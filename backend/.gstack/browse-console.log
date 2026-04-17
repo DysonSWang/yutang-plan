@@ -1,0 +1,40 @@
+[2026-04-16T04:28:41.534Z] [error] Failed to load resource: the server responded with a status of 404 (Not Found)
+[2026-04-16T04:28:47.141Z] [debug] [vite] connecting...
+[2026-04-16T04:28:47.336Z] [debug] [vite] connected.
+[2026-04-16T04:28:47.876Z] [info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+[2026-04-16T04:28:47.983Z] [warning] A preload for 'http://localhost:5173/fonts/material-symbols-outlined.woff2' is found, but is not used because the request credentials mode does not match. Consider taking a look at crossorigin attribute.
+[2026-04-16T04:28:51.644Z] [warning] The resource http://localhost:5173/fonts/material-symbols-outlined.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+[2026-04-16T04:29:00.078Z] [debug] [vite] connecting...
+[2026-04-16T04:29:00.325Z] [debug] [vite] connected.
+[2026-04-16T04:29:00.925Z] [info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+[2026-04-16T04:29:00.991Z] [warning] A preload for 'http://localhost:5173/fonts/material-symbols-outlined.woff2' is found, but is not used because the request credentials mode does not match. Consider taking a look at crossorigin attribute.
+[2026-04-16T04:29:04.465Z] [warning] The resource http://localhost:5173/fonts/material-symbols-outlined.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+[2026-04-16T04:29:15.908Z] [debug] [vite] connecting...
+[2026-04-16T04:29:15.938Z] [debug] [vite] connected.
+[2026-04-16T04:29:16.808Z] [info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+[2026-04-16T04:29:16.879Z] [warning] A preload for 'http://localhost:5173/fonts/material-symbols-outlined.woff2' is found, but is not used because the request credentials mode does not match. Consider taking a look at crossorigin attribute.
+[2026-04-16T04:29:20.403Z] [warning] The resource http://localhost:5173/fonts/material-symbols-outlined.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+[2026-04-16T04:30:13.814Z] [debug] [vite] connecting...
+[2026-04-16T04:30:14.182Z] [debug] [vite] connected.
+[2026-04-16T04:30:14.697Z] [info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+[2026-04-16T04:30:14.775Z] [warning] A preload for 'http://localhost:5173/fonts/material-symbols-outlined.woff2' is found, but is not used because the request credentials mode does not match. Consider taking a look at crossorigin attribute.
+[2026-04-16T04:30:18.254Z] [warning] The resource http://localhost:5173/fonts/material-symbols-outlined.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+[2026-04-16T04:30:24.523Z] [debug] [vite] connecting...
+[2026-04-16T04:30:24.554Z] [debug] [vite] connected.
+[2026-04-16T04:30:25.326Z] [info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+[2026-04-16T04:30:25.375Z] [warning] A preload for 'http://localhost:5173/fonts/material-symbols-outlined.woff2' is found, but is not used because the request credentials mode does not match. Consider taking a look at crossorigin attribute.
+[2026-04-16T04:30:28.855Z] [warning] The resource http://localhost:5173/fonts/material-symbols-outlined.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+[2026-04-16T04:30:31.447Z] [debug] [vite] connecting...
+[2026-04-16T04:30:31.580Z] [debug] [vite] connected.
+[2026-04-16T04:30:31.881Z] [info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+[2026-04-16T04:30:31.899Z] [warning] A preload for 'http://localhost:5173/fonts/material-symbols-outlined.woff2' is found, but is not used because the request credentials mode does not match. Consider taking a look at crossorigin attribute.
+[2026-04-16T04:30:35.331Z] [warning] The resource http://localhost:5173/fonts/material-symbols-outlined.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+[2026-04-16T04:30:51.022Z] [log] [vite] server connection lost. Polling for restart...
+[2026-04-16T04:30:51.028Z] [error] Failed to load resource: net::ERR_CONNECTION_REFUSED
+[2026-04-16T04:30:52.027Z] [error] Failed to load resource: net::ERR_CONNECTION_REFUSED
+[2026-04-16T04:30:53.028Z] [error] Failed to load resource: net::ERR_CONNECTION_REFUSED
+[2026-04-16T04:30:54.494Z] [debug] [vite] connecting...
+[2026-04-16T04:30:54.509Z] [debug] [vite] connected.
+[2026-04-16T04:31:01.032Z] [info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+[2026-04-16T04:31:01.102Z] [warning] A preload for 'http://localhost:5173/fonts/material-symbols-outlined.woff2' is found, but is not used because the request credentials mode does not match. Consider taking a look at crossorigin attribute.
+[2026-04-16T04:31:04.603Z] [warning] The resource http://localhost:5173/fonts/material-symbols-outlined.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.

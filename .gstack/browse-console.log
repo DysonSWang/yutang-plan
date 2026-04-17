@@ -1,0 +1,90 @@
+[2026-04-16T15:12:14.921Z] [debug] [vite] connecting...
+[2026-04-16T15:12:14.994Z] [debug] [vite] connected.
+[2026-04-16T15:12:15.237Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[2026-04-16T15:12:34.484Z] [debug] [vite] connecting...
+[2026-04-16T15:12:34.493Z] [debug] [vite] connected.
+[2026-04-16T15:12:34.750Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[2026-04-16T15:13:32.288Z] [log] [SocketContext] 已连接
+[2026-04-16T15:15:41.877Z] [error] TypeError: Failed to fetch
+    at Api.request (http://localhost:5181/src/utils/api.js:31:26)
+    at Api.post (http://localhost:5181/src/utils/api.js:42:15)
+    at Object.extractProfile (http://localhost:5181/src/utils/api.js:80:32)
+    at handleExtractProfile (http://localhost:5181/src/pages/admin/Clients.jsx:925:33)
+    at executeDispatch (http://localhost:5181/node_modules/.vite/deps/react-dom_client.js?v=ae983c61:9141:5)
+    at runWithFiberInDEV (http://localhost:5181/node_modules/.vite/deps/react-dom_client.js?v=ae983c61:851:66)
+    at processDispatchQueue (http://localhost:5181/node_modules/.vite/deps/react-dom_client.js?v=ae983c61:9167:27)
+    at http://localhost:5181/node_modules/.vite/deps/react-dom_client.js?v=ae983c61:9454:5
+    at batchedUpdates$1 (http://localhost:5181/node_modules/.vite/deps/react-dom_client.js?v=ae983c61:2044:12)
+    at dispatchEventForPluginEventSystem (http://localhost:5181/node_modules/.vite/deps/react-dom_client.js?v=ae983c61:9240:4)
+[2026-04-16T15:15:42.952Z] [debug] [vite] connecting...
+[2026-04-16T15:15:42.954Z] [debug] [vite] connected.
+[2026-04-16T15:15:43.211Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[2026-04-16T15:15:43.525Z] [log] [SocketContext] 已连接
+[2026-04-16T15:17:52.122Z] [debug] [vite] connecting...
+[2026-04-16T15:17:52.131Z] [debug] [vite] connected.
+[2026-04-16T15:17:52.405Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[2026-04-16T15:17:52.708Z] [log] [SocketContext] 已连接
+[2026-04-16T15:18:56.479Z] [error] TypeError: Failed to fetch
+    at Api.request (http://localhost:5181/src/utils/api.js:31:26)
+    at Api.post (http://localhost:5181/src/utils/api.js:42:15)
+    at Object.extractProfile (http://localhost:5181/src/utils/api.js:80:32)
+    at handleExtractProfile (http://localhost:5181/src/pages/admin/Clients.jsx:925:33)
+    at executeDispatch (http://localhost:5181/node_modules/.vite/deps/react-dom_client.js?v=ae983c61:9141:5)
+    at runWithFiberInDEV (http://localhost:5181/node_modules/.vite/deps/react-dom_client.js?v=ae983c61:851:66)
+    at processDispatchQueue (http://localhost:5181/node_modules/.vite/deps/react-dom_client.js?v=ae983c61:9167:27)
+    at http://localhost:5181/node_modules/.vite/deps/react-dom_client.js?v=ae983c61:9454:5
+    at batchedUpdates$1 (http://localhost:5181/node_modules/.vite/deps/react-dom_client.js?v=ae983c61:2044:12)
+    at dispatchEventForPluginEventSystem (http://localhost:5181/node_modules/.vite/deps/react-dom_client.js?v=ae983c61:9240:4)
+[2026-04-16T15:18:57.199Z] [debug] [vite] connecting...
+[2026-04-16T15:18:57.368Z] [debug] [vite] connected.
+[2026-04-16T15:18:57.435Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[2026-04-16T15:18:57.798Z] [warning] WebSocket connection to 'ws://localhost:3005/socket.io/?EIO=4&transport=websocket' failed: WebSocket is closed before the connection is established.
+[2026-04-16T15:18:58.022Z] [log] [SocketContext] 已连接
+[2026-04-16T15:19:23.101Z] [error] Failed to load resource: the server responded with a status of 400 (Bad Request)
+[2026-04-16T15:19:23.102Z] [log] Success: {"error":"文本内容太少，请提供更完整的自我介绍（至少20字）"}
+[2026-04-16T15:20:35.983Z] [error] Failed to load resource: the server responded with a status of 400 (Bad Request)
+[2026-04-16T15:20:35.983Z] [log] Status: 400
+[2026-04-16T15:20:35.983Z] [log] Response: {"error":"文本内容太少，请提供更完整的自我介绍（至少20字）"}
+[2026-04-16T15:20:57.346Z] [log] Token exists: true
+[2026-04-16T15:20:57.346Z] [log] Token preview: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjU4M...
+[2026-04-16T15:21:15.560Z] [debug] [vite] connecting...
+[2026-04-16T15:21:15.750Z] [debug] [vite] connected.
+[2026-04-16T15:21:15.786Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[2026-04-16T15:21:16.491Z] [log] [SocketContext] 已连接
+[2026-04-16T15:21:50.292Z] [error] Failed to load resource: the server responded with a status of 400 (Bad Request)
+[2026-04-16T15:21:50.294Z] [error] Error: 文本内容太少，请提供更完整的自我介绍（至少20字）
+    at Api.request (http://localhost:5181/src/utils/api.js:34:10)
+    at async handleExtractProfile (http://localhost:5181/src/pages/admin/Clients.jsx:925:16)
+[2026-04-16T15:22:38.488Z] [error] TypeError: Failed to fetch
+    at Api.request (http://localhost:5181/src/utils/api.js:31:26)
+    at Api.post (http://localhost:5181/src/utils/api.js:42:15)
+    at Object.extractProfile (http://localhost:5181/src/utils/api.js:80:32)
+    at handleExtractProfile (http://localhost:5181/src/pages/admin/Clients.jsx:925:33)
+    at executeDispatch (http://localhost:5181/node_modules/.vite/deps/react-dom_client.js?v=ae983c61:9141:5)
+    at runWithFiberInDEV (http://localhost:5181/node_modules/.vite/deps/react-dom_client.js?v=ae983c61:851:66)
+    at processDispatchQueue (http://localhost:5181/node_modules/.vite/deps/react-dom_client.js?v=ae983c61:9167:27)
+    at http://localhost:5181/node_modules/.vite/deps/react-dom_client.js?v=ae983c61:9454:5
+    at batchedUpdates$1 (http://localhost:5181/node_modules/.vite/deps/react-dom_client.js?v=ae983c61:2044:12)
+    at dispatchEventForPluginEventSystem (http://localhost:5181/node_modules/.vite/deps/react-dom_client.js?v=ae983c61:9240:4)
+[2026-04-16T15:22:39.705Z] [debug] [vite] connecting...
+[2026-04-16T15:22:39.712Z] [debug] [vite] connected.
+[2026-04-16T15:22:39.859Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[2026-04-16T15:22:40.304Z] [log] [SocketContext] 已连接
+[2026-04-16T15:24:04.957Z] [debug] [vite] connecting...
+[2026-04-16T15:24:05.161Z] [debug] [vite] connected.
+[2026-04-16T15:24:05.163Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[2026-04-16T15:24:05.549Z] [log] [SocketContext] 已连接
+[2026-04-16T15:25:39.792Z] [error] Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+[2026-04-16T15:25:39.800Z] [error] Error: 更新失败
+    at Api.request (http://localhost:5181/src/utils/api.js:34:10)
+    at async handleSave (http://localhost:5181/src/pages/client/ClientProfile.jsx:450:16)
+[2026-04-16T15:27:04.437Z] [error] WebSocket connection to 'ws://localhost:3005/socket.io/?EIO=4&transport=websocket' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED
+[2026-04-16T15:27:07.026Z] [log] [SocketContext] 已连接
+[2026-04-16T15:27:09.965Z] [debug] [vite] connecting...
+[2026-04-16T15:27:10.156Z] [debug] [vite] connected.
+[2026-04-16T15:27:10.159Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[2026-04-16T15:27:10.576Z] [log] [SocketContext] 已连接
+[2026-04-16T15:27:58.429Z] [debug] [vite] connecting...
+[2026-04-16T15:27:58.433Z] [debug] [vite] connected.
+[2026-04-16T15:27:58.656Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[2026-04-16T15:27:59.128Z] [log] [SocketContext] 已连接

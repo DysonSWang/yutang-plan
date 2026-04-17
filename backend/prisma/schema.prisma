@@ -1,0 +1,466 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:../data/database.db"
+}
+
+// ========== 用户系统 ==========
+model User {
+  id       String  @id @default(uuid())
+  username String  @unique
+  password String
+  nickname String?
+  avatar   String?
+  phone    String?
+  role     String  @default("client") // client, operator, admin
+
+  // ===== 基础信息 =====
+  age        Int? // 年龄
+  occupation String? // 职业
+  education  String? // 学历
+  income     String? // 收入水平
+  height     Int? // 身高(cm)
+  residence  String? // 所在地
+  hometown   String? // 籍贯
+
+  // ===== 外貌资源 =====
+  appearance    String? // 外貌描述
+  dressingStyle String? // 穿着风格
+  photos        String? // JSON array - 照片
+
+  // ===== 家庭背景 =====
+  familyBackground String? // 家庭背景：农村/城市/经商/公务员
+  familyStructure  String? // 家庭结构：双亲/单亲/离异
+  familyAtmosphere String? // 家庭氛围
+  familyBurden     String? // 养老负担
+  familyMembers    String? // 家庭成员说明
+
+  // ===== 性格画像（AI提炼）=====
+  personality        String? // MBTI/性格标签
+  emotionalStable    Int? // 情绪稳定性 1-10
+  eqLevel            Int? // 情商水平 1-10
+  communicationStyle String? // 沟通风格：直接/含蓄/话多/话少
+  socialStyle        String? // 社交风格：主动/被动/社交达人
+
+  // ===== 情感状态 =====
+  relationshipAttitude    String? // 婚恋态度：认真/随便/急切
+  pastRelationshipSummary String? // 情史摘要
+  marriageHistory         String? // 婚史：未婚/离异/丧偶
+  emotionalWounds         String? // 情伤记录
+  exPartnerTaboos         String? // 介意的前任类型
+
+  // ===== 情感目标（四位专家新增）=====
+  emotionalGoal         String? // 感情诉求：认真/随便/家里催/空虚
+  relationshipGoal      String? // 关系目标：短期/长期/不确定
+  commitmentWillingness Int? // 承诺意愿 1-10
+  emotionalMaturity     String? // 感情认知水平：幼稚/一般/成熟
+
+  // ===== 学习能力 =====
+  learningAbility  String? // 学习能力：强/中/弱
+  coachCooperation String? // 配合度：配合/一般/抵触
+  feedbackQuality  String? // 反馈质量：详细/简单/无反馈
+
+  // ===== 价值画像（Mo哥新增）=====
+  strengths  String? // 核心卖点：有钱/幽默/真诚/帅气
+  weaknesses String? // 价值短板：长相/情商/聊天/money
+
+  // ===== 客户类型（Mo哥新增）=====
+  clientType String? // 客户类型：执行型/质疑型/自主型
+
+  // ===== 认知评估（旭哥新增）=====
+  selfValuePerception String? // 自我价值认知：认为自己哪方面最强
+  cognitiveAccuracy   String? // 认知准确度：准确/高估/低估
+
+  // ===== 资源投入 =====
+  assetsLevel    String? // 资产级别
+  budgetRange    String? // 预算范围
+  timeInvestment String? // 时间投入意愿
+  serviceStage   String? // 服务阶段：背调/建池/约会/锁定/维护
+
+  // ===== 客户上下文记忆 =====
+  signals             String? // JSON数组: [{"date":"","type":"","event":""}]
+  pendingActions      String? // JSON数组
+  observations        String? // JSON数组
+  conversationSummary String? // 与操盘手沟通摘要
+
+  // ===== 匹配相关 =====
+  matchPreferences String? // 理想型偏好
+  dealbreakers     String? // 绝对雷区
+
+  // ===== 社交主页展示面 =====
+  profilePhotos      String? // JSON array - 主页照片列表
+  profileBio         String? // 主页简介/个人签名
+  preferredPlatforms String? // 常用平台：微信/探探/Soul等
+
+  // ===== 代聊风格（凯哥新增）=====
+  openingTemplates String? // JSON array - 打招呼模板话术
+  petPhrases       String? // JSON array - 客户口头禅/习惯用语
+  interactionStyle String? // 互动风格：主动型/调理型/细腻型
+  chatTaboos       String? // JSON array - 代聊禁区：哪些话不能说
+  humorStyle       String? // 幽默风格：冷幽默/自嘲/调侃/正经
+
+  // ===== 阶段进度（凯哥新增）=====
+  currentStage  String? // 当前阶段：陌生/朋友/暧昧/亲密
+  stageProgress Int? // 阶段进度 0-100%
+  lastMilestone String? // 最近里程碑事件
+
+  // ===== 抗压与节奏（凯哥+旭哥新增）=====
+  selfEsteemLevel      String? // 自尊水平：高/中/低
+  antiFrustrationLevel Int? // 抗压能力 1-10
+  pacePreference       String? // 节奏偏好：快节奏/稳健型/慢热型
+
+  // ===== 投入意愿（旭哥新增）=====
+  investmentWillingness String? // 投入意愿：时间/金钱/精力维度
+
+  // ===== 舒适区（旭哥新增）=====
+  comfortZone String? // 舒适区：习惯哪种类型的女生
+
+  // ===== 信任度/亲密度（类比女生）=====
+  trustLevel      Int   @default(1) // 1-5信任度
+  interactionHeat Float @default(5.0) // 1.0~10.0 互动热度
+
+  // ===== 语音克隆素材 =====
+  voiceSamples String? // JSON array - 语音样本URL列表，用于音色克隆
+
+  // ===== 元数据 =====
+  balance          Float     @default(0)
+  notes            String? // 备注
+  source           String? // 客户来源
+  serviceStartDate DateTime? // 服务开始日期
+
+  // ===== 关系 =====
+  clientGirls      Girl[]            @relation("ClientGirls")
+  operatorSessions ChatSession[]     @relation("OperatorSessions")
+  dates            Date[]
+  payments         Payment[]
+  progress         ServiceProgress[]
+  learnings        ClientLearning[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+// ========== 女生资源池 ==========
+model Girl {
+  // ===== 基础信息 =====
+  id         String  @id @default(uuid())
+  name       String // 姓名/昵称
+  age        Int? // 年龄
+  occupation String? // 职业
+  education  String? // 学历
+  major      String? // 专业
+  hometown   String? // 籍贯
+  residence  String? // 现居城市
+  workplace  String? // 工作地点
+
+  // ===== 外貌特征 =====
+  appearance  String? // 外貌描述（身高/体型/穿着风格）
+  photos      String? // JSON array - 照片
+  homepageUrl String? // 主页链接（个人网站/社交主页）
+  videos      String? // JSON array - 视频链接
+  styleTags   String? // 风格标签：文艺/运动/精致/朴素
+
+  // ===== 家庭背景 =====
+  familyBackground String? // 农村/城市/经商/公务员
+  familyAtmosphere String? // 和睦/离异/单亲
+  familyBurden     String? // 养老负担
+  familyComments   String? // 家庭备注
+
+  // ===== 生活状态 =====
+  workSchedule    String? // 朝九晚五/自由职业/经常加班
+  socialActivity  String? // 社交活跃度：高/中/低
+  financialHabits String? // 月光/务实/超前
+
+  // ===== 兴趣爱好 =====
+  interests       String? // 兴趣爱好
+  dietPreferences String? // 饮食偏好
+  hobbiesDetail   String? // 兴趣详情
+
+  // ===== 情感状态（Mo哥+童锦程）=====
+  relationshipAttitude    String? // 婚恋态度：认真/随便/不清楚
+  pastRelationshipSummary String? // 情史摘要
+  emotionalWounds         String? // 情伤记录：被渣/家暴/丧偶/其他
+  attachmentStyle         String? // 依恋类型：焦虑/回避/安全
+  dealbreakers            String? // 绝对雷区
+
+  // ===== 字母圈属性（操盘手专用）=====
+  isKinkOriented Boolean @default(false) // 是否接触字母圈
+  kinkIdentity   String? // S/M/Switch/观望/探索者
+  kinkBoundaries String? // 硬边界/软边界/雷区
+  kinkInterests  String? // 兴趣标签
+  kinkExperience String? // 新手/有经验/资深
+  kinkNotes      String? // 安全词/特殊需求
+
+  // ===== 内在画像（AI提炼，持续更新）=====
+  personality        String? // MBTI/性格标签
+  values_            String? // 价值观：事业型/家庭型/自由型
+  communicationStyle String? // 沟通风格：直接/含蓄/话多/话少
+  emotionalTriggers  String? // 情绪触发点
+  talkingTopics      String? // 喜欢的话题
+  thingsToAvoid      String? // 禁忌话题
+
+  // ===== 关系状态 =====
+  stage           String? // 当前阶段：陌生/搭讪/聊天/暧昧/约会/长期
+  status          String    @default("available") // available, chatting, dating, locked, long_term
+  intimacyLevel   Int       @default(1) // 1-5亲密度
+  tensionScore    Float     @default(5.0) // 1.0~10.0关系热度
+  lastContact     DateTime? // 最后联系时间
+  responsePattern String? // 回复规律：秒回/慢/已读不回
+
+  // ===== 上下文记忆（持续更新）=====
+  signals             String? // JSON数组
+  pendingActions      String? // JSON数组
+  observations        String? // JSON数组
+  conversationSummary String? // 压缩后的对话摘要
+
+  // ===== AI战略分析 =====
+  bestApproach      String? // 最佳策略：幽默/真诚/霸道/温柔
+  recommendedTopics String? // 推荐话题
+  upgradeConditions String? // 升级条件
+  estimatedTimeline String? // 预计时间线
+  riskFactors       String? // 风险因素
+  strategicNotes    String? // 战略备注
+
+  // ===== AI画像（谙世eq-profile维度）=====
+  empathy       Int?
+  selfAwareness Int?
+  communication Int?
+  relationship  Int?
+  conflictRes   Int?
+
+  // ===== 谙世角色关联 ======
+  chatPartnerId String? // 对应谙世角色库的ID
+
+  // ===== 匹配相关 =====
+  matchScore Int?
+
+  // ===== 元数据 =====
+  sourcePlatform String? // 平台来源
+  sourceUrl      String? // 主页链接
+  notes          String? // 备注
+
+  // ===== 关系 =====
+  clientId String
+  client   User   @relation("ClientGirls", fields: [clientId], references: [id])
+
+  chatLogs        ChatLog[]
+  chatScreenshots ChatScreenshot[]
+  dates           Date[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("girls")
+}
+
+// ========== 操盘手↔客户 私密聊天 ==========
+model ChatSession {
+  id            String    @id @default(uuid())
+  operatorId    String
+  operator      User      @relation("OperatorSessions", fields: [operatorId], references: [id])
+  clientId      String
+  lastMessage   String?
+  lastMessageAt DateTime?
+  unreadCount   Int       @default(0)
+
+  messages Message[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([operatorId, clientId])
+  @@map("chat_sessions")
+}
+
+model Message {
+  id        String      @id @default(uuid())
+  sessionId String
+  session   ChatSession @relation(fields: [sessionId], references: [id])
+
+  senderRole String
+  senderId   String
+
+  content String?
+  type    String  @default("text")
+
+  isBurnAfterRead Boolean   @default(false)
+  burnedAt        DateTime?
+
+  isRead Boolean   @default(false)
+  readAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([sessionId])
+  @@map("messages")
+}
+
+// ========== 聊天截图记录 ==========
+model ChatScreenshot {
+  id     String @id @default(uuid())
+  girlId String
+  girl   Girl   @relation(fields: [girlId], references: [id])
+
+  clientId   String
+  operatorId String
+
+  imageUrl  String
+  chatText String? // 从截图识别的原始对话文本
+  notes    String?
+  platform String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("chat_screenshots")
+}
+
+// ========== 代聊记录 ==========
+model ChatLog {
+  id     String @id @default(uuid())
+  girlId String
+  girl   Girl   @relation(fields: [girlId], references: [id])
+
+  clientId   String
+  operatorId String
+
+  receiverName String
+  content      String
+  type         String @default("text")
+
+  aiAnalysis    String?
+  aiSuggestions String?
+  aiAdopted     Boolean @default(false)
+
+  isVisibleToClient Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@map("chat_logs")
+}
+
+// ========== 约会管理 ==========
+model Date {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+  girlId String
+  girl   Girl   @relation(fields: [girlId], references: [id])
+
+  dateTime   DateTime
+  location   String?
+  status     String   @default("planned")
+  notes      String?
+  nextAction String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("dates")
+}
+
+// ========== 服务进度 ==========
+model ServiceProgress {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  stage     Int
+  stageName String
+  status    String @default("in_progress")
+
+  amountPaid  Float?
+  paidAt      DateTime?
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("service_progress")
+}
+
+// ========== 阶段付款 ==========
+model Payment {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  stage  Int
+  amount Float
+  status String @default("pending")
+
+  paidAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@map("payments")
+}
+
+// ========== 操作日志 ==========
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  resource  String?
+  details   String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+// ========== 通知 ==========
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String
+  title     String
+  content   String
+  isRead    Boolean  @default(false)
+  metadata  String?
+  createdAt DateTime @default(now())
+
+  @@map("notifications")
+}
+
+// ========== 客户经验库 ==========
+model ClientLearning {
+  id       String  @id @default(uuid())
+  clientId String
+  client   User    @relation(fields: [clientId], references: [id])
+  girlId   String?
+
+  type    String
+  scene   String
+  content String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("client_learnings")
+}
+
+// ========== 对话记忆 ==========
+model ConversationMemory {
+  id       String @id @default(uuid())
+  clientId String
+  girlId   String
+  coachId  String
+
+  messages     String
+  summary      String?
+  signals      String?
+  stageChanged Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("conversation_memories")
+}
