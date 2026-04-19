@@ -262,13 +262,15 @@ module.exports = function(io) {
         return res.status(400).json({ error: '消息已被销毁' });
       }
 
-      if (message.senderId !== req.user.id && message.sessionId) {
-        const session = await prisma.chatSession.findUnique({
-          where: { id: message.sessionId }
-        });
-        if (session?.operatorId !== req.user.id && session?.clientId !== req.user.id) {
-          return res.status(403).json({ error: '无权限' });
-        }
+      // 授权检查：发送者本人，或会话参与者
+      const session = message.sessionId
+        ? await prisma.chatSession.findUnique({ where: { id: message.sessionId } })
+        : null;
+      const isParticipant = session && (
+        session.operatorId === req.user.id || session.clientId === req.user.id
+      );
+      if (message.senderId !== req.user.id && !isParticipant) {
+        return res.status(403).json({ error: '无权限' });
       }
 
       const updateData = {
@@ -277,7 +279,7 @@ module.exports = function(io) {
         burnedAt: new Date()
       };
 
-      // 闪图时额外记录flashBurnedAt
+      // 闪图时额外记录 flashBurnedAt
       if (message.isFlashImage) {
         updateData.flashBurnedAt = new Date();
       }
@@ -290,16 +292,13 @@ module.exports = function(io) {
       const updated = await prisma.message.findUnique({ where: { id: req.params.id } });
 
       // 广播给会话另一方（同步销毁状态）
-      if (message.sessionId) {
-        const session = await prisma.chatSession.findUnique({ where: { id: message.sessionId } });
-        if (session) {
-          io.to(`operator:${session.operatorId}`).emit('message:burned', {
-            sessionId: message.sessionId, messageId: message.id
-          });
-          io.to(`client:${session.clientId}`).emit('message:burned', {
-            sessionId: message.sessionId, messageId: message.id
-          });
-        }
+      if (session) {
+        io.to(`operator:${session.operatorId}`).emit('message:burned', {
+          sessionId: message.sessionId, messageId: message.id
+        });
+        io.to(`client:${session.clientId}`).emit('message:burned', {
+          sessionId: message.sessionId, messageId: message.id
+        });
       }
       res.json({ success: true, message: updated });
     } catch (error) {

@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Box, Flex, Heading, Text, Card, CardBody, CardHeader, Button, Select, Textarea, SimpleGrid, Badge, VStack, HStack, Divider, Spinner, useToast, Tabs, TabList, TabPanels, Tab, TabPanel, Icon, Input, useDisclosure } from '@chakra-ui/react';
-import { clients, girls, chatLogs, chatPartner } from '../../utils/api';
-import { FiSend, FiMessageSquare, FiTarget, FiZap, FiAlertCircle, FiCheck } from 'react-icons/fi';
+import { Box, Flex, Heading, Text, Card, CardBody, CardHeader, Button, Select, Textarea, SimpleGrid, Badge, VStack, HStack, Divider, Spinner, useToast, Tabs, TabList, TabPanels, Tab, TabPanel, Icon, Input, useDisclosure, Checkbox, Collapse, Alert, AlertIcon } from '@chakra-ui/react';
+import { clients, girls, chatLogs, chat, chatPartner } from '../../utils/api';
+import { useSocket } from '../../contexts/SocketContext';
+import { FiSend, FiMessageSquare, FiTarget, FiZap, FiAlertCircle, FiCheck, FiCopy, FiUser } from 'react-icons/fi';
 import { HeartIcon } from '../../components/Icons';
 
 const COACHES = [
@@ -42,12 +43,45 @@ export default function AdminWorkbench() {
   const messagesEndRef = useRef(null);
   const analysisRef = useRef(null);
 
+  // 实战聊天模式：和客户聊天 / 和女生聊天
+  const [workbenchChatMode, setWorkbenchChatMode] = useState('girl');
+  const [clientSession, setClientSession] = useState(null);
+  const [clientMessages, setClientMessages] = useState([]);
+  const [clientInput, setClientInput] = useState('');
+  const [sendingClientMsg, setSendingClientMsg] = useState(false);
+
+  // 客户聊天 AI 能力
+  const [clientChatMode, setClientChatMode] = useState('suggest'); // 'suggest' | 'optimize'
+  const [clientChatHistory, setClientChatHistory] = useState([]); // 多轮对话
+  const [clientMsg, setClientMsg] = useState(''); // 粘贴的客户消息
+  const [clientMyMsg, setClientMyMsg] = useState(''); // 操盘手想发的话
+  const [clientAiAnalysis, setClientAiAnalysis] = useState('');
+  const [clientAiSummary, setClientAiSummary] = useState('');
+  const [clientAiSuggestions, setClientAiSuggestions] = useState([]);
+  const [clientOptimizations, setClientOptimizations] = useState([]);
+  const [clientAnalyzing, setClientAnalyzing] = useState(false);
+  const [clientOptimizing, setClientOptimizing] = useState(false);
+
+  // Socket.io
+  const { on } = useSocket();
+
   // 异步反馈状态
   const [pendingUpdates, setPendingUpdates] = useState([]);
   const [currentGirlState, setCurrentGirlState] = useState(null); // 用于 diff
   const [showUpdatePanel, setShowUpdatePanel] = useState(false);
   const [feedbackAnalyzing, setFeedbackAnalyzing] = useState(false); // 采纳后"分析中"状态
   const pollingRef = useRef(null);
+
+  // 档案提取待确认状态（女生聊天）
+  const [profilePendingId, setProfilePendingId] = useState(null);
+  const [profilePendingFields, setProfilePendingFields] = useState({}); // { fieldKey: { label, value } }
+  const [selectedProfileFields, setSelectedProfileFields] = useState({}); // 用户勾选的字段
+  const [showProfileFields, setShowProfileFields] = useState(false); // 展开档案更新面板
+
+  // 档案提取待确认状态（客户聊天）
+  const [clientProfilePendingId, setClientProfilePendingId] = useState(null);
+  const [clientProfilePendingFields, setClientProfilePendingFields] = useState({});
+  const [selectedClientProfileFields, setSelectedClientProfileFields] = useState({});
 
   useEffect(() => {
     loadClients();
@@ -80,6 +114,85 @@ export default function AdminWorkbench() {
       if (pollingRef.current) clearInterval(pollingRef.current);
     };
   }, [selectedGirl?.id]);
+
+  // 加载/创建客户会话（和客户聊天模式）
+  const loadClientSession = async () => {
+    if (!selectedClient) return;
+    try {
+      const res = await chat.createSession(selectedClient.id);
+      if (res.success) {
+        setClientSession(res.session);
+      }
+    } catch {
+      console.error('请求错误');
+    }
+  };
+
+  const loadClientMessages = async () => {
+    if (!clientSession) return;
+    try {
+      const res = await chat.messages(clientSession.id);
+      if (res.success) setClientMessages(res.messages || []);
+    } catch {
+      console.error('请求错误');
+    }
+  };
+
+  // 当切换到"和客户聊天"模式时，加载会话
+  useEffect(() => {
+    if (workbenchChatMode === 'client' && selectedClient) {
+      loadClientSession();
+    }
+  }, [workbenchChatMode, selectedClient?.id]);
+
+  // 会话加载后获取消息
+  useEffect(() => {
+    if (clientSession) {
+      loadClientMessages();
+    }
+  }, [clientSession?.id]);
+
+  // Socket.io 监听实时消息（和客户聊天模式）
+  useEffect(() => {
+    if (workbenchChatMode !== 'client' || !clientSession) return;
+
+    const handler = (message) => {
+      if (message.senderRole === 'operator') return;
+      if (message.sessionId === clientSession.id) {
+        setClientMessages(prev => [...prev, message]);
+      }
+    };
+    on('message:new', handler);
+  }, [workbenchChatMode, clientSession?.id]);
+
+  // 切换实战聊天模式时重置状态
+  const switchWorkbenchChatMode = (mode) => {
+    setWorkbenchChatMode(mode);
+    if (mode === 'client') {
+      // 清理女生聊天状态
+      setChatHistory([]);
+      setAiAnalysis('');
+      setAiSuggestions([]);
+      setOptimizations([]);
+      setSendingContent('');
+      setGirlMessage('');
+      setMyMessage('');
+      setBattleMode('analyze');
+      setPendingUpdates([]);
+    } else {
+      // 清理客户聊天状态
+      setClientMessages([]);
+      setClientSession(null);
+      setClientInput('');
+      setClientChatHistory([]);
+      setClientAiAnalysis('');
+      setClientAiSummary('');
+      setClientAiSuggestions([]);
+      setClientOptimizations([]);
+      setClientMsg('');
+      setClientMyMsg('');
+    }
+  };
 
   const loadClients = async () => {
     try {
@@ -246,6 +359,19 @@ export default function AdminWorkbench() {
       if (res.success) {
         setAiAnalysis(res.analysis || '');
         setAiSuggestions(res.suggestions || []);
+        // 档案提取结果
+        if (res.profilePendingId) {
+          const fields = res.pendingFields || {};
+          setProfilePendingId(res.profilePendingId);
+          setProfilePendingFields(fields);
+          // 默认全选
+          setSelectedProfileFields(Object.fromEntries(
+            Object.entries(fields).map(([k, v]) => [k, v.value])
+          ));
+          if (Object.keys(fields).length > 0) {
+            setShowProfileFields(true);
+          }
+        }
         setBattleMode('manual');
       }
     } catch {
@@ -300,19 +426,37 @@ export default function AdminWorkbench() {
     // 立即把这条消息加入聊天历史
     setChatHistory(prev => [...prev, { role: 'user', content: replyText, adopted: true }]);
     setAiAnalysis('');
+    // 清除档案状态（采纳后由后端处理确认）
+    const pid = profilePendingId;
+    const pfields = selectedProfileFields;
+    setProfilePendingId(null);
+    setProfilePendingFields({});
+    setSelectedProfileFields({});
+    setShowProfileFields(false);
 
     if (selectedGirl && selectedClient) {
       try {
         const girlMsg = chatHistory.filter(m => m.role === 'girl').pop()?.content || '';
-        await chatPartner.feedback({
+        const res = await chatPartner.feedback({
           girlId: selectedGirl.id,
           clientId: selectedClient.id,
           receiverName: selectedGirl.name,
           chosenReply: replyText,
           originalGirlMessage: girlMsg,
           style,
-          intention
+          intention,
+          profilePendingId: pid,
+          selectedProfileFields: Object.keys(pfields).length > 0 ? pfields : null
         });
+
+        // 档案确认结果提示
+        if (res.profileConfirm?.success && res.profileConfirm.updatedFields?.length > 0) {
+          toast({
+            title: `档案已更新：${res.profileConfirm.updatedFields.length} 个字段`,
+            status: 'success',
+            duration: 3000
+          });
+        }
 
         // 立即轮询一次，尝试获取刚生成的待审核更新
         setTimeout(() => fetchPendingUpdates(), 500);
@@ -419,7 +563,148 @@ export default function AdminWorkbench() {
     }
   };
 
-  // 格式化热度显示
+  // 发送消息给客户
+  const handleSendToClient = async () => {
+    if (!clientInput.trim() || !clientSession) return;
+    setSendingClientMsg(true);
+    try {
+      const res = await chat.send(clientSession.id, clientInput.trim());
+      if (res.success) {
+        setClientMessages(prev => [...prev, res.message]);
+        // 追加到多轮对话历史（操盘手发的）
+        setClientChatHistory(prev => [...prev, { role: 'operator', content: clientInput.trim() }]);
+        setClientInput('');
+      }
+    } catch {
+      toast({ title: '发送失败', status: 'error' });
+    } finally {
+      setSendingClientMsg(false);
+    }
+  };
+
+  // 客户聊天 - 分析客户消息 → 回复建议
+  const handleClientAnalyze = async () => {
+    if (!clientMsg.trim() || !selectedClient) {
+      toast({ title: '请先粘贴客户消息', status: 'warning' });
+      return;
+    }
+    setClientAnalyzing(true);
+    const newHistory = [...clientChatHistory, { role: 'client', content: clientMsg }];
+    setClientChatHistory(newHistory);
+    setClientMsg('');
+
+    try {
+      const res = await chatPartner.analyzeClient({
+        clientId: selectedClient.id,
+        message: clientMsg,
+        history: clientChatHistory.map(m => ({ role: m.role, content: m.content }))
+      });
+      if (res.success) {
+        setClientAiAnalysis(res.analysis || '');
+        setClientAiSummary(res.summary || '');
+        setClientAiSuggestions(res.suggestions || []);
+        // 档案提取结果
+        if (res.profilePendingId) {
+          const fields = res.pendingFields || {};
+          setClientProfilePendingId(res.profilePendingId);
+          setClientProfilePendingFields(fields);
+          setSelectedClientProfileFields(Object.fromEntries(
+            Object.entries(fields).map(([k, v]) => [k, v.value])
+          ));
+        }
+      }
+    } catch {
+      toast({ title: 'AI分析失败', status: 'error' });
+    } finally {
+      setClientAnalyzing(false);
+    }
+  };
+
+  // 客户聊天 - 话术优化
+  const handleClientOptimize = async () => {
+    if (!clientMyMsg.trim() || !selectedClient) {
+      toast({ title: '请先输入想发的话', status: 'warning' });
+      return;
+    }
+    setClientOptimizing(true);
+    try {
+      const res = await chatPartner.optimizeClientMessage({
+        clientId: selectedClient.id,
+        myMessage: clientMyMsg,
+        history: clientChatHistory.map(m => ({ role: m.role, content: m.content }))
+      });
+      if (res.success) {
+        setClientOptimizations(res.optimizations || []);
+      }
+    } catch {
+      toast({ title: '话术优化失败', status: 'error' });
+    } finally {
+      setClientOptimizing(false);
+    }
+  };
+
+  // 采纳建议 → 填入发送框 + 确认档案更新
+  const handleClientSelectSuggestion = async (suggestion) => {
+    const text = suggestion.text || suggestion.reply || suggestion;
+    setClientInput(text);
+    setClientAiSuggestions([]);
+    setClientAiAnalysis('');
+    setClientAiSummary('');
+
+    // 自动确认档案更新
+    const pid = clientProfilePendingId;
+    const pfields = selectedClientProfileFields;
+    setClientProfilePendingId(null);
+    setClientProfilePendingFields({});
+    setSelectedClientProfileFields({});
+
+    if (pid && selectedClient && Object.keys(pfields).length > 0) {
+      try {
+        const res = await chatPartner.confirmClientProfile({
+          clientId: selectedClient.id,
+          pendingId: pid,
+          selectedFields: pfields
+        });
+        if (res.success && res.updatedFields?.length > 0) {
+          toast({ title: `客户档案已更新：${res.updatedFields.length} 个字段`, status: 'success', duration: 3000 });
+        }
+      } catch (e) {
+        console.warn('客户档案确认失败:', e);
+      }
+    }
+  };
+
+  // 采纳优化 → 填入发送框
+  const handleClientSelectOptimization = (opt) => {
+    const text = opt.text || opt.reply || opt;
+    setClientInput(text);
+    setClientOptimizations([]);
+  };
+
+  // 切换客户聊天模式时重置状态
+  const switchClientChatMode = (mode) => {
+    setClientChatMode(mode);
+    if (mode === 'suggest') {
+      setClientOptimizations([]);
+      setClientMyMsg('');
+    } else {
+      setClientAiSuggestions([]);
+      setClientAiAnalysis('');
+      setClientAiSummary('');
+      setClientMsg('');
+    }
+  };
+
+  const handleClearClientChat = () => {
+    setClientChatHistory([]);
+    setClientAiAnalysis('');
+    setClientAiSummary('');
+    setClientAiSuggestions([]);
+    setClientOptimizations([]);
+    setClientInput('');
+    setClientMsg('');
+    setClientMyMsg('');
+  };
   const getTensionEmoji = (score) => {
     if (score >= 8) return '🔥🔥🔥';
     if (score >= 7) return '🔥🔥';
@@ -601,15 +886,411 @@ export default function AdminWorkbench() {
                 </Card>
               </TabPanel>
 
-              {/* 实战聊天（统一工作流） */}
+              {/* 实战聊天 */}
               <TabPanel p={0} pt={4}>
                 <Card bg="gray.800" h="calc(100vh - 280px)">
                   <CardBody display="flex" flexDirection="column" gap={3}>
-                    {!selectedGirl ? (
+                    {/* 顶部：模式切换 */}
+                    <HStack mb={1} bg="gray.700" p={1} borderRadius="md" w="fit-content">
+                      <Box
+                        px={4}
+                        py={2}
+                        borderRadius="md"
+                        cursor="pointer"
+                        bg={workbenchChatMode === 'girl' ? 'teal.600' : 'transparent'}
+                        onClick={() => switchWorkbenchChatMode('girl')}
+                      >
+                        <HStack spacing={2}>
+                          <Icon as={HeartIcon} color="pink.400" boxSize={4} />
+                          <Text color="white" fontSize="sm" fontWeight="bold">
+                            和女生聊天
+                          </Text>
+                        </HStack>
+                      </Box>
+                      <Box
+                        px={4}
+                        py={2}
+                        borderRadius="md"
+                        cursor="pointer"
+                        bg={workbenchChatMode === 'client' ? 'teal.600' : 'transparent'}
+                        onClick={() => switchWorkbenchChatMode('client')}
+                      >
+                        <HStack spacing={2}>
+                          <Icon as={FiUser} color="teal.300" boxSize={4} />
+                          <Text color="white" fontSize="sm" fontWeight="bold">
+                            和客户聊天
+                          </Text>
+                        </HStack>
+                      </Box>
+                    </HStack>
+
+                    {/* 和客户聊天模式 */}
+                    {workbenchChatMode === 'client' && !selectedClient && (
+                      <Flex flex={1} align="center" justify="center">
+                        <Text color="gray.500">先在左侧选择一个客户</Text>
+                      </Flex>
+                    )}
+
+                    {workbenchChatMode === 'client' && selectedClient && (
+                      <>
+                        {/* 顶部：AI模式切换 tabs */}
+                        <HStack mb={1} bg="gray.700" p={1} borderRadius="md" w="fit-content">
+                          <Box
+                            px={4}
+                            py={2}
+                            borderRadius="md"
+                            cursor="pointer"
+                            bg={clientChatMode === 'suggest' ? 'teal.600' : 'transparent'}
+                            onClick={() => switchClientChatMode('suggest')}
+                          >
+                            <Text color="white" fontSize="sm" fontWeight="bold">回复建议</Text>
+                          </Box>
+                          <Box
+                            px={4}
+                            py={2}
+                            borderRadius="md"
+                            cursor="pointer"
+                            bg={clientChatMode === 'optimize' ? 'orange.600' : 'transparent'}
+                            onClick={() => switchClientChatMode('optimize')}
+                          >
+                            <Text color="white" fontSize="sm" fontWeight="bold">话术优化</Text>
+                          </Box>
+                        </HStack>
+
+                        {/* 回复建议模式 */}
+                        {clientChatMode === 'suggest' && (
+                          <Box>
+                            <HStack mb={2}>
+                              <Icon as={FiMessageSquare} color="blue.400" />
+                              <Text color="gray.400" fontSize="sm">
+                                粘贴客户的消息，AI 分析意图并给出回复建议
+                              </Text>
+                            </HStack>
+                            <HStack>
+                              <Input
+                                flex={1}
+                                value={clientMsg}
+                                onChange={e => setClientMsg(e.target.value)}
+                                onKeyPress={(e) => {
+                                  if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleClientAnalyze();
+                                  }
+                                }}
+                                placeholder="粘贴客户的消息..."
+                                bg="gray.700"
+                                border="none"
+                                color="white"
+                                _placeholder={{ color: 'gray.400' }}
+                              />
+                              <Button
+                                colorScheme="blue"
+                                onClick={handleClientAnalyze}
+                                isLoading={clientAnalyzing}
+                                isDisabled={!clientMsg.trim()}
+                              >
+                                分析
+                              </Button>
+                            </HStack>
+                          </Box>
+                        )}
+
+                        {/* 话术优化模式 */}
+                        {clientChatMode === 'optimize' && (
+                          <Box>
+                            <HStack mb={2}>
+                              <Icon as={FiZap} color="orange.400" />
+                              <Text color="gray.400" fontSize="sm">
+                                粘贴你想发的话，AI 帮你优化得更专业、更有温度
+                              </Text>
+                            </HStack>
+                            <HStack>
+                              <Input
+                                flex={1}
+                                value={clientMyMsg}
+                                onChange={e => setClientMyMsg(e.target.value)}
+                                onKeyPress={(e) => {
+                                  if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleClientOptimize();
+                                  }
+                                }}
+                                placeholder="粘贴你想发给客户的话..."
+                                bg="gray.700"
+                                border="none"
+                                color="white"
+                                _placeholder={{ color: 'gray.400' }}
+                              />
+                              <Button
+                                colorScheme="orange"
+                                onClick={handleClientOptimize}
+                                isLoading={clientOptimizing}
+                                isDisabled={!clientMyMsg.trim()}
+                              >
+                                优化
+                              </Button>
+                            </HStack>
+                          </Box>
+                        )}
+
+                        {/* 聊天历史 + AI 分析结果 */}
+                        <Box flex={1} overflowY="auto">
+                          <VStack spacing={3} align="stretch">
+                            {/* 多轮对话历史（和女生的类似风格） */}
+                            {clientChatHistory.length === 0 && !clientAiAnalysis && (
+                              <Text color="gray.500" textAlign="center" fontSize="sm" py={4}>
+                                暂无对话记录，粘贴客户消息开始分析
+                              </Text>
+                            )}
+
+                            {clientChatHistory.map((msg, index) => (
+                              <Box
+                                key={index}
+                                alignSelf={msg.role === 'operator' ? 'flex-end' : 'flex-start'}
+                                maxW="80%"
+                                p={3}
+                                borderRadius="lg"
+                                bg={msg.role === 'operator' ? 'teal.700' : 'gray.700'}
+                              >
+                                <HStack mb={1} spacing={1}>
+                                  <Icon
+                                    as={msg.role === 'operator' ? FiSend : FiMessageSquare}
+                                    boxSize={3}
+                                    color={msg.role === 'operator' ? 'teal.300' : 'gray.400'}
+                                  />
+                                  <Text fontSize="xs" color="gray.300">
+                                    {msg.role === 'operator' ? '操盘手' : (selectedClient?.nickname || '客户')}
+                                  </Text>
+                                </HStack>
+                                <Text color="white" fontSize="sm" whiteSpace="pre-wrap">{msg.content}</Text>
+                              </Box>
+                            ))}
+
+                            {/* AI 分析结果 */}
+                            {clientAiAnalysis && (
+                              <Box p={3} bg="purple.900" borderRadius="lg" borderLeft="3px solid" borderColor="purple.400">
+                                <HStack mb={2}>
+                                  <Icon as={FiTarget} color="purple.400" boxSize={4} />
+                                  <Text color="purple.300" fontSize="sm" fontWeight="bold">AI 分析</Text>
+                                </HStack>
+                                <Text color="gray.200" fontSize="sm" whiteSpace="pre-wrap">{clientAiAnalysis}</Text>
+                              </Box>
+                            )}
+
+                            {/* AI 总结 */}
+                            {clientAiSummary && (
+                              <Box p={3} bg="gray.700" borderRadius="md" borderLeft="2px solid" borderColor="teal.500">
+                                <HStack mb={1}>
+                                  <Icon as={FiTarget} color="teal.400" boxSize={3} />
+                                  <Text color="teal.300" fontSize="xs" fontWeight="bold">本轮总结</Text>
+                                </HStack>
+                                <Text color="gray.300" fontSize="sm">{clientAiSummary}</Text>
+                              </Box>
+                            )}
+
+                            {/* 档案更新预览 */}
+                            {Object.keys(clientProfilePendingFields).length > 0 && (
+                              <Box p={3} bg="cyan.900" borderRadius="lg" borderLeft="3px solid" borderColor="cyan.400">
+                                <HStack mb={2}>
+                                  <Icon as={FiUser} color="cyan.400" boxSize={4} />
+                                  <Text color="cyan.300" fontSize="sm" fontWeight="bold">客户档案更新</Text>
+                                  <Badge colorScheme="cyan" fontSize="xs">{Object.keys(clientProfilePendingFields).length} 个字段</Badge>
+                                </HStack>
+                                <Alert status="info" borderRadius="md" mb={2} bg="cyan.800" fontSize="xs">
+                                  <AlertIcon />
+                                  采纳回复建议时将自动更新已勾选字段
+                                </Alert>
+                                <SimpleGrid columns={2} spacing={2}>
+                                  {Object.entries(clientProfilePendingFields).map(([key, { label, value }]) => (
+                                    <HStack key={key} bg="gray.700" p={2} borderRadius="md">
+                                      <Checkbox
+                                        size="sm"
+                                        isChecked={!!selectedClientProfileFields[key]}
+                                        onChange={(e) => {
+                                          setSelectedClientProfileFields(prev => ({
+                                            ...prev,
+                                            [key]: e.target.checked ? value : false
+                                          }));
+                                        }}
+                                        colorScheme="cyan"
+                                      />
+                                      <Box flex={1}>
+                                        <Text color="gray.400" fontSize="xs">{label}</Text>
+                                        <Text color="cyan.200" fontSize="sm" wordBreak="break-all">{value}</Text>
+                                      </Box>
+                                    </HStack>
+                                  ))}
+                                </SimpleGrid>
+                              </Box>
+                            )}
+
+                            {/* 回复建议 */}
+                            {clientAiSuggestions.length > 0 && (
+                              <Box p={3} bg="blue.900" borderRadius="lg" borderLeft="3px solid" borderColor="blue.400">
+                                <HStack mb={2}>
+                                  <Icon as={FiMessageSquare} color="blue.400" boxSize={4} />
+                                  <Text color="blue.300" fontSize="sm" fontWeight="bold">回复建议（点击采纳或复制）</Text>
+                                </HStack>
+                                <VStack spacing={2} align="stretch">
+                                  {clientAiSuggestions.map((s, i) => (
+                                    <Box
+                                      key={i}
+                                      p={3}
+                                      bg="gray.700"
+                                      borderRadius="md"
+                                      cursor="pointer"
+                                      _hover={{ bg: 'teal.700', transform: 'translateX(4px)' }}
+                                      transition="all 0.15s"
+                                      onClick={() => handleClientSelectSuggestion(s)}
+                                    >
+                                      <HStack justify="space-between" mb={1}>
+                                        <Badge colorScheme="blue" fontSize="xs">{s.style || '建议'}</Badge>
+                                        <HStack spacing={1}>
+                                          <Text color="gray.400" fontSize="xs">{s.intention || ''}</Text>
+                                          <Icon
+                                            as={FiCopy}
+                                            color="gray.500"
+                                            boxSize={3}
+                                            cursor="pointer"
+                                            _hover={{ color: 'teal.400' }}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              navigator.clipboard.writeText(s.text || s.reply || s);
+                                              toast({ description: '已复制到剪贴板', duration: 1500, isClosable: false, position: 'top' });
+                                            }}
+                                            title="一键复制到剪贴板"
+                                          />
+                                        </HStack>
+                                      </HStack>
+                                      <Text color="white" fontSize="sm">{s.text || s.reply || s}</Text>
+                                    </Box>
+                                  ))}
+                                </VStack>
+                              </Box>
+                            )}
+
+                            {/* 话术优化结果 */}
+                            {clientOptimizations.length > 0 && (
+                              <Box p={3} bg="orange.900" borderRadius="lg" borderLeft="3px solid" borderColor="orange.400">
+                                <HStack mb={2}>
+                                  <Icon as={FiZap} color="orange.400" boxSize={4} />
+                                  <Text color="orange.300" fontSize="sm" fontWeight="bold">话术优化（点击采纳或复制）</Text>
+                                </HStack>
+                                <VStack spacing={2} align="stretch">
+                                  {clientOptimizations.map((opt, i) => (
+                                    <Box
+                                      key={i}
+                                      p={3}
+                                      bg="gray.700"
+                                      borderRadius="md"
+                                      cursor="pointer"
+                                      _hover={{ bg: 'teal.700', transform: 'translateX(4px)' }}
+                                      transition="all 0.15s"
+                                      onClick={() => handleClientSelectOptimization(opt)}
+                                    >
+                                      <HStack justify="space-between" mb={1}>
+                                        <Badge colorScheme="orange" fontSize="xs">{opt.style || '优化版'}</Badge>
+                                        <HStack spacing={1}>
+                                          <Text color="gray.400" fontSize="xs">{opt.point || ''}</Text>
+                                          <Icon
+                                            as={FiCopy}
+                                            color="gray.500"
+                                            boxSize={3}
+                                            cursor="pointer"
+                                            _hover={{ color: 'teal.400' }}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              navigator.clipboard.writeText(opt.text || opt.reply || opt);
+                                              toast({ description: '已复制到剪贴板', duration: 1500, isClosable: false, position: 'top' });
+                                            }}
+                                            title="一键复制到剪贴板"
+                                          />
+                                        </HStack>
+                                      </HStack>
+                                      <Text color="white" fontSize="sm">{opt.text || opt.reply || opt}</Text>
+                                    </Box>
+                                  ))}
+                                </VStack>
+                              </Box>
+                            )}
+
+                            {clientAnalyzing && (
+                              <Box p={3} bg="gray.700" borderRadius="lg" alignSelf="flex-start">
+                                <HStack spacing={2}>
+                                  <Spinner size="sm" color="teal.400" />
+                                  <Text color="gray.400" fontSize="sm">AI分析中...</Text>
+                                </HStack>
+                              </Box>
+                            )}
+
+                            {clientOptimizing && (
+                              <Box p={3} bg="gray.700" borderRadius="lg" alignSelf="flex-start">
+                                <HStack spacing={2}>
+                                  <Spinner size="sm" color="orange.400" />
+                                  <Text color="gray.400" fontSize="sm">话术优化中...</Text>
+                                </HStack>
+                              </Box>
+                            )}
+
+                            <div ref={messagesEndRef} />
+                          </VStack>
+                        </Box>
+
+                        {/* 底部：发送/编辑区 */}
+                        <Box>
+                          <HStack mb={1}>
+                            <Text color="gray.500" fontSize="xs">
+                              {clientChatMode === 'suggest' ? '采纳建议后可直接发送，或复制到其他平台' : '采纳优化后可直接发送，或复制到其他平台'}
+                            </Text>
+                          </HStack>
+                          <HStack>
+                            <Input
+                              flex={1}
+                              value={clientInput}
+                              onChange={e => setClientInput(e.target.value)}
+                              onKeyPress={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                  e.preventDefault();
+                                  handleSendToClient();
+                                }
+                              }}
+                              placeholder="编辑回复内容，或点击上方建议采纳..."
+                              bg="gray.700"
+                              border="none"
+                              color="white"
+                              _placeholder={{ color: 'gray.400' }}
+                            />
+                            <Button
+                              colorScheme="teal"
+                              onClick={handleSendToClient}
+                              isLoading={sendingClientMsg}
+                              isDisabled={!clientInput.trim()}
+                              leftIcon={<Icon as={FiSend} />}
+                            >
+                              发送
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleClearClientChat}
+                              color="gray.400"
+                              isDisabled={clientChatHistory.length === 0}
+                            >
+                              清除
+                            </Button>
+                          </HStack>
+                        </Box>
+                      </>
+                    )}
+
+                    {/* 和女生聊天模式 */}
+                    {workbenchChatMode === 'girl' && !selectedGirl && (
                       <Flex flex={1} align="center" justify="center">
                         <Text color="gray.500">先在左侧选择一个女生开始实战聊天</Text>
                       </Flex>
-                    ) : (
+                    )}
+
+                    {workbenchChatMode === 'girl' && selectedGirl && (
                       <>
                         {/* 顶部：模式切换 + 输入区 */}
                         {battleMode === 'analyze' && (
@@ -891,6 +1572,55 @@ export default function AdminWorkbench() {
                               </Box>
                             )}
 
+                            {/* 档案更新预览 */}
+                            {Object.keys(profilePendingFields).length > 0 && (
+                              <Box p={3} bg="cyan.900" borderRadius="lg" borderLeft="3px solid" borderColor="cyan.400">
+                                <HStack justify="space-between" mb={2}>
+                                  <HStack>
+                                    <Icon as={FiUser} color="cyan.400" boxSize={4} />
+                                    <Text color="cyan.300" fontSize="sm" fontWeight="bold">档案更新（AI 从对话中识别）</Text>
+                                    <Badge colorScheme="cyan" fontSize="xs">{Object.keys(profilePendingFields).length} 个字段</Badge>
+                                  </HStack>
+                                  <Button
+                                    size="xs"
+                                    variant="ghost"
+                                    color="gray.400"
+                                    onClick={() => setShowProfileFields(v => !v)}
+                                  >
+                                    {showProfileFields ? '收起' : '展开'}
+                                  </Button>
+                                </HStack>
+
+                                <Collapse in={showProfileFields}>
+                                  <Alert status="info" borderRadius="md" mb={2} bg="cyan.800" fontSize="xs">
+                                    <AlertIcon />
+                                    采纳回复建议时将自动更新已勾选字段。如需修改，稍后可在底部「待审核档案」面板处理。
+                                  </Alert>
+                                  <SimpleGrid columns={2} spacing={2}>
+                                    {Object.entries(profilePendingFields).map(([key, { label, value }]) => (
+                                      <HStack key={key} bg="gray.700" p={2} borderRadius="md">
+                                        <Checkbox
+                                          size="sm"
+                                          isChecked={!!selectedProfileFields[key]}
+                                          onChange={(e) => {
+                                            setSelectedProfileFields(prev => ({
+                                              ...prev,
+                                              [key]: e.target.checked ? value : false
+                                            }));
+                                          }}
+                                          colorScheme="cyan"
+                                        />
+                                        <Box flex={1}>
+                                          <Text color="gray.400" fontSize="xs">{label}</Text>
+                                          <Text color="cyan.200" fontSize="sm" wordBreak="break-all">{value}</Text>
+                                        </Box>
+                                      </HStack>
+                                    ))}
+                                  </SimpleGrid>
+                                </Collapse>
+                              </Box>
+                            )}
+
                             {aiSuggestions.length > 0 && (
                               <Box p={3} bg="blue.900" borderRadius="lg" borderLeft="3px solid" borderColor="blue.400">
                                 <HStack mb={2}>
@@ -911,7 +1641,18 @@ export default function AdminWorkbench() {
                                     >
                                       <HStack justify="space-between" mb={1}>
                                         <Badge colorScheme="blue" fontSize="xs">{s.style || '建议'}</Badge>
-                                        <Text color="gray.400" fontSize="xs">{s.intention || ''}</Text>
+                                        <HStack spacing={1}>
+                                          <Text color="gray.400" fontSize="xs">{s.intention || ''}</Text>
+                                          <Icon
+                                            as={FiCopy}
+                                            color="gray.500"
+                                            boxSize={3}
+                                            cursor="pointer"
+                                            _hover={{ color: 'teal.400' }}
+                                            onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(s.text || s.reply || s); toast({ description: '已复制到剪贴板', duration: 1500, isClosable: false, position: 'top' }); }}
+                                            title="一键复制"
+                                          />
+                                        </HStack>
                                       </HStack>
                                       <Text color="white" fontSize="sm">{s.text || s.reply || s}</Text>
                                     </Box>
@@ -941,7 +1682,18 @@ export default function AdminWorkbench() {
                                     >
                                       <HStack justify="space-between" mb={1}>
                                         <Badge colorScheme="orange" fontSize="xs">{opt.style || '优化版'}</Badge>
-                                        <Text color="gray.400" fontSize="xs">{opt.point || ''}</Text>
+                                        <HStack spacing={1}>
+                                          <Text color="gray.400" fontSize="xs">{opt.point || ''}</Text>
+                                          <Icon
+                                            as={FiCopy}
+                                            color="gray.500"
+                                            boxSize={3}
+                                            cursor="pointer"
+                                            _hover={{ color: 'teal.400' }}
+                                            onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(opt.text || opt.reply || opt); toast({ description: '已复制到剪贴板', duration: 1500, isClosable: false, position: 'top' }); }}
+                                            title="一键复制"
+                                          />
+                                        </HStack>
                                       </HStack>
                                       <Text color="white" fontSize="sm">{opt.text || opt.reply || opt}</Text>
                                     </Box>
@@ -995,29 +1747,6 @@ export default function AdminWorkbench() {
                             >
                               发送
                             </Button>
-                            <HStack
-                              bg="gray.700"
-                              px={3}
-                              py={2}
-                              borderRadius="md"
-                              cursor="pointer"
-                              onClick={() => setVisibleToClient(!visibleToClient)}
-                            >
-                              <Box
-                                w="16px"
-                                h="16px"
-                                borderRadius="sm"
-                                border="2px solid"
-                                borderColor={visibleToClient ? 'teal.400' : 'gray.500'}
-                                bg={visibleToClient ? 'teal.400' : 'transparent'}
-                                display="flex"
-                                alignItems="center"
-                                justifyContent="center"
-                              >
-                                {visibleToClient && <Text fontSize="xs">✓</Text>}
-                              </Box>
-                              <Text color="gray.300" fontSize="xs">推送客户</Text>
-                            </HStack>
                             <Box flex={1} />
                             <Button
                               variant="ghost"
@@ -1112,14 +1841,68 @@ export default function AdminWorkbench() {
           </Tabs>
         </Box>
 
-        {/* 右侧：选中女生详情 */}
+        {/* 右侧：选中对象详情 */}
         <Box w="300px">
           <Card bg="gray.800" h="100%">
             <CardHeader pb={2}>
-              <Text color="gray.400" fontSize="sm">选中女生</Text>
+              <Text color="gray.400" fontSize="sm">
+                {workbenchChatMode === 'client' ? '选中客户' : '选中女生'}
+              </Text>
             </CardHeader>
             <CardBody pt={0}>
-              {selectedGirl ? (
+              {/* 客户模式 */}
+              {workbenchChatMode === 'client' && selectedClient ? (
+                <VStack spacing={3} align="stretch">
+                  <Box p={3} bg="gray.700" borderRadius="md">
+                    <HStack mb={2}>
+                      <Icon as={FiUser} color="teal.300" boxSize={5} />
+                      <Text color="white" fontWeight="bold" fontSize="lg">{selectedClient.nickname || selectedClient.username}</Text>
+                    </HStack>
+                    <HStack spacing={2}>
+                      <Badge colorScheme="teal">{selectedClient.serviceStage || '建池'}</Badge>
+                      <Text color="gray.400" fontSize="xs">{girlsList.length} 个女生</Text>
+                    </HStack>
+                  </Box>
+
+                  <SimpleGrid columns={2} gap={2}>
+                    <Box p={2} bg="gray.700" borderRadius="md">
+                      <Text color="gray.400" fontSize="xs">年龄</Text>
+                      <Text color="white">{selectedClient.age || '-'}</Text>
+                    </Box>
+                    <Box p={2} bg="gray.700" borderRadius="md">
+                      <Text color="gray.400" fontSize="xs">职业</Text>
+                      <Text color="white">{selectedClient.occupation || '-'}</Text>
+                    </Box>
+                  </SimpleGrid>
+
+                  <Box p={3} bg="gray.700" borderRadius="md">
+                    <Text color="gray.400" fontSize="xs">所在地</Text>
+                    <Text color="white" fontSize="sm">{selectedClient.residence || '-'}</Text>
+                  </Box>
+
+                  <Box p={3} bg="gray.700" borderRadius="md">
+                    <Text color="gray.400" fontSize="xs">沟通风格</Text>
+                    <Text color="white" fontSize="sm">{selectedClient.communicationStyle || '-'}</Text>
+                  </Box>
+
+                  <Box p={3} bg="gray.700" borderRadius="md">
+                    <Text color="gray.400" fontSize="xs">当前会话</Text>
+                    <Text color="gray.300" fontSize="sm">{clientMessages.length} 条消息</Text>
+                  </Box>
+
+                  {selectedClient.notes && (
+                    <Box p={3} bg="gray.700" borderRadius="md">
+                      <Text color="gray.400" fontSize="xs">备注</Text>
+                      <Text color="gray.300" fontSize="sm">{selectedClient.notes}</Text>
+                    </Box>
+                  )}
+                </VStack>
+              ) : workbenchChatMode === 'client' ? (
+                <Text color="gray.500" fontSize="sm">选择客户查看详情</Text>
+              ) : null}
+
+              {/* 女生模式 */}
+              {workbenchChatMode === 'girl' && selectedGirl ? (
                 <VStack spacing={3} align="stretch">
                   <Box p={3} bg="gray.700" borderRadius="md">
                     <Text color="white" fontWeight="bold" fontSize="lg">{selectedGirl.name}</Text>
@@ -1170,9 +1953,9 @@ export default function AdminWorkbench() {
                     </Box>
                   )}
                 </VStack>
-              ) : (
+              ) : workbenchChatMode === 'girl' && !selectedGirl ? (
                 <Text color="gray.500" fontSize="sm">选择女生查看详情</Text>
-              )}
+              ) : null}
             </CardBody>
           </Card>
         </Box>

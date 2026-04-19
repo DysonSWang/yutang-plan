@@ -217,7 +217,18 @@ export const chatPartner = {
   send: (data) => api.post('/api/chat-partner/send', data),
   pendingUpdates: (girlId) => api.get(`/api/chat-partner/pending-updates/${girlId}`),
   approveUpdates: (updateIds, approve) => api.post('/api/chat-partner/approve-updates', { updateIds, approve }),
-  applyUpdate: (updateId) => api.post(`/api/chat-partner/apply-update/${updateId}`)
+  applyUpdate: (updateId) => api.post(`/api/chat-partner/apply-update/${updateId}`),
+  // 女生档案待确认
+  girlProfilePending: (girlId) => api.get(`/api/chat-partner/girl-profile/pending/${girlId}`),
+  confirmGirlProfile: (data) => api.post('/api/chat-partner/girl-profile/confirm', data),
+  rejectGirlProfile: (data) => api.post('/api/chat-partner/girl-profile/reject', data),
+  // 客户聊天分析（操盘手↔客户沟通时的AI军师）
+  analyzeClient: (data) => api.post('/api/chat-partner/client-analyze', data),
+  optimizeClientMessage: (data) => api.post('/api/chat-partner/client-optimize', data),
+  // 客户档案待确认
+  clientProfilePending: (clientId) => api.get(`/api/chat-partner/client-profile/pending/${clientId}`),
+  confirmClientProfile: (data) => api.post('/api/chat-partner/client-profile/confirm', data),
+  rejectClientProfile: (data) => api.post('/api/chat-partner/client-profile/reject', data),
 };
 
 // 聊天截图

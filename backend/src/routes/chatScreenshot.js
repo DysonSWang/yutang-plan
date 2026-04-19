@@ -10,7 +10,7 @@ const jwt = require('jsonwebtoken');
 
 const { JWT_SECRET, BASE_URL } = require('../config');
 const prisma = require('../prisma');
-const { extractFromNotes, extractFromImage, applyAnalysisToGirl } = require('../services/signalExtractor');
+const { extractFromNotes, extractFromImage, confirmAnalysis } = require('../services/signalExtractor');
 
 // 上传目录
 const UPLOAD_DIR = path.join(__dirname, '../../uploads/chat-screenshots');
@@ -132,50 +132,27 @@ router.post('/', authMiddleware, async (req, res) => {
         }
       });
 
-      // 自动提取信号（异步，不阻塞响应）
-      if (notes) {
-        extractFromNotes(girlId, notes).catch(err => {
-          console.error('[ChatScreenshot] 自动提取信号失败:', err);
-        });
-      }
-
-      // AI 分析截图（不自动入库，返回待确认字段）
-      let extractedFields = {};
+      // AI 分析截图 + 备注提取（均返回待确认，不自动入库）
+      let pendingFields = {};
+      let pendingId = null;
       let analysisData = null;
+
+      // 截图分析
       try {
-        const result = await extractFromImage(girlId, imageUrl, BASE_URL);
-        if (result.error) {
-          // JSON 解析失败或图片无法识别，仍返回截图（已上传），但告知前端错误原因
-          console.warn('[ChatScreenshot] AI分析失败:', result.error, result.rawContent || '');
-        } else if (result.analysis) {
-          analysisData = result.analysis;
+        const imageResult = await extractFromImage(girlId, imageUrl, BASE_URL, req.user.id);
+        if (imageResult?.error) {
+          console.warn('[ChatScreenshot] AI分析失败:', imageResult.error);
+        } else if (imageResult?.analysis) {
+          analysisData = imageResult.analysis;
+          pendingFields = imageResult.pendingFields || {};
+          pendingId = imageResult.pendingId;
 
-          // 提取待确认的档案字段（key-value 形式返回前端）
-          const profileUpdates = result.analysis.profileUpdates || {};
-          const fieldLabels = {
-            age: '年龄', occupation: '职业', education: '学历', major: '专业',
-            hometown: '籍贯', residence: '现居城市', workplace: '工作地点',
-            height: '身高(cm)', bodyType: '体型',
-            appearance: '外貌', styleTags: '风格', familyBackground: '家庭背景',
-            workSchedule: '工作时间', interests: '兴趣爱好', dietPreferences: '饮食偏好', dietRestrictions: '饮食禁忌',
-            personality: '性格', communicationStyle: '沟通风格', emotionalTriggers: '情绪触发点',
-            talkingTopics: '喜欢话题', thingsToAvoid: '禁忌话题',
-            relationshipAttitude: '婚恋态度', attachmentStyle: '依恋类型', responsePattern: '回复规律',
-            chatPartnerId: '谙世角色ID'
-          };
-          for (const [key, label] of Object.entries(fieldLabels)) {
-            const val = profileUpdates[key];
-            if (val && val !== null && val !== '') {
-              extractedFields[key] = { label, value: String(val) };
-            }
-          }
-
-          // 备注和对话文本仍保存到截图（不需确认）
+          // 备注和对话文本保存到截图
           await prisma.chatScreenshot.update({
             where: { id: screenshot.id },
             data: {
-              notes: result.aiNotes,
-              chatText: result.chatText || null
+              notes: imageResult.aiNotes,
+              chatText: imageResult.chatText || null
             }
           });
         }
@@ -183,7 +160,14 @@ router.post('/', authMiddleware, async (req, res) => {
         console.error('[ChatScreenshot] AI分析失败:', err);
       }
 
-      res.json({ success: true, screenshot, extractedFields });
+      // 备注分析（异步，不阻塞响应）
+      if (notes) {
+        extractFromNotes(girlId, notes, req.user.id).catch(err => {
+          console.error('[ChatScreenshot] 备注提取信号失败:', err);
+        });
+      }
+
+      res.json({ success: true, screenshot, pendingFields, pendingId });
     });
   } catch (error) {
     console.error('[ChatScreenshot] 上传截图失败:', error);
@@ -198,35 +182,19 @@ router.post('/confirm-fields', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: '无权限' });
     }
 
-    const { girlId, selectedFields } = req.body;
-    if (!girlId || !selectedFields || typeof selectedFields !== 'object') {
-      return res.status(400).json({ error: '参数不完整' });
+    const { girlId, pendingId, selectedFields } = req.body;
+    if (!girlId || !pendingId) {
+      return res.status(400).json({ error: '参数不完整，需要 girlId 和 pendingId' });
     }
 
-    const girl = await prisma.girl.findUnique({ where: { id: girlId } });
-    if (!girl) {
-      return res.status(404).json({ error: '女生不存在' });
+    // 调用新的确认接口
+    const result = await confirmAnalysis(girlId, pendingId, selectedFields);
+
+    if (!result.success) {
+      return res.status(404).json({ error: result.reason });
     }
 
-    // 构建 analysis 对象，只包含用户选中的字段
-    const profileUpdates = {};
-    for (const [key, val] of Object.entries(selectedFields)) {
-      if (val !== null && val !== undefined && val !== '') {
-        profileUpdates[key] = val;
-      }
-    }
-
-    const analysis = { profileUpdates };
-
-    // 解析现有信号
-    let existingSignals = [];
-    if (girl.signals) {
-      try { existingSignals = JSON.parse(girl.signals); } catch (e) {}
-    }
-
-    await applyAnalysisToGirl(girlId, analysis, existingSignals, girl);
-
-    res.json({ success: true });
+    res.json({ success: true, ...result });
   } catch (error) {
     console.error('[ChatScreenshot] 确认字段失败:', error);
     res.status(500).json({ error: '确认失败' });
@@ -291,6 +259,8 @@ router.post('/:id/ai-notes', authMiddleware, async (req, res) => {
     res.json({
       success: true,
       screenshot: updated,
+      pendingId: result.pendingId,
+      pendingFields: result.pendingFields,
       aiNotes: result.aiNotes,
       chatText: result.chatText,
       analysis: result.analysis
@@ -333,13 +303,27 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// 客户的截图记录（双方共享）
+// 客户的截图记录（仅客户本人可见）
 router.get('/client/me', authMiddleware, async (req, res) => {
   try {
+    // 客户才能查自己的截图
+    if (req.user.role !== 'client') {
+      return res.status(403).json({ error: '只有客户可以访问此接口' });
+    }
+
     const { girlId, limit = 50 } = req.query;
 
+    // 客户只能查自己名下的截图，不允许跨客户查询
     const where = { clientId: req.user.id };
+
+    // 如果指定了 girlId，额外校验该女生是否属于此客户
     if (girlId) {
+      const girl = await prisma.girl.findFirst({
+        where: { id: girlId, clientId: req.user.id }
+      });
+      if (!girl) {
+        return res.status(403).json({ error: '无权查看此女生的截图' });
+      }
       where.girlId = girlId;
     }
 

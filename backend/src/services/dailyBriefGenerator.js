@@ -322,5 +322,6 @@ async function getDashboardStats(clientId) {
 module.exports = {
   generateDailyBrief,
   getDashboardStats,
+  getCachedBrief,
   clearBriefCache
 };

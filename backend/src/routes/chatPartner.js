@@ -12,41 +12,26 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const { buildAICoachContext } = require('../services/contextBuilder');
 const { executeTool } = require('../coaches/skills');
+const { extractFromChat: extractGirlFromChat } = require('../services/girlProfileExtractor');
+const { extractFromChat: extractClientFromChat } = require('../services/clientProfileExtractor');
+const { GIRL_FIELD_LABELS, CLIENT_FIELD_LABELS } = require('../services/profileEngine');
 
 const { JWT_SECRET, getAIConfig } = require('../config');
 const prisma = require('../prisma');
 
 /**
- * 待审核更新队列（内存）
- * 结构：Map<girlId, PendingUpdate[]>
- * PendingUpdate: { id, operatorId, clientId, girlId, logId, replyText,
- *   originalGirlMessage, style, intention, createdAt, status: 'pending'|'approved'|'rejected',
- *   analysis: { tensionChange, signalType, signalEvent, newSignals, learning } }
+ * 待审核更新队列（数据库驱动，不再使用内存 Map）
+ * 写入：runAsyncFeedbackAnalysis() → PendingProfileUpdate 表
+ * 读取：/pending-updates → DB 查询
+ * 审核：/approve-updates → DB 更新 status
  */
-const pendingUpdates = new Map();
 
-/**
- * 生成待审核更新 ID
- */
-function makeUpdateId() {
-  return `pu_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-}
-
-/**
- * 获取女生的待审核更新（倒序，新到旧）
- */
-function getPendingForGirl(girlId) {
-  const updates = pendingUpdates.get(girlId) || [];
-  return updates.filter(u => u.status === 'pending').reverse();
-}
 
 /**
  * 异步执行反馈分析（不阻塞主流程）
- * 分析采纳的建议会对女生档案产生什么变化，但暂时不写入，只返回变化内容
+ * 分析采纳的建议会对女生档案产生什么变化，写入数据库待审核队列
  */
 async function runAsyncFeedbackAnalysis({ girlId, clientId, operatorId, logId, replyText, originalGirlMessage, style, intention }) {
-  const updateId = makeUpdateId();
-
   // 热度调整映射（和 /feedback 里一致）
   const tensionAdjustments = {
     '进攻型': 1, '暧昧型': 1.5, '浪漫型': 1.5, '试探型': 0.5,
@@ -63,7 +48,7 @@ async function runAsyncFeedbackAnalysis({ girlId, clientId, operatorId, logId, r
     ? `采纳"${style}"回复，对方回应积极，关系推进信号`
     : `采纳"${style}"回复，维持互动`;
 
-  // 分析消息内容，推断热度变化原因和新增信号
+  // 构建分析数据（写入数据库）
   const analysisResult = {
     tensionChange: adjustment,
     signalType,
@@ -71,6 +56,11 @@ async function runAsyncFeedbackAnalysis({ girlId, clientId, operatorId, logId, r
     newSignals: [
       { type: signalType, event: signalEvent, date: new Date().toISOString() }
     ],
+    // fieldChanges 供审核时使用
+    fieldChanges: {
+      tensionScore: adjustment !== 0 ? { delta: adjustment, reason: signalEvent } : null,
+      signals: [{ type: signalType, event: signalEvent }],
+    },
     // record_learning 的内容（异步，不写库）
     learning: {
       style,
@@ -78,33 +68,31 @@ async function runAsyncFeedbackAnalysis({ girlId, clientId, operatorId, logId, r
       replyText: replyText.slice(0, 50),
       result: adjustment > 0 ? 'positive' : adjustment < 0 ? 'negative' : 'neutral',
       timestamp: new Date().toISOString()
-    },
-    // 可供操盘手审核的字段变化
-    fieldChanges: {
-      tensionScore: adjustment !== 0 ? { delta: adjustment, reason: signalEvent } : null,
-      signals: [{ type: signalType, event: signalEvent }],
     }
   };
 
-  // 写入待审核队列
-  const update = {
-    id: updateId,
-    operatorId,
-    clientId,
-    girlId,
-    logId,
-    replyText,
-    originalGirlMessage,
-    style,
-    intention,
-    createdAt: new Date().toISOString(),
-    status: 'pending',
-    analysis: analysisResult
-  };
-
-  const existing = pendingUpdates.get(girlId) || [];
-  existing.push(update);
-  pendingUpdates.set(girlId, existing);
+  // 写入数据库待审核队列（持久化，重启不丢失）
+  const pending = await prisma.pendingProfileUpdate.create({
+    data: {
+      targetType: 'girl',
+      targetId: girlId,
+      source: 'chat_feedback',
+      operatorId,
+      profileContext: JSON.stringify({
+        girlId,
+        clientId,
+        logId,
+        replyText,
+        originalGirlMessage,
+        style,
+        intention
+      }),
+      analysisData: JSON.stringify(analysisResult),
+      adoptedReply: replyText,
+      replyStyle: style,
+      status: 'pending'
+    }
+  });
 
   // 异步执行 record_learning（不影响主流程）
   setImmediate(async () => {
@@ -121,8 +109,8 @@ async function runAsyncFeedbackAnalysis({ girlId, clientId, operatorId, logId, r
     }
   });
 
-  console.log(`[PendingUpdates] 生成待审核更新 ${updateId} for girl ${girlId}`);
-  return updateId;
+  console.log(`[PendingUpdates] 生成待审核更新 ${pending.id} for girl ${girlId}`);
+  return pending.id;
 }
 
 const authMiddleware = async (req, res, next) => {
@@ -402,46 +390,67 @@ ${operatorNotes || '无'}
 
 只输出 JSON，不要其他内容。`;
 
+    // 并行执行：AI 回复建议 + 档案字段提取（一次 fetch，复用结果）
     const aiConfig = getAIConfig();
-    const response = await fetch(aiConfig.url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${aiConfig.key}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: aiConfig.model,
-        messages: [
-          { role: 'system', content: '你是一个专业的恋爱军师和沟通顾问，擅长分析女生聊天对话并提供高情商回复建议。回复要口语化、有温度。' },
-          { role: 'user', content: systemPrompt }
-        ],
-        temperature: 0.8,
-        max_tokens: 1200
-      })
-    });
+    const [replyResult, profileResult] = await Promise.allSettled([
+      // AI 回复建议
+      fetch(aiConfig.url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${aiConfig.key}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: aiConfig.model,
+          messages: [
+            { role: 'system', content: '你是一个专业的恋爱军师和沟通顾问，擅长分析女生聊天对话并提供高情商回复建议。回复要口语化、有温度。' },
+            { role: 'user', content: systemPrompt }
+          ],
+          temperature: 0.8,
+          max_tokens: 1200
+        })
+      }),
+      // 档案字段提取
+      girlId ? extractGirlFromChat(girlId, req.user.id, message, { history, pendingActions, observations, conversationSummary }) : Promise.resolve(null)
+    ]);
 
-    const data = await response.json();
-    const aiContent = data.choices?.[0]?.message?.content || '';
+    // 解析回复建议
+    let replySuggestions = [
+      { text: '嗯嗯，我在呢~', style: defaultStyles[0], intention: '维持联系' },
+      { text: '想我啦？', style: defaultStyles[1], intention: '制造暧昧' },
+      { text: '怎么突然找我呀？', style: defaultStyles[2], intention: '试探对方' }
+    ];
+    let replyAnalysis = '分析中...';
 
-    let result;
-    try {
-      const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        result = JSON.parse(jsonMatch[0]);
-      }
-    } catch (e) {
-      console.warn('[ChatPartner] AI 返回非 JSON 格式');
+    if (replyResult.status === 'fulfilled' && replyResult.value.ok) {
+      const replyData = await replyResult.value.json();
+      const aiContent = replyData.choices?.[0]?.message?.content || '';
+      try {
+        const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          replyAnalysis = parsed.analysis || replyAnalysis;
+          replySuggestions = parsed.suggestions || replySuggestions;
+        }
+      } catch {}
+    }
+
+    // 解析档案提取结果
+    let pendingFields = {};
+    let profilePendingId = null;
+    if (profileResult.status === 'fulfilled' && profileResult.value) {
+      pendingFields = profileResult.value.pendingFields || {};
+      profilePendingId = profileResult.value.pendingId;
     }
 
     res.json({
       success: true,
       girlId: girlId || null,
-      analysis: result?.analysis || '分析中...',
-      suggestions: result?.suggestions || [
-        { text: '嗯嗯，我在呢~', style: defaultStyles[0], intention: '维持联系' },
-        { text: '想我啦？', style: defaultStyles[1], intention: '制造暧昧' },
-        { text: '怎么突然找我呀？', style: defaultStyles[2], intention: '试探对方' }
-      ],
+      analysis: replyAnalysis,
+      suggestions: replySuggestions,
+      profilePendingId,  // 新：档案待确认 ID
+      pendingFields,     // 新：待确认档案字段 { fieldKey: { label, value } }
+      fieldLabels: GIRL_FIELD_LABELS,
       context: {
         stage,
         tensionScore: girlInfo?.tensionScore || 5,
@@ -472,7 +481,8 @@ router.post('/feedback', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: '无权限' });
     }
 
-    const { girlId, receiverName, chosenReply, originalGirlMessage, style, intention } = req.body;
+    const { girlId, receiverName, chosenReply, originalGirlMessage, style, intention,
+      profilePendingId, selectedProfileFields } = req.body;
 
     if (!girlId || !chosenReply) {
       return res.status(400).json({ error: '参数不完整' });
@@ -510,10 +520,26 @@ router.post('/feedback', authMiddleware, async (req, res) => {
       intention: intention || ''
     });
 
+    // 3. 处理档案字段确认（如果提供了 pendingId）
+    let profileConfirmResult = null;
+    if (profilePendingId) {
+      try {
+        const { confirmProfileUpdate } = require('../services/girlProfileExtractor');
+        // 如果没有传递 selectedProfileFields，默认不采纳任何字段（{}）
+        // 操盘手必须在 /girl-profile/confirm 手动确认要采纳哪些字段
+        // 传空对象 {} 明确表示放弃采纳；传 null 意味着采纳热度/信号但不更新档案字段
+        const fieldsToApply = selectedProfileFields === undefined ? {} : selectedProfileFields;
+        profileConfirmResult = await confirmProfileUpdate(girlId, profilePendingId, fieldsToApply);
+      } catch (e) {
+        console.warn('[ChatPartner] 档案确认失败:', e.message);
+      }
+    }
+
     res.json({
       success: true,
       logId: log.id,
       feedbackId: updateId,
+      profileConfirm: profileConfirmResult,
       status: 'pending_review'
     });
 
@@ -534,7 +560,24 @@ router.get('/pending-updates/:girlId', authMiddleware, async (req, res) => {
     }
 
     const { girlId } = req.params;
-    const updates = getPendingForGirl(girlId);
+
+    // 从数据库查询待审核记录（包括 chat_feedback 和 chat_analyze 等来源）
+    const pending = await prisma.pendingProfileUpdate.findMany({
+      where: { targetType: 'girl', targetId: girlId, status: 'pending' },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const updates = pending.map(p => ({
+      id: p.id,
+      operatorId: p.operatorId,
+      source: p.source,
+      createdAt: p.createdAt,
+      status: p.status,
+      analysis: JSON.parse(p.analysisData),
+      profileContext: p.profileContext ? JSON.parse(p.profileContext) : null,
+      adoptedReply: p.adoptedReply,
+      replyStyle: p.replyStyle
+    }));
 
     // 附带女生当前状态（用于 diff）
     let currentGirl = null;
@@ -588,30 +631,29 @@ router.post('/approve-updates', authMiddleware, async (req, res) => {
     const results = [];
 
     for (const updateId of updateIds) {
-      // 找到这条更新
-      let found = null;
-      for (const [girlId, updates] of pendingUpdates.entries()) {
-        const idx = updates.findIndex(u => u.id === updateId && u.status === 'pending');
-        if (idx !== -1) {
-          found = updates[idx];
-          found.status = approve ? 'approved' : 'rejected';
-          break;
-        }
-      }
+      // 从数据库查找待审核记录
+      const pending = await prisma.pendingProfileUpdate.findFirst({
+        where: { id: updateId, status: 'pending' }
+      });
 
-      if (!found) {
+      if (!pending) {
         results.push({ updateId, success: false, reason: '未找到或已处理' });
         continue;
       }
 
+      // 更新数据库状态
+      await prisma.pendingProfileUpdate.update({
+        where: { id: updateId },
+        data: { status: approve ? 'approved' : 'rejected' }
+      });
+
       if (approve) {
-        // 执行实际的档案更新
-        const { girlId, analysis } = found;
+        const analysis = JSON.parse(pending.analysisData);
 
         try {
-          if (analysis.fieldChanges.tensionScore) {
+          if (analysis.fieldChanges?.tensionScore) {
             await executeTool('update_tension', {
-              girlId,
+              girlId: pending.targetId,
               adjustment: analysis.fieldChanges.tensionScore.delta,
               reason: `操盘手审核采纳: ${analysis.fieldChanges.tensionScore.reason}`
             });
@@ -620,7 +662,7 @@ router.post('/approve-updates', authMiddleware, async (req, res) => {
           if (analysis.newSignals?.length > 0) {
             for (const signal of analysis.newSignals) {
               await executeTool('add_signal', {
-                girlId,
+                girlId: pending.targetId,
                 type: signal.type,
                 event: signal.event
               });
@@ -653,29 +695,27 @@ router.post('/apply-update/:updateId', authMiddleware, async (req, res) => {
     }
 
     const { updateId } = req.params;
-    let found = null;
-    let foundGirlId = null;
 
-    for (const [girlId, updates] of pendingUpdates.entries()) {
-      const idx = updates.findIndex(u => u.id === updateId && u.status === 'pending');
-      if (idx !== -1) {
-        found = updates[idx];
-        foundGirlId = girlId;
-        break;
-      }
-    }
+    // 从数据库查找待审核记录
+    const pending = await prisma.pendingProfileUpdate.findFirst({
+      where: { id: updateId, status: 'pending' }
+    });
 
-    if (!found) {
+    if (!pending) {
       return res.status(404).json({ error: '未找到待审核更新' });
     }
 
-    found.status = 'approved';
+    // 更新数据库状态
+    await prisma.pendingProfileUpdate.update({
+      where: { id: updateId },
+      data: { status: 'approved' }
+    });
 
     // 执行档案更新
-    const { analysis } = found;
-    if (analysis.fieldChanges.tensionScore) {
+    const analysis = JSON.parse(pending.analysisData);
+    if (analysis.fieldChanges?.tensionScore) {
       await executeTool('update_tension', {
-        girlId: foundGirlId,
+        girlId: pending.targetId,
         adjustment: analysis.fieldChanges.tensionScore.delta,
         reason: `操盘手审核采纳: ${analysis.fieldChanges.tensionScore.reason}`
       });
@@ -684,7 +724,7 @@ router.post('/apply-update/:updateId', authMiddleware, async (req, res) => {
     if (analysis.newSignals?.length > 0) {
       for (const signal of analysis.newSignals) {
         await executeTool('add_signal', {
-          girlId: foundGirlId,
+          girlId: pending.targetId,
           type: signal.type,
           event: signal.event
         });
@@ -774,6 +814,518 @@ router.post('/send', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('[ChatPartner] 保存失败:', error);
     res.status(500).json({ error: '保存失败' });
+  }
+});
+
+/**
+ * 客户聊天分析 - 操盘手和客户沟通时的 AI 军师
+ * POST /api/chat-partner/client-analyze
+ *
+ * 和 /analyze 的区别：
+ * - 上下文是客户档案（沟通风格、服务阶段、情绪状态、配合度）
+ * - 目标是帮助操盘手更有效地与客户沟通
+ * - 建议风格要适配客户的性格和沟通偏好
+ */
+router.post('/client-analyze', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const { clientId, message, history = [] } = req.body;
+
+    if (!message) {
+      return res.status(400).json({ error: '消息内容是必需的' });
+    }
+    if (!clientId) {
+      return res.status(400).json({ error: 'clientId 是必需的' });
+    }
+
+    // 安全校验：验证 clientId 属于当前操盘手（通过会话关联校验）
+    const operatorSession = await prisma.chatSession.findFirst({
+      where: { clientId, operatorId: req.user.id }
+    });
+    if (!operatorSession) {
+      return res.status(403).json({ error: '无权操作此客户' });
+    }
+
+    // 获取客户档案
+    const client = await prisma.user.findUnique({ where: { id: clientId, role: 'client' } });
+    if (!client) {
+      return res.status(404).json({ error: '客户不存在' });
+    }
+
+    // 获取与该客户的聊天历史
+    const session = await prisma.chatSession.findFirst({
+      where: { clientId },
+      orderBy: { updatedAt: 'desc' }
+    });
+
+    let recentMessages = [];
+    if (session) {
+      const msgs = await prisma.message.findMany({
+        where: { sessionId: session.id },
+        orderBy: { createdAt: 'desc' },
+        take: 20
+      });
+      recentMessages = msgs.reverse().map(m => ({
+        role: m.senderRole === 'operator' ? '操盘手' : '客户',
+        content: m.content
+      }));
+    }
+
+    const historyString = recentMessages.map(m => `${m.role}: ${m.content}`).join('\n') || '（暂无历史记录）';
+
+    const clientType = client.clientType || '执行型';
+    const communicationStyle = client.communicationStyle || '含蓄';
+    const cooperation = client.coachCooperation || '配合';
+    const serviceStage = client.serviceStage || '建池';
+
+
+    // 沟通风格适配
+    const styleMap = {
+      '直接': ['直接型', '真诚型', '简洁型'],
+      '含蓄': ['委婉型', '细腻型', '试探型'],
+      '话多': ['耐心型', '互动型', '引导型'],
+      '话少': ['精简型', '沉稳型', '观察型'],
+    };
+    const defaultStyles = styleMap[communicationStyle] || ['真诚型', '细腻型', '引导型'];
+
+    const systemPrompt = `你是一个专业的客户服务顾问，擅长帮助操盘手（情感咨询师）与客户进行高效沟通。
+
+【客户档案】
+昵称：${client.nickname || client.username || '未知'}
+服务阶段：${serviceStage}
+沟通风格：${communicationStyle}
+客户类型：${clientType}
+配合度：${cooperation}
+
+【性格特征】
+- MBTI/性格：${client.personality || '未知'}
+- 情绪稳定性：${client.emotionalStable ? client.emotionalStable + '/10' : '未知'}
+- 情商水平：${client.eqLevel ? client.eqLevel + '/10' : '未知'}
+- 社交风格：${client.socialStyle || '未知'}
+- 婚恋态度：${client.relationshipAttitude || '未知'}
+- 感情诉求：${client.emotionalGoal || '未知'}
+
+【价值画像】
+核心卖点：${client.strengths || '未知'}
+价值短板：${client.weaknesses || '未知'}
+自我价值认知：${client.selfValuePerception || '未知'}
+
+【学习与配合】
+学习能力：${client.learningAbility || '未知'}
+配合度：${cooperation}
+反馈质量：${client.feedbackQuality || '未知'}
+自尊水平：${client.selfEsteemLevel || '未知'}
+抗压能力：${client.antiFrustrationLevel ? client.antiFrustrationLevel + '/10' : '未知'}
+
+【代聊风格偏好】
+互动风格：${client.interactionStyle || '未知'}
+幽默风格：${client.humorStyle || '未知'}
+口头禅：${client.petPhrases || '暂无'}
+代聊禁区：${client.chatTaboos || '暂无'}
+
+【关系信任度】
+信任度：${client.trustLevel || 1}/5
+互动热度：${client.interactionHeat || 5}/10
+
+【近期沟通记录】
+${historyString}
+
+客户刚刚发来消息："${message}"
+
+请你：
+1. 分析客户这条消息的意图、情绪和潜台词
+2. 结合客户的性格、沟通风格和服务阶段，给出 3 条适合操盘手回复的建议
+3. 每条建议要适配客户的沟通偏好，有明确的意图导向
+
+回复风格应适配该客户的沟通习惯（${communicationStyle}），注意避开代聊禁区。
+
+请按以下 JSON 格式返回：
+{
+  "analysis": "分析内容（80-150字），包括：意图、情绪、潜台词、沟通策略建议",
+  "suggestions": [
+    {"text": "回复内容1", "style": "${defaultStyles[0]}", "intention": "意图说明"},
+    {"text": "回复内容2", "style": "${defaultStyles[1]}", "intention": "意图说明"},
+    {"text": "回复内容3", "style": "${defaultStyles[2]}", "intention": "意图说明"}
+  ],
+  "summary": "对本轮对话的简短总结（50字以内），帮助操盘手快速掌握沟通要点"
+}
+
+只输出 JSON，不要其他内容。`;
+
+    // 并行执行：AI 回复建议 + 档案字段提取（一次 fetch，复用结果）
+    const aiConfig = getAIConfig();
+    const [replyResult, profileResult] = await Promise.allSettled([
+      // AI 回复建议
+      fetch(aiConfig.url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${aiConfig.key}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: aiConfig.model,
+          messages: [
+            { role: 'system', content: '你是一个专业的客户服务顾问，擅长帮助操盘手与客户进行高效沟通。回复要专业、有温度、适配客户风格。' },
+            { role: 'user', content: systemPrompt }
+          ],
+          temperature: 0.8,
+          max_tokens: 1500
+        })
+      }),
+      // 档案字段提取
+      extractClientFromChat(clientId, req.user.id, message, { recentMessages })
+    ]);
+
+    // 解析回复建议
+    let replySuggestions = [
+      { text: '收到，我来看看情况。', style: defaultStyles[0], intention: '确认收到' },
+      { text: '嗯嗯，说说你的想法？', style: defaultStyles[1], intention: '引导表达' },
+      { text: '这个情况我理解，我们来分析一下。', style: defaultStyles[2], intention: '共情+分析' }
+    ];
+    let replyAnalysis = '分析中...';
+    let replySummary = '';
+
+    if (replyResult.status === 'fulfilled' && replyResult.value.ok) {
+      const replyData = await replyResult.value.json();
+      const aiContent = replyData.choices?.[0]?.message?.content || '';
+      try {
+        const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          replyAnalysis = parsed.analysis || replyAnalysis;
+          replySuggestions = parsed.suggestions || replySuggestions;
+          replySummary = parsed.summary || '';
+        }
+      } catch {}
+    }
+
+    // 解析档案提取结果
+    let pendingFields = {};
+    let profilePendingId = null;
+    if (profileResult.status === 'fulfilled' && profileResult.value) {
+      pendingFields = profileResult.value.pendingFields || {};
+      profilePendingId = profileResult.value.pendingId;
+    }
+
+    res.json({
+      success: true,
+      clientId,
+      analysis: replyAnalysis,
+      suggestions: replySuggestions,
+      summary: replySummary,
+      profilePendingId,
+      pendingFields,
+      fieldLabels: CLIENT_FIELD_LABELS,
+      context: {
+        serviceStage,
+        communicationStyle,
+        trustLevel: client.trustLevel || 1,
+        interactionHeat: client.interactionHeat || 5,
+        cooperation: client.coachCooperation || '配合'
+      }
+    });
+
+  } catch (error) {
+    console.error('[ChatPartner] 客户聊天分析失败:', error);
+    res.status(500).json({ error: '客户聊天分析失败' });
+  }
+});
+
+/**
+ * 客户聊天话术优化 - 操盘手准备发给客户的话，AI 给出优化版本
+ * POST /api/chat-partner/client-optimize
+ */
+router.post('/client-optimize', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const { clientId, myMessage, history = [] } = req.body;
+
+    if (!myMessage) {
+      return res.status(400).json({ error: '消息内容是必需的' });
+    }
+
+    const context = await buildAICoachContext(req.user.id, null);
+    const { client } = context;
+
+    if (!client || client.role !== 'client') {
+      return res.status(404).json({ error: '客户不存在' });
+    }
+
+    const communicationStyle = client.communicationStyle || '含蓄';
+    const serviceStage = client.serviceStage || '建池';
+    const cooperation = client.coachCooperation || '配合';
+    const interactionStyle = client.interactionStyle || '细腻型';
+    const humorStyle = client.humorStyle || '正经';
+    const chatTaboos = client.chatTaboos || '暂无';
+    const petPhrases = client.petPhrases || '暂无';
+
+    const historyString = history.slice(-10).map(m => {
+      const role = m.role === 'operator' ? '操盘手' : (client.nickname || '客户');
+      return `${role}: ${m.content}`;
+    }).join('\n');
+
+    const systemPrompt = `你是一个专业的客户服务话术优化专家，帮助操盘手（情感咨询师）把准备发送给客户的回复优化得更专业、更有效。
+
+【客户档案】
+昵称：${client.nickname || client.username || '未知'}
+服务阶段：${serviceStage}
+沟通风格：${communicationStyle}
+配合度：${cooperation}
+互动风格：${interactionStyle}
+幽默风格：${humorStyle}
+
+【客户口头禅】
+${petPhrases}
+
+【代聊禁区（这些话绝对不能说）】
+${chatTaboos}
+
+【对话上下文】
+${historyString || '（暂无历史记录）'}
+
+【操盘手准备发送的内容】
+"${myMessage}"
+
+请给出 3 条不同风格的优化版本：
+- 更专业（结构清晰、有理有据）
+- 更有温度（共情、理解、支持）
+- 更契合该客户性格（${communicationStyle}风格，${interactionStyle}互动）
+
+每条优化要有明确的优化点说明，让操盘手知道好在哪里。注意避开禁区。
+
+请按以下 JSON 格式返回：
+{
+  "original": "${myMessage}",
+  "optimizations": [
+    {"text": "优化版本1", "point": "优化点：...", "style": "专业型"},
+    {"text": "优化版本2", "point": "优化点：...", "style": "温度型"},
+    {"text": "优化版本3", "point": "优化点：...", "style": "契合型"}
+  ]
+}
+
+只输出 JSON，不要其他内容。`;
+
+    const aiConfig = getAIConfig();
+    const response = await fetch(aiConfig.url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${aiConfig.key}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: aiConfig.model,
+        messages: [
+          { role: 'system', content: '你是一个专业的客户服务话术优化专家，帮助操盘手把话优化得更专业、更有温度、更契合客户风格。' },
+          { role: 'user', content: systemPrompt }
+        ],
+        temperature: 0.8,
+        max_tokens: 1200
+      })
+    });
+
+    const data = await response.json();
+    const aiContent = data.choices?.[0]?.message?.content || '';
+
+    let result;
+    try {
+      const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        result = JSON.parse(jsonMatch[0]);
+      }
+    } catch (e) {
+      console.warn('[ChatPartner] 客户话术优化返回非 JSON 格式');
+    }
+
+    res.json({
+      success: true,
+      clientId,
+      original: result?.original || myMessage,
+      optimizations: result?.optimizations || [
+        { text: myMessage, point: '暂无优化建议', style: '原版' }
+      ],
+      context: {
+        serviceStage,
+        communicationStyle,
+        interactionStyle,
+        cooperation
+      }
+    });
+
+  } catch (error) {
+    console.error('[ChatPartner] 客户话术优化失败:', error);
+    res.status(500).json({ error: '客户话术优化失败' });
+  }
+});
+
+// ============================================================================
+// 女生档案待确认管理
+// ============================================================================
+
+/**
+ * 获取女生的待确认档案更新列表
+ * GET /api/chat-partner/girl-profile/pending/:girlId
+ */
+router.get('/girl-profile/pending/:girlId', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const { girlId } = req.params;
+    const { getPendingUpdates } = require('../services/girlProfileExtractor');
+    const updates = await getPendingUpdates(girlId);
+
+    res.json({ success: true, updates });
+  } catch (error) {
+    console.error('[ChatPartner] 获取女生待确认更新失败:', error);
+    res.status(500).json({ error: '获取失败' });
+  }
+});
+
+/**
+ * 确认女生档案更新
+ * POST /api/chat-partner/girl-profile/confirm
+ */
+router.post('/girl-profile/confirm', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const { girlId, pendingId, selectedFields } = req.body;
+    if (!girlId || !pendingId) {
+      return res.status(400).json({ error: '参数不完整' });
+    }
+
+    const { confirmProfileUpdate } = require('../services/girlProfileExtractor');
+    const result = await confirmProfileUpdate(girlId, pendingId, selectedFields);
+
+    if (!result.success) {
+      return res.status(404).json({ error: result.reason });
+    }
+
+    res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('[ChatPartner] 确认女生档案更新失败:', error);
+    res.status(500).json({ error: '确认失败' });
+  }
+});
+
+/**
+ * 驳回女生档案更新
+ * POST /api/chat-partner/girl-profile/reject
+ */
+router.post('/girl-profile/reject', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const { girlId, pendingId } = req.body;
+    if (!girlId || !pendingId) {
+      return res.status(400).json({ error: '参数不完整' });
+    }
+
+    const { rejectProfileUpdate } = require('../services/girlProfileExtractor');
+    const result = await rejectProfileUpdate(girlId, pendingId);
+
+    if (!result.success) {
+      return res.status(404).json({ error: result.reason });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[ChatPartner] 驳回女生档案更新失败:', error);
+    res.status(500).json({ error: '驳回失败' });
+  }
+});
+
+// ============================================================================
+// 客户档案待确认管理
+// ============================================================================
+
+/**
+ * 获取客户的待确认档案更新列表
+ * GET /api/chat-partner/client-profile/pending/:clientId
+ */
+router.get('/client-profile/pending/:clientId', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const { clientId } = req.params;
+    const { getPendingUpdates } = require('../services/clientProfileExtractor');
+    const updates = await getPendingUpdates(clientId);
+
+    res.json({ success: true, updates });
+  } catch (error) {
+    console.error('[ChatPartner] 获取客户待确认更新失败:', error);
+    res.status(500).json({ error: '获取失败' });
+  }
+});
+
+/**
+ * 确认客户档案更新
+ * POST /api/chat-partner/client-profile/confirm
+ */
+router.post('/client-profile/confirm', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const { clientId, pendingId, selectedFields } = req.body;
+    if (!clientId || !pendingId) {
+      return res.status(400).json({ error: '参数不完整' });
+    }
+
+    const { confirmProfileUpdate } = require('../services/clientProfileExtractor');
+    const result = await confirmProfileUpdate(clientId, pendingId, selectedFields);
+
+    if (!result.success) {
+      return res.status(404).json({ error: result.reason });
+    }
+
+    res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('[ChatPartner] 确认客户档案更新失败:', error);
+    res.status(500).json({ error: '确认失败' });
+  }
+});
+
+/**
+ * 驳回客户档案更新
+ * POST /api/chat-partner/client-profile/reject
+ */
+router.post('/client-profile/reject', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const { clientId, pendingId } = req.body;
+    if (!clientId || !pendingId) {
+      return res.status(400).json({ error: '参数不完整' });
+    }
+
+    const { rejectProfileUpdate } = require('../services/clientProfileExtractor');
+    const result = await rejectProfileUpdate(clientId, pendingId);
+
+    if (!result.success) {
+      return res.status(404).json({ error: result.reason });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[ChatPartner] 驳回客户档案更新失败:', error);
+    res.status(500).json({ error: '驳回失败' });
   }
 });
 

@@ -543,6 +543,37 @@ model ClientLearning {
   @@map("client_learnings")
 }
 
+// ========== 待确认档案更新队列 ==========
+model PendingProfileUpdate {
+  id          String   @id @default(uuid())
+  targetType  String   // 'girl' | 'client'
+  targetId    String   // girlId or clientId
+  source      String   // 'chat_analyze' | 'chat_optimize' | 'notes' | 'screenshot'
+
+  // 操盘手/操作人
+  operatorId  String
+
+  // 档案上下文（用于展示 diff）
+  profileContext String? // JSON: { name, stage, tensionScore, ... }
+
+  // 分析结果
+  analysisData String   // JSON: { profileUpdates, newSignals, tensionAdjustment, stageChange, observations, pendingActions, ... }
+
+  // 采纳的回复（如果有，来源是 chat_analyze 时）
+  adoptedReply  String? // 操盘手最终采纳的回复内容
+  replyStyle    String? // 风格标签
+
+  // 状态：pending / approved / rejected
+  status      String   @default("pending")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([targetType, targetId, status])
+  @@index([operatorId, status])
+  @@map("pending_profile_updates")
+}
+
 // ========== 对话记忆 ==========
 model ConversationMemory {
   id       String @id @default(uuid())
