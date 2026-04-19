@@ -11,15 +11,14 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
 const { buildAICoachContext, getContextSummary } = require('../services/contextBuilder');
 const { getCoach, listCoaches, getSystemPrompt } = require('../coaches');
 const { chatWithTools, toolDefinitions } = require('../services/coach-engine');
 const { getOrCreateSession, addMessage, shouldSummarize } = require('../services/memory');
 const { searchLearnings, extractLearningsFromConversation, formatLearningsForPrompt } = require('../services/learning');
 
-const prisma = new PrismaClient();
 const { JWT_SECRET, getAIConfig } = require('../config');
+const prisma = require('../prisma');
 
 // Auth middleware
 const authMiddleware = async (req, res, next) => {
@@ -56,6 +55,14 @@ router.post('/situation', authMiddleware, async (req, res) => {
 
     if (!situation) {
       return res.status(400).json({ error: '情况描述是必需的' });
+    }
+
+    // 安全：验证女生归属权，防止跨客户数据访问
+    if (girlId) {
+      const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+      if (!girl) {
+        return res.status(404).json({ error: '女生不存在' });
+      }
     }
 
     // 使用 contextBuilder 获取上下文
@@ -255,6 +262,14 @@ router.post('/analyze-chat', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: '聊天记录是必需的' });
     }
 
+    // 安全：验证女生归属权
+    if (girlId) {
+      const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+      if (!girl) {
+        return res.status(404).json({ error: '女生不存在' });
+      }
+    }
+
     const historyText = chatHistory.map(msg =>
       `${msg.isFromUser ? '用户' : '女生'}: ${msg.content}`
     ).join('\n');
@@ -375,6 +390,14 @@ router.post('/reply-suggestions', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: '对方消息是必需的' });
     }
 
+    // 安全：验证女生归属权
+    if (girlId) {
+      const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+      if (!girl) {
+        return res.status(404).json({ error: '女生不存在' });
+      }
+    }
+
     // 使用 contextBuilder 获取完整上下文
     const fullContext = await buildAICoachContext(req.user.id, girlId);
 
@@ -490,6 +513,14 @@ router.post('/optimize-reply', authMiddleware, async (req, res) => {
 
     if (!originalReply) {
       return res.status(400).json({ error: '原始回复是必需的' });
+    }
+
+    // 安全：验证女生归属权
+    if (girlId) {
+      const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+      if (!girl) {
+        return res.status(404).json({ error: '女生不存在' });
+      }
     }
 
     // 如果有 girlId，使用 contextBuilder 获取完整上下文

@@ -5,10 +5,9 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
 
-const prisma = new PrismaClient();
 const { JWT_SECRET } = require('../config');
+const prisma = require('../prisma');
 
 // Auth middleware
 const authMiddleware = async (req, res, next) => {
@@ -38,6 +37,12 @@ router.get('/girl/:girlId', authMiddleware, async (req, res) => {
     const { girlId } = req.params;
     const { limit = 50 } = req.query;
 
+    // 安全：验证女生存在
+    const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+    if (!girl) {
+      return res.status(404).json({ error: '女生不存在' });
+    }
+
     const logs = await prisma.chatLog.findMany({
       where: { girlId },
       orderBy: { createdAt: 'desc' },
@@ -60,6 +65,12 @@ router.patch('/:id/visibility', authMiddleware, async (req, res) => {
 
     const { id } = req.params;
     const { isVisibleToClient } = req.body;
+
+    // 安全：验证记录存在
+    const existing = await prisma.chatLog.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: '记录不存在' });
+    }
 
     const log = await prisma.chatLog.update({
       where: { id },
@@ -112,11 +123,18 @@ router.post('/', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: '无权限' });
     }
 
-    const { girlId, clientId, receiverName, content, type = 'text', aiAnalysis, aiSuggestions, aiAdopted = false } = req.body;
+    const { girlId, receiverName, content, type = 'text', aiAnalysis, aiSuggestions, aiAdopted = false } = req.body;
 
-    if (!girlId || !clientId || !content) {
+    if (!girlId || !content) {
       return res.status(400).json({ error: '参数不完整' });
     }
+
+    // 安全：验证女生存在并获取其 clientId，防止操作不属于自己的客户数据
+    const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+    if (!girl) {
+      return res.status(404).json({ error: '女生不存在' });
+    }
+    const clientId = girl.clientId;
 
     const log = await prisma.chatLog.create({
       data: {

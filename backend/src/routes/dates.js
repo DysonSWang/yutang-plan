@@ -6,10 +6,9 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
 
-const prisma = new PrismaClient();
 const { JWT_SECRET, getAIConfig } = require('../config');
+const prisma = require('../prisma');
 
 // Auth middleware
 const authMiddleware = async (req, res, next) => {
@@ -314,6 +313,76 @@ router.get('/checklist-template', authMiddleware, async (req, res) => {
   ];
   res.json({ success: true, template });
 });
+
+
+// ========== 客户获取待确认的约会方案 ==========
+router.get('/client-pending', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'client') {
+      return res.status(403).json({ error: '仅客户可访问' });
+    }
+
+    const dates = await prisma.date.findMany({
+      where: {
+        userId: req.user.id,
+        status: 'pending_client_confirm',
+        clientConfirmed: false
+      },
+      include: {
+        girl: { select: { id: true, name: true, age: true, stage: true, personality: true } }
+      },
+      orderBy: { dateTime: 'asc' }
+    });
+
+    res.json({ success: true, dates });
+  } catch (error) {
+    console.error('[Dates] 获取待确认方案失败:', error);
+    res.status(500).json({ error: '获取失败' });
+  }
+});
+
+
+// ========== 客户获取待填写的访谈 ==========
+router.get('/client-interviews', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'client') return res.status(403).json({ error: '仅客户可访问' });
+
+    // 查找已推送但未回答的访谈
+    const completedDates = await prisma.date.findMany({
+      where: {
+        userId: req.user.id,
+        status: 'completed',
+        postDateInterview: { not: null }
+      },
+      include: {
+        girl: { select: { id: true, name: true, stage: true } }
+      },
+      orderBy: { dateTime: 'desc' }
+    });
+
+    const pending = completedDates.filter(d => {
+      const interview = JSON.parse(d.postDateInterview || '{}');
+      return interview.questionStatus === 'pending' && interview.generatedQuestions?.length > 0;
+    }).map(d => {
+      const interview = JSON.parse(d.postDateInterview);
+      return {
+        dateId: d.id,
+        title: d.title || '约会反馈访谈',
+        girlName: d.girl?.name,
+        dateTime: d.dateTime,
+        interviewOverview: interview.interviewOverview,
+        questions: interview.generatedQuestions,
+        pushedAt: interview.pushedAt
+      };
+    });
+
+    res.json({ success: true, interviews: pending });
+  } catch (error) {
+    console.error('[Dates] 获取客户访谈失败:', error);
+    res.status(500).json({ error: '获取失败' });
+  }
+});
+
 
 // 获取单个约会详情
 router.get('/:id', authMiddleware, async (req, res) => {
@@ -720,32 +789,6 @@ router.post('/:id/push-to-client', authMiddleware, async (req, res) => {
   }
 });
 
-// ========== 客户获取待确认的约会方案 ==========
-router.get('/client-pending', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'client') {
-      return res.status(403).json({ error: '仅客户可访问' });
-    }
-
-    const dates = await prisma.date.findMany({
-      where: {
-        userId: req.user.id,
-        status: 'pending_client_confirm',
-        clientConfirmed: false
-      },
-      include: {
-        girl: { select: { id: true, name: true, age: true, stage: true, personality: true } }
-      },
-      orderBy: { dateTime: 'asc' }
-    });
-
-    res.json({ success: true, dates });
-  } catch (error) {
-    console.error('[Dates] 获取待确认方案失败:', error);
-    res.status(500).json({ error: '获取失败' });
-  }
-});
-
 // ========== 客户提交调整建议 ==========
 router.post('/:id/client-feedback', authMiddleware, async (req, res) => {
   try {
@@ -991,47 +1034,6 @@ router.post('/:id/push-interview', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('[Dates] 推送访谈失败:', error);
     res.status(500).json({ error: '推送失败' });
-  }
-});
-
-// ========== 客户获取待填写的访谈 ==========
-router.get('/client-interviews', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'client') return res.status(403).json({ error: '仅客户可访问' });
-
-    // 查找已推送但未回答的访谈
-    const completedDates = await prisma.date.findMany({
-      where: {
-        userId: req.user.id,
-        status: 'completed',
-        postDateInterview: { not: null }
-      },
-      include: {
-        girl: { select: { id: true, name: true, stage: true } }
-      },
-      orderBy: { dateTime: 'desc' }
-    });
-
-    const pending = completedDates.filter(d => {
-      const interview = JSON.parse(d.postDateInterview || '{}');
-      return interview.questionStatus === 'pending' && interview.generatedQuestions?.length > 0;
-    }).map(d => {
-      const interview = JSON.parse(d.postDateInterview);
-      return {
-        dateId: d.id,
-        title: d.title || '约会反馈访谈',
-        girlName: d.girl?.name,
-        dateTime: d.dateTime,
-        interviewOverview: interview.interviewOverview,
-        questions: interview.generatedQuestions,
-        pushedAt: interview.pushedAt
-      };
-    });
-
-    res.json({ success: true, interviews: pending });
-  } catch (error) {
-    console.error('[Dates] 获取客户访谈失败:', error);
-    res.status(500).json({ error: '获取失败' });
   }
 });
 

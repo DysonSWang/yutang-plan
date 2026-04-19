@@ -4,10 +4,9 @@
 
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
 
-const prisma = new PrismaClient();
 const { JWT_SECRET } = require('../config');
+const prisma = require('../prisma');
 
 module.exports = function(io) {
   const router = express.Router();

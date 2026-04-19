@@ -6,19 +6,26 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
 
-const prisma = new PrismaClient();
 const { JWT_SECRET } = require('../config');
+const prisma = require('../prisma');
 
 // 注册
 router.post('/register', async (req, res) => {
   try {
-    const { username, password, role = 'client', nickname, phone } = req.body;
+    const { username, password, nickname, phone } = req.body;
 
     if (!username || !password) {
       return res.status(400).json({ error: '用户名和密码是必需的' });
     }
+
+    // 安全：强制最小密码长度
+    if (password.length < 8) {
+      return res.status(400).json({ error: '密码至少8位' });
+    }
+
+    // 安全：不接受 role 参数，所有注册用户都是 client
+    const role = 'client';
 
     // 检查用户是否存在
     const existing = await prisma.user.findUnique({ where: { username } });

@@ -11,13 +11,9 @@
 const request = require('supertest');
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../prisma');
 
-const prisma = new PrismaClient({
-  datasources: { db: { url: 'file:../data/database.db' } }
-});
-
-const JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
+const JWT_SECRET = process.env.JWT_SECRET;
 let app;
 let operatorToken;
 let clientToken;
@@ -33,12 +29,33 @@ const mockIo = {
 };
 
 beforeAll(async () => {
-  // 找到已有的 operator 和 client 用户
-  const operator = await prisma.user.findFirst({ where: { role: 'operator' } });
-  const client = await prisma.user.findFirst({ where: { role: 'client' } });
+  // 确保有 operator 和 client 用户
+  let operator = await prisma.user.findFirst({ where: { role: 'operator' } });
+  let client = await prisma.user.findFirst({ where: { role: 'client' } });
 
-  if (!operator || !client) {
-    throw new Error('测试需要至少一个 operator 和一个 client 用户');
+  if (!operator) {
+    const bcrypt = require('bcryptjs');
+    operator = await prisma.user.create({
+      data: {
+        username: 'test_operator',
+        password: await bcrypt.hash('operator123', 10),
+        role: 'operator',
+        nickname: '测试操盘手',
+        phone: '13800000001'
+      }
+    });
+  }
+  if (!client) {
+    const bcrypt = require('bcryptjs');
+    client = await prisma.user.create({
+      data: {
+        username: 'test_client',
+        password: await bcrypt.hash('client123', 10),
+        role: 'client',
+        nickname: '测试客户',
+        phone: '13800000002'
+      }
+    });
   }
 
   operatorId = operator.id;
@@ -444,4 +461,8 @@ describe('阅后即焚功能测试', () => {
       expect(res.body.error).toBe('消息已被销毁');
     });
   });
+});
+
+afterAll(async () => {
+  await prisma.$disconnect();
 });

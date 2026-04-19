@@ -7,9 +7,9 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { exec } = require('child_process');
+const { execFile } = require('child_process');
 const util = require('util');
-const execPromise = util.promisify(exec);
+const execPromise = util.promisify(execFile);
 const jwt = require('jsonwebtoken');
 
 const { JWT_SECRET } = require('../config');
@@ -89,27 +89,22 @@ router.post('/compress-video', authMiddleware, upload.single('file'), async (req
     }
 
     // 大文件用 FFmpeg 压缩
-    // 参数说明：
-    // -c:v libx264: H.264 编码
-    // -crf 28: 质量参数 (0=无损, 23=默认, 28=低质量/高压缩)
-    // -preset fast: 编码速度 (ultrafast/superfast/veryfast/faster/fast/medium/slow/slower/veryslow)
-    // -vf scale=-2:720: 高度 720px，宽度等比缩放（-2 确保是 2 的倍数）
-    // -c:a aac -b:a 128k: AAC 音频，128kbps
-    // -movflags +faststart: 优化 web 流媒体加载
-    const ffmpegCmd = [
-      'ffmpeg -y',
-      `-i "${inputPath}"`,
-      '-c:v libx264',
-      '-crf 28',
-      '-preset fast',
-      '-vf "scale=-2:720"',
-      '-c:a aac -b:a 128k',
-      '-movflags +faststart',
-      `-threads 4`,
-      `"${outputPath}"`
-    ].join(' ');
+    // 使用数组参数避免 shell 注入（execFile 不经过 shell）
+    const ffmpegArgs = [
+      '-y',
+      '-i', inputPath,
+      '-c:v', 'libx264',
+      '-crf', '28',
+      '-preset', 'fast',
+      '-vf', 'scale=-2:720',
+      '-c:a', 'aac',
+      '-b:a', '128k',
+      '-movflags', '+faststart',
+      '-threads', '4',
+      outputPath
+    ];
 
-    const { stderr } = await execPromise(ffmpegCmd, { timeout: 120000 });
+    const { stderr } = await execPromise('ffmpeg', ffmpegArgs, { timeout: 120000 });
 
     // 删除原始临时文件
     if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);

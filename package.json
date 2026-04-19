@@ -1,0 +1,29 @@
+{
+  "name": "yutang-plan",
+  "version": "1.0.0",
+  "description": "> **让每一位成功的男人，都能实现妹子自由。**",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "cd backend && npx jest --no-coverage",
+    "test:e2e": "npx playwright test",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DysonSWang/yutang-plan.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/DysonSWang/yutang-plan/issues"
+  },
+  "homepage": "https://github.com/DysonSWang/yutang-plan#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.59.1"
+  }
+}

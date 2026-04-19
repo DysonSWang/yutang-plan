@@ -10,12 +10,11 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
 const { buildAICoachContext } = require('../services/contextBuilder');
 const { executeTool } = require('../coaches/skills');
 
-const prisma = new PrismaClient();
 const { JWT_SECRET, getAIConfig } = require('../config');
+const prisma = require('../prisma');
 
 /**
  * 待审核更新队列（内存）
@@ -473,11 +472,18 @@ router.post('/feedback', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: '无权限' });
     }
 
-    const { girlId, clientId, receiverName, chosenReply, originalGirlMessage, style, intention } = req.body;
+    const { girlId, receiverName, chosenReply, originalGirlMessage, style, intention } = req.body;
 
-    if (!girlId || !clientId || !chosenReply) {
+    if (!girlId || !chosenReply) {
       return res.status(400).json({ error: '参数不完整' });
     }
+
+    // 安全：从女生记录获取 clientId，防止操作不属于自己的客户数据
+    const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+    if (!girl) {
+      return res.status(404).json({ error: '女生不存在' });
+    }
+    const clientId = girl.clientId;
 
     // 1. 同步保存到代聊记录
     const log = await prisma.chatLog.create({
@@ -738,11 +744,18 @@ router.post('/send', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: '无权限' });
     }
 
-    const { girlId, clientId, receiverName, content, aiAdopted = false, originalMessage } = req.body;
+    const { girlId, receiverName, content, aiAdopted = false, originalMessage } = req.body;
 
-    if (!girlId || !clientId || !content) {
+    if (!girlId || !content) {
       return res.status(400).json({ error: '参数不完整' });
     }
+
+    // 安全：从女生记录获取 clientId，防止操作不属于自己的客户数据
+    const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+    if (!girl) {
+      return res.status(404).json({ error: '女生不存在' });
+    }
+    const clientId = girl.clientId;
 
     const log = await prisma.chatLog.create({
       data: {

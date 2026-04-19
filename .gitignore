@@ -16,6 +16,10 @@ frontend/node_modules/
 # Coverage
 coverage/
 
+# Playwright
+test-results/
+playwright-report/
+
 # GSD artifacts
 .gsd/
 

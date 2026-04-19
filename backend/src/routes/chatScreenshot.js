@@ -7,10 +7,9 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
 
-const prisma = new PrismaClient();
 const { JWT_SECRET, BASE_URL } = require('../config');
+const prisma = require('../prisma');
 const { extractFromNotes, extractFromImage, applyAnalysisToGirl } = require('../services/signalExtractor');
 
 // 上传目录
