@@ -35,6 +35,8 @@ const PERSONALITY_TYPES = ['INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ
 const OCCUPATIONS = ['学生', '上班族', '自由职业', '企业主', '公务员', '医生', '律师', '教师', '销售', '设计师', '程序员', '其他'];
 const INTERESTS = ['健身', '跑步', '游泳', '篮球', '足球', '网球', '羽毛球', '乒乓球', '瑜伽', '舞蹈', '唱歌', '乐器', '绘画', '摄影', '阅读', '写作', '旅行', '美食', '电影', '音乐', '游戏', '宠物', '其他'];
 const DIET_PREFERENCES = ['不挑食', '素食', '清淡', '重口味', '火锅', '烧烤', '日料', '西餐', '甜品', '咖啡', '茶'];
+const DIET_RESTRICTIONS = ['不吃辣', '不吃香菜', '海鲜过敏', '酒精过敏', '坚果过敏', '不吃羊肉', '不吃猪肉', '不吃牛肉', '麸质过敏', '素食主义', '清真', '糖尿病/控糖', '其他'];
+const BODY_TYPES = ['偏瘦', '标准', '微胖', '偏胖'];
 const MAJOR_CATEGORIES = ['计算机/互联网', '金融/经济', '法律', '医学', '教育', '工程', '艺术/设计', '传媒', '语言', '管理', '其他'];
 const CITIES = ['北京', '上海', '广州', '深圳', '杭州', '南京', '苏州', '成都', '重庆', '武汉', '西安', '天津', '长沙', '郑州', '东莞', '佛山', '青岛', '沈阳', '大连', '厦门', '宁波', '其他'];
 
@@ -54,6 +56,10 @@ export default function AdminGirls() {
   const [screenshotNotes, setScreenshotNotes] = useState('');
   const [aiGenerating, setAiGenerating] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
+  // AI 识别待确认字段
+  const [pendingFields, setPendingFields] = useState({}); // { key: { label, value } }
+  const [confirmSelections, setConfirmSelections] = useState({}); // { key: bool }
+  const { isOpen: isConfirmOpen, onOpen: onConfirmOpen, onClose: onConfirmClose } = useDisclosure();
   const fileInputRef = useRef();
   const toast = useToast();
 
@@ -68,13 +74,13 @@ export default function AdminGirls() {
       clientId: '', name: '', age: '', occupation: '', education: '', major: '',
       hometown: '', residence: '', workplace: '',
       // 外貌特征
-      appearance: '', photos: '', styleTags: '',
+      appearance: '', height: '', bodyType: '', photos: '', styleTags: '',
       // 家庭背景
       familyBackground: '', familyAtmosphere: '', familyBurden: '', familyComments: '',
       // 生活状态
       workSchedule: '', socialActivity: '', financialHabits: '',
       // 兴趣爱好
-      interests: '', dietPreferences: '', hobbiesDetail: '',
+      interests: '', dietPreferences: '', dietRestrictions: '', hobbiesDetail: '',
       // 情感状态
       relationshipAttitude: '', pastRelationshipSummary: '', emotionalWounds: '',
       attachmentStyle: '', dealbreakers: '',
@@ -96,7 +102,7 @@ export default function AdminGirls() {
       empathy: '', selfAwareness: '', communication: '', relationship: '', conflictRes: '',
       chatPartnerId: '',
       // 匹配相关
-      matchScore: '',
+      matchScore: '', matchScoreBasis: '', matePreferences: '',
       // 元数据
       sourcePlatform: '', homepageUrl: '', photos: '', videos: '', notes: ''
     };
@@ -160,6 +166,8 @@ export default function AdminGirls() {
       residence: girl.residence || '',
       workplace: girl.workplace || '',
       appearance: girl.appearance || '',
+      height: girl.height || '',
+      bodyType: girl.bodyType || '',
       photos: girl.photos || '',
       styleTags: girl.styleTags || '',
       familyBackground: girl.familyBackground || '',
@@ -171,6 +179,7 @@ export default function AdminGirls() {
       financialHabits: girl.financialHabits || '',
       interests: girl.interests || '',
       dietPreferences: girl.dietPreferences || '',
+      dietRestrictions: girl.dietRestrictions || '',
       hobbiesDetail: girl.hobbiesDetail || '',
       relationshipAttitude: girl.relationshipAttitude || '',
       pastRelationshipSummary: girl.pastRelationshipSummary || '',
@@ -212,6 +221,8 @@ export default function AdminGirls() {
       conflictRes: girl.conflictRes || '',
       chatPartnerId: girl.chatPartnerId || '',
       matchScore: girl.matchScore || '',
+      matchScoreBasis: girl.matchScoreBasis || '',
+      matePreferences: girl.matePreferences || '',
       sourcePlatform: girl.sourcePlatform || '',
       homepageUrl: girl.homepageUrl || '',
       photos: parseJSONField(girl.photos).join(', '),
@@ -232,7 +243,10 @@ export default function AdminGirls() {
   const parseJSONField = (val) => {
     if (!val) return [];
     if (Array.isArray(val)) return val;
-    try { return JSON.parse(val); } catch { return []; }
+    try {
+      const parsed = JSON.parse(val);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch { return []; }
   };
 
   const handleSubmit = async () => {
@@ -240,6 +254,8 @@ export default function AdminGirls() {
       const data = { ...formData };
       if (data.age) data.age = parseInt(data.age);
       else data.age = undefined;
+      if (data.height) data.height = parseInt(data.height);
+      else data.height = undefined;
       if (data.intimacyLevel) data.intimacyLevel = parseInt(data.intimacyLevel);
       if (data.tensionScore) data.tensionScore = parseFloat(data.tensionScore);
       // JSON字段处理
@@ -303,6 +319,15 @@ export default function AdminGirls() {
         setSelectedFile(null);
         setScreenshotNotes('');
         if (fileInputRef.current) fileInputRef.current.value = '';
+        // 如果有识别出的字段，弹出确认框
+        if (res.extractedFields && Object.keys(res.extractedFields).length > 0) {
+          setPendingFields(res.extractedFields);
+          // 默认全选
+          const defaults = {};
+          Object.keys(res.extractedFields).forEach(k => { defaults[k] = true; });
+          setConfirmSelections(defaults);
+          onConfirmOpen();
+        }
       } else {
         toast({ title: res.error || '上传失败', status: 'error', duration: 2000 });
       }
@@ -311,6 +336,37 @@ export default function AdminGirls() {
       toast({ title: '上传失败', status: 'error', duration: 2000 });
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleConfirmFields = async () => {
+    // 只提交用户选中的字段
+    const selected = {};
+    for (const [key, checked] of Object.entries(confirmSelections)) {
+      if (checked && pendingFields[key]) {
+        selected[key] = pendingFields[key].value;
+      }
+    }
+    if (Object.keys(selected).length === 0) {
+      toast({ title: '未选择任何字段', status: 'warning', duration: 2000 });
+      onConfirmClose();
+      return;
+    }
+    try {
+      const res = await chatScreenshots.confirmFields(selectedGirl.id, selected);
+      if (res.success) {
+        toast({ title: '信息已更新', status: 'success', duration: 2000 });
+        loadGirls();
+      } else {
+        toast({ title: res.error || '确认失败', status: 'error', duration: 2000 });
+      }
+    } catch (e) {
+      console.error(e);
+      toast({ title: '确认失败', status: 'error', duration: 2000 });
+    } finally {
+      onConfirmClose();
+      setPendingFields({});
+      setConfirmSelections({});
     }
   };
 
@@ -401,7 +457,7 @@ export default function AdminGirls() {
           <Table variant="simple" color="gray.300" size="sm">
             <Thead>
               <Tr>
-                <Th color="gray.400">姓名</Th>
+                <Th color="gray.400">昵称</Th>
                 <Th color="gray.400">年龄</Th>
                 <Th color="gray.400">职业</Th>
                 <Th color="gray.400">阶段</Th>
@@ -436,9 +492,9 @@ export default function AdminGirls() {
                   <Td>
                     <HStack spacing={2}>
                       <Button size="xs" colorScheme="teal" variant="ghost" onClick={() => openDetailModal(girl)}>详情</Button>
-                      <Button size="xs" colorScheme="blue" variant="ghost" onClick={() => openEditModal(girl)}>编辑</Button>
-                      <Button size="xs" colorScheme="orange" variant="ghost" onClick={() => openScreenshotModal(girl)}>截图</Button>
-                      <Button size="xs" colorScheme="red" variant="ghost" onClick={() => deleteGirl(girl.id)}>删除</Button>
+                      <Button size="xs" colorScheme="blue" variant="ghost" onClick={(e) => { e.stopPropagation(); openEditModal(girl); }}>编辑</Button>
+                      <Button size="xs" colorScheme="orange" variant="ghost" onClick={(e) => { e.stopPropagation(); openScreenshotModal(girl); }}>截图</Button>
+                      <Button size="xs" colorScheme="red" variant="ghost" onClick={(e) => { e.stopPropagation(); deleteGirl(girl.id); }}>删除</Button>
                     </HStack>
                   </Td>
                 </Tr>
@@ -481,7 +537,7 @@ export default function AdminGirls() {
                       </Select>
                     </FormControl>
                     <FormControl isRequired>
-                      <FormLabel color="gray.400">姓名</FormLabel>
+                      <FormLabel color="gray.400">昵称</FormLabel>
                       <Input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} bg="gray.700" />
                     </FormControl>
                     <SimpleGrid columns={4} spacing={4}>
@@ -552,25 +608,38 @@ export default function AdminGirls() {
                     <Text color="white" fontWeight="bold">外貌特征</Text>
                     <FormControl>
                       <FormLabel color="gray.400">外貌描述</FormLabel>
-                      <Textarea value={formData.appearance} onChange={e => setFormData({...formData, appearance: e.target.value})} placeholder="身高/体型/穿着风格..." bg="gray.700" rows={2} />
+                      <Textarea value={formData.appearance} onChange={e => setFormData({...formData, appearance: e.target.value})} placeholder="穿着风格、发型、肤色..." bg="gray.700" rows={2} />
                     </FormControl>
-                    <FormControl>
-                      <FormLabel color="gray.400">风格标签</FormLabel>
-                      <Select value={formData.styleTags} onChange={e => setFormData({...formData, styleTags: e.target.value})} bg="gray.700" color="white">
-                        <option value="">选择标签</option>
-                        {STYLE_TAGS.map(t => <option key={t} value={t}>{t}</option>)}
-                      </Select>
-                    </FormControl>
-                    <SimpleGrid columns={2} spacing={4}>
+                    <SimpleGrid columns={4} spacing={4}>
+                      <FormControl>
+                        <FormLabel color="gray.400">身高(cm)</FormLabel>
+                        <NumberInput value={formData.height} onChange={(_, v) => setFormData({...formData, height: v})} bg="gray.700" min={140} max={200}>
+                          <NumberInputField />
+                        </NumberInput>
+                      </FormControl>
+                      <FormControl>
+                        <FormLabel color="gray.400">体型</FormLabel>
+                        <Select value={formData.bodyType} onChange={e => setFormData({...formData, bodyType: e.target.value})} bg="gray.700" color="white">
+                          <option value="">选择</option>
+                          {BODY_TYPES.map(b => <option key={b} value={b}>{b}</option>)}
+                        </Select>
+                      </FormControl>
+                      <FormControl>
+                        <FormLabel color="gray.400">风格标签</FormLabel>
+                        <Select value={formData.styleTags} onChange={e => setFormData({...formData, styleTags: e.target.value})} bg="gray.700" color="white">
+                          <option value="">选择标签</option>
+                          {STYLE_TAGS.map(t => <option key={t} value={t}>{t}</option>)}
+                        </Select>
+                      </FormControl>
                       <FormControl>
                         <FormLabel color="gray.400">照片链接（多个用逗号分隔）</FormLabel>
                         <Input value={formData.photos} onChange={e => setFormData({...formData, photos: e.target.value})} bg="gray.700" color="white" placeholder="https://..." />
                       </FormControl>
-                      <FormControl>
-                        <FormLabel color="gray.400">视频链接（多个用逗号分隔）</FormLabel>
-                        <Input value={formData.videos} onChange={e => setFormData({...formData, videos: e.target.value})} bg="gray.700" color="white" placeholder="https://..." />
-                      </FormControl>
                     </SimpleGrid>
+                    <FormControl>
+                      <FormLabel color="gray.400">视频链接（多个用逗号分隔）</FormLabel>
+                      <Input value={formData.videos} onChange={e => setFormData({...formData, videos: e.target.value})} bg="gray.700" color="white" placeholder="https://..." />
+                    </FormControl>
                     <Text color="white" fontWeight="bold" mt={2}>家庭背景</Text>
                     <SimpleGrid columns={2} spacing={4}>
                       <FormControl>
@@ -641,11 +710,24 @@ export default function AdminGirls() {
                     </FormControl>
                     <SimpleGrid columns={2} spacing={4}>
                       <FormControl>
-                        <FormLabel color="gray.400">饮食偏好</FormLabel>
-                        <Select value={formData.dietPreferences} onChange={e => setFormData({...formData, dietPreferences: e.target.value})} bg="gray.700" color="white">
-                          <option value="">选择</option>
-                          {DIET_PREFERENCES.map(d => <option key={d} value={d}>{d}</option>)}
-                        </Select>
+                        <FormLabel color="gray.400">饮食偏好（多选，用逗号分隔）</FormLabel>
+                        <Textarea
+                          value={formData.dietPreferences}
+                          onChange={e => setFormData({...formData, dietPreferences: e.target.value})}
+                          placeholder="清淡,火锅,日料"
+                          bg="gray.700" rows={2}
+                        />
+                        <Text color="gray.500" fontSize="xs" mt={1}>可选：{DIET_PREFERENCES.join('、')}</Text>
+                      </FormControl>
+                      <FormControl>
+                        <FormLabel color="gray.400">饮食禁忌/过敏（多选，用逗号分隔）</FormLabel>
+                        <Textarea
+                          value={formData.dietRestrictions}
+                          onChange={e => setFormData({...formData, dietRestrictions: e.target.value})}
+                          placeholder="不吃辣,海鲜过敏"
+                          bg="gray.700" rows={2}
+                        />
+                        <Text color="gray.500" fontSize="xs" mt={1}>可选：{DIET_RESTRICTIONS.join('、')}</Text>
                       </FormControl>
                       <FormControl>
                         <FormLabel color="gray.400">兴趣详情</FormLabel>
@@ -688,6 +770,10 @@ export default function AdminGirls() {
                     <FormControl>
                       <FormLabel color="gray.400">绝对雷区</FormLabel>
                       <Textarea value={formData.dealbreakers} onChange={e => setFormData({...formData, dealbreakers: e.target.value})} bg="gray.700" rows={2} />
+                    </FormControl>
+                    <FormControl>
+                      <FormLabel color="gray.400">择偶偏好</FormLabel>
+                      <Textarea value={formData.matePreferences} onChange={e => setFormData({...formData, matePreferences: e.target.value})} placeholder="年龄范围/学历/地域/职业/收入/其他要求" bg="gray.700" rows={2} />
                     </FormControl>
                   </VStack>
                 </TabPanel>
@@ -914,6 +1000,19 @@ export default function AdminGirls() {
                       <Textarea value={formData.conversationSummary} onChange={e => setFormData({...formData, conversationSummary: e.target.value})} bg="gray.700" rows={3} />
                     </FormControl>
 
+                    <Text color="white" fontWeight="bold" mt={2}>匹配相关</Text>
+                    <SimpleGrid columns={2} spacing={4}>
+                      <FormControl>
+                        <FormLabel color="gray.400">匹配分</FormLabel>
+                        <NumberInput value={formData.matchScore} onChange={(_, v) => setFormData({...formData, matchScore: v})} bg="gray.700" min={1} max={100}>
+                          <NumberInputField />
+                        </NumberInput>
+                      </FormControl>
+                    </SimpleGrid>
+                    <FormControl>
+                      <FormLabel color="gray.400">匹配分计算依据</FormLabel>
+                      <Textarea value={formData.matchScoreBasis} onChange={e => setFormData({...formData, matchScoreBasis: e.target.value})} placeholder="说明这个分数是怎么算出来的，如：年龄差3岁、同城、学历相当、互有好感" bg="gray.700" rows={2} />
+                    </FormControl>
                     <Text color="white" fontWeight="bold" mt={2}>其他</Text>
                     <FormControl>
                       <FormLabel color="gray.400">备注</FormLabel>
@@ -951,6 +1050,7 @@ export default function AdminGirls() {
                   <TabPanel px={0}>
                     <SimpleGrid columns={3} spacing={4}>
                       <Box><Text color="gray.400" fontSize="sm">年龄</Text>{renderField('age', selectedGirl.age)}</Box>
+                      <Box><Text color="gray.400" fontSize="sm">身高</Text>{renderField('height', selectedGirl.height ? selectedGirl.height + 'cm' : '')}</Box>
                       <Box><Text color="gray.400" fontSize="sm">职业</Text>{renderField('occupation', selectedGirl.occupation)}</Box>
                       <Box><Text color="gray.400" fontSize="sm">学历</Text>{renderField('education', selectedGirl.education)}</Box>
                       <Box><Text color="gray.400" fontSize="sm">专业</Text>{renderField('major', selectedGirl.major)}</Box>
@@ -959,6 +1059,7 @@ export default function AdminGirls() {
                       <Box><Text color="gray.400" fontSize="sm">工作地点</Text>{renderField('workplace', selectedGirl.workplace)}</Box>
                       <Box><Text color="gray.400" fontSize="sm">平台</Text>{renderField('sourcePlatform', selectedGirl.sourcePlatform)}</Box>
                       <Box><Text color="gray.400" fontSize="sm">匹配分</Text>{renderField('matchScore', selectedGirl.matchScore)}</Box>
+                      <Box><Text color="gray.400" fontSize="sm">匹配分依据</Text><Text color={selectedGirl.matchScoreBasis ? 'white' : 'gray.500'}>{selectedGirl.matchScoreBasis || '-'}</Text></Box>
                     </SimpleGrid>
                     <Box mt={4}>
                       <Text color="gray.400" fontSize="sm">主页链接</Text>
@@ -976,7 +1077,7 @@ export default function AdminGirls() {
                     <Text color="white" fontWeight="bold" mb={2}>外貌特征</Text>
                     <SimpleGrid columns={2} spacing={4} mb={4}>
                       <Box><Text color="gray.400" fontSize="sm">外貌描述</Text>{renderField('appearance', selectedGirl.appearance)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">风格标签</Text>{renderField('styleTags', selectedGirl.styleTags, true)}</Box>
+                      <Box><Text color="gray.400" fontSize="sm">体型</Text>{renderField('bodyType', selectedGirl.bodyType)}</Box>
                     </SimpleGrid>
                     {selectedGirl.photos && (
                       <Box mb={4}>
@@ -1016,12 +1117,14 @@ export default function AdminGirls() {
                       <Box><Text color="gray.400" fontSize="sm">社交活跃度</Text>{renderField('socialActivity', selectedGirl.socialActivity)}</Box>
                       <Box><Text color="gray.400" fontSize="sm">消费习惯</Text>{renderField('financialHabits', selectedGirl.financialHabits)}</Box>
                       <Box><Text color="gray.400" fontSize="sm">饮食偏好</Text>{renderField('dietPreferences', selectedGirl.dietPreferences)}</Box>
+                      <Box><Text color="gray.400" fontSize="sm">饮食禁忌</Text>{renderField('dietRestrictions', selectedGirl.dietRestrictions) || <Text color="gray.500" fontSize="sm">无</Text>}</Box>
                     </SimpleGrid>
                     <Text color="white" fontWeight="bold" mb={2}>情史</Text>
                     <SimpleGrid columns={1} spacing={2}>
                       <Box><Text color="gray.400" fontSize="sm">情史摘要</Text>{renderField('pastRelationshipSummary', selectedGirl.pastRelationshipSummary)}</Box>
                       <Box><Text color="gray.400" fontSize="sm">情伤记录</Text>{renderField('emotionalWounds', selectedGirl.emotionalWounds)}</Box>
                       <Box><Text color="gray.400" fontSize="sm">绝对雷区</Text>{renderField('dealbreakers', selectedGirl.dealbreakers)}</Box>
+                      <Box><Text color="gray.400" fontSize="sm">择偶偏好</Text>{renderField('matePreferences', selectedGirl.matePreferences)}</Box>
                     </SimpleGrid>
                     {selectedGirl.isKinkOriented && (
                       <>
@@ -1276,6 +1379,57 @@ export default function AdminGirls() {
                 </Box>
               )}
             </VStack>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+
+      {/* AI 识别字段确认弹窗 */}
+      <Modal isOpen={isConfirmOpen} onClose={onConfirmClose} size="md">
+        <ModalOverlay />
+        <ModalContent bg="gray.800">
+          <ModalHeader color="white">
+            确认录入信息
+            <Button
+              size="xs"
+              variant="outline"
+              colorScheme="gray"
+              ml={4}
+              onClick={() => {
+                const allChecked = Object.keys(pendingFields).every(k => confirmSelections[k]);
+                const toggled = {};
+                Object.keys(pendingFields).forEach(k => { toggled[k] = !allChecked; });
+                setConfirmSelections(toggled);
+              }}
+            >
+              {Object.keys(pendingFields).every(k => confirmSelections[k]) ? '反选' : '全选'}
+            </Button>
+          </ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            <Text color="gray.300" mb={4}>
+              AI 从截图中识别到以下信息，请勾选要录入档案的字段：
+            </Text>
+            <VStack spacing={3} align="stretch">
+              {Object.entries(pendingFields).map(([key, { label, value }]) => (
+                <Flex key={key} align="center" gap={3} bg="gray.700" p={3} borderRadius="md">
+                  <Switch
+                    colorScheme="teal"
+                    isChecked={!!confirmSelections[key]}
+                    onChange={(e) => setConfirmSelections(prev => ({ ...prev, [key]: e.target.checked }))}
+                  />
+                  <Box flex={1}>
+                    <Text color="gray.400" fontSize="sm">{label}</Text>
+                    <Text color="white" fontSize="md">{value}</Text>
+                  </Box>
+                </Flex>
+              ))}
+            </VStack>
+            <HStack mt={6} spacing={4} justify="flex-end">
+              <Button variant="ghost" colorScheme="gray" onClick={onConfirmClose}>取消</Button>
+              <Button colorScheme="teal" onClick={handleConfirmFields}>
+                确认录入 ({Object.values(confirmSelections).filter(Boolean).length})
+              </Button>
+            </HStack>
           </ModalBody>
         </ModalContent>
       </Modal>

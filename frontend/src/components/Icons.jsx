@@ -52,6 +52,16 @@ export const WarningIcon = createIcon({
   ]
 });
 
+// Check Circle 图标
+export const CheckCircleIcon = createIcon({
+  displayName: 'CheckCircleIcon',
+  viewBox: '0 0 24 24',
+  path: [
+    <path key="1" d="M22 11.08V12a10 10 0 11-5.93-9.14" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>,
+    <path key="2" d="M22 4L12 14.01l-3-3" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+  ]
+});
+
 // Calendar 图标
 export const CalendarIcon = createIcon({
   displayName: 'CalendarIcon',
@@ -192,6 +202,17 @@ export const BellIcon = createIcon({
   viewBox: '0 0 24 24',
   path: [
     <path key="1" d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+  ]
+});
+
+// Question 图标
+export const QuestionIcon = createIcon({
+  displayName: 'QuestionIcon',
+  viewBox: '0 0 24 24',
+  path: [
+    <circle key="1" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none"/>,
+    <path key="2" d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>,
+    <path key="3" d="M12 17h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
   ]
 });
 

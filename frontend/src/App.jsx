@@ -11,12 +11,14 @@ import ClientProfile from './pages/client/ClientProfile';
 import ClientChat from './pages/client/Chat';
 import AICoach from './pages/client/AICoach';
 import MyPond from './pages/client/MyPond';
+import ClientDates from './pages/client/ClientDates';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminClients from './pages/admin/Clients';
 import AdminGirls from './pages/admin/Girls';
 import AdminChat from './pages/admin/Chat';
 import AdminWorkbench from './pages/admin/Workbench';
 import AdminProgress from './pages/admin/Progress';
+import AdminDates from './pages/admin/Dates';
 
 function ProtectedRoute({ children, requireOperator = false }) {
   const { user, loading } = useAuth();
@@ -40,6 +42,7 @@ function AppRoutes() {
         <Route path="chat" element={<ClientChat />} />
         <Route path="ai-coach" element={<AICoach />} />
         <Route path="my-pond" element={<MyPond />} />
+        <Route path="dates" element={<ClientDates />} />
       </Route>
       <Route path="/admin" element={<ProtectedRoute requireOperator><AdminLayout /></ProtectedRoute>}>
         <Route index element={<AdminDashboard />} />
@@ -48,6 +51,7 @@ function AppRoutes() {
         <Route path="chat" element={<AdminChat />} />
         <Route path="workbench" element={<AdminWorkbench />} />
         <Route path="progress" element={<AdminProgress />} />
+        <Route path="dates" element={<AdminDates />} />
       </Route>
     </Routes>
   );

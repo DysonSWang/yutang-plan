@@ -1,12 +1,13 @@
 import { Box, Flex, VStack, Text, Badge, Icon, useBreakpointValue, HStack, Spacer } from '@chakra-ui/react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { DashboardIcon, UsersIcon, FemaleIcon, ChatIcon, BrainIcon, ChartIcon, FishIcon } from '../../components/Icons';
+import { DashboardIcon, UsersIcon, FemaleIcon, ChatIcon, BrainIcon, ChartIcon, FishIcon, CalendarIcon } from '../../components/Icons';
 
 const navItems = [
   { path: '/admin', label: '工作台', icon: DashboardIcon },
   { path: '/admin/clients', label: '客户', icon: UsersIcon },
   { path: '/admin/girls', label: '女生', icon: FemaleIcon },
+  { path: '/admin/dates', label: '约会', icon: CalendarIcon },
   { path: '/admin/chat', label: '聊天', icon: ChatIcon },
   { path: '/admin/workbench', label: '军师', icon: BrainIcon },
   { path: '/admin/progress', label: '进度', icon: ChartIcon },

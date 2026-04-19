@@ -4,11 +4,12 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSocket } from '../../contexts/SocketContext';
 import { notifications as notifApi } from '../../utils/api';
-import { FishIcon, ChatIcon, SparklesIcon, BellIcon, HomeIcon, UserIcon } from '../../components/Icons';
+import { FishIcon, ChatIcon, SparklesIcon, BellIcon, HomeIcon, UserIcon, CalendarIcon } from '../../components/Icons';
 
 const navItems = [
   { path: '/', label: '首页', icon: HomeIcon },
   { path: '/profile', label: '档案', icon: UserIcon },
+  { path: '/dates', label: '约会', icon: CalendarIcon },
   { path: '/chat', label: '顾问', icon: ChatIcon },
   { path: '/ai-coach', label: 'AI', icon: SparklesIcon },
   { path: '/my-pond', label: '鱼塘', icon: FishIcon },
@@ -159,7 +160,7 @@ function MobileBottomNav() {
         console.error(e);
       }
     };
-    loadUnreadCount();
+    loadUnread();
 
     on('notification:new', () => {
       setUnreadCount(prev => prev + 1);

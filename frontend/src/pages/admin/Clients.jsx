@@ -68,6 +68,12 @@ const ASSETS_LEVELS = ['A6', 'A7', 'A8', 'A9', 'A10', 'A10+'];
 const BUDGET_RANGES = ['10万以下', '10-30万', '30-50万', '50-100万', '100万以上'];
 const TIME_INVESTMENTS = ['每天<1小时', '每天1-2小时', '每天2-3小时', '每天>3小时'];
 const COMFORT_ZONES = ['独立女性', '温柔体贴', '活泼开朗', '成熟稳重', '小女生', '事业型'];
+const ATTACHMENT_STYLES = ['焦虑型', '回避型', '安全型'];
+const LOVE_STYLES = ['真诚型', '陪伴型', '言语型', '身体型', '浪漫型'];
+const LOVE_LANGUAGES = ['肯定言语', '高质量陪伴', '收到礼物', '服务的行动', '身体接触'];
+const MONEY_DATING_PATTERNS = ['AA', '请客', '轮流', '看情况'];
+const APPEARANCE_SELF_ASSESSMENTS = ['很帅', '中等偏上', '普通', '其貌不扬', '不确定'];
+const APPEARANCE_MIN_ACCEPTABLES = ['非常漂亮', '中上颜值', '普通即可', '能看就行', '不看重外表'];
 const CITIES = ['北京', '上海', '广州', '深圳', '杭州', '南京', '苏州', '成都', '重庆', '武汉', '西安', '天津', '长沙', '郑州', '东莞', '佛山', '青岛', '沈阳', '大连', '厦门', '宁波', '其他'];
 const OCCUPATIONS = ['企业主', '企业高管', '公务员', '医生', '律师', '教师', '工程师', '程序员', '销售', '金融从业者', '自由职业', '退休', '其他'];
 const CLIENT_SOURCES = ['朋友推荐', '自然流量', '抖音', '小红书', '微信', '线下活动', '其他'];
@@ -132,6 +138,37 @@ const FIELD_HELP = {
   pacePreference: { label: '节奏偏好', help: '喜欢快节奏还是慢热', example: '稳健型' },
   investmentWillingness: { label: '投入意愿', help: '愿意投入多少时间金钱精力', example: '愿意花时间但预算有限' },
   comfortZone: { label: '舒适区', help: '习惯跟什么类型的女生相处', example: '独立女性' },
+  // 【评审团新增 P0】依恋类型 & 量化EQ
+  attachmentStyle: { label: '依恋类型', help: '焦虑型=粘人敏感；回避型=冷淡独立；安全型=平衡健康', example: '安全型' },
+  empathy: { label: '同理心', help: '1=很难理解对方感受，10=非常能共情', example: '7' },
+  communication: { label: '沟通能力', help: '1=词不达意，10=表达清晰有感染力', example: '6' },
+  conflictRes: { label: '冲突解决', help: '1=容易冷战激化，10=能化解矛盾促进关系', example: '5' },
+  intimacyBoundary: { label: '亲密边界', help: '身体接触到什么程度感到舒适', example: '可以牵手，拥抱需要熟悉后' },
+  // 【评审团新增 P0】约会雷区
+  dateTaboos: { label: '约会雷区', help: '约会中绝对不能做的事/说的话', example: '不能问职业/不能太快推进' },
+  // 【评审团新增 P1】恋爱风格 & 五种爱的语言
+  loveStyle: { label: '恋爱风格', help: '表达爱的核心方式', example: '浪漫型' },
+  loveLanguage1: { label: '第一爱的语言', help: '最重要的爱的表达方式', example: '高质量陪伴' },
+  loveLanguage2: { label: '第二爱的语言', help: '次重要的爱的表达方式', example: '身体接触' },
+  loveLanguage3: { label: '第三爱的语言', help: '第三重要的爱的表达方式', example: '肯定言语' },
+  loveLanguage4: { label: '第四爱的语言', help: '第四重要的爱的表达方式', example: '收到礼物' },
+  loveLanguage5: { label: '第五爱的语言', help: '最不重要的爱的表达方式', example: '服务的行动' },
+  // 【评审团新增 P1】约会金钱观念
+  moneyDatingPattern: { label: '买单观念', help: '约会时谁买单', example: '请客' },
+  // 【评审团新增 P1】前任模式 & 外表评估
+  pastRelationshipPattern: { label: '前任模式', help: '重复了什么样的关系角色，如：总追拜金女/总被发好人卡', example: '总被当备胎' },
+  appearanceSelfAssessment: { label: '外表自评', help: '客户认为自己颜值', example: '普通' },
+  appearanceSelfRequirement: { label: '对女生颜值要求', help: '希望女生什么颜值', example: '中上即可' },
+  appearanceMinAcceptable: { label: '颜值下限', help: '能接受女生最差颜值', example: '普通即可' },
+  // 【评审团新增】量化版本
+  emotionalMaturityLevel: { label: '感情成熟度', help: '1=幼稚，10=非常成熟', example: '7' },
+  coachCooperationLevel: { label: '配合度评分', help: '1=抵触，10=完全配合', example: '8' },
+  // 【评审团新增】客户AI战略分析
+  clientBestApproach: { label: '最佳策略', help: '追这个客户的最佳方式：幽默/真诚/霸道/温柔', example: '真诚' },
+  clientRecommendedTopics: { label: '推荐话题', help: '适合聊什么话题', example: '健身/创业/旅行' },
+  clientUpgradeConditions: { label: '升级条件', help: '关系升级需要满足什么条件', example: '需要先建立信任' },
+  clientRiskFactors: { label: '风险因素', help: '追这个客户需要注意什么风险', example: '容易冷暴力' },
+  clientStrategicNotes: { label: '战略备注', help: '其他战略思考', example: '需要循序渐进' },
   trustLevel: { label: '信任度', help: '对操盘手的信任，1-5', example: '3' },
   interactionHeat: { label: '互动热度', help: '客户活跃度，1-10', example: '7.5' },
   notes: { label: '备注', help: '其他补充信息', example: '客户比较忙，只晚上联系' },
@@ -199,6 +236,19 @@ function getInitialFormData() {
     currentStage: '', stageProgress: '', lastMilestone: '',
     selfEsteemLevel: '', antiFrustrationLevel: '', pacePreference: '',
     investmentWillingness: '', comfortZone: '',
+    // 【评审团新增 P0】
+    attachmentStyle: '', empathy: '', communication: '', conflictRes: '', intimacyBoundary: '',
+    dateTaboos: '',
+    // 【评审团新增 P1】
+    loveStyle: '', loveLanguage1: '', loveLanguage2: '', loveLanguage3: '', loveLanguage4: '', loveLanguage5: '',
+    moneyDatingPattern: '',
+    pastRelationshipPattern: '',
+    appearanceSelfAssessment: '', appearanceSelfRequirement: '', appearanceMinAcceptable: '',
+    // 【评审团新增】量化版本
+    emotionalMaturityLevel: '', coachCooperationLevel: '',
+    // 【评审团新增】AI战略分析
+    clientBestApproach: '', clientRecommendedTopics: '', clientUpgradeConditions: '',
+    clientRiskFactors: '', clientStrategicNotes: '',
     trustLevel: 1, interactionHeat: 5.0,
     notes: '', source: ''
   };
@@ -212,6 +262,7 @@ export default function AdminClients() {
   const { isOpen: isCreateOpen, onOpen: onCreateOpen, onClose: onCreateClose } = useDisclosure();
   const { isOpen: isExtractOpen, onOpen: onExtractOpen, onClose: onExtractClose } = useDisclosure();
   const { isOpen: isPreviewOpen, onOpen: onPreviewOpen, onClose: onPreviewClose } = useDisclosure();
+  const { isOpen: isChatExtractOpen, onOpen: onChatExtractOpen, onClose: onChatExtractClose } = useDisclosure();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState(getInitialFormData());
   const [creating, setCreating] = useState(false);
@@ -219,6 +270,15 @@ export default function AdminClients() {
   const [extractText, setExtractText] = useState('');
   const [extracting, setExtracting] = useState(false);
   const [extractedProfile, setExtractedProfile] = useState(null);
+  const [pendingFields, setPendingFields] = useState({});
+  const [confirmSelections, setConfirmSelections] = useState({});
+  // 交流提取相关状态
+  const [chatExtracting, setChatExtracting] = useState(false);
+  const [chatAnalysis, setChatAnalysis] = useState(null);
+  const [chatPreview, setChatPreview] = useState([]);
+  const [chatMessageCount, setChatMessageCount] = useState(20);
+  const [chatPendingUpdates, setChatPendingUpdates] = useState({});
+  const [chatConfirmSelections, setChatConfirmSelections] = useState({});
   const toast = useToast();
 
   useEffect(() => {
@@ -247,6 +307,30 @@ export default function AdminClients() {
       if (res.success && res.profile) {
         setExtractedProfile(res.profile);
         onExtractClose();
+        // 构建 pendingFields，只包含有值的字段
+        const p = res.profile;
+        const labelMap = {
+          age: '年龄', occupation: '职业', education: '学历', income: '收入', height: '身高',
+          residence: '所在地', hometown: '籍贯', appearance: '外貌描述', dressingStyle: '穿着风格',
+          familyBackground: '家庭背景', familyStructure: '家庭结构', familyAtmosphere: '家庭氛围',
+          personality: '性格/MBTI', emotionalStable: '情绪稳定', eqLevel: '情商',
+          communicationStyle: '沟通风格', socialStyle: '社交风格', humorStyle: '幽默风格',
+          relationshipAttitude: '婚恋态度', marriageHistory: '婚史', emotionalGoal: '感情诉求',
+          relationshipGoal: '关系目标', learningAbility: '学习能力', coachCooperation: '配合度',
+          assetsLevel: '资产级别', clientType: '客户类型', selfEsteemLevel: '自尊水平',
+          pacePreference: '节奏偏好', strengths: '优点', weaknesses: '缺点', notes: '备注'
+        };
+        const allKeys = Object.keys(labelMap);
+        const fields = {};
+        const defaults = {};
+        allKeys.forEach(k => {
+          if (p[k]) {
+            fields[k] = { label: labelMap[k], value: p[k] };
+            defaults[k] = true;
+          }
+        });
+        setPendingFields(fields);
+        setConfirmSelections(defaults);
         onPreviewOpen();
       } else {
         toast({ title: '提取失败，请重试', status: 'error' });
@@ -262,43 +346,24 @@ export default function AdminClients() {
   const handleConfirmExtract = () => {
     if (!extractedProfile) return;
     const p = extractedProfile;
-    setFormData(prev => ({
-      ...prev,
-      age: p.age || prev.age,
-      occupation: p.occupation || prev.occupation,
-      education: p.education || prev.education,
-      income: p.income || prev.income,
-      height: p.height || prev.height,
-      residence: p.residence || prev.residence,
-      hometown: p.hometown || prev.hometown,
-      appearance: p.appearance || prev.appearance,
-      familyBackground: p.familyBackground || prev.familyBackground,
-      familyStructure: p.familyStructure || prev.familyStructure,
-      familyAtmosphere: p.familyAtmosphere || prev.familyAtmosphere,
-      personality: p.personality || prev.personality,
-      emotionalStable: p.emotionalStable || prev.emotionalStable,
-      eqLevel: p.eqLevel || prev.eqLevel,
-      communicationStyle: p.communicationStyle || prev.communicationStyle,
-      socialStyle: p.socialStyle || prev.socialStyle,
-      relationshipAttitude: p.relationshipAttitude || prev.relationshipAttitude,
-      marriageHistory: p.marriageHistory || prev.marriageHistory,
-      emotionalGoal: p.emotionalGoal || prev.emotionalGoal,
-      relationshipGoal: p.relationshipGoal || prev.relationshipGoal,
-      learningAbility: p.learningAbility || prev.learningAbility,
-      coachCooperation: p.coachCooperation || prev.coachCooperation,
-      assetsLevel: p.assetsLevel || prev.assetsLevel,
-      clientType: p.clientType || prev.clientType,
-      humorStyle: p.humorStyle || prev.humorStyle,
-      selfEsteemLevel: p.selfEsteemLevel || prev.selfEsteemLevel,
-      pacePreference: p.pacePreference || prev.pacePreference,
-      strengths: p.strengths || prev.strengths,
-      weaknesses: p.weaknesses || prev.weaknesses,
-      notes: p.notes ? (prev.notes ? prev.notes + '\n' + p.notes : p.notes) : prev.notes
-    }));
-    toast({ title: '档案提取成功，请检查并完善信息', status: 'success' });
+    const updates = {};
+    Object.entries(pendingFields).forEach(([key, { value }]) => {
+      if (confirmSelections[key]) {
+        updates[key] = value;
+      }
+    });
+    setFormData(prev => {
+      const next = { ...prev };
+      Object.entries(updates).forEach(([k, v]) => { next[k] = v; });
+      if (updates.notes && prev.notes) next.notes = prev.notes + '\n' + updates.notes;
+      return next;
+    });
+    toast({ title: `已填充 ${Object.values(confirmSelections).filter(Boolean).length} 个字段，请检查并完善信息`, status: 'success' });
     onPreviewClose();
     setExtractText('');
     setExtractedProfile(null);
+    setPendingFields({});
+    setConfirmSelections({});
     if (!isEditing) {
       setIsEditing(true);
     }
@@ -308,6 +373,92 @@ export default function AdminClients() {
     onPreviewClose();
     setExtractedProfile(null);
     setExtractText('');
+    setPendingFields({});
+    setConfirmSelections({});
+  };
+
+  // 交流提取：从聊天记录分析档案更新
+  const handleExtractFromChat = async () => {
+    if (!selectedClient) return;
+    setChatExtracting(true);
+    setChatAnalysis(null);
+    setChatPendingUpdates({});
+    setChatConfirmSelections({});
+    setChatPreview([]);
+    try {
+      const res = await clientsApi.extractFromChat(selectedClient.id, chatMessageCount);
+      if (res.success && res.analysis) {
+        setChatAnalysis(res.analysis);
+        setChatPreview(res.chatPreview || []);
+        // 构建待确认更新
+        const updates = res.analysis.updatedFields || {};
+        const strategic = res.analysis.strategicAnalysis || {};
+        const allUpdates = { ...updates, ...strategic };
+        setChatPendingUpdates(allUpdates);
+        const selections = {};
+        Object.keys(allUpdates).forEach(k => { selections[k] = true; });
+        setChatConfirmSelections(selections);
+      } else {
+        toast({ title: res.error || '提取失败', status: 'error' });
+      }
+    } catch (e) {
+      console.error(e);
+      toast({ title: '提取失败，请重试', status: 'error' });
+    } finally {
+      setChatExtracting(false);
+    }
+  };
+
+  // 确认应用交流提取结果
+  const handleConfirmChatExtract = () => {
+    if (!chatAnalysis) return;
+    const updates = {};
+    Object.entries(chatPendingUpdates).forEach(([key, value]) => {
+      if (chatConfirmSelections[key]) {
+        updates[key] = value;
+      }
+    });
+    if (Object.keys(updates).length === 0) {
+      toast({ title: '请至少选择一个字段', status: 'warning' });
+      return;
+    }
+    // 填充到表单
+    setFormData(prev => {
+      const next = { ...prev };
+      // 数值型字段
+      const numericKeys = ['emotionalStable', 'eqLevel', 'commitmentWillingness', 'antiFrustrationLevel', 'empathy', 'communication', 'conflictRes', 'emotionalMaturityLevel', 'coachCooperationLevel'];
+      Object.entries(updates).forEach(([k, v]) => {
+        if (numericKeys.includes(k) && typeof v === 'number') {
+          next[k] = v;
+        } else {
+          next[k] = v;
+        }
+      });
+      // 追加到备注
+      const newInsights = chatAnalysis.newInsights || [];
+      if (newInsights.length > 0) {
+        const insightText = `[交流提取 ${new Date().toLocaleDateString()}] ${newInsights.join('；')}`;
+        next.notes = next.notes ? next.notes + '\n' + insightText : insightText;
+      }
+      return next;
+    });
+    toast({ title: `已填充 ${Object.values(chatConfirmSelections).filter(Boolean).length} 个字段，请检查并保存`, status: 'success' });
+    onChatExtractClose();
+    setChatAnalysis(null);
+    setChatPendingUpdates({});
+    setChatConfirmSelections({});
+    setChatPreview([]);
+    if (!isEditing) {
+      startEdit();
+    }
+  };
+
+  const handleCancelChatExtract = () => {
+    onChatExtractClose();
+    setChatAnalysis(null);
+    setChatPendingUpdates({});
+    setChatConfirmSelections({});
+    setChatPreview([]);
   };
 
   
@@ -390,6 +541,34 @@ export default function AdminClients() {
       pacePreference: selectedClient.pacePreference || '',
       investmentWillingness: selectedClient.investmentWillingness || '',
       comfortZone: selectedClient.comfortZone || '',
+      // 【评审团新增 P0】
+      attachmentStyle: selectedClient.attachmentStyle || '',
+      empathy: selectedClient.empathy || '',
+      communication: selectedClient.communication || '',
+      conflictRes: selectedClient.conflictRes || '',
+      intimacyBoundary: selectedClient.intimacyBoundary || '',
+      dateTaboos: selectedClient.dateTaboos || '',
+      // 【评审团新增 P1】
+      loveStyle: selectedClient.loveStyle || '',
+      loveLanguage1: selectedClient.loveLanguage1 || '',
+      loveLanguage2: selectedClient.loveLanguage2 || '',
+      loveLanguage3: selectedClient.loveLanguage3 || '',
+      loveLanguage4: selectedClient.loveLanguage4 || '',
+      loveLanguage5: selectedClient.loveLanguage5 || '',
+      moneyDatingPattern: selectedClient.moneyDatingPattern || '',
+      pastRelationshipPattern: selectedClient.pastRelationshipPattern || '',
+      appearanceSelfAssessment: selectedClient.appearanceSelfAssessment || '',
+      appearanceSelfRequirement: selectedClient.appearanceSelfRequirement || '',
+      appearanceMinAcceptable: selectedClient.appearanceMinAcceptable || '',
+      // 【评审团新增】量化版本
+      emotionalMaturityLevel: selectedClient.emotionalMaturityLevel || '',
+      coachCooperationLevel: selectedClient.coachCooperationLevel || '',
+      // 【评审团新增】AI战略分析
+      clientBestApproach: selectedClient.clientBestApproach || '',
+      clientRecommendedTopics: selectedClient.clientRecommendedTopics || '',
+      clientUpgradeConditions: selectedClient.clientUpgradeConditions || '',
+      clientRiskFactors: selectedClient.clientRiskFactors || '',
+      clientStrategicNotes: selectedClient.clientStrategicNotes || '',
       trustLevel: selectedClient.trustLevel || 1,
       interactionHeat: selectedClient.interactionHeat || 5.0,
       notes: selectedClient.notes || '',
@@ -402,7 +581,15 @@ export default function AdminClients() {
     if (!selectedClient) return;
     setSaving(true);
     try {
-      const res = await clientsApi.update(selectedClient.id, formData);
+      // 转换 Int 字段（NumberInput 返回字符串）
+      const intFields = ['empathy', 'communication', 'conflictRes', 'emotionalMaturityLevel', 'coachCooperationLevel'];
+      const payload = { ...formData };
+      intFields.forEach(f => {
+        if (payload[f] !== '' && payload[f] !== undefined) {
+          payload[f] = parseInt(payload[f], 10);
+        }
+      });
+      const res = await clientsApi.update(selectedClient.id, payload);
       if (res.success) {
         toast({ title: '保存成功', status: 'success' });
         setIsEditing(false);
@@ -609,178 +796,52 @@ export default function AdminClients() {
       </Modal>
 
       {/* 提取结果预览弹窗 */}
-      <Modal isOpen={isPreviewOpen} onClose={handleCancelExtract} size="2xl">
-        <ModalOverlay bg="blackAlpha.700" />
-        <ModalContent bg="gray.800" borderRadius="xl" border="1px solid" borderColor="gray.700" maxH="85vh" overflow="auto">
-          <ModalHeader borderBottom="1px solid" borderColor="gray.700" color="white">
-            <HStack spacing={2}>
-              <Box color="teal.400"><EditIcon /></Box>
-              <Text>识别结果确认</Text>
-            </HStack>
+      <Modal isOpen={isPreviewOpen} onClose={handleCancelExtract} size="md">
+        <ModalOverlay />
+        <ModalContent bg="gray.800">
+          <ModalHeader color="white">
+            确认录入信息
+            <Button
+              size="xs"
+              variant="outline"
+              colorScheme="gray"
+              ml={4}
+              onClick={() => {
+                const allChecked = Object.keys(pendingFields).every(k => confirmSelections[k]);
+                const toggled = {};
+                Object.keys(pendingFields).forEach(k => { toggled[k] = !allChecked; });
+                setConfirmSelections(toggled);
+              }}
+            >
+              {Object.keys(pendingFields).every(k => confirmSelections[k]) ? '反选' : '全选'}
+            </Button>
           </ModalHeader>
-          <ModalCloseButton color="gray.400" />
-          <ModalBody py={6}>
-            {extractedProfile && (
-              <VStack spacing={4} align="stretch">
-                {/* 基础信息 */}
-                <Box>
-                  <Text color="teal.400" fontWeight="bold" mb={2} fontSize="sm">基本信息</Text>
-                  <SimpleGrid columns={2} spacing={3}>
-                    {[
-                      { label: '年龄', key: 'age' },
-                      { label: '职业', key: 'occupation' },
-                      { label: '学历', key: 'education' },
-                      { label: '收入', key: 'income' },
-                      { label: '身高', key: 'height' },
-                      { label: '所在地', key: 'residence' },
-                      { label: '籍贯', key: 'hometown' },
-                    ].map(f => (
-                      <HStack key={f.key} justify="space-between" bg={extractedProfile[f.key] ? 'gray.700' : 'gray.750'} p={2} borderRadius="md">
-                        <Text color="gray.400" fontSize="xs">{f.label}</Text>
-                        <Text color={extractedProfile[f.key] ? 'white' : 'gray.500'} fontSize="sm" fontWeight={extractedProfile[f.key] ? 'normal' : 'bold'}>
-                          {extractedProfile[f.key] || '（未识别）'}
-                        </Text>
-                      </HStack>
-                    ))}
-                  </SimpleGrid>
-                </Box>
-
-                {/* 外貌资源 */}
-                <Box>
-                  <Text color="orange.400" fontWeight="bold" mb={2} fontSize="sm">外貌资源</Text>
-                  <SimpleGrid columns={2} spacing={3}>
-                    {[
-                      { label: '外貌描述', key: 'appearance' },
-                      { label: '穿着风格', key: 'dressingStyle' },
-                    ].map(f => (
-                      <HStack key={f.key} justify="space-between" bg={extractedProfile[f.key] ? 'gray.700' : 'gray.750'} p={2} borderRadius="md">
-                        <Text color="gray.400" fontSize="xs">{f.label}</Text>
-                        <Text color={extractedProfile[f.key] ? 'white' : 'gray.500'} fontSize="sm" fontWeight={extractedProfile[f.key] ? 'normal' : 'bold'}>
-                          {extractedProfile[f.key] || '（未识别）'}
-                        </Text>
-                      </HStack>
-                    ))}
-                  </SimpleGrid>
-                </Box>
-
-                {/* 家庭背景 */}
-                <Box>
-                  <Text color="purple.400" fontWeight="bold" mb={2} fontSize="sm">家庭背景</Text>
-                  <SimpleGrid columns={3} spacing={3}>
-                    {[
-                      { label: '家庭背景', key: 'familyBackground' },
-                      { label: '家庭结构', key: 'familyStructure' },
-                      { label: '家庭氛围', key: 'familyAtmosphere' },
-                    ].map(f => (
-                      <HStack key={f.key} justify="space-between" bg={extractedProfile[f.key] ? 'gray.700' : 'gray.750'} p={2} borderRadius="md">
-                        <Text color="gray.400" fontSize="xs">{f.label}</Text>
-                        <Text color={extractedProfile[f.key] ? 'white' : 'gray.500'} fontSize="sm" fontWeight={extractedProfile[f.key] ? 'normal' : 'bold'}>
-                          {extractedProfile[f.key] || '（未识别）'}
-                        </Text>
-                      </HStack>
-                    ))}
-                  </SimpleGrid>
-                </Box>
-
-                {/* 性格画像 */}
-                <Box>
-                  <Text color="cyan.400" fontWeight="bold" mb={2} fontSize="sm">性格画像</Text>
-                  <SimpleGrid columns={2} spacing={3}>
-                    {[
-                      { label: '性格/MBTI', key: 'personality' },
-                      { label: '情绪稳定', key: 'emotionalStable' },
-                      { label: '情商', key: 'eqLevel' },
-                      { label: '沟通风格', key: 'communicationStyle' },
-                      { label: '社交风格', key: 'socialStyle' },
-                      { label: '幽默风格', key: 'humorStyle' },
-                    ].map(f => (
-                      <HStack key={f.key} justify="space-between" bg={extractedProfile[f.key] ? 'gray.700' : 'gray.750'} p={2} borderRadius="md">
-                        <Text color="gray.400" fontSize="xs">{f.label}</Text>
-                        <Text color={extractedProfile[f.key] ? 'white' : 'gray.500'} fontSize="sm" fontWeight={extractedProfile[f.key] ? 'normal' : 'bold'}>
-                          {extractedProfile[f.key] || '（未识别）'}
-                        </Text>
-                      </HStack>
-                    ))}
-                  </SimpleGrid>
-                </Box>
-
-                {/* 情感状态 */}
-                <Box>
-                  <Text color="red.400" fontWeight="bold" mb={2} fontSize="sm">情感状态</Text>
-                  <SimpleGrid columns={2} spacing={3}>
-                    {[
-                      { label: '婚恋态度', key: 'relationshipAttitude' },
-                      { label: '婚史', key: 'marriageHistory' },
-                      { label: '感情诉求', key: 'emotionalGoal' },
-                      { label: '关系目标', key: 'relationshipGoal' },
-                    ].map(f => (
-                      <HStack key={f.key} justify="space-between" bg={extractedProfile[f.key] ? 'gray.700' : 'gray.750'} p={2} borderRadius="md">
-                        <Text color="gray.400" fontSize="xs">{f.label}</Text>
-                        <Text color={extractedProfile[f.key] ? 'white' : 'gray.500'} fontSize="sm" fontWeight={extractedProfile[f.key] ? 'normal' : 'bold'}>
-                          {extractedProfile[f.key] || '（未识别）'}
-                        </Text>
-                      </HStack>
-                    ))}
-                  </SimpleGrid>
-                </Box>
-
-                {/* 价值评估 */}
-                <Box>
-                  <Text color="yellow.400" fontWeight="bold" mb={2} fontSize="sm">价值评估</Text>
-                  <SimpleGrid columns={3} spacing={3}>
-                    {[
-                      { label: '学习能力', key: 'learningAbility' },
-                      { label: '配合度', key: 'coachCooperation' },
-                      { label: '资产级别', key: 'assetsLevel' },
-                      { label: '客户类型', key: 'clientType' },
-                      { label: '自尊水平', key: 'selfEsteemLevel' },
-                      { label: '节奏偏好', key: 'pacePreference' },
-                    ].map(f => (
-                      <HStack key={f.key} justify="space-between" bg={extractedProfile[f.key] ? 'gray.700' : 'gray.750'} p={2} borderRadius="md">
-                        <Text color="gray.400" fontSize="xs">{f.label}</Text>
-                        <Text color={extractedProfile[f.key] ? 'white' : 'gray.500'} fontSize="sm" fontWeight={extractedProfile[f.key] ? 'normal' : 'bold'}>
-                          {extractedProfile[f.key] || '（未识别）'}
-                        </Text>
-                      </HStack>
-                    ))}
-                  </SimpleGrid>
-                </Box>
-
-                {/* 优缺点 */}
-                {(extractedProfile.strengths || extractedProfile.weaknesses) && (
-                  <Box>
-                    <Text color="gray.400" fontWeight="bold" mb={2} fontSize="sm">优缺点</Text>
-                    <VStack spacing={2} align="stretch">
-                      {extractedProfile.strengths && (
-                        <Box bg="gray.700" p={2} borderRadius="md">
-                          <Text color="gray.400" fontSize="xs">优点</Text>
-                          <Text color="green.400" fontSize="sm">{extractedProfile.strengths}</Text>
-                        </Box>
-                      )}
-                      {extractedProfile.weaknesses && (
-                        <Box bg="gray.700" p={2} borderRadius="md">
-                          <Text color="gray.400" fontSize="xs">缺点</Text>
-                          <Text color="red.400" fontSize="sm">{extractedProfile.weaknesses}</Text>
-                        </Box>
-                      )}
-                    </VStack>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            <Text color="gray.300" mb={4}>
+              AI 从文本中识别到以下信息，请勾选要填充到档案的字段（默认全选）：
+            </Text>
+            <VStack spacing={3} align="stretch">
+              {Object.entries(pendingFields).map(([key, { label, value }]) => (
+                <Flex key={key} align="center" gap={3} bg="gray.700" p={3} borderRadius="md">
+                  <Switch
+                    colorScheme="teal"
+                    isChecked={!!confirmSelections[key]}
+                    onChange={(e) => setConfirmSelections(prev => ({ ...prev, [key]: e.target.checked }))}
+                  />
+                  <Box flex={1}>
+                    <Text color="gray.400" fontSize="sm">{label}</Text>
+                    <Text color="white" fontSize="md">{value}</Text>
                   </Box>
-                )}
-
-                {/* 备注 */}
-                {extractedProfile.notes && (
-                  <Box bg="gray.700" p={2} borderRadius="md">
-                    <Text color="gray.400" fontSize="xs">备注</Text>
-                    <Text color="gray.300" fontSize="sm">{extractedProfile.notes}</Text>
-                  </Box>
-                )}
-
-                <HStack justify="flex-end" spacing={3} pt={2}>
-                  <Button variant="ghost" color="gray.400" onClick={handleCancelExtract}>取消</Button>
-                  <Button colorScheme="teal" onClick={handleConfirmExtract}>确认并填充</Button>
-                </HStack>
-              </VStack>
-            )}
+                </Flex>
+              ))}
+            </VStack>
+            <HStack mt={6} spacing={4} justify="flex-end">
+              <Button variant="ghost" colorScheme="gray" onClick={handleCancelExtract}>取消</Button>
+              <Button colorScheme="teal" onClick={handleConfirmExtract}>
+                确认并填充 ({Object.values(confirmSelections).filter(Boolean).length})
+              </Button>
+            </HStack>
           </ModalBody>
         </ModalContent>
       </Modal>
@@ -828,6 +889,9 @@ export default function AdminClients() {
                 <Button size="md" colorScheme="teal" variant="outline" onClick={() => { startEdit(); onExtractOpen(); }} borderRadius="md">
                   从文本导入
                 </Button>
+                <Button size="md" colorScheme="purple" variant="outline" onClick={onChatExtractOpen} borderRadius="md">
+                  交流提取
+                </Button>
                 <Button size="md" colorScheme={isEditing ? 'green' : 'teal'} onClick={isEditing ? handleSave : startEdit} isLoading={saving} borderRadius="md" leftIcon={isEditing ? undefined : <EditIcon />}>
                   {isEditing ? '保存' : '编辑'}
                 </Button>
@@ -846,6 +910,8 @@ export default function AdminClients() {
                 <Tab _selected={{ bg: 'teal.600', color: 'white' }} color="gray.400" borderRadius="md" fontSize="sm">学习能力</Tab>
                 <Tab _selected={{ bg: 'orange.600', color: 'white' }} color="gray.400" borderRadius="md" fontSize="sm">代聊风格</Tab>
                 <Tab _selected={{ bg: 'purple.600', color: 'white' }} color="gray.400" borderRadius="md" fontSize="sm">价值画像</Tab>
+                <Tab _selected={{ bg: 'red.600', color: 'white' }} color="gray.400" borderRadius="md" fontSize="sm">依恋分析</Tab>
+                <Tab _selected={{ bg: 'cyan.600', color: 'white' }} color="gray.400" borderRadius="md" fontSize="sm">AI战略</Tab>
               </TabList>
 
               <TabPanels>
@@ -1207,6 +1273,16 @@ export default function AdminClients() {
                             <Text color="white">{selectedClient?.socialStyle || '-'}</Text>
                           )}
                         </FormControl>
+                        <FormControl>
+                          <FieldLabel fieldKey="emotionalMaturityLevel" isEditing={isEditing} />
+                          {isEditing ? (
+                            <NumberInput value={formData.emotionalMaturityLevel} onChange={(_, v) => setFormData({...formData, emotionalMaturityLevel: v})} bg="gray.700" min={1} max={10}>
+                              <NumberInputField color="white" />
+                            </NumberInput>
+                          ) : (
+                            <ScoreIndicator label="感情成熟度" value={selectedClient?.emotionalMaturityLevel || 0} colorScheme="purple" />
+                          )}
+                        </FormControl>
                       </VStack>
                     </FieldCard>
                     <FieldCard title="情绪能力" icon={InfoIcon} colorScheme="orange">
@@ -1360,6 +1436,75 @@ export default function AdminClients() {
                             <Text color="white">{selectedClient?.comfortZone || '-'}</Text>
                           )}
                         </FormControl>
+                        {/* 【评审团新增 P1】恋爱风格 & 金钱观念 */}
+                        <FormControl>
+                          <FieldLabel fieldKey="loveStyle" isEditing={isEditing} />
+                          {isEditing ? (
+                            <Select value={formData.loveStyle} onChange={e => setFormData({...formData, loveStyle: e.target.value})} bg="gray.700" color="white">
+                              <option value="">选择</option>
+                              {LOVE_STYLES.map(l => <option key={l} value={l}>{l}</option>)}
+                            </Select>
+                          ) : (
+                            <Badge colorScheme="purple">{selectedClient?.loveStyle || '-'}</Badge>
+                          )}
+                        </FormControl>
+                        <FormControl>
+                          <FieldLabel fieldKey="moneyDatingPattern" isEditing={isEditing} />
+                          {isEditing ? (
+                            <Select value={formData.moneyDatingPattern} onChange={e => setFormData({...formData, moneyDatingPattern: e.target.value})} bg="gray.700" color="white">
+                              <option value="">选择</option>
+                              {MONEY_DATING_PATTERNS.map(m => <option key={m} value={m}>{m}</option>)}
+                            </Select>
+                          ) : (
+                            <Text color="white">{selectedClient?.moneyDatingPattern || '-'}</Text>
+                          )}
+                        </FormControl>
+                        {/* 【评审团新增 P1】前任模式 */}
+                        <FormControl>
+                          <FieldLabel fieldKey="pastRelationshipPattern" isEditing={isEditing} />
+                          {isEditing ? (
+                            <Textarea value={formData.pastRelationshipPattern} onChange={e => setFormData({...formData, pastRelationshipPattern: e.target.value})} bg="gray.700" rows={2} color="white" />
+                          ) : (
+                            <Text color="red.300">{selectedClient?.pastRelationshipPattern || '-'}</Text>
+                          )}
+                        </FormControl>
+                      </SimpleGrid>
+                    </FieldCard>
+                  </Box>
+                  {/* 【评审团新增 P1】外表吸引力评估 */}
+                  <Box mt={4}>
+                    <FieldCard title="外表吸引力评估" icon={InfoIcon} colorScheme="pink">
+                      <SimpleGrid columns={3} spacing={4}>
+                        <FormControl>
+                          <FieldLabel fieldKey="appearanceSelfAssessment" isEditing={isEditing} />
+                          {isEditing ? (
+                            <Select value={formData.appearanceSelfAssessment} onChange={e => setFormData({...formData, appearanceSelfAssessment: e.target.value})} bg="gray.700" color="white">
+                              <option value="">选择</option>
+                              {APPEARANCE_SELF_ASSESSMENTS.map(a => <option key={a} value={a}>{a}</option>)}
+                            </Select>
+                          ) : (
+                            <Text color="white">{selectedClient?.appearanceSelfAssessment || '-'}</Text>
+                          )}
+                        </FormControl>
+                        <FormControl>
+                          <FieldLabel fieldKey="appearanceSelfRequirement" isEditing={isEditing} />
+                          {isEditing ? (
+                            <Textarea value={formData.appearanceSelfRequirement} onChange={e => setFormData({...formData, appearanceSelfRequirement: e.target.value})} bg="gray.700" rows={2} color="white" />
+                          ) : (
+                            <Text color="white">{selectedClient?.appearanceSelfRequirement || '-'}</Text>
+                          )}
+                        </FormControl>
+                        <FormControl>
+                          <FieldLabel fieldKey="appearanceMinAcceptable" isEditing={isEditing} />
+                          {isEditing ? (
+                            <Select value={formData.appearanceMinAcceptable} onChange={e => setFormData({...formData, appearanceMinAcceptable: e.target.value})} bg="gray.700" color="white">
+                              <option value="">选择</option>
+                              {APPEARANCE_MIN_ACCEPTABLES.map(a => <option key={a} value={a}>{a}</option>)}
+                            </Select>
+                          ) : (
+                            <Text color="white">{selectedClient?.appearanceMinAcceptable || '-'}</Text>
+                          )}
+                        </FormControl>
                       </SimpleGrid>
                     </FieldCard>
                   </Box>
@@ -1390,6 +1535,16 @@ export default function AdminClients() {
                             </Select>
                           ) : (
                             <Badge colorScheme={getCooperationColor(selectedClient?.coachCooperation)}>{selectedClient?.coachCooperation || '-'}</Badge>
+                          )}
+                        </FormControl>
+                        <FormControl>
+                          <FieldLabel fieldKey="coachCooperationLevel" isEditing={isEditing} />
+                          {isEditing ? (
+                            <NumberInput value={formData.coachCooperationLevel} onChange={(_, v) => setFormData({...formData, coachCooperationLevel: v})} bg="gray.700" min={1} max={10}>
+                              <NumberInputField color="white" />
+                            </NumberInput>
+                          ) : (
+                            <ScoreIndicator label="配合度评分" value={selectedClient?.coachCooperationLevel || 0} colorScheme="green" />
                           )}
                         </FormControl>
                         <FormControl>
@@ -1465,6 +1620,152 @@ export default function AdminClients() {
                       </VStack>
                     </FieldCard>
                   </SimpleGrid>
+                </TabPanel>
+
+                {/* 【评审团新增】依恋分析 */}
+                <TabPanel px={0} pt={4}>
+                  <SimpleGrid columns={2} spacing={4}>
+                    <FieldCard title="依恋类型（核心维度）" icon={HeartIcon} colorScheme="red">
+                      <VStack spacing={3} align="stretch">
+                        <FormControl>
+                          <FieldLabel fieldKey="attachmentStyle" isEditing={isEditing} />
+                          {isEditing ? (
+                            <Select value={formData.attachmentStyle} onChange={e => setFormData({...formData, attachmentStyle: e.target.value})} bg="gray.700" color="white">
+                              <option value="">选择</option>
+                              {ATTACHMENT_STYLES.map(a => <option key={a} value={a}>{a}</option>)}
+                            </Select>
+                          ) : (
+                            <Badge colorScheme={selectedClient?.attachmentStyle === '安全型' ? 'green' : selectedClient?.attachmentStyle === '焦虑型' ? 'orange' : 'gray'}>
+                              {selectedClient?.attachmentStyle || '-'}
+                            </Badge>
+                          )}
+                        </FormControl>
+                        <FormControl>
+                          <FieldLabel fieldKey="intimacyBoundary" isEditing={isEditing} />
+                          {isEditing ? (
+                            <Textarea value={formData.intimacyBoundary} onChange={e => setFormData({...formData, intimacyBoundary: e.target.value})} bg="gray.700" rows={2} color="white" />
+                          ) : (
+                            <Text color="white">{selectedClient?.intimacyBoundary || '-'}</Text>
+                          )}
+                        </FormControl>
+                      </VStack>
+                    </FieldCard>
+                    <FieldCard title="量化EQ维度" icon={InfoIcon} colorScheme="orange">
+                      <VStack spacing={3} align="stretch">
+                        <FormControl>
+                          <FieldLabel fieldKey="empathy" isEditing={isEditing} />
+                          {isEditing ? (
+                            <NumberInput value={formData.empathy} onChange={(_, v) => setFormData({...formData, empathy: v})} bg="gray.700" min={1} max={10}>
+                              <NumberInputField color="white" />
+                            </NumberInput>
+                          ) : (
+                            <ScoreIndicator label="同理心" value={selectedClient?.empathy || 0} />
+                          )}
+                        </FormControl>
+                        <FormControl>
+                          <FieldLabel fieldKey="communication" isEditing={isEditing} />
+                          {isEditing ? (
+                            <NumberInput value={formData.communication} onChange={(_, v) => setFormData({...formData, communication: v})} bg="gray.700" min={1} max={10}>
+                              <NumberInputField color="white" />
+                            </NumberInput>
+                          ) : (
+                            <ScoreIndicator label="沟通能力" value={selectedClient?.communication || 0} />
+                          )}
+                        </FormControl>
+                        <FormControl>
+                          <FieldLabel fieldKey="conflictRes" isEditing={isEditing} />
+                          {isEditing ? (
+                            <NumberInput value={formData.conflictRes} onChange={(_, v) => setFormData({...formData, conflictRes: v})} bg="gray.700" min={1} max={10}>
+                              <NumberInputField color="white" />
+                            </NumberInput>
+                          ) : (
+                            <ScoreIndicator label="冲突解决" value={selectedClient?.conflictRes || 0} colorScheme="purple" />
+                          )}
+                        </FormControl>
+                      </VStack>
+                    </FieldCard>
+                  </SimpleGrid>
+                  <Box mt={4}>
+                    <FieldCard title="约会雷区" icon={InfoIcon} colorScheme="red">
+                      <FormControl>
+                        <FieldLabel fieldKey="dateTaboos" isEditing={isEditing} />
+                        {isEditing ? (
+                          <Textarea value={formData.dateTaboos} onChange={e => setFormData({...formData, dateTaboos: e.target.value})} bg="gray.700" rows={3} color="white" placeholder="如：不能太快推进/不能AA/不能问职业/不能提及婚姻等" />
+                        ) : (
+                          <Text color="red.300">{selectedClient?.dateTaboos || '-'}</Text>
+                        )}
+                      </FormControl>
+                    </FieldCard>
+                  </Box>
+                </TabPanel>
+
+                {/* 【评审团新增】AI战略分析 */}
+                <TabPanel px={0} pt={4}>
+                  <SimpleGrid columns={2} spacing={4}>
+                    <FieldCard title="最佳追求策略" icon={InfoIcon} colorScheme="cyan">
+                      <VStack spacing={3} align="stretch">
+                        <FormControl>
+                          <FieldLabel fieldKey="clientBestApproach" isEditing={isEditing} />
+                          {isEditing ? (
+                            <Select value={formData.clientBestApproach} onChange={e => setFormData({...formData, clientBestApproach: e.target.value})} bg="gray.700" color="white">
+                              <option value="">选择</option>
+                              <option value="幽默">幽默</option>
+                              <option value="真诚">真诚</option>
+                              <option value="霸道">霸道</option>
+                              <option value="温柔">温柔</option>
+                              <option value="调理型">调理型</option>
+                            </Select>
+                          ) : (
+                            <Badge colorScheme="cyan">{selectedClient?.clientBestApproach || '-'}</Badge>
+                          )}
+                        </FormControl>
+                        <FormControl>
+                          <FieldLabel fieldKey="clientRecommendedTopics" isEditing={isEditing} />
+                          {isEditing ? (
+                            <Textarea value={formData.clientRecommendedTopics} onChange={e => setFormData({...formData, clientRecommendedTopics: e.target.value})} bg="gray.700" rows={2} color="white" />
+                          ) : (
+                            <Text color="white">{selectedClient?.clientRecommendedTopics || '-'}</Text>
+                          )}
+                        </FormControl>
+                      </VStack>
+                    </FieldCard>
+                    <FieldCard title="升级条件" icon={InfoIcon} colorScheme="green">
+                      <VStack spacing={3} align="stretch">
+                        <FormControl>
+                          <FieldLabel fieldKey="clientUpgradeConditions" isEditing={isEditing} />
+                          {isEditing ? (
+                            <Textarea value={formData.clientUpgradeConditions} onChange={e => setFormData({...formData, clientUpgradeConditions: e.target.value})} bg="gray.700" rows={3} color="white" />
+                          ) : (
+                            <Text color="white">{selectedClient?.clientUpgradeConditions || '-'}</Text>
+                          )}
+                        </FormControl>
+                      </VStack>
+                    </FieldCard>
+                  </SimpleGrid>
+                  <Box mt={4}>
+                    <FieldCard title="风险因素" icon={InfoIcon} colorScheme="red">
+                      <FormControl>
+                        <FieldLabel fieldKey="clientRiskFactors" isEditing={isEditing} />
+                        {isEditing ? (
+                          <Textarea value={formData.clientRiskFactors} onChange={e => setFormData({...formData, clientRiskFactors: e.target.value})} bg="gray.700" rows={3} color="white" />
+                        ) : (
+                          <Text color="red.300">{selectedClient?.clientRiskFactors || '-'}</Text>
+                        )}
+                      </FormControl>
+                    </FieldCard>
+                  </Box>
+                  <Box mt={4}>
+                    <FieldCard title="战略备注" icon={InfoIcon} colorScheme="gray">
+                      <FormControl>
+                        <FieldLabel fieldKey="clientStrategicNotes" isEditing={isEditing} />
+                        {isEditing ? (
+                          <Textarea value={formData.clientStrategicNotes} onChange={e => setFormData({...formData, clientStrategicNotes: e.target.value})} bg="gray.700" rows={3} color="white" />
+                        ) : (
+                          <Text color="gray.300">{selectedClient?.clientStrategicNotes || '-'}</Text>
+                        )}
+                      </FormControl>
+                    </FieldCard>
+                  </Box>
                 </TabPanel>
 
                 {/* 代聊风格 */}
@@ -1648,6 +1949,207 @@ export default function AdminClients() {
                 </TabPanel>
               </TabPanels>
             </Tabs>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+
+      {/* 交流提取弹窗：操盘手交流后从聊天记录提取档案更新 */}
+      <Modal isOpen={isChatExtractOpen} onClose={handleCancelChatExtract} size="4xl">
+        <ModalOverlay bg="blackAlpha.700" />
+        <ModalContent bg="gray.800" borderRadius="xl" border="1px solid" borderColor="gray.700" maxH="85vh" overflow="hidden" display="flex" flexDirection="column">
+          <ModalHeader borderBottom="1px solid" borderColor="gray.700" color="white" pb={3}>
+            <HStack spacing={2}>
+              <Box color="purple.400"><HeartIcon /></Box>
+              <Text>交流提取 · 更新档案</Text>
+              {selectedClient && (
+                <Badge colorScheme="purple" ml={2}>{selectedClient.nickname || selectedClient.username}</Badge>
+              )}
+            </HStack>
+          </ModalHeader>
+          <ModalCloseButton color="gray.400" />
+          <ModalBody p={0} overflow="auto" flex="1">
+            {!chatAnalysis ? (
+              /* 提取界面 */
+              <VStack spacing={6} p={6} align="stretch">
+                <Box bg="gray.750" borderRadius="lg" p={4}>
+                  <Text color="gray.300" fontSize="sm" mb={3}>
+                    将分析你与该客户的聊天记录，AI 自动提取档案更新建议。
+                  </Text>
+                  <HStack spacing={4} align="center">
+                    <Text color="gray.400" fontSize="sm" whiteSpace="nowrap">分析最近</Text>
+                    <Select
+                      value={chatMessageCount}
+                      onChange={e => setChatMessageCount(parseInt(e.target.value))}
+                      bg="gray.700"
+                      color="white"
+                      w="120px"
+                      size="sm"
+                    >
+                      <option value={10}>10 条</option>
+                      <option value={20}>20 条</option>
+                      <option value={30}>30 条</option>
+                      <option value={50}>50 条</option>
+                    </Select>
+                    <Text color="gray.400" fontSize="sm" whiteSpace="nowrap">条聊天记录</Text>
+                  </HStack>
+                </Box>
+                <SimpleGrid columns={2} spacing={4}>
+                  <Box bg="gray.750" borderRadius="lg" p={4}>
+                    <Text color="purple.300" fontWeight="600" mb={2} fontSize="sm">提取内容</Text>
+                    <VStack align="start" spacing={1}>
+                      {[
+                        ['newInsights', '客户透露的新信息'],
+                        ['updatedFields', '建议更新的档案字段'],
+                        ['strategicAnalysis', '操盘手战略建议'],
+                        ['confidence', '分析置信度'],
+                      ].map(([key, label]) => (
+                        <HStack key={key} spacing={2}>
+                          <Box w={2} h={2} borderRadius="full" bg="purple.400" flexShrink={0} />
+                          <Text color="gray.300" fontSize="sm">{label}</Text>
+                        </HStack>
+                      ))}
+                    </VStack>
+                  </Box>
+                  <Box bg="gray.750" borderRadius="lg" p={4}>
+                    <Text color="purple.300" fontWeight="600" mb={2} fontSize="sm">适用场景</Text>
+                    <VStack align="start" spacing={1}>
+                      {[
+                        '深度沟通后了解客户新动态',
+                        '发现客户态度/情绪变化',
+                        '识别客户新雷区或新需求',
+                        '更新战略分析维度',
+                      ].map((item, i) => (
+                        <HStack key={i} spacing={2}>
+                          <Box w={2} h={2} borderRadius="full" bg="gray.500" flexShrink={0} />
+                          <Text color="gray.400" fontSize="sm">{item}</Text>
+                        </HStack>
+                      ))}
+                    </VStack>
+                  </Box>
+                </SimpleGrid>
+                <HStack justify="flex-end" spacing={4}>
+                  <Button variant="ghost" color="gray.400" onClick={handleCancelChatExtract}>取消</Button>
+                  <Button
+                    colorScheme="purple"
+                    onClick={handleExtractFromChat}
+                    isLoading={chatExtracting}
+                    loadingText="AI 分析中..."
+                    borderRadius="md"
+                  >
+                    开始分析聊天记录
+                  </Button>
+                </HStack>
+              </VStack>
+            ) : (
+              /* 分析结果界面 */
+              <VStack spacing={0} align="stretch">
+                {/* 置信度 & 消息预览 */}
+                <Box bg="gray.750" p={4} borderBottom="1px solid" borderColor="gray.700">
+                  <HStack justify="space-between" mb={3}>
+                    <HStack spacing={3}>
+                      <Badge colorScheme={chatAnalysis.confidence >= 0.7 ? 'green' : chatAnalysis.confidence >= 0.4 ? 'yellow' : 'red'} borderRadius="full">
+                        置信度 {(chatAnalysis.confidence * 100).toFixed(0)}%
+                      </Badge>
+                      <Text color="gray.400" fontSize="xs">基于 {chatAnalysis.messageCount} 条聊天记录</Text>
+                    </HStack>
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      colorScheme="gray"
+                      onClick={() => {
+                        const allChecked = Object.keys(chatPendingUpdates).every(k => chatConfirmSelections[k]);
+                        const toggled = {};
+                        Object.keys(chatPendingUpdates).forEach(k => { toggled[k] = !allChecked; });
+                        setChatConfirmSelections(toggled);
+                      }}
+                    >
+                      {Object.keys(chatPendingUpdates).every(k => chatConfirmSelections[k]) ? '反选' : '全选'}
+                    </Button>
+                  </HStack>
+                  {chatAnalysis.newInsights?.length > 0 && (
+                    <Box>
+                      <Text color="purple.300" fontSize="xs" fontWeight="600" mb={1}>新发现</Text>
+                      <HStack spacing={2} flexWrap="wrap">
+                        {chatAnalysis.newInsights.map((insight, i) => (
+                          <Badge key={i} colorScheme="purple" variant="subtle" borderRadius="full" px={2} py={1} fontSize="xs">
+                            {insight}
+                          </Badge>
+                        ))}
+                      </HStack>
+                    </Box>
+                  )}
+                </Box>
+
+                {/* 待确认更新列表 */}
+                <Box p={4} overflow="auto" maxH="400px">
+                  {Object.keys(chatPendingUpdates).length === 0 ? (
+                    <Box textAlign="center" py={8}>
+                      <Text color="gray.500">本次分析未发现需要更新的档案字段</Text>
+                    </Box>
+                  ) : (
+                    <VStack spacing={3} align="stretch">
+                      {Object.entries(chatPendingUpdates).map(([key, value]) => {
+                        const fieldInfo = FIELD_HELP[key] || { label: key, help: '' };
+                        const displayValue = typeof value === 'number' ? `${value}/10` : value;
+                        const isStrategic = ['clientBestApproach', 'clientRecommendedTopics', 'clientUpgradeConditions', 'clientRiskFactors', 'clientStrategicNotes'].includes(key);
+                        return (
+                          <Flex
+                            key={key}
+                            align="center"
+                            gap={3}
+                            bg={isStrategic ? 'purple.900' : 'gray.700'}
+                            opacity={chatConfirmSelections[key] === false ? 0.5 : 1}
+                            p={3}
+                            borderRadius="md"
+                            borderLeft="3px solid"
+                            borderLeftColor={isStrategic ? 'purple.400' : 'teal.400'}
+                          >
+                            <Switch
+                              colorScheme="purple"
+                              isChecked={!!chatConfirmSelections[key]}
+                              onChange={(e) => setChatConfirmSelections(prev => ({ ...prev, [key]: e.target.checked }))}
+                            />
+                            <Box flex={1}>
+                              <HStack spacing={2} mb={0.5}>
+                                <Text color="gray.300" fontSize="xs" fontWeight="600">{fieldInfo.label}</Text>
+                                {isStrategic && <Badge colorScheme="purple" fontSize="10px">战略</Badge>}
+                              </HStack>
+                              <Text color="white" fontSize="sm" whiteSpace="pre-wrap">{displayValue}</Text>
+                            </Box>
+                          </Flex>
+                        );
+                      })}
+                    </VStack>
+                  )}
+                </Box>
+
+                {/* 底部操作栏 */}
+                <HStack justify="space-between" p={4} borderTop="1px solid" borderColor="gray.700" bg="gray.750">
+                  <Button
+                    variant="ghost"
+                    color="gray.400"
+                    size="sm"
+                    onClick={() => {
+                      setChatAnalysis(null);
+                      setChatPendingUpdates({});
+                      setChatConfirmSelections({});
+                    }}
+                  >
+                    重新分析
+                  </Button>
+                  <HStack spacing={4}>
+                    <Button variant="ghost" color="gray.400" onClick={handleCancelChatExtract}>取消</Button>
+                    <Button
+                      colorScheme="purple"
+                      onClick={handleConfirmChatExtract}
+                      borderRadius="md"
+                    >
+                      确认并填充 ({Object.values(chatConfirmSelections).filter(Boolean).length})
+                    </Button>
+                  </HStack>
+                </HStack>
+              </VStack>
+            )}
           </ModalBody>
         </ModalContent>
       </Modal>
