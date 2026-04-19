@@ -4,28 +4,7 @@
  */
 
 const { toolDefinitions, executeTool } = require('../coaches/skills');
-
-// AI Provider 配置（与 aiCoach.js 保持一致）
-const AI_PROVIDER = process.env.AI_PROVIDER || 'dashscope';
-const ZHIPU_API_KEY = process.env.ZHIPUAI_API_KEY || "60bb0c8311af4755ba87b749353354d8.OePtWEfG8VYlmrtf";
-const ZHIPU_API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
-const DASHSCOPE_API_KEY = process.env.DASH_SCOPE_API_KEY;
-const DASHSCOPE_API_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
-
-function getAIConfig() {
-  if (AI_PROVIDER === 'dashscope' && DASHSCOPE_API_KEY) {
-    return {
-      url: DASHSCOPE_API_URL,
-      key: DASHSCOPE_API_KEY,
-      model: 'qwen3.6-plus-2026-04-02'
-    };
-  }
-  return {
-    url: ZHIPU_API_URL,
-    key: ZHIPU_API_KEY,
-    model: 'glm-4'
-  };
-}
+const { getAIConfig } = require('../config');
 
 // 最大工具调用次数（防止无限循环）
 const MAX_TOOL_CALLS = 5;

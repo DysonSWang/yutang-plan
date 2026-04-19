@@ -1,6 +1,8 @@
 /**
  * API 工具类
  */
+import imageCompression from 'browser-image-compression';
+
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3005';
 
 class Api {
@@ -76,17 +78,74 @@ export const clients = {
   me: () => api.get('/api/clients/me'),
   update: (id, data) => api.put(`/api/clients/${id}`, data),
   create: (data) => api.post('/api/clients', data),
-  extractProfile: (text) => api.post('/api/clients/extract-profile', { text })
+  extractProfile: (text) => api.post('/api/clients/extract-profile', { text }),
+  extractFromChat: (clientId, messageCount) => api.post(`/api/clients/${clientId}/extract-from-chat`, { messageCount })
 };
 
 // 聊天
 export const chat = {
   sessions: () => api.get('/api/chat/sessions'),
+  mySessions: () => api.get('/api/chat/my-sessions'),
   createSession: (clientId) => api.post('/api/chat/sessions', { clientId }),
   messages: (sessionId, params) => api.get(`/api/chat/sessions/${sessionId}/messages` + (params ? '?' + new URLSearchParams(params) : '')),
-  send: (sessionId, content, type = 'text') => api.post('/api/chat/messages', { sessionId, content, type }),
+  send: (sessionId, content, type = 'text', mediaUrl, duration, isBurnAfterRead = false, burnAfterSeconds = null, isFlashImage = false) =>
+    api.post('/api/chat/messages', { sessionId, content, type, mediaUrl, duration, isBurnAfterRead, burnAfterSeconds, isFlashImage }),
   burn: (id) => api.post(`/api/chat/messages/${id}/burn`),
-  read: (id) => api.post(`/api/chat/messages/${id}/read`)
+  recall: (messageId) => api.post(`/api/chat/messages/${messageId}/recall`),
+  read: (id) => api.post(`/api/chat/messages/${id}/read`),
+  profile: {
+    get: (clientId) => api.get(`/api/chat/profile/${clientId}`),
+    suggest: (clientId) => api.post(`/api/chat/profile/${clientId}/suggest`, {}),
+    update: (clientId, data) => api.request('PATCH', `/api/chat/profile/${clientId}`, data),
+  }
+};
+
+// 上传
+export const upload = {
+  image: async (file) => {
+    const options = {
+      maxSizeMB: 1,
+      maxWidthOrHeight: 1920,
+      useWebWorker: true,
+      fileType: 'image/jpeg'
+    };
+    const compressed = await imageCompression(file, options);
+
+    const token = api.getToken();
+    const formData = new FormData();
+    formData.append('file', compressed);
+    const res = await fetch(`${api.baseUrl}/api/upload/image`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData
+    });
+    const json = await res.json();
+    json.originalSize = file.size;
+    json.compressedSize = compressed.size;
+    return json;
+  },
+  video: async (file) => {
+    const token = api.getToken();
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${api.baseUrl}/api/upload/compress-video`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData
+    });
+    return res.json();
+  },
+  audio: async (file) => {
+    const token = api.getToken();
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${api.baseUrl}/api/upload/audio`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData
+    });
+    return res.json();
+  }
 };
 
 // 代聊记录
@@ -101,8 +160,24 @@ export const chatLogs = {
 export const dates = {
   list: (params) => api.get('/api/dates' + (params ? '?' + new URLSearchParams(params) : '')),
   create: (data) => api.post('/api/dates', data),
+  get: (id) => api.get(`/api/dates/${id}`),
   update: (id, data) => api.put(`/api/dates/${id}`, data),
-  delete: (id) => api.delete(`/api/dates/${id}`)
+  delete: (id) => api.delete(`/api/dates/${id}`),
+  generatePlan: (id) => api.post(`/api/dates/${id}/generate-plan`),
+  evaluate: (id, data) => api.post(`/api/dates/${id}/evaluate`, data),
+  getChecklistTemplate: () => api.get('/api/dates/checklist-template'),
+  updateChecklist: (id, checklist) => api.put(`/api/dates/${id}/checklist`, { checklist }),
+  discuss: (id, message) => api.post(`/api/dates/${id}/discuss`, { message }),
+  pushToClient: (id) => api.post(`/api/dates/${id}/push-to-client`),
+  getClientPending: () => api.get('/api/dates/client-pending'),
+  submitClientFeedback: (id, feedback) => api.post(`/api/dates/${id}/client-feedback`, feedback),
+  clientConfirm: (id) => api.post(`/api/dates/${id}/client-confirm`),
+  // 个性化访谈
+  generateInterview: (id) => api.post(`/api/dates/${id}/generate-interview`),
+  pushInterview: (id) => api.post(`/api/dates/${id}/push-interview`),
+  getClientInterviews: () => api.get('/api/dates/client-interviews'),
+  submitInterview: (id, answers) => api.post(`/api/dates/${id}/submit-interview`, { answers }),
+  generateReviewReport: (id) => api.post(`/api/dates/${id}/generate-review-report`),
 };
 
 // 付款
@@ -136,8 +211,13 @@ export const aiCoach = {
 // 实战聊天（操盘手帮客户和女生聊）
 export const chatPartner = {
   analyze: (data) => api.post('/api/chat-partner/analyze', data),
+  optimizeMessage: (data) => api.post('/api/chat-partner/optimize-message', data),
+  feedback: (data) => api.post('/api/chat-partner/feedback', data),
   history: (girlId) => api.get(`/api/chat-partner/history/${girlId}`),
-  send: (data) => api.post('/api/chat-partner/send', data)
+  send: (data) => api.post('/api/chat-partner/send', data),
+  pendingUpdates: (girlId) => api.get(`/api/chat-partner/pending-updates/${girlId}`),
+  approveUpdates: (updateIds, approve) => api.post('/api/chat-partner/approve-updates', { updateIds, approve }),
+  applyUpdate: (updateId) => api.post(`/api/chat-partner/apply-update/${updateId}`)
 };
 
 // 聊天截图
@@ -155,7 +235,8 @@ export const chatScreenshots = {
   },
   updateNotes: (id, notes) => api.patch(`/api/chat-screenshots/${id}/notes`, { notes }),
   aiNotes: (id) => api.post(`/api/chat-screenshots/${id}/ai-notes`),
-  delete: (id) => api.delete(`/api/chat-screenshots/${id}`)
+  delete: (id) => api.delete(`/api/chat-screenshots/${id}`),
+  confirmFields: (girlId, selectedFields) => api.post('/api/chat-screenshots/confirm-fields', { girlId, selectedFields })
 };
 
 // Dashboard
@@ -166,5 +247,5 @@ export const dashboard = {
   weekTasks: (clientId) => api.get('/api/dashboard/week-tasks' + (clientId ? '?clientId=' + clientId : '')),
   alerts: (clientId) => api.get('/api/dashboard/alerts' + (clientId ? '?clientId=' + clientId : '')),
   analyzeAll: (clientId) => api.post('/api/dashboard/analyze-all' + (clientId ? '?clientId=' + clientId : '')),
-  analyzeResult: (jobId) => api.get('/api/dashboard/analyze-result/' + jobId)
+  analyzeResult: (jobId) => api.get(`/api/dashboard/analyze-result/${jobId}`)
 };

@@ -19,32 +19,7 @@ const { getOrCreateSession, addMessage, shouldSummarize } = require('../services
 const { searchLearnings, extractLearningsFromConversation, formatLearningsForPrompt } = require('../services/learning');
 
 const prisma = new PrismaClient();
-const JWT_SECRET = process.env.JWT_SECRET || 'yutang-secret-key-2024';
-
-// AI Provider 配置 - 支持智谱AI和通义千问
-const AI_PROVIDER = process.env.AI_PROVIDER || 'dashscope'; // 'zhipu' 或 'dashscope'
-
-const ZHIPU_API_KEY = process.env.ZHIPUAI_API_KEY || "60bb0c8311af4755ba87b749353354d8.OePtWEfG8VYlmrtf";
-const ZHIPU_API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
-
-const DASHSCOPE_API_KEY = process.env.DASH_SCOPE_API_KEY;
-const DASHSCOPE_API_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
-
-// 获取当前AI配置
-function getAIConfig() {
-  if (AI_PROVIDER === 'dashscope' && DASHSCOPE_API_KEY) {
-    return {
-      url: DASHSCOPE_API_URL,
-      key: DASHSCOPE_API_KEY,
-      model: 'qwen3.6-plus-2026-04-02'
-    };
-  }
-  return {
-    url: ZHIPU_API_URL,
-    key: ZHIPU_API_KEY,
-    model: 'glm-4'
-  };
-}
+const { JWT_SECRET, getAIConfig } = require('../config');
 
 // Auth middleware
 const authMiddleware = async (req, res, next) => {
@@ -93,7 +68,7 @@ router.post('/situation', authMiddleware, async (req, res) => {
       contextInfo = `
 【女生档案】
 ID：${context.girlInfo.id}（调用工具时必须使用此ID）
-姓名：${context.girlInfo.name}
+昵称：${context.girlInfo.name}
 当前阶段：${context.girlInfo.stage || '未知'}
 关系热度：${context.girlInfo.tensionScore || 5}/10
 亲密度：${'❤️'.repeat(context.girlInfo.intimacyLevel || 1)}
@@ -294,7 +269,7 @@ router.post('/analyze-chat', authMiddleware, async (req, res) => {
       if (context.girlInfo) {
         girlContextInfo = `
 【女生完整档案】
-姓名：${context.girlInfo.name}
+昵称：${context.girlInfo.name}
 当前阶段：${context.girlInfo.stage || '未知'}
 关系热度：${context.girlInfo.tensionScore || 5}/10
 亲密度：${'❤️'.repeat(context.girlInfo.intimacyLevel || 1)}
@@ -322,7 +297,7 @@ ${context.observations.length > 0
       // 降级：使用传入的 girlInfo 对象
       girlContextInfo = `
 【女生信息】
-姓名：${girlInfo.name || '未知'}
+昵称：${girlInfo.name || '未知'}
 当前阶段：${girlInfo.stage || '未知'}
 `;
     }
@@ -409,7 +384,7 @@ router.post('/reply-suggestions', authMiddleware, async (req, res) => {
       const p = fullContext.girlInfo.personality || {};
       girlContextInfo = `
 【女生完整档案】
-姓名：${fullContext.girlInfo.name}
+昵称：${fullContext.girlInfo.name}
 当前阶段：${fullContext.girlInfo.stage || '未知'}
 关系热度：${fullContext.girlInfo.tensionScore || 5}/10
 亲密度：${'❤️'.repeat(fullContext.girlInfo.intimacyLevel || 1)}
@@ -530,7 +505,7 @@ router.post('/optimize-reply', authMiddleware, async (req, res) => {
     if (fullContext && fullContext.girlInfo) {
       girlContextInfo = `
 【女生信息】
-姓名：${fullContext.girlInfo.name}
+昵称：${fullContext.girlInfo.name}
 阶段：${fullContext.girlInfo.stage || '未知'}
 热度：${fullContext.girlInfo.tensionScore || 5}/10
 近期信号：${fullContext.recentSignals[0]?.event || '暂无'}

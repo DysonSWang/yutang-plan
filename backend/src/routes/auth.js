@@ -9,7 +9,7 @@ const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
-const JWT_SECRET = process.env.JWT_SECRET || 'yutang-secret-key-2024';
+const { JWT_SECRET } = require('../config');
 
 // 注册
 router.post('/register', async (req, res) => {

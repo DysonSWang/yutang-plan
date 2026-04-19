@@ -7,7 +7,7 @@ const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
-const JWT_SECRET = process.env.JWT_SECRET || 'yutang-secret-key-2024';
+const { JWT_SECRET } = require('../config');
 
 module.exports = function(io) {
 const router = express.Router();

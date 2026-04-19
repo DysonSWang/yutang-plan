@@ -8,7 +8,7 @@ const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
-const JWT_SECRET = process.env.JWT_SECRET || 'yutang-secret-key-2024';
+const { JWT_SECRET } = require('../config');
 
 // Auth middleware
 const authMiddleware = async (req, res, next) => {
@@ -114,6 +114,8 @@ router.post('/', authMiddleware, async (req, res) => {
         residence: data.residence,
         workplace: data.workplace,
         appearance: data.appearance,
+        height: data.height ? parseInt(data.height) : null,
+        bodyType: data.bodyType,
         photos: data.photos ? JSON.stringify(data.photos) : null,
         styleTags: data.styleTags,
         familyBackground: data.familyBackground,
@@ -125,6 +127,7 @@ router.post('/', authMiddleware, async (req, res) => {
         financialHabits: data.financialHabits,
         interests: data.interests,
         dietPreferences: data.dietPreferences,
+        dietRestrictions: data.dietRestrictions,
         hobbiesDetail: data.hobbiesDetail,
         relationshipAttitude: data.relationshipAttitude,
         pastRelationshipSummary: data.pastRelationshipSummary,
@@ -147,7 +150,7 @@ router.post('/', authMiddleware, async (req, res) => {
         status: data.status || 'available',
         intimacyLevel: data.intimacyLevel || 1,
         tensionScore: data.tensionScore || 5.0,
-        lastContact: data.lastContact,
+        lastContact: data.lastContact || null,
         responsePattern: data.responsePattern,
         signals: data.signals ? JSON.stringify(data.signals) : null,
         pendingActions: data.pendingActions ? JSON.stringify(data.pendingActions) : null,
@@ -166,6 +169,8 @@ router.post('/', authMiddleware, async (req, res) => {
         relationship: data.relationship,
         conflictRes: data.conflictRes,
         matchScore: data.matchScore,
+        matchScoreBasis: data.matchScoreBasis,
+        matePreferences: data.matePreferences,
         sourcePlatform: data.sourcePlatform,
         sourceUrl: data.sourceUrl,
         notes: data.notes
@@ -209,6 +214,8 @@ router.put('/:id', authMiddleware, async (req, res) => {
 
     // 外貌特征
     if (data.appearance !== undefined) updateData.appearance = data.appearance;
+    if (data.height !== undefined) updateData.height = data.height ? parseInt(data.height) : null;
+    if (data.bodyType !== undefined) updateData.bodyType = data.bodyType || null;
     if (data.photos !== undefined) updateData.photos = data.photos ? JSON.stringify(data.photos) : null;
     if (data.styleTags !== undefined) updateData.styleTags = data.styleTags;
 
@@ -226,6 +233,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     // 兴趣爱好
     if (data.interests !== undefined) updateData.interests = data.interests;
     if (data.dietPreferences !== undefined) updateData.dietPreferences = data.dietPreferences;
+    if (data.dietRestrictions !== undefined) updateData.dietRestrictions = data.dietRestrictions;
     if (data.hobbiesDetail !== undefined) updateData.hobbiesDetail = data.hobbiesDetail;
 
     // 情感状态
@@ -256,7 +264,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     if (data.status !== undefined) updateData.status = data.status;
     if (data.intimacyLevel !== undefined) updateData.intimacyLevel = data.intimacyLevel;
     if (data.tensionScore !== undefined) updateData.tensionScore = data.tensionScore;
-    if (data.lastContact !== undefined) updateData.lastContact = data.lastContact;
+    if (data.lastContact !== undefined) updateData.lastContact = data.lastContact || null;
     if (data.responsePattern !== undefined) updateData.responsePattern = data.responsePattern;
 
     // 上下文记忆
@@ -283,6 +291,8 @@ router.put('/:id', authMiddleware, async (req, res) => {
 
     // 元数据
     if (data.matchScore !== undefined) updateData.matchScore = data.matchScore;
+    if (data.matchScoreBasis !== undefined) updateData.matchScoreBasis = data.matchScoreBasis;
+    if (data.matePreferences !== undefined) updateData.matePreferences = data.matePreferences;
     if (data.sourcePlatform !== undefined) updateData.sourcePlatform = data.sourcePlatform;
     if (data.sourceUrl !== undefined) updateData.sourceUrl = data.sourceUrl;
     if (data.notes !== undefined) updateData.notes = data.notes;

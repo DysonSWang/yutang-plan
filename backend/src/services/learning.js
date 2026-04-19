@@ -6,21 +6,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-const { getAIConfig } = require('./contextBuilder');
-
-// 同步 getAIConfig（避免循环依赖）
-function getAIConfigLocal() {
-  const AI_PROVIDER = process.env.AI_PROVIDER || 'dashscope';
-  const ZHIPU_API_KEY = process.env.ZHIPUAI_API_KEY || "60bb0c8311af4755ba87b749353354d8.OePtWEfG8VYlmrtf";
-  const ZHIPU_API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
-  const DASHSCOPE_API_KEY = process.env.DASH_SCOPE_API_KEY;
-  const DASHSCOPE_API_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
-
-  if (AI_PROVIDER === 'dashscope' && DASHSCOPE_API_KEY) {
-    return { url: DASHSCOPE_API_URL, key: DASHSCOPE_API_KEY, model: 'qwen3.6-plus-2026-04-02' };
-  }
-  return { url: ZHIPU_API_URL, key: ZHIPU_API_KEY, model: 'glm-4' };
-}
+const { getAIConfig } = require('../config');
 
 /**
  * 搜索历史经验
@@ -95,7 +81,7 @@ ${conversationText}
 
 只输出JSON，不要其他内容。`;
 
-  const aiConfig = getAIConfigLocal();
+  const aiConfig = getAIConfig();
 
   try {
     const response = await fetch(aiConfig.url, {

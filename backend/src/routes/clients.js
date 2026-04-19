@@ -8,29 +8,7 @@ const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
-const JWT_SECRET = process.env.JWT_SECRET || 'yutang-secret-key-2024';
-
-// AI Provider 配置
-const AI_PROVIDER = process.env.AI_PROVIDER || 'dashscope';
-const ZHIPU_API_KEY = process.env.ZHIPUAI_API_KEY || "60bb0c8311af4755ba87b749353354d8.OePtWEfG8VYlmrtf";
-const ZHIPU_API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
-const DASHSCOPE_API_KEY = process.env.DASH_SCOPE_API_KEY;
-const DASHSCOPE_API_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
-
-function getAIConfig() {
-  if (AI_PROVIDER === 'dashscope' && DASHSCOPE_API_KEY) {
-    return {
-      url: DASHSCOPE_API_URL,
-      key: DASHSCOPE_API_KEY,
-      model: 'qwen3.6-plus-2026-04-02'
-    };
-  }
-  return {
-    url: ZHIPU_API_URL,
-    key: ZHIPU_API_KEY,
-    model: 'glm-4'
-  };
-}
+const { JWT_SECRET, getAIConfig } = require('../config');
 
 // Auth middleware
 const authMiddleware = async (req, res, next) => {
@@ -269,6 +247,38 @@ router.post('/', authMiddleware, async (req, res) => {
         investmentWillingness: data.investmentWillingness,
         // 舒适区（旭哥新增）
         comfortZone: data.comfortZone,
+        // 【评审团新增 P0】依恋类型 & 量化EQ维度
+        attachmentStyle: data.attachmentStyle,
+        empathy: data.empathy,
+        communication: data.communication,
+        conflictRes: data.conflictRes,
+        intimacyBoundary: data.intimacyBoundary,
+        // 【评审团新增 P0】约会雷区
+        dateTaboos: data.dateTaboos,
+        // 【评审团新增 P1】恋爱风格 & 五种爱的语言
+        loveStyle: data.loveStyle,
+        loveLanguage1: data.loveLanguage1,
+        loveLanguage2: data.loveLanguage2,
+        loveLanguage3: data.loveLanguage3,
+        loveLanguage4: data.loveLanguage4,
+        loveLanguage5: data.loveLanguage5,
+        // 【评审团新增 P1】约会金钱观念
+        moneyDatingPattern: data.moneyDatingPattern,
+        // 【评审团新增 P1】前任关系模式分析
+        pastRelationshipPattern: data.pastRelationshipPattern,
+        // 【评审团新增 P1】外表吸引力自评与需求
+        appearanceSelfAssessment: data.appearanceSelfAssessment,
+        appearanceSelfRequirement: data.appearanceSelfRequirement,
+        appearanceMinAcceptable: data.appearanceMinAcceptable,
+        // 【评审团新增】量化版本
+        emotionalMaturityLevel: data.emotionalMaturityLevel,
+        coachCooperationLevel: data.coachCooperationLevel,
+        // 【评审团新增】客户AI战略分析
+        clientBestApproach: data.clientBestApproach,
+        clientRecommendedTopics: data.clientRecommendedTopics,
+        clientUpgradeConditions: data.clientUpgradeConditions,
+        clientRiskFactors: data.clientRiskFactors,
+        clientStrategicNotes: data.clientStrategicNotes,
         // 信任度/热度
         trustLevel: data.trustLevel || 1,
         interactionHeat: data.interactionHeat || 5.0,
@@ -345,6 +355,46 @@ router.put('/:id', authMiddleware, async (req, res) => {
     // 舒适区（旭哥新增）
     if (data.comfortZone !== undefined) updateData.comfortZone = data.comfortZone;
 
+    // 【评审团新增 P0】依恋类型 & 量化EQ维度
+    if (data.attachmentStyle !== undefined) updateData.attachmentStyle = data.attachmentStyle;
+    if (data.empathy !== undefined) updateData.empathy = data.empathy;
+    if (data.communication !== undefined) updateData.communication = data.communication;
+    if (data.conflictRes !== undefined) updateData.conflictRes = data.conflictRes;
+    if (data.intimacyBoundary !== undefined) updateData.intimacyBoundary = data.intimacyBoundary;
+
+    // 【评审团新增 P0】约会雷区
+    if (data.dateTaboos !== undefined) updateData.dateTaboos = data.dateTaboos;
+
+    // 【评审团新增 P1】恋爱风格 & 五种爱的语言
+    if (data.loveStyle !== undefined) updateData.loveStyle = data.loveStyle;
+    if (data.loveLanguage1 !== undefined) updateData.loveLanguage1 = data.loveLanguage1;
+    if (data.loveLanguage2 !== undefined) updateData.loveLanguage2 = data.loveLanguage2;
+    if (data.loveLanguage3 !== undefined) updateData.loveLanguage3 = data.loveLanguage3;
+    if (data.loveLanguage4 !== undefined) updateData.loveLanguage4 = data.loveLanguage4;
+    if (data.loveLanguage5 !== undefined) updateData.loveLanguage5 = data.loveLanguage5;
+
+    // 【评审团新增 P1】约会金钱观念
+    if (data.moneyDatingPattern !== undefined) updateData.moneyDatingPattern = data.moneyDatingPattern;
+
+    // 【评审团新增 P1】前任关系模式分析
+    if (data.pastRelationshipPattern !== undefined) updateData.pastRelationshipPattern = data.pastRelationshipPattern;
+
+    // 【评审团新增 P1】外表吸引力自评与需求
+    if (data.appearanceSelfAssessment !== undefined) updateData.appearanceSelfAssessment = data.appearanceSelfAssessment;
+    if (data.appearanceSelfRequirement !== undefined) updateData.appearanceSelfRequirement = data.appearanceSelfRequirement;
+    if (data.appearanceMinAcceptable !== undefined) updateData.appearanceMinAcceptable = data.appearanceMinAcceptable;
+
+    // 【评审团新增】量化版本
+    if (data.emotionalMaturityLevel !== undefined) updateData.emotionalMaturityLevel = data.emotionalMaturityLevel;
+    if (data.coachCooperationLevel !== undefined) updateData.coachCooperationLevel = data.coachCooperationLevel;
+
+    // 【评审团新增】客户AI战略分析
+    if (data.clientBestApproach !== undefined) updateData.clientBestApproach = data.clientBestApproach;
+    if (data.clientRecommendedTopics !== undefined) updateData.clientRecommendedTopics = data.clientRecommendedTopics;
+    if (data.clientUpgradeConditions !== undefined) updateData.clientUpgradeConditions = data.clientUpgradeConditions;
+    if (data.clientRiskFactors !== undefined) updateData.clientRiskFactors = data.clientRiskFactors;
+    if (data.clientStrategicNotes !== undefined) updateData.clientStrategicNotes = data.clientStrategicNotes;
+
     // 信任度/热度
     if (data.trustLevel !== undefined) updateData.trustLevel = data.trustLevel;
     if (data.interactionHeat !== undefined) updateData.interactionHeat = data.interactionHeat;
@@ -359,7 +409,9 @@ router.put('/:id', authMiddleware, async (req, res) => {
     if (data.serviceStartDate !== undefined) updateData.serviceStartDate = data.serviceStartDate;
 
     // 将空字符串转换为 null，避免 Prisma Int 字段类型错误
-    const numericFields = ['age', 'height', 'trustLevel', 'interactionHeat', 'balance'];
+    const numericFields = ['age', 'height', 'trustLevel', 'interactionHeat', 'balance',
+      'empathy', 'communication', 'conflictRes',
+      'emotionalMaturityLevel', 'coachCooperationLevel'];
     for (const field of numericFields) {
       if (updateData[field] === '') {
         updateData[field] = null;
@@ -435,8 +487,10 @@ router.post('/extract-profile', authMiddleware, async (req, res) => {
 - emotionalGoal: 认真找对象/随便玩玩/家里催婚/空虚寂寞
 - relationshipGoal: 短期/长期/不确定
 - emotionalMaturity: 幼稚/一般/成熟
+- emotionalMaturityLevel: 1-10的数字（根据文字描述推断：幼稚=1-3，一般=4-6，成熟=7-10）
 - learningAbility: 强/中/弱
 - coachCooperation: 配合/一般/抵触
+- coachCooperationLevel: 1-10的数字（配合=7-10，一般=4-6，抵触=1-3）
 - assetsLevel: A6/A7/A8/A9/A10/A10+
 - clientType: 执行型/质疑型/自主型
 - humorStyle: 冷幽默/自嘲/调侃/正经
@@ -444,6 +498,15 @@ router.post('/extract-profile', authMiddleware, async (req, res) => {
 - pacePreference: 快节奏/稳健型/慢热型
 - residence: 北京/上海/广州/深圳/杭州/南京/苏州/成都/重庆/武汉/西安/天津/长沙/郑州/东莞/佛山/青岛/沈阳/大连/厦门/宁波/其他
 - occupation: 企业主/企业高管/公务员/医生/律师/教师/工程师/程序员/销售/金融从业者/自由职业/退休/其他
+- attachmentStyle: 焦虑型/回避型/安全型（根据文字描述推断）
+- empathy: 1-10的数字
+- communication: 1-10的数字
+- conflictRes: 1-10的数字
+- loveStyle: 真诚型/陪伴型/言语型/身体型/浪漫型
+- moneyDatingPattern: AA/请客/轮流/看情况
+- appearanceSelfAssessment: 根据外貌描述推断颜值区间，如"中等偏上"/"普通"/"帅气"/"其貌不扬"
+- appearanceSelfRequirement: 对女生颜值的要求，如"中等即可"/"要漂亮的"/"不看重外表"
+- dateTaboos: 约会雷区，如"不能太快"/"不能AA"/"不能问职业"
 
 【输出格式】
 请直接输出 JSON，不要有其他解释文字：
@@ -477,6 +540,15 @@ router.post('/extract-profile', authMiddleware, async (req, res) => {
   "pacePreference": "稳健型",
   "strengths": "有钱/幽默/真诚",
   "weaknesses": "情商低/不会聊天",
+  "attachmentStyle": "安全型",
+  "empathy": "6",
+  "communication": "5",
+  "conflictRes": "4",
+  "loveStyle": "浪漫型",
+  "moneyDatingPattern": "请客",
+  "appearanceSelfAssessment": "普通",
+  "appearanceSelfRequirement": "不看重外表，聊得来就行",
+  "dateTaboos": "不能问收入",
   "notes": "从文本中提取的其他备注信息"
 }
 
@@ -525,6 +597,192 @@ ${text}
     res.json({ success: true, profile: extracted });
   } catch (error) {
     console.error('[Clients] 提取客户档案失败:', error);
+    res.status(500).json({ error: '提取失败' });
+  }
+});
+
+// 从聊天记录提取档案更新（操盘手交流后使用）
+router.post('/:id/extract-from-chat', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const { messageCount = 20 } = req.body;
+    const clientId = req.params.id;
+
+    // 查找操盘手和该客户的聊天会话
+    const session = await prisma.chatSession.findUnique({
+      where: { operatorId_clientId: { operatorId: req.user.id, clientId } }
+    });
+
+    if (!session) {
+      return res.status(404).json({ error: '暂无与该客户的聊天记录' });
+    }
+
+    // 获取最近的聊天记录
+    const messages = await prisma.message.findMany({
+      where: { sessionId: session.id },
+      orderBy: { createdAt: 'desc' },
+      take: parseInt(messageCount)
+    });
+
+    if (messages.length === 0) {
+      return res.status(400).json({ error: '聊天记录为空' });
+    }
+
+    // 反转，按时间正序
+    messages.reverse();
+
+    // 获取客户现有档案用于参考
+    const client = await prisma.user.findUnique({
+      where: { id: clientId },
+      select: {
+        nickname: true,
+        occupation: true,
+        age: true,
+        personality: true,
+        emotionalStable: true,
+        eqLevel: true,
+        attachmentStyle: true,
+        loveStyle: true,
+        moneyDatingPattern: true,
+        pastRelationshipPattern: true,
+        dateTaboos: true,
+        comfortZone: true,
+        strengths: true,
+        weaknesses: true,
+        clientType: true,
+        interactionStyle: true,
+        humorStyle: true,
+        notes: true,
+        clientBestApproach: true,
+        clientRecommendedTopics: true,
+        clientRiskFactors: true,
+        clientStrategicNotes: true,
+      }
+    });
+
+    // 构建对话文本
+    const chatText = messages.map(m => {
+      const role = m.senderRole === 'operator' ? '【操盘手】' : '【客户】';
+      return `${role}${m.content || '[媒体消息]'}`;
+    }).join('\n');
+
+    // 调用 AI 提取档案更新建议
+    const aiConfig = getAIConfig();
+    const extractPrompt = `你是客户档案分析专家。操盘手刚刚和客户进行了一次深度交流，请从聊天记录中提取档案更新信息。
+
+【当前客户档案】（供参考，如字段有值说明已有信息）
+- 昵称：${client?.nickname || '未知'}
+- 职业：${client?.occupation || '未知'}
+- 年龄：${client?.age || '未知'}
+- 性格：${client?.personality || '未知'}
+- 情绪稳定：${client?.emotionalStable || '未知'}/10
+- 情商：${client?.eqLevel || '未知'}/10
+- 依恋类型：${client?.attachmentStyle || '未知'}
+- 恋爱风格：${client?.loveStyle || '未知'}
+- 买单观念：${client?.moneyDatingPattern || '未知'}
+- 前任模式：${client?.pastRelationshipPattern || '未知'}
+- 约会雷区：${client?.dateTaboos || '未知'}
+- 舒适区：${client?.comfortZone || '未知'}
+- 优点：${client?.strengths || '未知'}
+- 缺点：${client?.weaknesses || '未知'}
+- 客户类型：${client?.clientType || '未知'}
+- 互动风格：${client?.interactionStyle || '未知'}
+- 幽默风格：${client?.humorStyle || '未知'}
+- 最佳策略：${client?.clientBestApproach || '未知'}
+- 推荐话题：${client?.clientRecommendedTopics || '未知'}
+- 风险因素：${client?.clientRiskFactors || '未知'}
+- 战略备注：${client?.clientStrategicNotes || '未知'}
+- 现有备注：${client?.notes || '无'}
+
+【聊天记录】
+${chatText}
+
+【提取要求】
+请从聊天记录中分析并提取以下内容：
+1. 客户透露的新信息（之前档案没有的）
+2. 客户的态度/情绪变化（对服务的配合度、对女生、对关系的看法等）
+3. 客户的新雷区或新需求
+4. 建议更新的现有字段值（如果有变化）
+5. 给操盘手的战略建议（最佳策略/话题/风险/升级条件）
+
+【输出格式】请直接输出 JSON，不要有任何其他文字：
+{
+  "newInsights": ["发现1", "发现2", ...],
+  "updatedFields": {
+    "attachmentStyle": "安全型",
+    "emotionalStable": 7,
+    "dateTaboos": "补充的新雷区内容",
+    "loveStyle": "浪漫型",
+    "clientStrategicNotes": "操盘手战略建议"
+  },
+  "confidence": 0.85,
+  "strategicAnalysis": {
+    "clientBestApproach": "真诚型",
+    "clientRecommendedTopics": "健身,创业,旅行",
+    "clientUpgradeConditions": "需要更多正向反馈",
+    "clientRiskFactors": "容易在关系中退缩",
+    "clientStrategicNotes": "多给正面鼓励，少施压"
+  }
+}
+
+注意：
+- 只输出JSON，不要有markdown代码块
+- 如果某个字段在聊天记录中没有新的信息，不要输出它
+- confidence表示这次分析的置信度（0-1），如果聊天记录信息量少就低一些
+- strategicAnalysis为空对象表示AI分析部分置信度不足`;
+
+    const response = await fetch(aiConfig.url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${aiConfig.key}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: aiConfig.model,
+        messages: [
+          { role: 'system', content: '你是一个专业的客户档案分析专家。请严格按照要求提取信息，直接输出JSON，不要有任何其他文字。' },
+          { role: 'user', content: extractPrompt }
+        ],
+        temperature: 0.3,
+        max_tokens: 1500
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[Clients] AI提取失败:', response.status, errorText);
+      return res.status(500).json({ error: 'AI服务请求失败' });
+    }
+
+    const result = await response.json();
+    let content = result.choices?.[0]?.message?.content || '';
+
+    // 清理 markdown 代码块
+    content = content.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
+
+    let extracted;
+    try {
+      extracted = JSON.parse(content);
+    } catch (e) {
+      console.error('[Clients] 解析AI输出失败:', content);
+      return res.status(500).json({ error: 'AI输出格式错误，无法解析' });
+    }
+
+    res.json({
+      success: true,
+      analysis: extracted,
+      messageCount: messages.length,
+      chatPreview: messages.slice(-5).map(m => ({
+        role: m.senderRole,
+        content: m.content || '[媒体消息]',
+        createdAt: m.createdAt
+      }))
+    });
+  } catch (error) {
+    console.error('[Clients] 从聊天提取档案失败:', error);
     res.status(500).json({ error: '提取失败' });
   }
 });

@@ -121,6 +121,46 @@ model User {
   // ===== 舒适区（旭哥新增）=====
   comfortZone String? // 舒适区：习惯哪种类型的女生
 
+  // ===== 【评审团新增 P0】依恋类型 & 量化EQ维度 =====
+  attachmentStyle String? // 依恋类型：焦虑型/回避型/安全型
+  empathy         Int?    // 同理心 1-10
+  communication  Int?    // 沟通能力 1-10
+  conflictRes    Int?    // 冲突解决能力 1-10
+  intimacyBoundary String? // 物理亲密边界描述
+
+  // ===== 【评审团新增 P0】约会雷区 =====
+  dateTaboos String? // 约会雷区：哪些情况绝对不能做
+
+  // ===== 【评审团新增 P1】恋爱风格 & 五种爱的语言 =====
+  loveStyle   String? // 恋爱风格：真诚型/陪伴型/言语型/身体型/浪漫型
+  loveLanguage1 String? // 第一爱的语言
+  loveLanguage2 String? // 第二爱的语言
+  loveLanguage3 String? // 第三爱的语言
+  loveLanguage4 String? // 第四爱的语言
+  loveLanguage5 String? // 第五爱的语言
+
+  // ===== 【评审团新增 P1】约会金钱观念 =====
+  moneyDatingPattern String? // 买单观念：AA/请客/轮流/看情况
+
+  // ===== 【评审团新增 P1】前任关系模式分析 =====
+  pastRelationshipPattern String? // 前任模式分析：重复了什么样的关系角色
+
+  // ===== 【评审团新增 P1】外表吸引力自评与需求 =====
+  appearanceSelfAssessment  String? // 外表自评：客户认为自己颜值区间
+  appearanceSelfRequirement String? // 对女生颜值的要求描述
+  appearanceMinAcceptable  String? // 能接受女生最差颜值下限
+
+  // ===== 【评审团新增】量化版本（替代String字段，逐步迁移）=====
+  emotionalMaturityLevel Int? // 感情认知水平 1-10（原 emotionalMaturity 文字版保留）
+  coachCooperationLevel  Int? // 配合度 1-10（原 coachCooperation 文字版保留）
+
+  // ===== 【评审团新增】客户AI战略分析（对标女生 bestApproach/recommendedTopics 等）=====
+  clientBestApproach      String? // 最佳追求策略：幽默/真诚/霸道/温柔/调理型
+  clientRecommendedTopics String? // 推荐话题
+  clientUpgradeConditions String? // 升级条件
+  clientRiskFactors      String? // 风险因素
+  clientStrategicNotes   String? // 战略备注
+
   // ===== 信任度/亲密度（类比女生）=====
   trustLevel      Int   @default(1) // 1-5信任度
   interactionHeat Float @default(5.0) // 1.0~10.0 互动热度
@@ -162,7 +202,9 @@ model Girl {
   workplace  String? // 工作地点
 
   // ===== 外貌特征 =====
-  appearance  String? // 外貌描述（身高/体型/穿着风格）
+  appearance  String? // 外貌描述（穿着风格）
+  height      Int? // 身高(cm)
+  bodyType    String? // 体型：偏瘦/标准/微胖/偏胖
   photos      String? // JSON array - 照片
   homepageUrl String? // 主页链接（个人网站/社交主页）
   videos      String? // JSON array - 视频链接
@@ -180,8 +222,10 @@ model Girl {
   financialHabits String? // 月光/务实/超前
 
   // ===== 兴趣爱好 =====
-  interests       String? // 兴趣爱好
-  dietPreferences String? // 饮食偏好
+  interests        String? // 兴趣爱好
+  // 饮食偏好/禁忌存储为逗号分隔字符串，标准化标签见前端 DIET_PREFERENCES/DIET_RESTRICTIONS
+  dietPreferences String? // 饮食偏好（多选，如：清淡,火锅,日料）
+  dietRestrictions String? // 饮食禁忌/过敏（多选，如：不吃辣,海鲜过敏,酒精过敏）
   hobbiesDetail   String? // 兴趣详情
 
   // ===== 情感状态（Mo哥+童锦程）=====
@@ -240,7 +284,9 @@ model Girl {
   chatPartnerId String? // 对应谙世角色库的ID
 
   // ===== 匹配相关 =====
-  matchScore Int?
+  matchScore     Int?
+  matchScoreBasis String? // 匹配分计算依据（算法说明或参考因素）
+  matePreferences String? // 择偶偏好：年龄范围/学历/地域/职业/收入/其他要求
 
   // ===== 元数据 =====
   sourcePlatform String? // 平台来源
@@ -288,11 +334,18 @@ model Message {
   senderRole String
   senderId   String
 
-  content String?
-  type    String  @default("text")
+  content   String?
+  type      String  @default("text")
+  mediaUrl  String?
+  duration  Int?
 
   isBurnAfterRead Boolean   @default(false)
+  burnAfterSeconds Int?     // 自动销毁倒计时秒数（阅后即焚时）
   burnedAt        DateTime?
+  recalledAt     DateTime?
+
+  isFlashImage  Boolean @default(false) // 闪图：查阅后5秒自动销毁
+  flashBurnedAt DateTime?
 
   isRead Boolean   @default(false)
   readAt DateTime?
@@ -355,11 +408,54 @@ model Date {
   girlId String
   girl   Girl   @relation(fields: [girlId], references: [id])
 
-  dateTime   DateTime
-  location   String?
-  status     String   @default("planned")
+  // 基础
+  dateTime DateTime
+  title    String? // 约会简称，如"第一次见面"
+  location String?
+
+  // 状态：pending_plan（待策划）/ planned（已策划）/ completed（已完成）/ cancelled（取消）
+  status     String @default("pending_plan")
   notes      String?
   nextAction String?
+
+  // ========== 约会前检查清单 ==========
+  preDateChecklist String? // JSON: [{ category, items: [{ id, label, checked }] }]
+
+  // ========== 约会条件（策划输入）==========
+  conditions String? // JSON: { budget, dateStyle, interests, restrictions, specialRequirements }
+
+  // ========== AI 生成的约会方案 ==========
+  aiPlan     String? // JSON: { overview, venue, schedule, talkingPoints, precautions, outfit, budgetTips }
+  planStatus String? // pending / generating / generated / rejected
+
+  // ========== 方案确认流程 ==========
+  // planDiscussion: 操盘手与AI的讨论记录 [{ role: 'operator'|'ai', content, timestamp }]
+  planDiscussion    String?
+  // clientFeedback: 客户对方案的调整建议 [{ adjustment, reason, submittedAt }]
+  clientFeedback    String?
+  // clientConfirmed: 客户是否已确认方案
+  clientConfirmed   Boolean @default(false)
+  // pushToClientAt: 方案推送给客户的时间
+  pushToClientAt    DateTime?
+  // confirmedAt: 客户确认时间
+  confirmedAt       DateTime?
+
+  // ========== 约会后记录 ===========
+  expenseRecord String? // JSON: [{ item, amount }]
+  totalExpense Float?   // 总花费
+  duration     String?  // 时长，如"2小时"
+  postDateInterview String? // JSON: 约会后结构化访谈数据
+
+  // ========== 约会评价 ===========
+  rating         Int?      // 1-5 星
+  positiveSignals String?  // JSON: [{ signal, note }]
+  negativeSignals String?  // JSON: [{ signal, note }]
+  followUpActions String?  // JSON: [{ action, priority, deadline }]
+  postNotes      String?   // 约会后总结
+
+  // ========== 女生状态同步 ===========
+  // 约会完成后可更新女生阶段
+  girlStageAfter String? // 约会后女生阶段
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

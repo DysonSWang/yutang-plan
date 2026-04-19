@@ -9,6 +9,7 @@ const http = require('http');
 const path = require('path');
 const { Server } = require('socket.io');
 const { PrismaClient } = require('@prisma/client');
+const { PORT } = require('./config');
 
 const authRoutes = require('./routes/auth');
 const chatRoutes = require('./routes/chat');
@@ -23,6 +24,8 @@ const notificationsRoutes = require('./routes/notifications');
 const chatPartnerRoutes = require('./routes/chatPartner');
 const chatScreenshotRoutes = require('./routes/chatScreenshot');
 const dashboardRoutes = require('./routes/dashboard');
+const uploadRoutes = require('./routes/upload');
+const videoCompressRoutes = require('./routes/video-compress');
 
 const prisma = new PrismaClient();
 const app = express();
@@ -57,6 +60,10 @@ app.use('/api/dashboard', dashboardRoutes);
 
 // 静态文件服务 - 截图图片
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// 上传路由
+app.use('/api/upload', uploadRoutes);
+app.use('/api/upload', videoCompressRoutes);
 
 // Socket.io 连接处理
 io.on('connection', (socket) => {
@@ -105,8 +112,6 @@ app.use((err, req, res, next) => {
   console.error('[Error]', err);
   res.status(500).json({ error: '服务器错误' });
 });
-
-const PORT = process.env.PORT || 3003;
 
 server.listen(PORT, () => {
   console.log(`🐟 鱼塘计划后端启动: http://localhost:${PORT}`);

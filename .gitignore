@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Environment - keep .env.example, ignore actual .env with secrets
+*.env
+.env.local
+.env.production
+!.env.example
+
+# Database
+*.db
+*.db-journal
+
+# Coverage
+coverage/
+
+# GSD artifacts
+.gsd/
+
+# Build outputs
+dist/
+build/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Uploads (user-generated content)
+backend/uploads/
+frontend/uploads/

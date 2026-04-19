@@ -10,8 +10,8 @@ const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
-const JWT_SECRET = process.env.JWT_SECRET || 'yutang-secret-key-2024';
-const { extractFromNotes, extractFromImage } = require('../services/signalExtractor');
+const { JWT_SECRET, BASE_URL } = require('../config');
+const { extractFromNotes, extractFromImage, applyAnalysisToGirl } = require('../services/signalExtractor');
 
 // 上传目录
 const UPLOAD_DIR = path.join(__dirname, '../../uploads/chat-screenshots');
@@ -140,29 +140,97 @@ router.post('/', authMiddleware, async (req, res) => {
         });
       }
 
-      // 自动 AI 分析图片（异步，不阻塞响应）
-      extractFromImage(girlId, imageUrl, process.env.BASE_URL || 'http://localhost:3005')
-        .then(result => {
-          if (result.success) {
-            // 更新截图备注和对话文本
-            return prisma.chatScreenshot.update({
-              where: { id: screenshot.id },
-              data: {
-                notes: result.aiNotes,
-                chatText: result.chatText || null
-              }
-            });
-          }
-        })
-        .catch(err => {
-          console.error('[ChatScreenshot] 自动AI分析失败:', err);
-        });
+      // AI 分析截图（不自动入库，返回待确认字段）
+      let extractedFields = {};
+      let analysisData = null;
+      try {
+        const result = await extractFromImage(girlId, imageUrl, BASE_URL);
+        if (result.error) {
+          // JSON 解析失败或图片无法识别，仍返回截图（已上传），但告知前端错误原因
+          console.warn('[ChatScreenshot] AI分析失败:', result.error, result.rawContent || '');
+        } else if (result.analysis) {
+          analysisData = result.analysis;
 
-      res.json({ success: true, screenshot });
+          // 提取待确认的档案字段（key-value 形式返回前端）
+          const profileUpdates = result.analysis.profileUpdates || {};
+          const fieldLabels = {
+            age: '年龄', occupation: '职业', education: '学历', major: '专业',
+            hometown: '籍贯', residence: '现居城市', workplace: '工作地点',
+            height: '身高(cm)', bodyType: '体型',
+            appearance: '外貌', styleTags: '风格', familyBackground: '家庭背景',
+            workSchedule: '工作时间', interests: '兴趣爱好', dietPreferences: '饮食偏好', dietRestrictions: '饮食禁忌',
+            personality: '性格', communicationStyle: '沟通风格', emotionalTriggers: '情绪触发点',
+            talkingTopics: '喜欢话题', thingsToAvoid: '禁忌话题',
+            relationshipAttitude: '婚恋态度', attachmentStyle: '依恋类型', responsePattern: '回复规律',
+            chatPartnerId: '谙世角色ID'
+          };
+          for (const [key, label] of Object.entries(fieldLabels)) {
+            const val = profileUpdates[key];
+            if (val && val !== null && val !== '') {
+              extractedFields[key] = { label, value: String(val) };
+            }
+          }
+
+          // 备注和对话文本仍保存到截图（不需确认）
+          await prisma.chatScreenshot.update({
+            where: { id: screenshot.id },
+            data: {
+              notes: result.aiNotes,
+              chatText: result.chatText || null
+            }
+          });
+        }
+      } catch (err) {
+        console.error('[ChatScreenshot] AI分析失败:', err);
+      }
+
+      res.json({ success: true, screenshot, extractedFields });
     });
   } catch (error) {
     console.error('[ChatScreenshot] 上传截图失败:', error);
     res.status(500).json({ error: '上传失败' });
+  }
+});
+
+// 确认并应用提取的档案字段
+router.post('/confirm-fields', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const { girlId, selectedFields } = req.body;
+    if (!girlId || !selectedFields || typeof selectedFields !== 'object') {
+      return res.status(400).json({ error: '参数不完整' });
+    }
+
+    const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+    if (!girl) {
+      return res.status(404).json({ error: '女生不存在' });
+    }
+
+    // 构建 analysis 对象，只包含用户选中的字段
+    const profileUpdates = {};
+    for (const [key, val] of Object.entries(selectedFields)) {
+      if (val !== null && val !== undefined && val !== '') {
+        profileUpdates[key] = val;
+      }
+    }
+
+    const analysis = { profileUpdates };
+
+    // 解析现有信号
+    let existingSignals = [];
+    if (girl.signals) {
+      try { existingSignals = JSON.parse(girl.signals); } catch (e) {}
+    }
+
+    await applyAnalysisToGirl(girlId, analysis, existingSignals, girl);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[ChatScreenshot] 确认字段失败:', error);
+    res.status(500).json({ error: '确认失败' });
   }
 });
 
@@ -205,7 +273,7 @@ router.post('/:id/ai-notes', authMiddleware, async (req, res) => {
     }
 
     // 调用 AI 分析截图图片
-    const baseUrl = process.env.BASE_URL || 'http://localhost:3005';
+    const baseUrl = BASE_URL;
     const result = await extractFromImage(screenshot.girlId, screenshot.imageUrl, baseUrl);
 
     if (result.error) {

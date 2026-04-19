@@ -5,13 +5,7 @@
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-
-// AI Provider 配置
-const AI_PROVIDER = process.env.AI_PROVIDER || 'dashscope';
-const ZHIPU_API_KEY = process.env.ZHIPUAI_API_KEY || "60bb0c8311af4755ba87b749353354d8.OePtWEfG8VYlmrtf";
-const ZHIPU_API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
-const DASHSCOPE_API_KEY = process.env.DASH_SCOPE_API_KEY;
-const DASHSCOPE_API_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
+const { getAIConfig } = require('../config');
 
 // 简报缓存（5分钟TTL）
 const briefCache = new Map();
@@ -27,13 +21,6 @@ function getCachedBrief(key) {
 
 function setCachedBrief(key, data) {
   briefCache.set(key, { data, timestamp: Date.now() });
-}
-
-function getAIConfig() {
-  if (AI_PROVIDER === 'dashscope' && DASHSCOPE_API_KEY) {
-    return { url: DASHSCOPE_API_URL, key: DASHSCOPE_API_KEY, model: 'qwen3.6-plus-2026-04-02' };
-  }
-  return { url: ZHIPU_API_URL, key: ZHIPU_API_KEY, model: 'glm-4' };
 }
 
 // Mo哥 + 童锦程 分析 prompt
@@ -134,6 +121,10 @@ async function generateDailyBrief(clientId) {
 
     // 调用 AI 分析
     const aiConfig = getAIConfig();
+    if (!aiConfig) {
+      console.warn('[DailyBriefGenerator] AI 未配置，跳过 AI 分析');
+      return generateFallbackBrief(girls);
+    }
     const prompt = DAILY_BRIEF_PROMPT.replace('{girlsList}', JSON.stringify(girlsList, null, 2));
 
     const controller = new AbortController();
