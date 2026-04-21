@@ -653,7 +653,7 @@ router.post('/:id/evaluate', authMiddleware, async (req, res) => {
           });
           res.json({ success: true, date: updated, review });
           return;
-        } catch {}
+        } catch (e) { console.warn('[Dates] AI复盘 JSON 解析失败:', e.message); }
       }
     } catch (err) {
       console.error('[Dates] AI复盘失败:', err);
@@ -696,7 +696,7 @@ router.post('/:id/discuss', authMiddleware, async (req, res) => {
         history.forEach(h => {
           historyMessages.push({ role: h.role === 'ai' ? 'assistant' : 'user', content: h.content });
         });
-      } catch {}
+      } catch (e) { console.warn('[Dates] planDiscussion JSON 解析失败:', e.message); }
     }
 
     const discussPrompt = `你是一位顶尖约会策划师，代号"月老"。客户正在就以下约会方案征求你的意见。
@@ -747,7 +747,7 @@ ${JSON.stringify(conditions, null, 2)}
           }
         });
         return res.json({ success: true, reply, planUpdated: true, newPlan });
-      } catch {}
+      } catch (e) { console.warn('[Dates] 约会讨论 JSON 解析失败:', e.message); }
     }
 
     await prisma.date.update({

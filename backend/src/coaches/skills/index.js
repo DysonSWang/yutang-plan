@@ -107,12 +107,12 @@ async function getGirlContext({ girlId }) {
     let pendingActions = [];
     let observations = [];
 
-    try { signals = JSON.parse(girl.signals || '[]'); } catch {}
-    try { pendingActions = JSON.parse(girl.pendingActions || '[]'); } catch {}
-    try { observations = JSON.parse(girl.observations || '[]'); } catch {}
+    try { signals = JSON.parse(girl.signals || '[]'); } catch (e) { console.warn(`[CoachSkills] signals 解析失败 girlId=${girl.id}:`, e.message); }
+    try { pendingActions = JSON.parse(girl.pendingActions || '[]'); } catch (e) { console.warn(`[CoachSkills] pendingActions 解析失败 girlId=${girl.id}:`, e.message); }
+    try { observations = JSON.parse(girl.observations || '[]'); } catch (e) { console.warn(`[CoachSkills] observations 解析失败 girlId=${girl.id}:`, e.message); }
 
     let personality = {};
-    try { personality = JSON.parse(girl.personality || '{}'); } catch {}
+    try { personality = JSON.parse(girl.personality || '{}'); } catch (e) { console.warn(`[CoachSkills] personality 解析失败 girlId=${girl.id}:`, e.message); }
 
     return {
       name: girl.name,
@@ -172,7 +172,7 @@ async function addSignal({ girlId, type, event }) {
     }
 
     let signals = [];
-    try { signals = JSON.parse(girl.signals || '[]'); } catch {}
+    try { signals = JSON.parse(girl.signals || '[]'); } catch (e) { console.warn(`[CoachSkills] signals 解析失败 addSignal girlId=${girl.id}:`, e.message); }
 
     signals.push({
       date: new Date().toLocaleDateString('zh-CN'),

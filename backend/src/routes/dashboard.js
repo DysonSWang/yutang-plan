@@ -61,14 +61,13 @@ router.get('/stats', authMiddleware, operatorOnly, async (req, res) => {
 router.get('/brief', authMiddleware, operatorOnly, async (req, res) => {
   try {
     const { clientId } = req.query;
-    const cached = getCachedBrief(clientId || 'all');
     const brief = await generateDailyBrief(clientId);
     res.json({
       success: true,
       tasks: brief.todayTasks || [],
       alerts: brief.alerts || [],
       weekTasks: brief.weekTasks || [],
-      updatedAt: cached ? new Date(cached.timestamp).toISOString() : new Date().toISOString()
+      updatedAt: brief.timestamp ? new Date(brief.timestamp).toISOString() : new Date().toISOString()
     });
   } catch (error) {
     console.error('[Dashboard] 获取简报失败:', error);
@@ -156,7 +155,7 @@ router.post('/analyze-all', authMiddleware, operatorOnly, async (req, res) => {
         });
       }
     };
-    asyncAnalyze();
+    asyncAnalyze().catch(err => console.error(`[Dashboard] asyncAnalyze 未捕获错误 job=${jobId}:`, err));
   } catch (error) {
     console.error('[Dashboard] 启动分析失败:', error);
     res.status(500).json({ error: '启动分析失败' });

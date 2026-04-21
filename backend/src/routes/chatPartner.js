@@ -10,13 +10,15 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const fs = require('fs');
+const path = require('path');
 const { buildAICoachContext } = require('../services/contextBuilder');
 const { executeTool } = require('../coaches/skills');
 const { extractFromChat: extractGirlFromChat } = require('../services/girlProfileExtractor');
 const { extractFromChat: extractClientFromChat } = require('../services/clientProfileExtractor');
 const { GIRL_FIELD_LABELS, CLIENT_FIELD_LABELS } = require('../services/profileEngine');
 
-const { JWT_SECRET, getAIConfig } = require('../config');
+const { JWT_SECRET, getAIConfig, getVLModelConfig } = require('../config');
 const prisma = require('../prisma');
 
 /**
@@ -31,6 +33,37 @@ const prisma = require('../prisma');
  * 异步执行反馈分析（不阻塞主流程）
  * 分析采纳的建议会对女生档案产生什么变化，写入数据库待审核队列
  */
+/**
+ * 将本地图片路径转为 DashScope 可用的格式
+ * 本地 /uploads/ 文件转为 base64；已经是 http URL 则直接返回
+ */
+async function resolveImageForVL(imagePath) {
+  if (!imagePath) return null;
+
+  // 已经是完整 URL（公网可访问）
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath;
+  }
+
+  // 本地 /uploads/ 路径 → 转为 base64
+  if (imagePath.startsWith('/uploads/')) {
+    const uploadDir = path.join(__dirname, '..', '..', 'uploads');
+    const filePath = path.join(uploadDir, imagePath.replace('/uploads/', ''));
+
+    try {
+      const buffer = fs.readFileSync(filePath);
+      const ext = path.extname(filePath).toLowerCase().replace('.', '') || 'jpg';
+      const mimeType = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
+      return `data:${mimeType};base64,${buffer.toString('base64')}`;
+    } catch (err) {
+      console.error('[ChatPartner] 读取本地图片失败:', filePath, err.message);
+      return imagePath; // fallback：传原始路径，让 API 失败时返回有意义的错误
+    }
+  }
+
+  return imagePath;
+}
+
 async function runAsyncFeedbackAnalysis({ girlId, clientId, operatorId, logId, replyText, originalGirlMessage, style, intention }) {
   // 热度调整映射（和 /feedback 里一致）
   const tensionAdjustments = {
@@ -163,7 +196,7 @@ router.post('/optimize-message', authMiddleware, async (req, res) => {
 
     let personality = {};
     if (girlInfo?.personality) {
-      try { personality = girlInfo.personality; } catch {}
+      try { personality = girlInfo.personality; } catch (e) { console.warn('[ChatPartner] personality 赋值失败:', e.message); }
     }
 
     const stage = girlInfo?.stage || '聊天';
@@ -172,7 +205,17 @@ router.post('/optimize-message', authMiddleware, async (req, res) => {
       return `${role}: ${m.content}`;
     }).join('\n');
 
-    const systemPrompt = `你是一个专业的聊天话术优化专家。你擅长把平淡或生硬的回复优化成有温度、有情商、有吸引力的聊天内容。
+    const systemPrompt = `你是童锦程，两性关系专家，情感老中医。你的风格：接地气，有温度，懂人心，有经验，真诚自然，不油腔滑调，不套路撩骚。
+
+你是一个专业的话术优化专家。你擅长把平淡或生硬的回复优化成有温度、有情商、有吸引力的聊天内容。
+
+请从以下4个维度优化操盘手准备发送的回复：
+
+优化维度：
+1. **语气自然度**：口语化、去生硬感。像正常聊天，不要像背台词。
+2. **情绪温度**：带情绪、少机械感。不要干巴巴的信息传递，要有互动感。
+3. **性格契合度**：更契合女生性格（${girlInfo?.name || '女生'}是${personality.communicationStyle || '未知'}风格，${personality.mbti || '未知MBTI'}）。
+4. **意图精准度**：服务于当前目的（推进关系/维持舒适感/试探/制造暧昧），优化版本要服务于这个目的。
 
 【女生档案】
 昵称：${girlInfo?.name || '未知'}
@@ -183,9 +226,9 @@ router.post('/optimize-message', authMiddleware, async (req, res) => {
 【性格画像】
 MBTI：${personality.mbti || '未知'}
 沟通风格：${personality.communicationStyle || '未知'}
-情绪触发点：${personality.emotionalTriggers?.join('、') || '暂无'}
-聊天禁忌：${personality.thingsToAvoid?.join('、') || '暂无'}
-Talking Topics：${personality.talkingTopics?.join('、') || '未知'}
+情绪触发点：${(personality.emotionalTriggers || []).join('、') || '暂无'}
+聊天禁忌：${(personality.thingsToAvoid || []).join('、') || '暂无'}
+喜欢话题：${(personality.talkingTopics || []).join('、') || '未知'}
 
 【近期关键信号】
 ${recentSignals.length > 0
@@ -201,24 +244,29 @@ ${historyString || '（暂无历史记录）'}
 【操盘手准备发送的内容】
 "${myMessage}"
 
-请给出 3 条不同风格的优化版本，按以下维度优化：
-- 语气更自然（口语化、去生硬感）
-- 更有温度（带情绪、少机械感）
-- 更契合对方性格
-
-每条优化要有明确的优化点说明，让操盘手知道好在哪里。
-
 请按以下 JSON 格式返回：
 {
-  "original": "原文：${myMessage}",
+  "original": "${myMessage}",
   "optimizations": [
-    {"text": "优化版本1", "point": "优化点：...", "style": "自然型"},
-    {"text": "优化版本2", "point": "优化点：...", "style": "温度型"},
-    {"text": "优化版本3", "point": "优化点：...", "style": "性格型"}
+    {
+      "text": "优化版本1（自然型）",
+      "point": "优化点：语气更口语，像正常聊天，有互动感",
+      "style": "自然型"
+    },
+    {
+      "text": "优化版本2（温度型）",
+      "point": "优化点：情绪更温暖，带一点调侃或暧昧的感觉",
+      "style": "温度型"
+    },
+    {
+      "text": "优化版本3（性格型）",
+      "point": "优化点：更契合${personality.communicationStyle || '未知'}风格，${personality.talkingTopics?.[0] ? '融入' + personality.talkingTopics[0] + '话题' : '适配她的性格节奏'}",
+      "style": "性格型"
+    }
   ]
 }
 
-只输出 JSON，不要其他内容。`;
+只输出 JSON，不要其他内容。优化版本要15-30字，不要超过30字。`;
 
     const aiConfig = getAIConfig();
     const response = await fetch(aiConfig.url, {
@@ -230,7 +278,6 @@ ${historyString || '（暂无历史记录）'}
       body: JSON.stringify({
         model: aiConfig.model,
         messages: [
-          { role: 'system', content: '你是一个专业的聊天话术优化专家，擅长把平淡的话优化成有温度、有吸引力的聊天内容。回复要口语化、有温度。' },
           { role: 'user', content: systemPrompt }
         ],
         temperature: 0.8,
@@ -303,7 +350,7 @@ router.post('/analyze', authMiddleware, async (req, res) => {
     // 解析 personality
     let personality = {};
     if (girlInfo?.personality) {
-      try { personality = girlInfo.personality; } catch {}
+      try { personality = girlInfo.personality; } catch (e) { console.warn('[ChatPartner] personality 赋值失败:', e.message); }
     }
 
     // 聊天历史（最近10条）
@@ -333,7 +380,9 @@ router.post('/analyze', authMiddleware, async (req, res) => {
     const defaultStyles = stageStyleMap[stage] || ['稳妥型', '进攻型', '调侃型'];
 
     // 构建提示词
-    const systemPrompt = `你是一个专业的恋爱军师和沟通顾问，擅长分析女生聊天对话并提供高情商回复建议。
+    const systemPrompt = `你是童锦程，两性关系专家，情感老中医。你的风格：接地气，有温度，懂人心，有经验，真诚自然，不油腔滑调，不套路撩骚。
+
+分析女生刚刚发来的消息，结合她的完整档案，给出专业分析和高情商回复建议。
 
 【女生档案】
 昵称：${girlInfo?.name || '未知'}
@@ -343,13 +392,24 @@ router.post('/analyze', authMiddleware, async (req, res) => {
 关系热度：${girlInfo?.tensionScore || 5}/10 ${getTensionEmoji(girlInfo?.tensionScore || 5)}
 亲密度：${'❤️'.repeat(girlInfo?.intimacyLevel || 1)}
 
+【外貌与风格】
+外貌：${girlInfo?.appearance || '未知'}
+穿着风格：${personality.dressingStyle || '未知'}
+风格标签：${personality.styleTags || '未知'}
+
 【性格画像】
 MBTI：${personality.mbti || '未知'}
+性格：${personality.type || personality.personality || '未知'}
 沟通风格：${personality.communicationStyle || '未知'}
-情绪触发点：${personality.emotionalTriggers?.join('、') || '暂无'}
-聊天禁忌：${personality.thingsToAvoid?.join('、') || '暂无'}
-Talking Topics：${personality.talkingTopics?.join('、') || '未知'}
-擅长话题：${personality.humorStyle || personality.talkingTopics?.join('、') || '暂无'}
+情绪触发点：${(personality.emotionalTriggers || []).join('、') || '暂无'}
+聊天禁忌：${(personality.thingsToAvoid || []).join('、') || '暂无'}
+喜欢话题：${(personality.talkingTopics || []).join('、') || '未知'}
+婚恋态度：${personality.relationshipAttitude || '未知'}
+依恋类型：${personality.attachmentStyle || '未知'}
+回复规律：${personality.responsePattern || '未知'}
+爱的语言：${personality.loveLanguage || '未知'}
+防御机制：${personality.defenseMechanism || '暂无'}
+核心羞耻感：${personality.coreShame || '暂无'}
 
 【近期关键信号（近30天）】
 ${signalsText}
@@ -363,26 +423,40 @@ ${observations.length > 0 ? observations.map(o => `- ${o}`).join('\n') : '暂无
 【对话摘要】
 ${conversationSummary || '暂无'}
 
-【聊天历史】
+【聊天历史（最近10条）】
 ${historyString || '（暂无历史记录）'}
 
 【操盘手备注】
 ${operatorNotes || '无'}
 
-对方（女生）刚刚发来消息："${message}"
+【女生刚刚发来的消息】
+"${message}"
 
-请你：
-1. 分析对方这句话的意图、情绪和潜台词
-2. 结合上下文和女生性格，给出 3 条回复建议
-3. 每条建议要口语化、15-30字、有明确的意图导向
+请按以下8个维度进行分析，然后给出回复建议：
 
-回复风格应适配当前阶段（${stage}），优先使用该阶段适合的风格。
+1. **意图识别**：她这句话想达到什么目的？（了解信息/表达好感/试探邀约/调侃/敷衍/冷淡/求关注/撒娇/抱怨等）
+2. **情绪状态**：她当前的情绪如何？（开心/害羞/犹豫/期待/紧张/淡定/冷漠/烦躁等）
+3. **潜台词**：她没明说但暗示了什么？有没有弦外之音？
+4. **关系信号**：她有没有释放积极信号？（主动/秒回/分享日常/暧昧称呼/身体接触暗示）
+5. **风险识别**：有没有需要注意的雷区？（触及情绪触发点/聊天禁忌/过于直接/时机不对）
+6. **时机判断**：当前热度（${girlInfo?.tensionScore || 5}/10）适合推进还是维持？
+7. **回复策略**：应该用什么风格推进？（${defaultStyles.join('、')}）
+8. **档案更新**：从这句话能提取哪些新信息？（职业/年龄/爱好/性格/偏好等）
+
+结合关系阶段（${stage}）和女生性格，给出3条回复建议。每条要口语化、15-30字、有明确的意图导向。
+
+回复风格优先使用：${defaultStyles.join('、')}
 
 请按以下 JSON 格式返回：
 {
-  "analysis": "分析内容（80-150字），包括：意图、情绪、潜台词、建议策略",
+  "analysis": "分析内容（100-200字），覆盖意图、情绪、潜台词、关系信号、风险、时机、策略",
+  "intent": "意图标签（3个词内）",
+  "emotion": "情绪状态（2个词）",
+  "subtext": "潜台词（20字内，如有）",
+  "riskWarning": "风险提示（如有，20字内）",
+  "timingAdvice": "时机建议（10字内）",
   "suggestions": [
-    {"text": "回复内容1", "style": "${defaultStyles[0]}", "intention": "意图说明"},
+    {"text": "回复内容1", "style": "${defaultStyles[0]}", "intention": "意图说明（推进关系/制造暧昧/试探/维持舒适感等）"},
     {"text": "回复内容2", "style": "${defaultStyles[1]}", "intention": "意图说明"},
     {"text": "回复内容3", "style": "${defaultStyles[2]}", "intention": "意图说明"}
   ]
@@ -403,11 +477,10 @@ ${operatorNotes || '无'}
         body: JSON.stringify({
           model: aiConfig.model,
           messages: [
-            { role: 'system', content: '你是一个专业的恋爱军师和沟通顾问，擅长分析女生聊天对话并提供高情商回复建议。回复要口语化、有温度。' },
             { role: 'user', content: systemPrompt }
           ],
           temperature: 0.8,
-          max_tokens: 1200
+          max_tokens: 1500
         })
       }),
       // 档案字段提取
@@ -431,8 +504,14 @@ ${operatorNotes || '无'}
           const parsed = JSON.parse(jsonMatch[0]);
           replyAnalysis = parsed.analysis || replyAnalysis;
           replySuggestions = parsed.suggestions || replySuggestions;
+          // 新字段
+          if (parsed.intent) context.intent = parsed.intent;
+          if (parsed.emotion) context.emotion = parsed.emotion;
+          if (parsed.subtext) context.subtext = parsed.subtext;
+          if (parsed.riskWarning) context.riskWarning = parsed.riskWarning;
+          if (parsed.timingAdvice) context.timingAdvice = parsed.timingAdvice;
         }
-      } catch {}
+      } catch (e) { console.warn('[ChatPartner] replyAnalysis JSON 解析失败:', e.message); }
     }
 
     // 解析档案提取结果
@@ -581,7 +660,7 @@ router.get('/pending-updates/:girlId', authMiddleware, async (req, res) => {
 
     // 附带女生当前状态（用于 diff）
     let currentGirl = null;
-    if (girlId !== 'null' && girlId !== 'undefined') {
+    if (girlId && girlId !== 'null' && girlId !== 'undefined') {
       try {
         currentGirl = await prisma.girl.findUnique({
           where: { id: girlId },
@@ -592,7 +671,7 @@ router.get('/pending-updates/:girlId', authMiddleware, async (req, res) => {
             signals: true
           }
         });
-      } catch {}
+      } catch (e) { console.warn('[ChatPartner] 女生状态查询失败 girlId:', girlId, e.message); }
     }
 
     res.json({
@@ -891,7 +970,9 @@ router.post('/client-analyze', authMiddleware, async (req, res) => {
     };
     const defaultStyles = styleMap[communicationStyle] || ['真诚型', '细腻型', '引导型'];
 
-    const systemPrompt = `你是一个专业的客户服务顾问，擅长帮助操盘手（情感咨询师）与客户进行高效沟通。
+    const systemPrompt = `你是童锦程，情感咨询领域的老中医。你的风格：专业、精准、有温度，懂客户心理，能快速判断客户诉求并给出适配的沟通策略。
+
+分析客户刚刚发来的消息，结合他的档案和服务阶段，给出专业的操盘手沟通建议。
 
 【客户档案】
 昵称：${client.nickname || client.username || '未知'}
@@ -899,26 +980,24 @@ router.post('/client-analyze', authMiddleware, async (req, res) => {
 沟通风格：${communicationStyle}
 客户类型：${clientType}
 配合度：${cooperation}
+信任度：${client.trustLevel || 1}/5
+互动热度：${client.interactionHeat || 5}/10
 
-【性格特征】
-- MBTI/性格：${client.personality || '未知'}
-- 情绪稳定性：${client.emotionalStable ? client.emotionalStable + '/10' : '未知'}
-- 情商水平：${client.eqLevel ? client.eqLevel + '/10' : '未知'}
-- 社交风格：${client.socialStyle || '未知'}
-- 婚恋态度：${client.relationshipAttitude || '未知'}
-- 感情诉求：${client.emotionalGoal || '未知'}
+【性格画像】
+性格：${client.personality || '未知'}
+情绪稳定性：${client.emotionalStable ? client.emotionalStable + '/10' : '未知'}
+情商水平：${client.eqLevel ? client.eqLevel + '/10' : '未知'}
+社交风格：${client.socialStyle || '未知'}
+婚恋态度：${client.relationshipAttitude || '未知'}
+感情诉求：${client.emotionalGoal || '未知'}
+自尊水平：${client.selfEsteemLevel || '未知'}
+抗压能力：${client.antiFrustrationLevel ? client.antiFrustrationLevel + '/10' : '未知'}
 
 【价值画像】
 核心卖点：${client.strengths || '未知'}
 价值短板：${client.weaknesses || '未知'}
 自我价值认知：${client.selfValuePerception || '未知'}
-
-【学习与配合】
 学习能力：${client.learningAbility || '未知'}
-配合度：${cooperation}
-反馈质量：${client.feedbackQuality || '未知'}
-自尊水平：${client.selfEsteemLevel || '未知'}
-抗压能力：${client.antiFrustrationLevel ? client.antiFrustrationLevel + '/10' : '未知'}
 
 【代聊风格偏好】
 互动风格：${client.interactionStyle || '未知'}
@@ -926,27 +1005,36 @@ router.post('/client-analyze', authMiddleware, async (req, res) => {
 口头禅：${client.petPhrases || '暂无'}
 代聊禁区：${client.chatTaboos || '暂无'}
 
-【关系信任度】
-信任度：${client.trustLevel || 1}/5
-互动热度：${client.interactionHeat || 5}/10
-
-【近期沟通记录】
+【近期沟通记录（最近20条）】
 ${historyString}
 
 客户刚刚发来消息："${message}"
 
-请你：
-1. 分析客户这条消息的意图、情绪和潜台词
-2. 结合客户的性格、沟通风格和服务阶段，给出 3 条适合操盘手回复的建议
-3. 每条建议要适配客户的沟通偏好，有明确的意图导向
+请按以下8个维度进行分析，然后给出操盘手回复建议：
 
-回复风格应适配该客户的沟通习惯（${communicationStyle}），注意避开代聊禁区。
+1. **意图识别**：客户这条消息想达到什么目的？（咨询/抱怨/催促/感谢/质疑/试探/倾诉/求安慰/给反馈/提建议）
+2. **情绪状态**：客户当前情绪如何？（积极/中性/焦虑/抵触/期待/紧张/急躁/低落/平稳）
+3. **潜台词**：客户没明说但暗示了什么？有没有弦外之音？
+4. **配合度信号**：客户的配合度有没有变化？（更配合/更抵触/没变化）
+5. **服务需求**：客户当前最需要什么？（专业分析/情绪安抚/具体建议/认可鼓励/更多信息/决策支持）
+6. **信任度判断**：这条消息显示信任度上升还是下降？原因是什么？
+7. **回复策略**：应该用什么风格沟通？（${defaultStyles.join('、')}）
+8. **禁区检查**：这条消息有没有触及代聊禁区或敏感话题？
+
+每条回复建议要适配客户的沟通偏好（${communicationStyle}风格），避开代聊禁区，15-30字，有明确的意图导向。
 
 请按以下 JSON 格式返回：
 {
-  "analysis": "分析内容（80-150字），包括：意图、情绪、潜台词、沟通策略建议",
+  "analysis": "分析内容（100-200字），覆盖意图、情绪、潜台词、配合度、服务需求、信任度、策略",
+  "intent": "意图标签（3个词内）",
+  "emotion": "情绪状态（2个词）",
+  "subtext": "潜台词（20字内，如有）",
+  "cooperationSignal": "配合度变化（上升/下降/不变）",
+  "trustSignal": "信任度变化（上浮/下降/不变）",
+  "serviceNeed": "服务需求标签（3个词内）",
+  "riskWarning": "禁区或敏感话题提示（如有，20字内）",
   "suggestions": [
-    {"text": "回复内容1", "style": "${defaultStyles[0]}", "intention": "意图说明"},
+    {"text": "回复内容1", "style": "${defaultStyles[0]}", "intention": "意图说明（安抚/分析/引导/确认/共情等）"},
     {"text": "回复内容2", "style": "${defaultStyles[1]}", "intention": "意图说明"},
     {"text": "回复内容3", "style": "${defaultStyles[2]}", "intention": "意图说明"}
   ],
@@ -968,7 +1056,6 @@ ${historyString}
         body: JSON.stringify({
           model: aiConfig.model,
           messages: [
-            { role: 'system', content: '你是一个专业的客户服务顾问，擅长帮助操盘手与客户进行高效沟通。回复要专业、有温度、适配客户风格。' },
             { role: 'user', content: systemPrompt }
           ],
           temperature: 0.8,
@@ -998,8 +1085,16 @@ ${historyString}
           replyAnalysis = parsed.analysis || replyAnalysis;
           replySuggestions = parsed.suggestions || replySuggestions;
           replySummary = parsed.summary || '';
+          // 新字段
+          if (parsed.intent) context.intent = parsed.intent;
+          if (parsed.emotion) context.emotion = parsed.emotion;
+          if (parsed.subtext) context.subtext = parsed.subtext;
+          if (parsed.cooperationSignal) context.cooperationSignal = parsed.cooperationSignal;
+          if (parsed.trustSignal) context.trustSignal = parsed.trustSignal;
+          if (parsed.serviceNeed) context.serviceNeed = parsed.serviceNeed;
+          if (parsed.riskWarning) context.riskWarning = parsed.riskWarning;
         }
-      } catch {}
+      } catch (e) { console.warn('[ChatPartner] context JSON 解析失败:', e.message); }
     }
 
     // 解析档案提取结果
@@ -1070,20 +1165,41 @@ router.post('/client-optimize', authMiddleware, async (req, res) => {
       return `${role}: ${m.content}`;
     }).join('\n');
 
-    const systemPrompt = `你是一个专业的客户服务话术优化专家，帮助操盘手（情感咨询师）把准备发送给客户的回复优化得更专业、更有效。
+    const systemPrompt = `你是童锦程，情感咨询领域的老中医。你的风格：专业、精准、有温度，懂客户心理，能快速判断客户诉求并给出适配的沟通策略。
+
+你是一个专业的客户服务话术优化专家，帮助操盘手（情感咨询师）把准备发送给客户的回复优化得更专业、更有效。
+
+请从以下4个维度优化操盘手准备发送的回复：
+
+优化维度：
+1. **专业度**：结构清晰、有理有据、不含糊，专业感
+2. **温度感**：共情、理解、支持，让客户感受到被理解
+3. **契合度**：更契合该客户性格（${communicationStyle}风格，${interactionStyle}互动，${serviceStage}阶段）
+4. **意图达成**：服务于当前沟通目的（安抚/分析/引导/确认），优化版本要能达成这个目的
+
+注意：绝对不能使用代聊禁区中的内容。
 
 【客户档案】
 昵称：${client.nickname || client.username || '未知'}
 服务阶段：${serviceStage}
 沟通风格：${communicationStyle}
 配合度：${cooperation}
+信任度：${client.trustLevel || 1}/5
+互动热度：${client.interactionHeat || 5}/10
+
+【性格画像】
+情绪稳定性：${client.emotionalStable ? client.emotionalStable + '/10' : '未知'}
+情商水平：${client.eqLevel ? client.eqLevel + '/10' : '未知'}
+自尊水平：${client.selfEsteemLevel || '未知'}
+抗压能力：${client.antiFrustrationLevel ? client.antiFrustrationLevel + '/10' : '未知'}
+感情诉求：${client.emotionalGoal || '未知'}
+
+【代聊风格偏好】
 互动风格：${interactionStyle}
 幽默风格：${humorStyle}
+口头禅：${petPhrases}
 
-【客户口头禅】
-${petPhrases}
-
-【代聊禁区（这些话绝对不能说）】
+【代聊禁区（绝对不能说）】
 ${chatTaboos}
 
 【对话上下文】
@@ -1092,24 +1208,29 @@ ${historyString || '（暂无历史记录）'}
 【操盘手准备发送的内容】
 "${myMessage}"
 
-请给出 3 条不同风格的优化版本：
-- 更专业（结构清晰、有理有据）
-- 更有温度（共情、理解、支持）
-- 更契合该客户性格（${communicationStyle}风格，${interactionStyle}互动）
-
-每条优化要有明确的优化点说明，让操盘手知道好在哪里。注意避开禁区。
-
 请按以下 JSON 格式返回：
 {
   "original": "${myMessage}",
   "optimizations": [
-    {"text": "优化版本1", "point": "优化点：...", "style": "专业型"},
-    {"text": "优化版本2", "point": "优化点：...", "style": "温度型"},
-    {"text": "优化版本3", "point": "优化点：...", "style": "契合型"}
+    {
+      "text": "优化版本1（专业型）",
+      "point": "优化点：结构清晰、有理有据，专业感强",
+      "style": "专业型"
+    },
+    {
+      "text": "优化版本2（温度型）",
+      "point": "优化点：共情理解、让客户感受到被支持",
+      "style": "温度型"
+    },
+    {
+      "text": "优化版本3（契合型）",
+      "point": "优化点：更契合${communicationStyle}风格，${serviceStage}阶段适配",
+      "style": "契合型"
+    }
   ]
 }
 
-只输出 JSON，不要其他内容。`;
+只输出 JSON，不要其他内容。优化版本要15-30字，不要超过30字。注意避开禁区。`;
 
     const aiConfig = getAIConfig();
     const response = await fetch(aiConfig.url, {
@@ -1121,7 +1242,6 @@ ${historyString || '（暂无历史记录）'}
       body: JSON.stringify({
         model: aiConfig.model,
         messages: [
-          { role: 'system', content: '你是一个专业的客户服务话术优化专家，帮助操盘手把话优化得更专业、更有温度、更契合客户风格。' },
           { role: 'user', content: systemPrompt }
         ],
         temperature: 0.8,
@@ -1326,6 +1446,340 @@ router.post('/client-profile/reject', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('[ChatPartner] 驳回客户档案更新失败:', error);
     res.status(500).json({ error: '驳回失败' });
+  }
+});
+
+/**
+ * 朋友圈模式分析
+ * POST /api/chat-partner/analyze-moment
+ *
+ * 支持两种输入：
+ * - momentText: 朋友圈文字内容
+ * - momentImage: base64 图片（内嵌）或图片 URL
+ *
+ * 输出：AI 分析 + 回复建议，作为聊天上下文记录下来
+ */
+router.post('/analyze-moment', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const { girlId, momentText, momentImage, operatorNotes } = req.body;
+
+    if (!momentText && !momentImage) {
+      return res.status(400).json({ error: '朋友圈文字或图片至少需要提供一个' });
+    }
+
+    // 构建上下文
+    const context = girlId
+      ? await buildAICoachContext(req.user.id, girlId)
+      : { girlInfo: null, recentSignals: [], pendingActions: [], observations: [], conversationSummary: '' };
+
+    const { girlInfo, recentSignals, pendingActions, observations, conversationSummary } = context;
+
+    let personality = {};
+    if (girlInfo?.personality) {
+      try { personality = girlInfo.personality; } catch (e) { console.warn('[ChatPartner] personality 赋值失败:', e.message); }
+    }
+
+    const stage = girlInfo?.stage || '聊天';
+    const signalsText = recentSignals.length > 0
+      ? recentSignals.map(s => {
+          const icon = s.type === 'positive' ? '[+]' : s.type === 'negative' ? '[-]' : '[*]';
+          return `${icon} ${s.event} — ${s.date}`;
+        }).join('\n')
+      : '暂无';
+
+    const stageStyleMap = {
+      '陌生': ['稳妥型', '破冰型', '探索型'],
+      '搭讪': ['稳妥型', '自然型', '幽默型'],
+      '聊天': ['稳妥型', '进攻型', '调侃型'],
+      '暧昧': ['进攻型', '暧昧型', '试探型'],
+      '约会': ['浪漫型', '推进型', '调侃型'],
+      '长期': ['陪伴型', '关心型', '默契型'],
+    };
+    const defaultStyles = stageStyleMap[stage] || ['稳妥型', '进攻型', '调侃型'];
+
+    // 构建 prompt
+    let contentDescription = '';
+    if (momentText) contentDescription += `【朋友圈文字】\n${momentText}\n\n`;
+    if (momentImage) contentDescription += '【朋友圈图片】\n（见下方图片）\n';
+
+    const systemPrompt = `你是童锦程，两性关系专家，情感老中医。你的风格：接地气，有温度，懂人心，有经验，真诚自然，不油腔滑调，不套路撩骚。
+
+分析以下女生朋友圈，提取对她有帮助的信息，结合她的档案给出发评论/私聊建议。
+
+【女生档案】
+昵称：${girlInfo?.name || '未知'}
+年龄：${girlInfo?.age || '未知'}
+职业：${girlInfo?.occupation || '未知'}
+当前阶段：${stage}
+关系热度：${girlInfo?.tensionScore || 5}/10
+亲密度：${'❤️'.repeat(girlInfo?.intimacyLevel || 1)}
+
+【性格画像】
+MBTI：${personality.mbti || '未知'}
+沟通风格：${personality.communicationStyle || '未知'}
+情绪触发点：${personality.emotionalTriggers?.join('、') || '暂无'}
+聊天禁忌：${personality.thingsToAvoid?.join('、') || '暂无'}
+擅长话题：${personality.talkingTopics?.join('、') || '未知'}
+
+【近期关键信号】
+${signalsText}
+
+【待推进事项】
+${pendingActions.length > 0 ? pendingActions.map(a => `- ${a}`).join('\n') : '暂无'}
+
+【观察记录】
+${observations.length > 0 ? observations.map(o => `- ${o}`).join('\n') : '暂无'}
+
+【操盘手备注】
+${operatorNotes || '无'}
+
+女生发了以下朋友圈：
+${contentDescription}
+
+请仔细看图（如果有图片）或文字，按以下8个维度分析：
+
+1. **内容分析**：这条朋友圈发的是什么？（美食、旅行、自拍、合照、工作、风景、宠物等）
+2. **生活方式**：作息暗示、消费水平、社交频率、生活品质
+3. **审美偏好**：穿着风格、拍照风格、修图风格、内容调性
+4. **社交圈信号**：经常和谁出镜、朋友圈活跃度、朋友类型
+5. **情绪状态**：发这条朋友圈时的情绪（开心/emo/炫耀/求关注/日常分享）
+6. **关系暗示**：是否暗示单身、有对象、在约会等
+7. **性格洞察**：外向/内向、文艺/接地气、精致/随性、高调/低调
+8. **互动时机**：适合评论还是私聊切入、评论方向建议
+
+结合她的性格和当前关系阶段，给出评论/私聊建议。评论要自然有共鸣感，不要跪舔也不要高冷，15-30字。
+
+请按以下 JSON 格式返回：
+{
+  "momentContent": "朋友圈内容描述（50字内）",
+  "lifestyleSignals": ["生活方式信号1", "信号2"],
+  "aestheticPreferences": "审美偏好描述",
+  "socialSignals": ["社交圈信号1", "信号2"],
+  "emotionalState": "情绪状态",
+  "relationshipHints": ["关系暗示1", "暗示2"],
+  "personalityInsights": "性格洞察（50字内）",
+  "interactionAdvice": "互动建议（评论/私聊方向，30字内）",
+  "commentSuggestions": [
+    {"text": "评论内容1", "style": "评论风格", "intention": "意图说明"},
+    {"text": "评论内容2", "style": "评论风格", "intention": "意图说明"}
+  ],
+  "dmSuggestions": [
+    {"text": "私聊话术1", "style": "风格", "intention": "意图说明"},
+    {"text": "私聊话术2", "style": "风格", "intention": "意图说明"}
+  ]
+}
+
+只输出 JSON，不要其他内容。`;
+
+    const aiConfig = getAIConfig();
+
+    // 构建 AI 消息
+    if (momentImage) {
+      // 视觉模型
+      const vlConfig = getVLModelConfig() || getAIConfig();
+
+      const baseMessages = [
+        { role: 'user', content: systemPrompt + '\n\n【图片】见下方。' }
+      ];
+
+      let analysisResult = {
+        momentContent: '图片分析中...',
+        commentSuggestions: defaultStyles.slice(0, 2).map((s) => ({ text: '分析中...', style: s, intention: '' })),
+        dmSuggestions: defaultStyles.slice(0, 2).map((s) => ({ text: '分析中...', style: s, intention: '' }))
+      };
+
+      try {
+        // 本地路径转为 base64（DashScope 无法访问 localhost）
+        const resolvedImage = await resolveImageForVL(momentImage);
+
+        const vlResp = await fetch(vlConfig.url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${vlConfig.key}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: vlConfig.model,
+            messages: [
+              ...baseMessages,
+              { role: 'user', content: [
+                { type: 'text', text: '以上是朋友圈内容，这是图片：' },
+                { type: 'image_url', image_url: { url: resolvedImage } }
+              ]}
+            ],
+            temperature: 0.7,
+            max_tokens: 1500
+          })
+        });
+
+        if (vlResp.ok) {
+          const vlData = await vlResp.json();
+          const aiContent = vlData.choices?.[0]?.message?.content || '';
+          try {
+            const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              analysisResult = JSON.parse(jsonMatch[0]);
+            }
+          } catch (e) { console.warn('[ChatPartner] 视觉分析 JSON 解析失败:', e.message); }
+        }
+      } catch (err) {
+        console.error('[ChatPartner] 视觉分析失败:', err.message);
+      }
+
+      return res.json({
+        success: true,
+        girlId: girlId || null,
+        analysis: analysisResult.momentContent || analysisResult.momentAnalysis || '',
+        lifestyleSignals: analysisResult.lifestyleSignals || [],
+        aestheticPreferences: analysisResult.aestheticPreferences || '',
+        socialSignals: analysisResult.socialSignals || [],
+        emotionalState: analysisResult.emotionalState || '',
+        relationshipHints: analysisResult.relationshipHints || [],
+        personalityInsights: analysisResult.personalityInsights || '',
+        interactionAdvice: analysisResult.interactionAdvice || '',
+        commentSuggestions: analysisResult.commentSuggestions || [],
+        dmSuggestions: analysisResult.dmSuggestions || [],
+        context: {
+          stage,
+          tensionScore: girlInfo?.tensionScore || 5,
+          intimacyLevel: girlInfo?.intimacyLevel || 1
+        }
+      });
+
+    } else {
+      // 纯文本模式
+      const resp = await fetch(aiConfig.url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${aiConfig.key}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: aiConfig.model,
+          messages: [
+            { role: 'user', content: systemPrompt }
+          ],
+          temperature: 0.8,
+          max_tokens: 1200
+        })
+      });
+
+      let analysisResult = {
+        momentContent: '分析中...',
+        commentSuggestions: defaultStyles.slice(0, 2).map((s, i) => ({ text: '分析中...', style: s, intention: '' })),
+        dmSuggestions: defaultStyles.slice(0, 2).map((s, i) => ({ text: '分析中...', style: s, intention: '' }))
+      };
+
+      if (resp.ok) {
+        const data = await resp.json();
+        const aiContent = data.choices?.[0]?.message?.content || '';
+        try {
+          const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            analysisResult = JSON.parse(jsonMatch[0]);
+          }
+        } catch (e) { console.warn('[ChatPartner] analyzeMoment JSON 解析失败:', e.message); }
+      }
+
+      return res.json({
+        success: true,
+        girlId: girlId || null,
+        analysis: analysisResult.momentContent || analysisResult.momentAnalysis || '',
+        lifestyleSignals: analysisResult.lifestyleSignals || [],
+        aestheticPreferences: analysisResult.aestheticPreferences || '',
+        socialSignals: analysisResult.socialSignals || [],
+        emotionalState: analysisResult.emotionalState || '',
+        relationshipHints: analysisResult.relationshipHints || [],
+        personalityInsights: analysisResult.personalityInsights || '',
+        interactionAdvice: analysisResult.interactionAdvice || '',
+        commentSuggestions: analysisResult.commentSuggestions || [],
+        dmSuggestions: analysisResult.dmSuggestions || [],
+        context: {
+          stage,
+          tensionScore: girlInfo?.tensionScore || 5,
+          intimacyLevel: girlInfo?.intimacyLevel || 1
+        }
+      });
+    }
+
+  } catch (error) {
+    console.error('[ChatPartner] 朋友圈分析失败:', error);
+    res.status(500).json({ error: '朋友圈分析失败' });
+  }
+});
+
+/**
+ * 朋友圈建议采纳反馈
+ * POST /api/chat-partner/moment-feedback
+ *
+ * 将采纳的朋友圈互动记录到 ChatLog，
+ * 同时异步分析对档案的影响（热度、信号提取）
+ */
+router.post('/moment-feedback', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const { girlId, chosenReply, replyType, momentText, momentImageUrl, style, intention } = req.body;
+
+    if (!girlId || !chosenReply) {
+      return res.status(400).json({ error: '参数不完整' });
+    }
+
+    const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+    if (!girl) {
+      return res.status(404).json({ error: '女生不存在' });
+    }
+
+    // 保存到 ChatLog
+    const log = await prisma.chatLog.create({
+      data: {
+        girlId,
+        clientId: girl.clientId,
+        operatorId: req.user.id,
+        receiverName: girl.name,
+        content: chosenReply,
+        type: replyType === 'dm' ? 'text' : 'text',
+        momentText: momentText || null,
+        momentImageUrl: momentImageUrl || null,
+        aiAdopted: true,
+        aiAnalysis: `朋友圈互动 | 类型: ${replyType} | 风格: ${style || ''} | 意图: ${intention || ''}`
+      }
+    });
+
+    // 热度调整
+    const tensionAdjustments = {
+      '进攻型': 1, '暧昧型': 1.5, '浪漫型': 1.5, '试探型': 0.5,
+      '推进型': 1, '调侃型': 0.5, '制造暧昧': 1, '推进关系': 1,
+      '稳妥型': 0, '破冰型': 0, '自然型': 0, '探索型': 0,
+      '陪伴型': 0, '关心型': 0, '默契型': 0,
+      '评论': 0.5, '私聊': 1,
+    };
+    const adjustment = tensionAdjustments[intention] || tensionAdjustments[replyType] || 0;
+
+    if (adjustment !== 0) {
+      await executeTool('update_tension', {
+        girlId,
+        adjustment,
+        reason: `朋友圈互动采纳"${style || replyType}"建议：${chosenReply.slice(0, 20)}`
+      });
+      await executeTool('add_signal', {
+        girlId,
+        type: adjustment > 0 ? 'positive' : 'neutral',
+        event: `朋友圈互动：${intention || replyType} - ${chosenReply.slice(0, 30)}`
+      });
+    }
+
+    res.json({ success: true, logId: log.id });
+
+  } catch (error) {
+    console.error('[ChatPartner] 朋友圈反馈失败:', error);
+    res.status(500).json({ error: '朋友圈反馈失败' });
   }
 });
 

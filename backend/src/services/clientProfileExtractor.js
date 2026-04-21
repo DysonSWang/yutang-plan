@@ -118,7 +118,7 @@ async function confirmProfileUpdate(clientId, pendingId, selectedFields) {
           // pendingActions 特殊处理：合并
           let existing = [];
           if (client.pendingActions) {
-            try { existing = JSON.parse(client.pendingActions); } catch {}
+            try { existing = JSON.parse(client.pendingActions); } catch (e) { console.warn(`[ClientProfileExtractor] pendingActions 解析失败 clientId=${client.id}:`, e.message); }
           }
           const newActions = String(value).split(/[,，]/).map(s => s.trim()).filter(Boolean);
           newActions.forEach(a => { if (!existing.includes(a)) existing.push(a); });

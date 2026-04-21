@@ -9,6 +9,8 @@
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const fs = require('fs');
+const path = require('path');
 const {
   analyzeGirlText,
   analyzeGirlImage,
@@ -31,21 +33,21 @@ async function buildGirlContext(girlId) {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       recentSignals = allSignals.filter(s => {
-        try { return new Date(s.date) >= thirtyDaysAgo; } catch { return true; }
+        try { return new Date(s.date) >= thirtyDaysAgo; } catch (e) { return true; }
       });
-    } catch { recentSignals = []; }
+    } catch (e) { recentSignals = []; }
   }
 
   // 解析 pendingActions
   let pendingActions = [];
   if (girl.pendingActions) {
-    try { pendingActions = JSON.parse(girl.pendingActions); } catch {}
+    try { pendingActions = JSON.parse(girl.pendingActions); } catch (e) { console.warn(`[GirlProfileExtractor] pendingActions 解析失败 girlId=${girl.id}:`, e.message); }
   }
 
   // 解析 observations
   let observations = [];
   if (girl.observations) {
-    try { observations = JSON.parse(girl.observations); } catch {}
+    try { observations = JSON.parse(girl.observations); } catch (e) { console.warn(`[GirlProfileExtractor] observations 解析失败 girlId=${girl.id}:`, e.message); }
   }
 
   // 解析 personality
@@ -161,34 +163,70 @@ async function extractFromChat(girlId, operatorId, message, chatContext) {
 }
 
 /**
+ * 将本地 /uploads/ 路径转为 data URI（base64）
+ * DashScope VL 模型无法访问 localhost URL
+ */
+function localImageToBase64(imageUrl) {
+  if (!imageUrl?.startsWith('/uploads/')) return imageUrl;
+
+  const filePath = path.join(__dirname, '..', '..', 'uploads', imageUrl.replace('/uploads/', ''));
+  try {
+    const buffer = fs.readFileSync(filePath);
+    const ext = path.extname(filePath).toLowerCase().replace('.', '') || 'jpg';
+    const mimeType = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
+    return `data:${mimeType};base64,${buffer.toString('base64')}`;
+  } catch {
+    return imageUrl;
+  }
+}
+
+/**
  * 从图片提取信号和档案字段（返回待确认，不自动入库）
  */
-async function extractFromImage(girlId, imageUrl, baseUrl, operatorId) {
+async function extractFromImage(girlId, imageUrl, baseUrl, operatorId, isMomentScreenshot = false) {
   const ctx = await buildGirlContext(girlId);
   if (!ctx) return null;
 
   let fullImageUrl = imageUrl;
   if (imageUrl?.startsWith('/')) {
-    fullImageUrl = (baseUrl || 'http://localhost:3005') + imageUrl;
+    // 本地路径 → base64（DashScope 无法访问 localhost）
+    fullImageUrl = localImageToBase64(imageUrl);
+    if (fullImageUrl === imageUrl) {
+      // 不是本地路径，尝试拼接 baseUrl
+      fullImageUrl = (baseUrl || 'http://localhost:3005') + imageUrl;
+    }
   }
 
-  const analysis = await analyzeGirlImage(ctx.profile, fullImageUrl);
+  const analysis = isMomentScreenshot
+    ? await analyzeMomentImage(ctx.profile, fullImageUrl)
+    : await analyzeGirlImage(ctx.profile, fullImageUrl);
   if (!analysis) return null;
 
   // 保存到待确认队列
-  const pending = await savePendingUpdate(girlId, 'screenshot', ctx.profile, analysis, operatorId);
+  const pending = await savePendingUpdate(girlId, isMomentScreenshot ? 'moment_screenshot' : 'screenshot', ctx.profile, analysis, operatorId);
 
   // 提取待确认字段
-  const pendingFields = extractGirlPendingFields(analysis.profileUpdates, ctx.girl);
+  const pendingFields = isMomentScreenshot
+    ? {}
+    : extractGirlPendingFields(analysis.profileUpdates, ctx.girl);
 
   // 生成摘要文本
-  const aiNotes = '[AI图像分析] ' + ctx.profile.name + '\n' +
-    '聊天摘要：' + (analysis.chatSummary || '无') + '\n' +
-    '女生情绪：' + (analysis.girlEmotion || '未知') + '\n' +
-    '关系阶段：' + (ctx.profile.stage || '未知') + ' -> ' + (analysis.nextStage || ctx.profile.stage) + '\n' +
-    '热度变化：' + (ctx.profile.tensionScore || 5) + ' -> ' + ((ctx.profile.tensionScore || 5) + (analysis.tensionAdjustment || 0)) + '\n' +
-    '信号提取：' + ((analysis.newSignals || []).map(s => s.event).join('; ') || '无') + '\n' +
-    '待推进：' + ((analysis.pendingActions || []).join('; ') || '无');
+  const aiNotes = isMomentScreenshot
+    ? '[朋友圈分析] ' + ctx.profile.name + '\n' +
+      '内容分析：' + (analysis.momentContent || '无') + '\n' +
+      '生活方式：' + ((analysis.lifestyleSignals || []).join('; ') || '无') + '\n' +
+      '审美偏好：' + (analysis.aestheticPreferences || '未知') + '\n' +
+      '社交信号：' + ((analysis.socialSignals || []).join('; ') || '无') + '\n' +
+      '关系暗示：' + ((analysis.relationshipHints || []).join('; ') || '无') + '\n' +
+      '性格洞察：' + (analysis.personalityInsights || '未知') + '\n' +
+      '互动建议：' + (analysis.interactionAdvice || '暂无')
+    : '[AI图像分析] ' + ctx.profile.name + '\n' +
+      '聊天摘要：' + (analysis.chatSummary || '无') + '\n' +
+      '女生情绪：' + (analysis.girlEmotion || '未知') + '\n' +
+      '关系阶段：' + (ctx.profile.stage || '未知') + ' -> ' + (analysis.nextStage || ctx.profile.stage) + '\n' +
+      '热度变化：' + (ctx.profile.tensionScore || 5) + ' -> ' + ((ctx.profile.tensionScore || 5) + (analysis.tensionAdjustment || 0)) + '\n' +
+      '信号提取：' + ((analysis.newSignals || []).map(s => s.event).join('; ') || '无') + '\n' +
+      '待推进：' + ((analysis.pendingActions || []).join('; ') || '无');
 
   return {
     pendingId: pending.id,
@@ -220,7 +258,7 @@ async function confirmProfileUpdate(girlId, pendingId, selectedFields) {
   // 解析现有 signals
   let existingSignals = [];
   if (girl.signals) {
-    try { existingSignals = JSON.parse(girl.signals); } catch {}
+    try { existingSignals = JSON.parse(girl.signals); } catch (e) { console.warn(`[GirlProfileExtractor] signals 解析失败 girlId=${girlId}:`, e.message); }
   }
 
   // 构建更新数据
@@ -247,7 +285,7 @@ async function confirmProfileUpdate(girlId, pendingId, selectedFields) {
   // 2. 合并待推进事项
   let pendingActions = [];
   if (girl.pendingActions) {
-    try { pendingActions = JSON.parse(girl.pendingActions); } catch {}
+    try { pendingActions = JSON.parse(girl.pendingActions); } catch (e) { console.warn(`[GirlProfileExtractor] pendingActions 解析失败 girlId=${girlId}:`, e.message); }
   }
   if (analysis.pendingActions?.length > 0) {
     analysis.pendingActions.forEach(action => {
@@ -259,7 +297,7 @@ async function confirmProfileUpdate(girlId, pendingId, selectedFields) {
   // 3. 合并观察点
   let observations = [];
   if (girl.observations) {
-    try { observations = JSON.parse(girl.observations); } catch {}
+    try { observations = JSON.parse(girl.observations); } catch (e) { console.warn(`[GirlProfileExtractor] observations 解析失败 girlId=${girlId}:`, e.message); }
   }
   if (analysis.observations?.length > 0) {
     analysis.observations.forEach(obs => {

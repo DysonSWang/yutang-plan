@@ -128,10 +128,10 @@ router.post('/compress-video', authMiddleware, upload.single('file'), async (req
   } catch (err) {
     // 清理失败时的临时文件
     if (fs.existsSync(inputPath)) {
-      try { fs.unlinkSync(inputPath); } catch {}
+      try { fs.unlinkSync(inputPath); } catch (e) { console.warn('[VideoCompress] 清理 inputPath 失败:', e.message); }
     }
     if (fs.existsSync(outputPath)) {
-      try { fs.unlinkSync(outputPath); } catch {}
+      try { fs.unlinkSync(outputPath); } catch (e) { console.warn('[VideoCompress] 清理 outputPath 失败:', e.message); }
     }
 
     console.error('视频压缩失败:', err.message);

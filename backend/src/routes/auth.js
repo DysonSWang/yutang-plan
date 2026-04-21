@@ -139,6 +139,7 @@ router.get('/verify', async (req, res) => {
 
     res.json({ success: true, user });
   } catch (error) {
+    console.warn('[Auth] verify token 失败:', error.message);
     res.status(401).json({ error: 'token无效' });
   }
 });
@@ -176,6 +177,7 @@ router.get('/me', async (req, res) => {
 
     res.json({ success: true, user });
   } catch (error) {
+    console.warn('[Auth] me token 失败:', error.message);
     res.status(401).json({ error: 'token无效' });
   }
 });
