@@ -103,7 +103,7 @@ router.post('/', authMiddleware, async (req, res) => {
         return res.status(400).json({ error: '请上传图片' });
       }
 
-      const { girlId, clientId, notes } = req.body;
+      const { girlId, clientId, notes, isMomentScreenshot } = req.body;
 
       if (!girlId || !clientId) {
         return res.status(400).json({ error: '参数不完整' });
@@ -139,7 +139,7 @@ router.post('/', authMiddleware, async (req, res) => {
 
       // 截图分析
       try {
-        const imageResult = await extractFromImage(girlId, imageUrl, BASE_URL, req.user.id);
+        const imageResult = await extractFromImage(girlId, imageUrl, BASE_URL, req.user.id, isMomentScreenshot === 'true');
         if (imageResult?.error) {
           console.warn('[ChatScreenshot] AI分析失败:', imageResult.error);
         } else if (imageResult?.analysis) {

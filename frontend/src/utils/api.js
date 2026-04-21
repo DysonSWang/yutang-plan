@@ -67,8 +67,9 @@ export const girls = {
   list: (params) => api.get('/api/girls' + (params ? '?' + new URLSearchParams(params) : '')),
   get: (id) => api.get(`/api/girls/${id}`),
   create: (data) => api.post('/api/girls', data),
-  update: (id, data) => api.put(`/api/girls/${id}`, data),
-  delete: (id) => api.delete(`/api/girls/${id}`)
+  clientAdd: (data) => api.post('/api/girls/client-add', data),
+  update: (id, data) => api.put('/api/girls/' + id, data),
+  delete: (id) => api.delete('/api/girls/' + id)
 };
 
 // 客户
@@ -229,6 +230,9 @@ export const chatPartner = {
   clientProfilePending: (clientId) => api.get(`/api/chat-partner/client-profile/pending/${clientId}`),
   confirmClientProfile: (data) => api.post('/api/chat-partner/client-profile/confirm', data),
   rejectClientProfile: (data) => api.post('/api/chat-partner/client-profile/reject', data),
+  // 朋友圈分析
+  analyzeMoment: (data) => api.post('/api/chat-partner/analyze-moment', data),
+  momentFeedback: (data) => api.post('/api/chat-partner/moment-feedback', data),
 };
 
 // 聊天截图

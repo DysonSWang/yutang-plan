@@ -1,4 +1,5 @@
 const { defineConfig } = require('@playwright/test');
+const path = require('path');
 
 module.exports = defineConfig({
   testDir: './e2e',
@@ -6,10 +7,14 @@ module.exports = defineConfig({
   forbidOnly: !!process.env.CI,
   retries: 0,
   workers: 1,
-  reporter: [['list']],
+  reporter: [
+    ['list'],
+    [path.join(__dirname, 'e2e/screenshot-reporter.cjs')],
+  ],
   use: {
     baseURL: process.env.BASE_URL || 'http://localhost:5181',
     trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
   },
   projects: [
     {
@@ -17,20 +22,5 @@ module.exports = defineConfig({
       use: { browserName: 'chromium' },
     },
   ],
-  webServer: [
-    {
-      command: 'cd ../backend && npm run dev',
-      port: 3005,
-      reuseExistingServer: true,
-      timeout: 30000,
-      url: 'http://localhost:3005',
-    },
-    {
-      command: 'cd ../frontend && npm run dev',
-      port: 5181,
-      reuseExistingServer: true,
-      timeout: 30000,
-      url: 'http://localhost:5181',
-    },
-  ],
+  webServer: [],
 });

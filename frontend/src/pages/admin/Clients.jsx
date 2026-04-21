@@ -171,6 +171,7 @@ const FIELD_HELP = {
   clientStrategicNotes: { label: '战略备注', help: '其他战略思考', example: '需要循序渐进' },
   trustLevel: { label: '信任度', help: '对操盘手的信任，1-5', example: '3' },
   interactionHeat: { label: '互动热度', help: '客户活跃度，1-10', example: '7.5' },
+  girlQuota: { label: '女生额度', help: '该客户能添加的女生上限', example: '10' },
   notes: { label: '备注', help: '其他补充信息', example: '客户比较忙，只晚上联系' },
   source: { label: '客户来源', help: '从哪里来的客户', example: '朋友推荐' },
 };
@@ -250,6 +251,7 @@ function getInitialFormData() {
     clientBestApproach: '', clientRecommendedTopics: '', clientUpgradeConditions: '',
     clientRiskFactors: '', clientStrategicNotes: '',
     trustLevel: 1, interactionHeat: 5.0,
+    girlQuota: 1,
     notes: '', source: ''
   };
 }
@@ -571,6 +573,7 @@ export default function AdminClients() {
       clientStrategicNotes: selectedClient.clientStrategicNotes || '',
       trustLevel: selectedClient.trustLevel || 1,
       interactionHeat: selectedClient.interactionHeat || 5.0,
+      girlQuota: selectedClient.girlQuota || 10,
       notes: selectedClient.notes || '',
       source: selectedClient.source || ''
     });
@@ -582,7 +585,7 @@ export default function AdminClients() {
     setSaving(true);
     try {
       // 转换 Int 字段（NumberInput 返回字符串）
-      const intFields = ['empathy', 'communication', 'conflictRes', 'emotionalMaturityLevel', 'coachCooperationLevel'];
+      const intFields = ['empathy', 'communication', 'conflictRes', 'emotionalMaturityLevel', 'coachCooperationLevel', 'girlQuota'];
       const payload = { ...formData };
       intFields.forEach(f => {
         if (payload[f] !== '' && payload[f] !== undefined) {
@@ -1088,6 +1091,19 @@ export default function AdminClients() {
                           ) : (
                             <Badge colorScheme="teal">{selectedClient?.serviceStage || '背调'}</Badge>
                           )}
+                        </FormControl>
+                        <FormControl>
+                          <HStack justify="space-between">
+                            <Text color="gray.400" fontSize="sm">女生额度</Text>
+                            <Text color={selectedClient?.girlCount >= selectedClient?.girlQuota ? 'red.400' : 'green.400'} fontSize="sm">
+                              {selectedClient?.girlCount || 0} / {selectedClient?.girlQuota || 10}
+                            </Text>
+                          </HStack>
+                          {isEditing ? (
+                            <NumberInput value={formData.girlQuota} onChange={(_, v) => setFormData({...formData, girlQuota: v})} bg="gray.700" min={1} max={100}>
+                              <NumberInputField color="white" />
+                            </NumberInput>
+                          ) : null}
                         </FormControl>
                         <FormControl>
                           <FieldLabel fieldKey="interactionHeat" isEditing={isEditing} />

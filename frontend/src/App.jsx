@@ -25,6 +25,7 @@ function ProtectedRoute({ children, requireOperator = false }) {
   if (loading) return null;
   if (!user) return <Navigate to="/login" />;
   if (requireOperator && user?.role === 'client') return <Navigate to="/" />;
+  if (!requireOperator && (user?.role === 'operator' || user?.role === 'admin')) return <Navigate to="/admin" />;
   return children;
 }
 

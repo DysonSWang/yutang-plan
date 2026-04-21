@@ -1,7 +1,7 @@
 # 鱼塘计划 · Claude Code 项目配置
 
 ## 项目入口
-`cd /home/admin/yutang-plan`
+cd /home/admin/yutang-plan
 
 ## 启动命令
 - 后端：`cd backend && npm run dev`（端口 3005）
@@ -18,3 +18,16 @@
 ## 禁忌
 - 不泄露客户信息
 - 不用敏感词
+
+## gstack
+Use /browse from gstack for all web browsing. Never use mcp__claude-in-chrome__* tools.
+
+Available skills:
+- **Think**: `/office-hours`, `/plan-ceo-review`, `/plan-eng-review`, `/plan-design-review`, `/design-consultation`
+- **Build**: `/review`, `/investigate`, `/design-review`
+- **Test**: `/qa`, `/qa-only`, `/benchmark`
+- **Ship**: `/ship`, `/land-and-deploy`, `/canary`, `/document-release`
+- **Reflect**: `/retro`
+- **Power Tools**: `/browse`, `/setup-browser-cookies`, `/codex`, `/careful`, `/freeze`, `/guard`, `/unfreeze`, `/gstack-upgrade`, `/setup-deploy`
+
+If gstack skills aren't working, run: `cd ~/.claude/skills/gstack && ./setup`

@@ -101,6 +101,17 @@ router.post('/', authMiddleware, async (req, res) => {
       }
     }
 
+    // 检查客户女生配额
+    const client = await prisma.user.findUnique({ where: { id: data.clientId } });
+    if (!client) {
+      return res.status(404).json({ error: '客户不存在' });
+    }
+    const currentCount = await prisma.girl.count({ where: { clientId: data.clientId } });
+    const quota = client.girlQuota || 999;
+    if (currentCount >= quota) {
+      return res.status(403).json({ error: `该客户女生额度已用完（${quota}人），请先调整配额` });
+    }
+
     const girl = await prisma.girl.create({
       data: {
         clientId: data.clientId,
@@ -216,6 +227,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     if (data.height !== undefined) updateData.height = data.height ? parseInt(data.height) : null;
     if (data.bodyType !== undefined) updateData.bodyType = data.bodyType || null;
     if (data.photos !== undefined) updateData.photos = data.photos ? JSON.stringify(data.photos) : null;
+    if (data.momentPhotos !== undefined) updateData.momentPhotos = data.momentPhotos ? JSON.stringify(data.momentPhotos) : null;
     if (data.styleTags !== undefined) updateData.styleTags = data.styleTags;
 
     // 家庭背景
@@ -344,6 +356,51 @@ router.post('/:id/intimacy', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('[Girls] 更新亲密度失败:', error);
     res.status(500).json({ error: '更新失败' });
+  }
+});
+
+// 客户自己添加女生（带额度校验）
+router.post('/client-add', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'client') {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const { name, age, occupation } = req.body;
+    if (!name) {
+      return res.status(400).json({ error: '昵称是必需的' });
+    }
+
+    const client = await prisma.user.findUnique({ where: { id: req.user.id } });
+    const currentCount = await prisma.girl.count({ where: { clientId: req.user.id } });
+    const quota = client.girlQuota || 1;
+
+    if (currentCount >= quota) {
+      return res.status(403).json({
+        error: `额度已用完（${currentCount}/${quota}人）`,
+        code: 'QUOTA_EXCEEDED',
+        quota,
+        currentCount
+      });
+    }
+
+    const girl = await prisma.girl.create({
+      data: {
+        clientId: req.user.id,
+        name,
+        age: age ? parseInt(age) : null,
+        occupation: occupation || null,
+        stage: '陌生',
+        status: 'available',
+        intimacyLevel: 1,
+        tensionScore: 5.0
+      }
+    });
+
+    res.json({ success: true, girl, quotaLeft: quota - currentCount - 1 });
+  } catch (error) {
+    console.error('[Girls] 客户添加女生失败:', error);
+    res.status(500).json({ error: '添加失败' });
   }
 });
 

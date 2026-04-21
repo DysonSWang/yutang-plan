@@ -2,9 +2,10 @@ import { useEffect, useState, useRef } from 'react';
 import {
   Box, Heading, Card, CardBody, Table, Thead, Tbody, Tr, Th, Td, Button, Badge, Modal, ModalOverlay, ModalContent,
   ModalHeader, ModalBody, ModalCloseButton, useDisclosure, SimpleGrid, FormControl, FormLabel, Input, Select,
-  Textarea, NumberInput, NumberInputField, VStack, HStack, Image, Text, Divider, Flex, useToast, Switch,
-  Accordion, AccordionItem, AccordionButton, AccordionPanel, AccordionIcon, Tabs, TabList, TabPanels, Tab, TabPanel, Icon
+  Textarea, NumberInput, NumberInputField, VStack, HStack, Image, Text, Divider, Flex, useToast, Checkbox,
+  Accordion, AccordionItem, AccordionButton, AccordionPanel, AccordionIcon, Tabs, TabList, TabPanels, Tab, TabPanel, Icon, IconButton, Spinner, Switch
 } from '@chakra-ui/react';
+import { FiX } from 'react-icons/fi';
 import { girls, clients, chatScreenshots } from '../../utils/api';
 import { HeartIcon, FireIcon, SnowIcon, SparklesIcon } from '../../components/Icons';
 
@@ -61,6 +62,15 @@ export default function AdminGirls() {
   const [confirmSelections, setConfirmSelections] = useState({}); // { key: bool }
   const { isOpen: isConfirmOpen, onOpen: onConfirmOpen, onClose: onConfirmClose } = useDisclosure();
   const fileInputRef = useRef();
+  // 朋友圈截图
+  const [momentScreenshots, setMomentScreenshots] = useState([]);
+  const [momentNotes, setMomentNotes] = useState('');
+  const [uploadingMoment, setUploadingMoment] = useState(false);
+  const [analyzingMoment, setAnalyzingMoment] = useState(false);
+  const [selectedClientQuota, setSelectedClientQuota] = useState(null); // { quota, count }
+  const [momentAiResult, setMomentAiResult] = useState('');
+  const [previewMomentImage, setPreviewMomentImage] = useState('');
+  const momentFileRef = useRef(null);
   const toast = useToast();
 
   useEffect(() => {
@@ -130,6 +140,19 @@ export default function AdminGirls() {
     }
   };
 
+  // 切换客户时更新配额信息
+  const handleClientChange = (clientId) => {
+    setFormData({...formData, clientId});
+    if (clientId) {
+      const c = clientList.find(x => x.id === clientId);
+      if (c) {
+        setSelectedClientQuota({ quota: c.girlQuota || 10, count: c.girlCount || 0 });
+      }
+    } else {
+      setSelectedClientQuota(null);
+    }
+  };
+
   const loadScreenshots = async (girlId) => {
     try {
       const res = await chatScreenshots.byGirl(girlId);
@@ -150,6 +173,9 @@ export default function AdminGirls() {
   const openDetailModal = async (girl) => {
     setSelectedGirl(girl);
     await loadScreenshots(girl.id);
+    // 加载朋友圈截图
+    setMomentScreenshots(girl.momentPhotos ? JSON.parse(girl.momentPhotos) : []);
+    setMomentAiResult('');
     onDetailOpen();
   };
 
@@ -283,7 +309,12 @@ export default function AdminGirls() {
       toast({ title: '保存成功', status: 'success', duration: 2000 });
     } catch (e) {
       console.error(e);
-      toast({ title: '保存失败', status: 'error', duration: 2000 });
+      const msg = e?.response?.data?.error || '';
+      if (msg.includes('额度') || msg.includes('配额')) {
+        toast({ title: msg, status: 'warning', duration: 4000 });
+      } else {
+        toast({ title: '保存失败', status: 'error', duration: 2000 });
+      }
     }
   };
 
@@ -405,6 +436,99 @@ export default function AdminGirls() {
     } catch (e) {
       console.error(e);
     }
+  };
+
+  // 朋友圈截图 - 上传并 AI 分析
+  const handleUploadMomentScreenshot = async () => {
+    if (!momentFileRef.current?.files[0] || !selectedGirl) return;
+    setUploadingMoment(true);
+    try {
+      const file = momentFileRef.current.files[0];
+      const fd = new FormData();
+      fd.append('image', file);
+      fd.append('girlId', selectedGirl.id);
+      fd.append('clientId', selectedGirl.clientId);
+      fd.append('notes', momentNotes);
+      fd.append('isMomentScreenshot', 'true');
+
+      const token = localStorage.getItem('yutang_token');
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/chat-screenshots`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: fd
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        toast({ title: '上传成功', status: 'success', duration: 2000 });
+        // 保存到 girl.momentPhotos
+        const existing = selectedGirl.momentPhotos ? JSON.parse(selectedGirl.momentPhotos) : [];
+        const newItem = { id: data.screenshot.id, imageUrl: data.screenshot.imageUrl, notes: momentNotes, createdAt: new Date().toISOString() };
+        const updated = [...existing, newItem];
+        await girls.update(selectedGirl.id, { momentPhotos: JSON.stringify(updated) });
+        // 刷新本地状态，确保详情弹窗里能看到
+        setMomentScreenshots(updated);
+        setMomentNotes('');
+        if (momentFileRef.current) momentFileRef.current.value = '';
+        setPreviewMomentImage('');
+
+        // 刷新 selectedGirl 和本地列表
+        try {
+          const res = await girls.list();
+          if (res.success) {
+            const found = res.girls.find(g => g.id === selectedGirl.id);
+            if (found) {
+              setSelectedGirl(found);
+              setMomentScreenshots(found.momentPhotos ? JSON.parse(found.momentPhotos) : []);
+            }
+          }
+        } catch {}
+
+        // 触发 AI 分析
+        if (data.screenshot?.id) {
+          setAnalyzingMoment(true);
+          setMomentAiResult('');
+          try {
+            const aiRes = await chatScreenshots.aiNotes(data.screenshot.id);
+            if (aiRes.success) setMomentAiResult(aiRes.notes || '');
+          } catch {}
+          setAnalyzingMoment(false);
+        }
+        // 如果有 AI 识别的额外字段（如年龄/职业/城市等），弹窗让用户选择录入
+        if (data.pendingFields && Object.keys(data.pendingFields).length > 0) {
+          setPendingFields(data.pendingFields);
+          const defaults = {};
+          Object.keys(data.pendingFields).forEach(k => { defaults[k] = false; }); // 默认不选中
+          setConfirmSelections(defaults);
+          onConfirmOpen();
+        }
+      } else {
+        toast({ title: data.error || '上传失败', status: 'error', duration: 2000 });
+      }
+    } catch (e) {
+      console.error(e);
+      toast({ title: '上传失败', status: 'error', duration: 2000 });
+    } finally {
+      setUploadingMoment(false);
+    }
+  };
+
+  const handleMomentImageSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setPreviewMomentImage(URL.createObjectURL(file));
+    }
+  };
+
+  const handleDeleteMomentScreenshot = async (momId) => {
+    if (!confirm('确定删除?')) return;
+    try {
+      const existing = selectedGirl.momentPhotos ? JSON.parse(selectedGirl.momentPhotos) : [];
+      const updated = existing.filter(m => m.id !== momId);
+      await girls.update(selectedGirl.id, { momentPhotos: JSON.stringify(updated) });
+      setMomentScreenshots(updated);
+      toast({ title: '已删除', status: 'success', duration: 1500 });
+    } catch {}
   };
 
   const renderField = (label, value, parseJSON = false) => {
@@ -530,11 +654,18 @@ export default function AdminGirls() {
                   <VStack spacing={4} align="stretch">
                     <FormControl isRequired>
                       <FormLabel color="gray.400">所属客户</FormLabel>
-                      <Select placeholder="选择客户" value={formData.clientId} onChange={e => setFormData({...formData, clientId: e.target.value})} bg="gray.700" color="white">
+                      <Select placeholder="选择客户" value={formData.clientId} onChange={e => handleClientChange(e.target.value)} bg="gray.700" color="white">
                         {clientList.map(c => (
-                          <option key={c.id} value={c.id}>{c.nickname || c.username}</option>
+                          <option key={c.id} value={c.id}>{c.nickname || c.username}（{c.girlCount || 0}/{c.girlQuota || 10}人）</option>
                         ))}
                       </Select>
+                      {selectedClientQuota && (
+                        <Text fontSize="xs" color={selectedClientQuota.count >= selectedClientQuota.quota ? 'red.400' : 'gray.400'}>
+                          {selectedClientQuota.count >= selectedClientQuota.quota
+                            ? `额度已用完（${selectedClientQuota.count}/${selectedClientQuota.quota}），请先调整客户配额`
+                            : `剩余 ${selectedClientQuota.quota - selectedClientQuota.count} 个名额（${selectedClientQuota.count}/${selectedClientQuota.quota}）`}
+                        </Text>
+                      )}
                     </FormControl>
                     <FormControl isRequired>
                       <FormLabel color="gray.400">昵称</FormLabel>
@@ -1022,7 +1153,7 @@ export default function AdminGirls() {
                 </TabPanel>
               </TabPanels>
             </Tabs>
-            <Button colorScheme="teal" w="100%" mt={6} onClick={handleSubmit} transition="all 0.15s ease" _hover={{ transform: 'translateY(-1px)' }}>{selectedGirl ? '保存修改' : '添加女生'}</Button>
+            <Button colorScheme="teal" w="100%" mt={6} onClick={handleSubmit} isDisabled={!selectedGirl && selectedClientQuota && selectedClientQuota.count >= selectedClientQuota.quota} transition="all 0.15s ease" _hover={{ transform: 'translateY(-1px)' }}>{selectedGirl ? '保存修改' : '添加女生'}</Button>
           </ModalBody>
         </ModalContent>
       </Modal>
@@ -1045,6 +1176,7 @@ export default function AdminGirls() {
                   <Tab>情感</Tab>
                   <Tab>AI画像</Tab>
                   <Tab>上下文</Tab>
+                  <Tab>朋友圈截图</Tab>
                 </TabList>
                 <TabPanels>
                   <TabPanel px={0}>
@@ -1249,6 +1381,81 @@ export default function AdminGirls() {
                       <Text color="white" whiteSpace="pre-wrap" fontSize="sm">{selectedGirl.conversationSummary || '暂无摘要'}</Text>
                     </Box>
                   </TabPanel>
+
+                  {/* 朋友圈截图 Tab */}
+                  <TabPanel px={0}>
+                    <VStack spacing={4} align="stretch">
+                      {/* 上传区 */}
+                      <Flex gap={4} align="flex-end" bg="gray.700" p={4} borderRadius="md">
+                        <FormControl flex={1}>
+                          <FormLabel color="gray.400" fontSize="sm">选择朋友圈截图</FormLabel>
+                          <Input type="file" accept="image/*" ref={momentFileRef} onChange={handleMomentImageSelect} bg="gray.600" pt={1} color="white" _placeholder={{ color: 'gray.400' }} />
+                        </FormControl>
+                        <FormControl flex={1}>
+                          <FormLabel color="gray.400" fontSize="sm">备注</FormLabel>
+                          <Input value={momentNotes} onChange={e => setMomentNotes(e.target.value)} placeholder="如：深夜美食自拍" bg="gray.600" color="white" _placeholder={{ color: 'gray.400' }} />
+                        </FormControl>
+                        <Button colorScheme="purple" onClick={handleUploadMomentScreenshot} isLoading={uploadingMoment} h="40px">
+                          上传并分析
+                        </Button>
+                      </Flex>
+
+                      {/* 图片预览 */}
+                      {previewMomentImage && (
+                        <Image src={previewMomentImage} alt="预览" maxH="200px" borderRadius="md" objectFit="cover" />
+                      )}
+
+                      {/* AI 分析结果 */}
+                      {analyzingMoment && (
+                        <HStack><Spinner size="sm" color="purple.400" /><Text color="purple.300" fontSize="sm">AI 分析中...</Text></HStack>
+                      )}
+                      {momentAiResult && (
+                        <Box bg="purple.900" p={3} borderRadius="md" borderLeft="3px solid" borderColor="purple.400">
+                          <Text color="purple.200" fontSize="sm" fontWeight="bold" mb={1}>AI 分析</Text>
+                          <Text color="gray.300" fontSize="sm" whiteSpace="pre-wrap">{momentAiResult}</Text>
+                        </Box>
+                      )}
+
+                      {/* 已有朋友圈截图 */}
+                      <Box>
+                        <Text color="gray.400" fontSize="sm" mb={3}>已保存 ({momentScreenshots.length})</Text>
+                        {momentScreenshots.length === 0 ? (
+                          <Flex h="150px" align="center" justify="center" bg="gray.700" borderRadius="md">
+                            <Text color="gray.500">暂无朋友圈截图</Text>
+                          </Flex>
+                        ) : (
+                          <SimpleGrid columns={4} spacing={4}>
+                            {momentScreenshots.map(m => (
+                              <Box key={m.id} position="relative" bg="gray.700" borderRadius="md" overflow="hidden">
+                                <Image
+                                  src={`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}${m.imageUrl}`}
+                                  alt="朋友圈截图"
+                                  w="100%"
+                                  h="140px"
+                                  objectFit="cover"
+                                  cursor="pointer"
+                                  onClick={() => setPreviewImage(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}${m.imageUrl}`)}
+                                />
+                                <Box position="absolute" bottom={0} left={0} right={0} bg="blackAlpha.700" p={2}>
+                                  <Text fontSize="xs" color="gray.300" noOfLines={1}>{m.notes || '无备注'}</Text>
+                                </Box>
+                                <IconButton
+                                  position="absolute"
+                                  top={1}
+                                  right={1}
+                                  icon={<Icon as={FiX} />}
+                                  size="xs"
+                                  colorScheme="red"
+                                  borderRadius="full"
+                                  onClick={() => handleDeleteMomentScreenshot(m.id)}
+                                />
+                              </Box>
+                            ))}
+                          </SimpleGrid>
+                        )}
+                      </Box>
+                    </VStack>
+                  </TabPanel>
                 </TabPanels>
               </Tabs>
             )}
@@ -1405,14 +1612,14 @@ export default function AdminGirls() {
             </Button>
           </ModalHeader>
           <ModalCloseButton />
-          <ModalBody pb={6}>
+          <ModalBody pb={6} maxH="60vh" overflowY="auto">
             <Text color="gray.300" mb={4}>
               AI 从截图中识别到以下信息，请勾选要录入档案的字段：
             </Text>
             <VStack spacing={3} align="stretch">
               {Object.entries(pendingFields).map(([key, { label, value }]) => (
                 <Flex key={key} align="center" gap={3} bg="gray.700" p={3} borderRadius="md">
-                  <Switch
+                  <Checkbox
                     colorScheme="teal"
                     isChecked={!!confirmSelections[key]}
                     onChange={(e) => setConfirmSelections(prev => ({ ...prev, [key]: e.target.checked }))}

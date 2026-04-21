@@ -43,3 +43,22 @@ Thumbs.db
 # Uploads (user-generated content)
 backend/uploads/
 frontend/uploads/
+.gstack/
+
+# ── GSD baseline (auto-generated) ──
+.gsd
+.gsd-id
+.bg-shell/
+*~
+*.code-workspace
+.env
+.env.*
+.next/
+__pycache__/
+*.pyc
+.venv/
+venv/
+target/
+vendor/
+.cache/
+tmp/

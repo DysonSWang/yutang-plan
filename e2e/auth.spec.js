@@ -2,60 +2,57 @@
  * E2E: 登录认证流程
  */
 
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./screenshot-setup.js');
+const { BASE_URL, API_BASE } = require('./helpers');
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:5181';
+async function showLoginForm(page) {
+  await page.goto(`${BASE_URL}/login`);
+  await page.waitForTimeout(500);
+  const loginBtn = page.locator('button:has-text("登录")').first();
+  if (await loginBtn.isVisible()) {
+    await loginBtn.click();
+    await page.waitForTimeout(500);
+  }
+}
+
+async function fillLoginForm(page, username, password) {
+  await showLoginForm(page);
+  const usernameInput = page.locator('input').filter({ hasNot: page.locator('[type="password"]') }).first();
+  const passwordInput = page.locator('input[type="password"]').first();
+  await usernameInput.fill(username);
+  await passwordInput.fill(password);
+  const submitBtn = page.locator('button[type="submit"]').first();
+  await submitBtn.click();
+  await page.waitForTimeout(2000);
+}
 
 test.describe('登录认证', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto(`${BASE_URL}/login`);
-  });
-
   test('登录页面正常加载', async ({ page }) => {
+    await page.goto(`${BASE_URL}/login`);
     await expect(page.locator('body')).toBeVisible();
-    const title = await page.title();
-    expect(title.length).toBeGreaterThan(0);
   });
 
   test('可以输入用户名和密码', async ({ page }) => {
-    const usernameInput = page.locator('input[type="text"], input[placeholder*="用户名"], input[placeholder*="账号"]').first();
+    await showLoginForm(page);
+    const usernameInput = page.locator('input').filter({ hasNot: page.locator('[type="password"]') }).first();
     const passwordInput = page.locator('input[type="password"]').first();
-
     if (await usernameInput.isVisible()) {
-      await usernameInput.fill('operator');
-      await passwordInput.fill('password123');
+      await usernameInput.fill('op_e2e');
+      await passwordInput.fill('op123456');
     }
   });
 
   test('未注册用户登录失败', async ({ page }) => {
-    const usernameInput = page.locator('input[type="text"], input[placeholder*="用户名"], input[placeholder*="账号"]').first();
-    const passwordInput = page.locator('input[type="password"]').first();
-    const submitButton = page.locator('button[type="submit"], button:has-text("登录"), button:has-text("登")').first();
-
-    if (await usernameInput.isVisible()) {
-      await usernameInput.fill('nonexistent_user_12345');
-      await passwordInput.fill('wrongpassword');
-      await submitButton.click();
-      await page.waitForTimeout(1000);
-      // 应该有错误提示或保持在登录页
-      const currentUrl = page.url();
-      expect(currentUrl).toContain('/login');
-    }
+    await fillLoginForm(page, 'nonexistent_user_12345', 'wrongpassword');
+    const currentUrl = page.url();
+    expect(currentUrl).toContain('/login');
   });
 
   test('操盘手登录成功', async ({ page }) => {
-    const usernameInput = page.locator('input[type="text"], input[placeholder*="用户名"], input[placeholder*="账号"]').first();
-    const passwordInput = page.locator('input[type="password"]').first();
-    const submitButton = page.locator('button[type="submit"], button:has-text("登录"), button:has-text("登")').first();
-
-    if (await usernameInput.isVisible()) {
-      await usernameInput.fill('operator');
-      await passwordInput.fill('operator123');
-      await submitButton.click();
-      await page.waitForTimeout(2000);
-      const currentUrl = page.url();
-      // 登录后应该跳转到管理后台
-      expect(currentUrl).not.toContain('/login');
-    }
+    await fillLoginForm(page, 'op_e2e', 'op123456');
+    await page.waitForTimeout(1000);
+    const currentUrl = page.url();
+    expect(currentUrl).not.toContain('/login');
+    expect(currentUrl).toContain('/admin');
   });
 });

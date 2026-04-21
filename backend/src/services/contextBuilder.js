@@ -40,6 +40,18 @@ async function buildAICoachContext(clientId, girlId, userMessage) {
       where: { id: girlId }
     });
 
+    // 安全验证：客户只能访问自己的女生
+    if (girl && girl.clientId !== clientId) {
+      return {
+        girlInfo: null,
+        recentSignals: [],
+        pendingActions: [],
+        observations: [],
+        conversationSummary: '',
+        client: null
+      };
+    }
+
     if (girl) {
       girlInfo = {
         id: girl.id,

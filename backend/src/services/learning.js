@@ -65,21 +65,32 @@ async function getAllLearnings(clientId, girlId = null) {
  * 从对话中提取经验教训
  */
 async function extractLearningsFromConversation(clientId, conversationText, girlId = null) {
-  const prompt = `从以下对话中提取可学习的insight，格式化为JSON数组：
+  const prompt = `你是童锦程，情感咨询领域的老中医，擅长从实战对话中提炼可复用的经验。
 
-对话内容：
+从以下对话中提取有价值的经验教训，每个经验要能从这段对话中学到真实可操作的东西，不是泛泛的道理。
+
+【对话内容】
 ${conversationText}
 
-要求：
-- type: 技巧/心态/案例
-- scene: 场景描述（10字内）
-- content: 具体学习内容（50字内）
-- 只提取有价值的经验，不超过3条
+经验类型定义：
+- **技巧**：具体的操作方法、话术、时机判断、互动技巧（如"女生发照片时不要只夸，要互动问问题"）
+- **心态**：认知调整、心理建设、情绪管理（如"进度不顺时不要追，等她主动"）
+- **案例**：可参考的完整互动模式、成功或失败的正反案例
 
-输出JSON数组格式：
-[{"type":"技巧","scene":"场景","content":"内容"}]
+提取标准：
+1. 要有具体场景，不能是放之四海皆准的废话
+2. 要有可操作性，不能只是"要真诚"这种空话
+3. 要么是别人没做好的教训，要么是别人做对了值得学习的技巧
+4. 每个经验不超过50字，内容要精准
 
-只输出JSON，不要其他内容。`;
+只提取最重要的2-3条，不要堆砌。
+
+输出 JSON 数组格式：
+[
+  {"type": "技巧|心态|案例", "scene": "场景描述（10字内）", "content": "具体学习内容（50字内）"}
+]
+
+只输出 JSON，不要其他内容。`;
 
   const aiConfig = getAIConfig();
 

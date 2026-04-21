@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Box, Flex, Heading, Text, Card, CardBody, CardHeader, Button, Select, Textarea, SimpleGrid, Badge, VStack, HStack, Divider, Spinner, useToast, Tabs, TabList, TabPanels, Tab, TabPanel, Icon, Input, useDisclosure, Checkbox, Collapse, Alert, AlertIcon } from '@chakra-ui/react';
+import { Box, Flex, Heading, Text, Card, CardBody, CardHeader, Button, Select, Textarea, SimpleGrid, Badge, VStack, HStack, Divider, Spinner, useToast, Tabs, TabList, TabPanels, Tab, TabPanel, Icon, Input, useDisclosure, Checkbox, Collapse, Alert, AlertIcon, Image, FormControl, FormLabel, Text as CText } from '@chakra-ui/react';
 import { clients, girls, chatLogs, chat, chatPartner } from '../../utils/api';
 import { useSocket } from '../../contexts/SocketContext';
 import { FiSend, FiMessageSquare, FiTarget, FiZap, FiAlertCircle, FiCheck, FiCopy, FiUser } from 'react-icons/fi';
@@ -82,6 +82,16 @@ export default function AdminWorkbench() {
   const [clientProfilePendingId, setClientProfilePendingId] = useState(null);
   const [clientProfilePendingFields, setClientProfilePendingFields] = useState({});
   const [selectedClientProfileFields, setSelectedClientProfileFields] = useState({});
+
+  // 朋友圈模式状态
+  const [momentMode, setMomentMode] = useState('comment'); // 'comment' | 'dm'
+  const [momentText, setMomentText] = useState('');
+  const [momentImage, setMomentImage] = useState(null); // File object
+  const [momentImagePreview, setMomentImagePreview] = useState('');
+  const [momentAnalysis, setMomentAnalysis] = useState('');
+  const [commentSuggestions, setCommentSuggestions] = useState([]);
+  const [dmSuggestions, setDmSuggestions] = useState([]);
+  const [momentLoading, setMomentLoading] = useState(false);
 
   useEffect(() => {
     loadClients();
@@ -168,7 +178,7 @@ export default function AdminWorkbench() {
   // 切换实战聊天模式时重置状态
   const switchWorkbenchChatMode = (mode) => {
     setWorkbenchChatMode(mode);
-    if (mode === 'client') {
+    if (mode === 'client' || mode === 'moment') {
       // 清理女生聊天状态
       setChatHistory([]);
       setAiAnalysis('');
@@ -563,6 +573,96 @@ export default function AdminWorkbench() {
     }
   };
 
+// 朋友圈模式 - 选择图片
+  const handleMomentImageSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setMomentImage(file);
+      setMomentImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  // 朋友圈模式 - 分析
+  const handleAnalyzeMoment = async () => {
+    if (!selectedGirl) {
+      toast({ title: '请先选择女生', status: 'warning' });
+      return;
+    }
+    if (!momentText.trim() && !momentImage) {
+      toast({ title: '请输入朋友圈文字或上传图片', status: 'warning' });
+      return;
+    }
+
+    setMomentLoading(true);
+    setMomentAnalysis('');
+    setCommentSuggestions([]);
+    setDmSuggestions([]);
+
+    try {
+      const payload = {
+        girlId: selectedGirl.id,
+        momentText: momentText.trim() || undefined,
+        operatorNotes: ''
+      };
+
+      // 如果有图片，转成 base64
+      if (momentImage) {
+        const reader = new FileReader();
+        const base64 = await new Promise((resolve) => {
+          reader.onload = (ev) => resolve(ev.target.result);
+          reader.readAsDataURL(momentImage);
+        });
+        payload.momentImage = base64;
+      }
+
+      const res = await chatPartner.analyzeMoment(payload);
+
+      if (res.success) {
+        setMomentAnalysis(res.analysis || '');
+        setCommentSuggestions(res.commentSuggestions || []);
+        setDmSuggestions(res.dmSuggestions || []);
+      } else {
+        toast({ title: res.error || '分析失败', status: 'error' });
+      }
+    } catch {
+      toast({ title: '分析失败', status: 'error' });
+    } finally {
+      setMomentLoading(false);
+    }
+  };
+
+  // 朋友圈模式 - 采纳建议
+  const handleMomentSuggestion = async (suggestion, replyType) => {
+    if (!selectedGirl) return;
+    const replyText = suggestion.text || suggestion.reply || suggestion;
+    const style = suggestion.style || '';
+    const intention = suggestion.intention || '';
+
+    try {
+      await chatPartner.momentFeedback({
+        girlId: selectedGirl.id,
+        chosenReply: replyText,
+        replyType,
+        momentText: momentText || null,
+        style,
+        intention
+      });
+      toast({ title: `已记录${replyType === 'comment' ? '评论' : '私聊'}建议`, status: 'success', duration: 2000 });
+    } catch {
+      toast({ title: '记录失败', status: 'error' });
+    }
+  };
+
+  // 朋友圈模式 - 清除
+  const handleClearMoment = () => {
+    setMomentText('');
+    setMomentImage(null);
+    setMomentImagePreview('');
+    setMomentAnalysis('');
+    setCommentSuggestions([]);
+    setDmSuggestions([]);
+  };
+
   // 发送消息给客户
   const handleSendToClient = async () => {
     if (!clientInput.trim() || !clientSession) return;
@@ -571,7 +671,6 @@ export default function AdminWorkbench() {
       const res = await chat.send(clientSession.id, clientInput.trim());
       if (res.success) {
         setClientMessages(prev => [...prev, res.message]);
-        // 追加到多轮对话历史（操盘手发的）
         setClientChatHistory(prev => [...prev, { role: 'operator', content: clientInput.trim() }]);
         setClientInput('');
       }
@@ -922,7 +1021,190 @@ export default function AdminWorkbench() {
                           </Text>
                         </HStack>
                       </Box>
+                      <Box
+                        px={4}
+                        py={2}
+                        borderRadius="md"
+                        cursor="pointer"
+                        bg={workbenchChatMode === 'moment' ? 'purple.600' : 'transparent'}
+                        onClick={() => switchWorkbenchChatMode('moment')}
+                      >
+                        <HStack spacing={2}>
+                          <Icon as={FiMessageSquare} color="purple.300" boxSize={4} />
+                          <Text color="white" fontSize="sm" fontWeight="bold">
+                            朋友圈互动
+                          </Text>
+                        </HStack>
+                      </Box>
                     </HStack>
+
+                    {/* 朋友圈互动模式 */}
+                    {workbenchChatMode === 'moment' && !selectedGirl && (
+                      <Flex flex={1} align="center" justify="center">
+                        <Text color="gray.500">先在左侧选择一个女生开始分析朋友圈</Text>
+                      </Flex>
+                    )}
+
+                    {workbenchChatMode === 'moment' && selectedGirl && (
+                      <Box>
+                        {/* 顶部：评论/私聊切换 */}
+                        <HStack mb={3} bg="gray.700" p={1} borderRadius="md" w="fit-content">
+                          <Box
+                            px={4}
+                            py={2}
+                            borderRadius="md"
+                            cursor="pointer"
+                            bg={momentMode === 'comment' ? 'purple.600' : 'transparent'}
+                            onClick={() => setMomentMode('comment')}
+                          >
+                            <Text color="white" fontSize="sm" fontWeight="bold">评论建议</Text>
+                          </Box>
+                          <Box
+                            px={4}
+                            py={2}
+                            borderRadius="md"
+                            cursor="pointer"
+                            bg={momentMode === 'dm' ? 'orange.600' : 'transparent'}
+                            onClick={() => setMomentMode('dm')}
+                          >
+                            <Text color="white" fontSize="sm" fontWeight="bold">私聊切入</Text>
+                          </Box>
+                        </HStack>
+
+                        {/* 输入区：朋友圈文字 */}
+                        <HStack mb={2}>
+                          <Icon as={FiMessageSquare} color="purple.400" />
+                          <Text color="gray.400" fontSize="sm">
+                            粘贴朋友圈文字，或上传截图（可选）
+                          </Text>
+                        </HStack>
+                        <Textarea
+                          value={momentText}
+                          onChange={e => setMomentText(e.target.value)}
+                          placeholder="粘贴朋友圈文字内容..."
+                          bg="gray.700"
+                          color="white"
+                          rows={3}
+                          mb={2}
+                          _placeholder={{ color: 'gray.400' }}
+                        />
+
+                        {/* 图片上传 */}
+                        <HStack mb={3}>
+                          <FormControl>
+                            <FormLabel color="gray.400" fontSize="sm" mb={0}>上传朋友圈截图</FormLabel>
+                            <Input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleMomentImageSelect}
+                              bg="gray.700"
+                              color="white"
+                              size="sm"
+                              pt={1}
+                              _placeholder={{ color: 'gray.400' }}
+                            />
+                          </FormControl>
+                          {momentImagePreview && (
+                            <Image
+                              src={momentImagePreview}
+                              alt="朋友圈截图"
+                              maxH="80px"
+                              borderRadius="md"
+                              objectFit="cover"
+                            />
+                          )}
+                        </HStack>
+
+                        {/* 分析按钮 */}
+                        <HStack mb={3}>
+                          <Button
+                            colorScheme="purple"
+                            onClick={handleAnalyzeMoment}
+                            isLoading={momentLoading}
+                            isDisabled={!momentText.trim() && !momentImage}
+                          >
+                            {momentImage ? 'AI 分析朋友圈' : '分析文字'}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            color="gray.400"
+                            size="sm"
+                            onClick={handleClearMoment}
+                          >
+                            清除
+                          </Button>
+                        </HStack>
+
+                        {/* AI 分析结果 */}
+                        {momentAnalysis && (
+                          <Box mb={3} p={3} bg="purple.900" borderRadius="md" borderLeft="3px solid" borderColor="purple.400">
+                            <Text color="purple.200" fontSize="sm" fontWeight="bold" mb={1}>AI 分析</Text>
+                            <Text color="gray.300" fontSize="sm">{momentAnalysis}</Text>
+                          </Box>
+                        )}
+
+                        {/* 评论建议 */}
+                        {(commentSuggestions.length > 0 || dmSuggestions.length > 0) && (
+                          <Box>
+                            {momentMode === 'comment' && commentSuggestions.length > 0 && (
+                              <Box mb={3}>
+                                <Text color="gray.400" fontSize="sm" mb={2}>💬 评论建议</Text>
+                                <VStack spacing={2} align="stretch">
+                                  {commentSuggestions.map((s, i) => (
+                                    <Box key={i} p={3} bg="gray.700" borderRadius="md">
+                                      <HStack justify="space-between">
+                                        <Box flex={1}>
+                                          <HStack mb={1}>
+                                            <Badge colorScheme="purple" fontSize="xs">{s.style || '评论'}</Badge>
+                                            {s.intention && <Text color="gray.500" fontSize="xs">{s.intention}</Text>}
+                                          </HStack>
+                                          <Text color="white" fontSize="sm">{s.text}</Text>
+                                        </Box>
+                                        <Button
+                                          size="sm"
+                                          colorScheme="green"
+                                          onClick={() => handleMomentSuggestion(s, 'comment')}
+                                        >
+                                          采纳
+                                        </Button>
+                                      </HStack>
+                                    </Box>
+                                  ))}
+                                </VStack>
+                              </Box>
+                            )}
+
+                            {momentMode === 'dm' && dmSuggestions.length > 0 && (
+                              <Box mb={3}>
+                                <Text color="gray.400" fontSize="sm" mb={2}>💬 私聊切入</Text>
+                                <VStack spacing={2} align="stretch">
+                                  {dmSuggestions.map((s, i) => (
+                                    <Box key={i} p={3} bg="gray.700" borderRadius="md">
+                                      <HStack justify="space-between">
+                                        <Box flex={1}>
+                                          <HStack mb={1}>
+                                            <Badge colorScheme="orange" fontSize="xs">{s.style || '私聊'}</Badge>
+                                            {s.intention && <Text color="gray.500" fontSize="xs">{s.intention}</Text>}
+                                          </HStack>
+                                          <Text color="white" fontSize="sm">{s.text}</Text>
+                                        </Box>
+                                        <Button
+                                          size="sm"
+                                          colorScheme="orange"
+                                          onClick={() => handleMomentSuggestion(s, 'dm')}
+                                        >
+                                          采纳
+                                        </Button>
+                                      </HStack>
+                                    </Box>
+                                  ))}
+                                </VStack>
+                              </Box>
+                            )}
+                          </Box>
+                        )}
+                      </Box>
+                    )}
 
                     {/* 和客户聊天模式 */}
                     {workbenchChatMode === 'client' && !selectedClient && (

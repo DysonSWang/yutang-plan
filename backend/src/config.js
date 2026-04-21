@@ -30,10 +30,11 @@ const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 
 function getAIConfig() {
   if (AI_PROVIDER === 'dashscope' && DASHSCOPE_API_KEY) {
+    // qwen-plus 免费额度已耗尽，qwen-vl-plus 可处理文本和图片
     return {
       url: DASHSCOPE_API_URL,
       key: DASHSCOPE_API_KEY,
-      model: 'qwen-plus'
+      model: 'qwen-vl-plus'
     };
   }
   if (ZHIPU_API_KEY) {

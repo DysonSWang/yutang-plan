@@ -170,6 +170,7 @@ model User {
 
   // ===== 元数据 =====
   balance          Float     @default(0)
+  girlQuota        Int       @default(1)  // 女生额度上限，新建客户默认1（体验版）
   notes            String? // 备注
   source           String? // 客户来源
   serviceStartDate DateTime? // 服务开始日期
@@ -209,6 +210,7 @@ model Girl {
   homepageUrl String? // 主页链接（个人网站/社交主页）
   videos      String? // JSON array - 视频链接
   styleTags   String? // 风格标签：文艺/运动/精致/朴素
+  momentPhotos String? // JSON array - 朋友圈截图
 
   // ===== 家庭背景 =====
   familyBackground String? // 农村/城市/经商/公务员
@@ -387,11 +389,15 @@ model ChatLog {
 
   receiverName String
   content      String
-  type         String @default("text")
+  type         String @default("text") // text | moment_text | moment_image
 
   aiAnalysis    String?
   aiSuggestions String?
   aiAdopted     Boolean @default(false)
+
+  // 朋友圈相关（当 type 为 moment_* 时）
+  momentImageUrl String?
+  momentText     String?
 
   isVisibleToClient Boolean @default(false)
 
@@ -578,13 +584,19 @@ model PendingProfileUpdate {
 model ConversationMemory {
   id       String @id @default(uuid())
   clientId String
-  girlId   String
+  girlId   String?
   coachId  String
 
-  messages     String
-  summary      String?
-  signals      String?
-  stageChanged Boolean @default(false)
+  messages      String
+  summary       String?
+  signals       String?
+  stageChanged  Boolean @default(false)
+
+  // ---- CC风格压缩 ----
+  compactionCount      Int @default(0) // 累计压缩次数
+  removedMessageCount  Int @default(0)  // 累计移除消息数
+  compactionChain      String? // JSON: [{seq, summary, timestamp}] 递归压缩链
+  tokenCount           Int @default(0)  // 累计消息token数（估算）
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

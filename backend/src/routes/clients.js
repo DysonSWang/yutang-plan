@@ -52,6 +52,7 @@ router.get('/', authMiddleware, async (req, res) => {
         assetsLevel: true,
         serviceStage: true,
         balance: true,
+        girlQuota: true,
         trustLevel: true,
         interactionHeat: true,
         coachCooperation: true,
@@ -403,6 +404,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
 
     // 元数据
     if (data.balance !== undefined) updateData.balance = data.balance;
+    if (data.girlQuota !== undefined) updateData.girlQuota = parseInt(data.girlQuota, 10) || 10;
     if (data.notes !== undefined) updateData.notes = data.notes;
     if (data.source !== undefined) updateData.source = data.source;
     if (data.serviceStartDate !== undefined) updateData.serviceStartDate = data.serviceStartDate;

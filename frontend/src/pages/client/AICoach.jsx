@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Box, VStack, HStack, Input, Button, Text, Card, CardBody, CardHeader, Heading, Select, Textarea, Spinner, Flex, Badge } from '@chakra-ui/react';
+import { Box, VStack, HStack, Input, Button, Text, Card, CardBody, CardHeader, Heading, Select, Textarea, Spinner, Flex, Badge, Icon } from '@chakra-ui/react';
 import { girls as girlsApi } from '../../utils/api';
 import { FireIcon, SnowIcon } from '../../components/Icons';
 

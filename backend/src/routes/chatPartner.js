@@ -178,7 +178,7 @@ function getTensionEmoji(score) {
  */
 router.post('/optimize-message', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -330,7 +330,7 @@ ${historyString || '（暂无历史记录）'}
  */
 router.post('/analyze', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -483,8 +483,11 @@ ${operatorNotes || '无'}
           max_tokens: 1500
         })
       }),
-      // 档案字段提取
-      girlId ? extractGirlFromChat(girlId, req.user.id, message, { history, pendingActions, observations, conversationSummary }) : Promise.resolve(null)
+      // 档案字段提取（女生 + 客户）
+      Promise.all([
+        girlId ? extractGirlFromChat(girlId, req.user.id, message, { history, pendingActions, observations, conversationSummary }) : Promise.resolve(null),
+        clientId ? extractClientFromChat(clientId, req.user.id, message, { recentMessages: history }) : Promise.resolve(null)
+      ])
     ]);
 
     // 解析回复建议
@@ -514,12 +517,27 @@ ${operatorNotes || '无'}
       } catch (e) { console.warn('[ChatPartner] replyAnalysis JSON 解析失败:', e.message); }
     }
 
-    // 解析档案提取结果
+    // 解析档案提取结果（女生 + 客户）
     let pendingFields = {};
     let profilePendingId = null;
+    let clientPendingFields = {};
+    let clientProfilePendingId = null;
     if (profileResult.status === 'fulfilled' && profileResult.value) {
-      pendingFields = profileResult.value.pendingFields || {};
-      profilePendingId = profileResult.value.pendingId;
+      if (Array.isArray(profileResult.value)) {
+        // [girlResult, clientResult]
+        const [girlResult, clientResult] = profileResult.value;
+        if (girlResult) {
+          pendingFields = girlResult.pendingFields || {};
+          profilePendingId = girlResult.pendingId;
+        }
+        if (clientResult) {
+          clientPendingFields = clientResult.pendingFields || {};
+          clientProfilePendingId = clientResult.pendingId;
+        }
+      } else {
+        pendingFields = profileResult.value.pendingFields || {};
+        profilePendingId = profileResult.value.pendingId;
+      }
     }
 
     res.json({
@@ -527,9 +545,12 @@ ${operatorNotes || '无'}
       girlId: girlId || null,
       analysis: replyAnalysis,
       suggestions: replySuggestions,
-      profilePendingId,  // 新：档案待确认 ID
-      pendingFields,     // 新：待确认档案字段 { fieldKey: { label, value } }
+      profilePendingId,  // 女生档案待确认 ID
+      pendingFields,     // 女生待确认档案字段 { fieldKey: { label, value } }
       fieldLabels: GIRL_FIELD_LABELS,
+      clientProfilePendingId, // 客户档案待确认 ID
+      clientPendingFields,    // 客户待确认档案字段
+      clientFieldLabels: CLIENT_FIELD_LABELS,
       context: {
         stage,
         tensionScore: girlInfo?.tensionScore || 5,
@@ -556,7 +577,7 @@ ${operatorNotes || '无'}
  */
 router.post('/feedback', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -571,6 +592,10 @@ router.post('/feedback', authMiddleware, async (req, res) => {
     const girl = await prisma.girl.findUnique({ where: { id: girlId } });
     if (!girl) {
       return res.status(404).json({ error: '女生不存在' });
+    }
+    // 客户端只能操作自己的女生
+    if (req.user.role === 'client' && girl.clientId !== req.user.id) {
+      return res.status(403).json({ error: '无权限' });
     }
     const clientId = girl.clientId;
 
@@ -599,18 +624,27 @@ router.post('/feedback', authMiddleware, async (req, res) => {
       intention: intention || ''
     });
 
-    // 3. 处理档案字段确认（如果提供了 pendingId）
+    // 3. 处理档案字段确认（女生 + 客户）
     let profileConfirmResult = null;
+    let clientProfileConfirmResult = null;
     if (profilePendingId) {
       try {
         const { confirmProfileUpdate } = require('../services/girlProfileExtractor');
-        // 如果没有传递 selectedProfileFields，默认不采纳任何字段（{}）
-        // 操盘手必须在 /girl-profile/confirm 手动确认要采纳哪些字段
-        // 传空对象 {} 明确表示放弃采纳；传 null 意味着采纳热度/信号但不更新档案字段
         const fieldsToApply = selectedProfileFields === undefined ? {} : selectedProfileFields;
         profileConfirmResult = await confirmProfileUpdate(girlId, profilePendingId, fieldsToApply);
       } catch (e) {
-        console.warn('[ChatPartner] 档案确认失败:', e.message);
+        console.warn('[ChatPartner] 女生档案确认失败:', e.message);
+      }
+    }
+    // 同时确认客户档案更新
+    const { clientProfilePendingId, clientSelectedProfileFields } = req.body;
+    if (clientProfilePendingId) {
+      try {
+        const { confirmProfileUpdate } = require('../services/clientProfileExtractor');
+        const fieldsToApply = clientSelectedProfileFields === undefined ? {} : clientSelectedProfileFields;
+        clientProfileConfirmResult = await confirmProfileUpdate(clientId, clientProfilePendingId, fieldsToApply);
+      } catch (e) {
+        console.warn('[ChatPartner] 客户档案确认失败:', e.message);
       }
     }
 
@@ -619,6 +653,7 @@ router.post('/feedback', authMiddleware, async (req, res) => {
       logId: log.id,
       feedbackId: updateId,
       profileConfirm: profileConfirmResult,
+      clientProfileConfirm: clientProfileConfirmResult,
       status: 'pending_review'
     });
 
@@ -634,7 +669,7 @@ router.post('/feedback', authMiddleware, async (req, res) => {
  */
 router.get('/pending-updates/:girlId', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -697,7 +732,7 @@ router.get('/pending-updates/:girlId', authMiddleware, async (req, res) => {
  */
 router.post('/approve-updates', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -769,7 +804,7 @@ router.post('/approve-updates', authMiddleware, async (req, res) => {
  */
 router.post('/apply-update/:updateId', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -824,7 +859,7 @@ router.post('/apply-update/:updateId', authMiddleware, async (req, res) => {
  */
 router.get('/history/:girlId', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -859,7 +894,7 @@ router.get('/history/:girlId', authMiddleware, async (req, res) => {
  */
 router.post('/send', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -873,6 +908,10 @@ router.post('/send', authMiddleware, async (req, res) => {
     const girl = await prisma.girl.findUnique({ where: { id: girlId } });
     if (!girl) {
       return res.status(404).json({ error: '女生不存在' });
+    }
+    // 客户端只能操作自己的女生
+    if (req.user.role === 'client' && girl.clientId !== req.user.id) {
+      return res.status(403).json({ error: '无权限' });
     }
     const clientId = girl.clientId;
 
@@ -907,7 +946,7 @@ router.post('/send', authMiddleware, async (req, res) => {
  */
 router.post('/client-analyze', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -1135,7 +1174,7 @@ ${historyString}
  */
 router.post('/client-optimize', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -1293,7 +1332,7 @@ ${historyString || '（暂无历史记录）'}
  */
 router.get('/girl-profile/pending/:girlId', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -1314,7 +1353,7 @@ router.get('/girl-profile/pending/:girlId', authMiddleware, async (req, res) => 
  */
 router.post('/girl-profile/confirm', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -1343,7 +1382,7 @@ router.post('/girl-profile/confirm', authMiddleware, async (req, res) => {
  */
 router.post('/girl-profile/reject', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -1376,7 +1415,7 @@ router.post('/girl-profile/reject', authMiddleware, async (req, res) => {
  */
 router.get('/client-profile/pending/:clientId', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -1397,7 +1436,7 @@ router.get('/client-profile/pending/:clientId', authMiddleware, async (req, res)
  */
 router.post('/client-profile/confirm', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -1426,7 +1465,7 @@ router.post('/client-profile/confirm', authMiddleware, async (req, res) => {
  */
 router.post('/client-profile/reject', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -1461,7 +1500,7 @@ router.post('/client-profile/reject', authMiddleware, async (req, res) => {
  */
 router.post('/analyze-moment', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -1721,7 +1760,7 @@ ${contentDescription}
  */
 router.post('/moment-feedback', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
       return res.status(403).json({ error: '无权限' });
     }
 

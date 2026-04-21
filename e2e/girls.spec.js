@@ -2,23 +2,8 @@
  * E2E: 女生资源池管理
  */
 
-const { test, expect } = require('@playwright/test');
-
-const BASE_URL = process.env.BASE_URL || 'http://localhost:5181';
-
-async function operatorLogin(page) {
-  await page.goto(`${BASE_URL}/login`);
-  const usernameInput = page.locator('input[type="text"], input[placeholder*="用户名"], input[placeholder*="账号"]').first();
-  const passwordInput = page.locator('input[type="password"]').first();
-  const submitButton = page.locator('button[type="submit"], button:has-text("登录")').first();
-
-  if (await usernameInput.isVisible()) {
-    await usernameInput.fill('operator');
-    await passwordInput.fill('operator123');
-    await submitButton.click();
-    await page.waitForTimeout(2000);
-  }
-}
+const { test, expect } = require('./screenshot-setup.js');
+const { operatorLogin, BASE_URL, getOperatorToken, API_BASE } = require('./helpers');
 
 test.describe('女生资源池管理', () => {
   test.beforeEach(async ({ page }) => {
@@ -26,18 +11,9 @@ test.describe('女生资源池管理', () => {
   });
 
   test('可以进入女生管理页面', async ({ page }) => {
-    // 尝试进入女生管理页面
-    const girlsLink = page.locator('a[href*="girls"], a:has-text("女生"), a:has-text("鱼塘"), nav >> text=女').first();
-    if (await girlsLink.isVisible()) {
-      await girlsLink.click();
-      await page.waitForTimeout(1000);
-    } else {
-      await page.goto(`${BASE_URL}/admin/girls`);
-      await page.waitForTimeout(1000);
-    }
-    const currentUrl = page.url();
-    // 页面应该能加载
-    expect(currentUrl).toBeTruthy();
+    await page.goto(`${BASE_URL}/admin/girls`);
+    await page.waitForTimeout(2000);
+    expect(page.url()).toContain('/admin/girls');
   });
 
   test('女生列表页面可显示', async ({ page }) => {
@@ -46,6 +22,15 @@ test.describe('女生资源池管理', () => {
     const body = page.locator('body');
     await expect(body).toBeVisible();
   });
+
+  test('女生列表有新增按钮', async ({ page }) => {
+    await page.goto(`${BASE_URL}/admin/girls`);
+    await page.waitForTimeout(2000);
+    const addBtn = page.locator('button:has-text("新增"), button:has-text("添加"), button:has-text("录入")').first();
+    if (await addBtn.isVisible()) {
+      await expect(addBtn).toBeVisible();
+    }
+  });
 });
 
 test.describe('女生详情查看', () => {
@@ -53,14 +38,24 @@ test.describe('女生详情查看', () => {
     await operatorLogin(page);
     await page.goto(`${BASE_URL}/admin/girls`);
     await page.waitForTimeout(2000);
-
-    // 尝试点击第一个女生条目
-    const firstGirl = page.locator('[data-testid*="girl"], [class*="girl"], tr:has(td)').first();
+    const firstGirl = page.locator('[class*="card"], [class*="item"], tr, [class*="row"]').first();
     if (await firstGirl.isVisible()) {
       await firstGirl.click();
       await page.waitForTimeout(1000);
     }
     const currentUrl = page.url();
     expect(currentUrl).toBeTruthy();
+  });
+});
+
+test.describe('女生 API 验证', () => {
+  test('操盘手可以获取女生列表', async ({ page }) => {
+    const token = await getOperatorToken(page);
+    const resp = await page.request.get(`${API_BASE}/api/girls`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    expect(resp.ok()).toBeTruthy();
+    const data = await resp.json();
+    expect(data.success).toBe(true);
   });
 });

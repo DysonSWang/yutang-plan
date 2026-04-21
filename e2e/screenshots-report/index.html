@@ -1,0 +1,2796 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E2E 测试报告 - 2026/4/21 11:56:25</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #333; }
+  .header { background: linear-gradient(135deg, #2c3e50, #3498db); color: white; padding: 32px 40px; }
+  .header h1 { font-size: 28px; margin-bottom: 8px; }
+  .header .subtitle { opacity: 0.8; font-size: 14px; }
+  .summary { display: flex; gap: 24px; padding: 24px 40px; background: white; border-bottom: 1px solid #eee; flex-wrap: wrap; }
+  .stat { text-align: center; min-width: 80px; }
+  .stat .number { font-size: 36px; font-weight: 700; }
+  .stat .label { font-size: 13px; color: #888; margin-top: 4px; }
+  .stat.all-pass { border-left: 3px solid #27ae60; padding-left: 12px; }
+  .filters { padding: 16px 40px; background: white; border-bottom: 1px solid #eee; display: flex; gap: 12px; align-items: center; }
+  .filter-btn { padding: 6px 16px; border-radius: 20px; border: 1px solid #ddd; background: white; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+  .filter-btn:hover { border-color: #3498db; color: #3498db; }
+  .filter-btn.active { background: #3498db; color: white; border-color: #3498db; }
+  .test-grid { padding: 20px 40px; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+  .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; }
+  .card.all-pass { border-left: 4px solid #27ae60; }
+  .card.has-fail { border-left: 4px solid #e74c3c; }
+  .card-header { padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
+  .card-header:hover { background: #fafafa; }
+  .card-title { font-weight: 600; font-size: 14px; flex: 1; }
+  .card-badges { display: flex; gap: 6px; align-items: center; }
+  .badge { padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .badge-pass { background: #d4edda; color: #27ae60; }
+  .badge-fail { background: #f8d7da; color: #e74c3c; }
+  .card-body { display: none; }
+  .card-body.open { display: block; }
+  .shot-row { display: flex; align-items: center; gap: 12px; padding: 10px 20px; border-bottom: 1px solid #f5f5f5; }
+  .shot-icon { font-size: 16px; width: 20px; text-align: center; }
+  .shot-pass { color: #27ae60; }
+  .shot-fail { color: #e74c3c; }
+  .shot-label { flex: 1; font-size: 13px; }
+  .shot-count { font-size: 12px; color: #999; }
+  .shot-preview { padding: 12px 20px; background: #fafafa; }
+  .shot-preview img { max-width: 100%; border: 1px solid #ddd; border-radius: 6px; display: block; }
+  .no-screenshots { padding: 20px; text-align: center; color: #999; font-size: 13px; }
+  .arrow { transition: transform 0.2s; font-size: 12px; color: #999; display: inline-block; }
+  .card-header.open .arrow { transform: rotate(90deg); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🧪 E2E 测试报告</h1>
+  <div class="subtitle">生成时间: 2026/4/21 11:56:25 &nbsp;|&nbsp; 前端: http://localhost:5181 &nbsp;|&nbsp; 后端: http://localhost:3005</div>
+</div>
+
+<div class="summary all-pass">
+  <div class="stat"><div class="number" style="color:#3498db">135</div><div class="label">测试用例</div></div>
+  <div class="stat"><div class="number" style="color:#27ae60">135</div><div class="label">通过</div></div>
+  <div class="stat"><div class="number" style="color:#e74c3c">0</div><div class="label">失败</div></div>
+  <div class="stat"><div class="number" style="color:#27ae60">100.0%</div><div class="label">通过率</div></div>
+  <div class="stat"><div class="number" style="color:#27ae60">✓</div><div class="label">全部通过</div></div>
+</div>
+
+<div class="filters">
+  <span style="font-size: 13px; color: #888;">筛选：</span>
+  <button class="filter-btn active" onclick="filterAll()">全部</button>
+  <button class="filter-btn" onclick="filterPass()">仅通过</button>
+  <button class="filter-btn" onclick="filterFail()">仅失败</button>
+  <span style="margin-left: auto; font-size: 12px; color: #aaa;">349 张截图</span>
+</div>
+
+<div class="test-grid">
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">AI 教练返回数据格式正确</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="AI_教练返回数据格式正确__SEP__PASS__SEP__1776743382997.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">Token 验证接口正常</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="Token_验证接口正常__SEP__PASS__SEP__1776743383716.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">不存在用户无法登录</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="不存在用户无法登录__SEP__PASS__SEP__1776743383431.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">侧边栏导航可见</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="侧边栏导航可见__SEP__PASS__SEP__1776743570025.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">侧边栏显示所有导航项</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="侧边栏显示所有导航项__SEP__PASS__SEP__1776743160231.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">侧边栏有通知铃铛图标</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="侧边栏有通知铃铛图标__SEP__PASS__SEP__1776743623680.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以切换到交流记录 Tab</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 4</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">4 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以切换到交流记录_Tab__SEP__PASS__SEP__1776743658407.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以创建约会</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以创建约会__SEP__PASS__SEP__1776743200229.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以导航到客户管理页面</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以导航到客户管理页面__SEP__PASS__SEP__1776743155734.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以展开新增女生表单</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以展开新增女生表单__SEP__PASS__SEP__1776743257870.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以展开新增客户表单</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以展开新增客户表单__SEP__PASS__SEP__1776743183181.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以按阶段筛选女生</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以按阶段筛选女生__SEP__PASS__SEP__1776743238661.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以查看约会方案详情</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以查看约会方案详情__SEP__PASS__SEP__1776743451688.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以点击查看女生详情</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以点击查看女生详情__SEP__PASS__SEP__1776743245135.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以筛选客户列表</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以筛选客户列表__SEP__PASS__SEP__1776743165712.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以编辑档案字段并保存</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以编辑档案字段并保存__SEP__PASS__SEP__1776743519419.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以访问 AI 教练页面</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以访问_AI_教练页面__SEP__PASS__SEP__1776743340163.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以访问个人主页</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以访问个人主页__SEP__PASS__SEP__1776743539190.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以访问个人档案页</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以访问个人档案页__SEP__PASS__SEP__1776743508537.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以访问军师工具页面</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以访问军师工具页面__SEP__PASS__SEP__1776743291932.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以访问女生管理页面</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 5</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">5 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以访问女生管理页面__SEP__PASS__SEP__1776743586339.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以访问客户管理页面</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以访问客户管理页面__SEP__PASS__SEP__1776743575436.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以访问工作台页面</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以访问工作台页面__SEP__PASS__SEP__1776743205915.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以访问我的鱼塘</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以访问我的鱼塘__SEP__PASS__SEP__1776743543589.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以访问我的鱼塘页面</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 4</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">4 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以访问我的鱼塘页面__SEP__PASS__SEP__1776743646953.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以访问操盘手聊天页面</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 4</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">4 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以访问操盘手聊天页面__SEP__PASS__SEP__1776743216846.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以访问约会管理页面</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 4</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">4 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以访问约会管理页面__SEP__PASS__SEP__1776743580886.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以访问约会页面</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 6</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">6 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以访问约会页面__SEP__PASS__SEP__1776743547972.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以访问聊天页面</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以访问聊天页面__SEP__PASS__SEP__1776743406593.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以访问进度管理页面</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以访问进度管理页面__SEP__PASS__SEP__1776743269914.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以访问进度页面</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以访问进度页面__SEP__PASS__SEP__1776743211363.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以输入并发送消息</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以输入并发送消息__SEP__PASS__SEP__1776743424512.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以输入用户名和密码</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以输入用户名和密码__SEP__PASS__SEP__1776743393382.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以进入女生管理页面</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 4</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">4 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以进入女生管理页面__SEP__PASS__SEP__1776743600619.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以选择女生 可选 </span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以选择女生_可选___SEP__PASS__SEP__1776743362909.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以选择教练</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以选择教练__SEP__PASS__SEP__1776743356985.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以通过侧边栏导航到女生管理</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以通过侧边栏导航到女生管理__SEP__PASS__SEP__1776743227769.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">可以通过侧边栏导航到约会管理</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="可以通过侧边栏导航到约会管理__SEP__PASS__SEP__1776743194522.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">女生列表有新增按钮</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 7</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">7 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="女生列表有新增按钮__SEP__PASS__SEP__1776743611546.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">女生列表页面可显示</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 4</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">4 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="女生列表页面可显示__SEP__PASS__SEP__1776743606096.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">女生卡片列表可以点击查看详情</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 4</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">4 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="女生卡片列表可以点击查看详情__SEP__PASS__SEP__1776743666472.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">女生管理页有截图上传功能</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="女生管理页有截图上传功能__SEP__PASS__SEP__1776743640542.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">女生详情弹窗有上传截图按钮</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="女生详情弹窗有上传截图按钮__SEP__PASS__SEP__1776743659953.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">女生详情页面包含基础内容</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="女生详情页面包含基础内容__SEP__PASS__SEP__1776743251620.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">客户 token 可以访问 AI 教练接口</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="客户_token_可以访问_AI_教练接口__SEP__PASS__SEP__1776743381585.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">客户可以成功登录</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="客户可以成功登录__SEP__PASS__SEP__1776743523623.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">客户可以提交约会调整建议</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="客户可以提交约会调整建议__SEP__PASS__SEP__1776743468696.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">客户可以更新自己的档案字段</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="客户可以更新自己的档案字段__SEP__PASS__SEP__1776743519789.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">客户可以标记所有通知为已读</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="客户可以标记所有通知为已读__SEP__PASS__SEP__1776743634939.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">客户可以确认约会方案</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="客户可以确认约会方案__SEP__PASS__SEP__1776743468529.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">客户可以获取自己的女生资源列表</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 4</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">4 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="客户可以获取自己的女生资源列表__SEP__PASS__SEP__1776743675801.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">客户可以获取自己的待确认约会</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="客户可以获取自己的待确认约会__SEP__PASS__SEP__1776743468364.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">客户可以获取自己的档案</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="客户可以获取自己的档案__SEP__PASS__SEP__1776743519611.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">客户可以获取自己的聊天截图</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 4</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">4 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="客户可以获取自己的聊天截图__SEP__PASS__SEP__1776743675979.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">客户可以获取通知列表</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="客户可以获取通知列表__SEP__PASS__SEP__1776743634768.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">客户可以访问 AI 教练接口 无 token 返回 401 </span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="客户可以访问_AI_教练接口_无_token_返回_401___SEP__PASS__SEP__1776743379880.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">客户可以访问自己的信息</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="客户可以访问自己的信息__SEP__PASS__SEP__1776743384586.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">客户无法直接上传截图</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="客户无法直接上传截图__SEP__PASS__SEP__1776743660337.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">客户无法直接访问女生管理</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="客户无法直接访问女生管理__SEP__PASS__SEP__1776743556818.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">客户无法直接访问管理后台</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="客户无法直接访问管理后台__SEP__PASS__SEP__1776743552385.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">客户登录页面可以访问</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="客户登录页面可以访问__SEP__PASS__SEP__1776743520248.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">客户管理页面有新增按钮</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="客户管理页面有新增按钮__SEP__PASS__SEP__1776743177696.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">客户鱼塘   女生详情弹窗显示完整字段</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 1</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">1 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="客户鱼塘___女生详情弹窗显示完整字段__SEP__PASS__SEP__1776743785372.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">情况咨询有 AI 分析按钮</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="情况咨询有_AI_分析按钮__SEP__PASS__SEP__1776743328759.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">操盘手可以创建客户但客户不能</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="操盘手可以创建客户但客户不能__SEP__PASS__SEP__1776743384840.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">操盘手可以创建约会但客户不能</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="操盘手可以创建约会但客户不能__SEP__PASS__SEP__1776743385077.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">操盘手可以推送约会方案给客户</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="操盘手可以推送约会方案给客户__SEP__PASS__SEP__1776743468192.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">操盘手可以添加女生资源</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="操盘手可以添加女生资源__SEP__PASS__SEP__1776743264510.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">操盘手可以获取女生列表</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 4</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">4 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="操盘手可以获取女生列表__SEP__PASS__SEP__1776743618262.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">操盘手可以获取女生的聊天截图列表</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="操盘手可以获取女生的聊天截图列表__SEP__PASS__SEP__1776743660159.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">操盘手可以获取客户列表</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="操盘手可以获取客户列表__SEP__PASS__SEP__1776743183398.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">操盘手可以获取客户进度</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="操盘手可以获取客户进度__SEP__PASS__SEP__1776743286509.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">操盘手可以获取自己的信息</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="操盘手可以获取自己的信息__SEP__PASS__SEP__1776743183565.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">操盘手可以获取通知列表</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="操盘手可以获取通知列表__SEP__PASS__SEP__1776743635108.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">操盘手可以访问  api clients</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="操盘手可以访问__api_clients__SEP__PASS__SEP__1776743384086.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">操盘手可以访问  api dates</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="操盘手可以访问__api_dates__SEP__PASS__SEP__1776743384421.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">操盘手可以访问  api girls</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="操盘手可以访问__api_girls__SEP__PASS__SEP__1776743384258.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">操盘手可以通过 API 获取女生列表</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="操盘手可以通过_API_获取女生列表__SEP__PASS__SEP__1776743264340.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">操盘手可查看女生详情</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 4</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">4 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="操盘手可查看女生详情__SEP__PASS__SEP__1776743618070.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">操盘手无法修改客户档案</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="操盘手无法修改客户档案__SEP__PASS__SEP__1776743519943.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">操盘手无法访问客户的聊天截图接口 403 </span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 4</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">4 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="操盘手无法访问客户的聊天截图接口_403___SEP__PASS__SEP__1776743676143.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">操盘手无法访问客户首页</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="操盘手无法访问客户首页__SEP__PASS__SEP__1776743561256.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">操盘手登出后无法访问管理后台</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="操盘手登出后无法访问管理后台__SEP__PASS__SEP__1776743389997.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">操盘手登录成功</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="操盘手登录成功__SEP__PASS__SEP__1776743401163.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">新增女生表单需要填写姓名</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="新增女生表单需要填写姓名__SEP__PASS__SEP__1776743264138.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">无 Token 访问需要认证的接口返回 401</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="无_Token_访问需要认证的接口返回_401__SEP__PASS__SEP__1776743383907.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">无 token 访问约会接口返回 401</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="无_token_访问约会接口返回_401__SEP__PASS__SEP__1776743200315.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">无效 Token 返回 401</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="无效_Token_返回_401__SEP__PASS__SEP__1776743383805.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">无未读通知时不显示红点</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="无未读通知时不显示红点__SEP__PASS__SEP__1776743634579.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">显示服务阶段进度</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="显示服务阶段进度__SEP__PASS__SEP__1776743280831.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">有代聊记录 Tab</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="有代聊记录_Tab__SEP__PASS__SEP__1776743334737.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">有会话选择或客户列表</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="有会话选择或客户列表__SEP__PASS__SEP__1776743140400.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">有咨询按钮</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="有咨询按钮__SEP__PASS__SEP__1776743373809.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">有咨询问题输入框</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="有咨询问题输入框__SEP__PASS__SEP__1776743368356.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">有客户下拉选择器</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="有客户下拉选择器__SEP__PASS__SEP__1776743308306.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">有文件上传输入框</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="有文件上传输入框__SEP__PASS__SEP__1776743652994.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">有更新进度按钮</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="有更新进度按钮__SEP__PASS__SEP__1776743286294.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">有消息输入区域</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="有消息输入区域__SEP__PASS__SEP__1776743145885.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">有确认按钮和调整建议入口</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="有确认按钮和调整建议入口__SEP__PASS__SEP__1776743467998.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">未注册用户登录失败</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="未注册用户登录失败__SEP__PASS__SEP__1776743396795.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">未登录直接访问后台被重定向</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="未登录直接访问后台被重定向__SEP__PASS__SEP__1776743391737.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">桌面视图下布局正常</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="桌面视图下布局正常__SEP__PASS__SEP__1776743590763.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">档案页显示用户信息</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="档案页显示用户信息__SEP__PASS__SEP__1776743513967.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">正确凭证可以登录</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="正确凭证可以登录__SEP__PASS__SEP__1776743383166.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">点击卡片打开详情弹窗</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 4</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">4 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="点击卡片打开详情弹窗__SEP__PASS__SEP__1776743675563.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">点击女生卡片可以打开详情弹窗</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="点击女生卡片可以打开详情弹窗__SEP__PASS__SEP__1776743647552.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">点击客户卡片可以查看详情</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="点击客户卡片可以查看详情__SEP__PASS__SEP__1776743172223.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">点击铃铛显示通知列表</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="点击铃铛显示通知列表__SEP__PASS__SEP__1776743629129.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">登录后进入仪表盘</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="登录后进入仪表盘__SEP__PASS__SEP__1776743565638.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">登录后进入客户首页</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="登录后进入客户首页__SEP__PASS__SEP__1776743530393.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">登录后进入操盘手工作台</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="登录后进入操盘手工作台__SEP__PASS__SEP__1776743150275.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">登录页面正常加载</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="登录页面正常加载__SEP__PASS__SEP__1776743392057.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">移动视图下布局正常</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="移动视图下布局正常__SEP__PASS__SEP__1776743595209.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">空状态显示正确</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="空状态显示正确__SEP__PASS__SEP__1776743457123.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">约会列表有新增按钮</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="约会列表有新增按钮__SEP__PASS__SEP__1776743200017.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">约会状态初始为 pending plan</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="约会状态初始为_pending_plan__SEP__PASS__SEP__1776743200496.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">缺少用户名返回 400</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="缺少用户名返回_400__SEP__PASS__SEP__1776743383538.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">聊天页面有会话列表</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="聊天页面有会话列表__SEP__PASS__SEP__1776743412050.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">聊天页面有媒体上传按钮</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="聊天页面有媒体上传按钮__SEP__PASS__SEP__1776743429955.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">聊天页面有消息输入框</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="聊天页面有消息输入框__SEP__PASS__SEP__1776743417493.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">聊天页面正常加载</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="聊天页面正常加载__SEP__PASS__SEP__1776743134966.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">聊天页面连接 Socket</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="聊天页面连接_Socket__SEP__PASS__SEP__1776743435387.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">详情包含推荐地点信息</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="详情包含推荐地点信息__SEP__PASS__SEP__1776743462567.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">输入问题后按钮可用</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="输入问题后按钮可用__SEP__PASS__SEP__1776743379772.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">选择女生后显示详情信息</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="选择女生后显示详情信息__SEP__PASS__SEP__1776743323314.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">选择客户后加载女生列表</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="选择客户后加载女生列表__SEP__PASS__SEP__1776743315829.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">错误密码无法登录</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 5</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">5 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="错误密码无法登录__SEP__PASS__SEP__1776743526004.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">页面显示 Tab 切换 女生资源 交流记录 </span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 4</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">4 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="页面显示_Tab_切换_女生资源_交流记录___SEP__PASS__SEP__1776743652434.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">页面显示客户列表</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="页面显示客户列表__SEP__PASS__SEP__1776743275359.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">页面显示教练选择下拉框</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="页面显示教练选择下拉框__SEP__PASS__SEP__1776743345590.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">页面有 AI 教练标题和描述</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="页面有_AI_教练标题和描述__SEP__PASS__SEP__1776743351040.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">页面有刷新按钮</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="页面有刷新按钮__SEP__PASS__SEP__1776743446253.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">页面有实战聊天 Tab</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="页面有实战聊天_Tab__SEP__PASS__SEP__1776743302862.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">页面有情况咨询 Tab</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 2</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">2 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="页面有情况咨询_Tab__SEP__PASS__SEP__1776743297411.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+  <div class="card all-pass" data-status="all-pass">
+    <div class="card-header" onclick="toggleCard(this)">
+      <span class="card-title">首页显示基础内容</span>
+      <div class="card-badges">
+        <span class="badge badge-pass">✓ 3</span>
+        
+        <span class="arrow">▶</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shot-row">
+        <span class="shot-icon shot-pass">✓</span>
+        <span class="shot-label">测试通过</span>
+        <span class="shot-count">3 张截图</span>
+      </div>
+      <div class="shot-preview">
+        <img src="首页显示基础内容__SEP__PASS__SEP__1776743534761.png" alt="PASS screenshot" loading="lazy">
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleCard(el) {
+  el.classList.toggle('open');
+  el.nextElementSibling.classList.toggle('open');
+}
+function filterAll() {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.filter-btn').classList.add('active');
+  document.querySelectorAll('.card').forEach(c => c.style.display = 'block');
+}
+function filterPass() {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.filter-btn')[1].classList.add('active');
+  document.querySelectorAll('.card').forEach(c => c.style.display = c.dataset.status === 'all-pass' ? 'block' : 'none');
+}
+function filterFail() {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.filter-btn')[2].classList.add('active');
+  document.querySelectorAll('.card').forEach(c => c.style.display = c.dataset.status === 'has-fail' ? 'block' : 'none');
+}
+</script>
+</body>
+</html>
