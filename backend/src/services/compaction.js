@@ -152,32 +152,49 @@ function buildSummarizePrompt(messages, existingSummary = null, context = {}) {
 
   const hasExistingSummary = existingSummary && existingSummary.trim();
 
-  let systemPrompt = `你是童锦程，两性关系专家。你的任务是压缩对话历史，生成结构化摘要。
+  // Few-shot examples showing exact expected output format
+  const fewShot = `
+【示例输入】
+用户: 第一次约她出来，她说比较忙，但说下周可以
+教练: 那女生能主动给替代时间窗口，说明窗口还在。但不要太急，先等下周，不要追着问具体哪天。
+用户: 她上周还说想看电影，感觉她不是完全没兴趣
+教练: 约电影是好的信号，说明她有预期感。但不能硬约成，要让她觉得是自然发生的，不是刻意追求。
+用户: 我约她周五晚上，她说那天下班晚，约周末呢？
+
+【示例输出】
+## Summary
+- Scope: 约女生看电影，被婉拒后约周末
+- Current work: 等待女生确认周末时间，不要主动追问
+- Pending work: 确定周末约会内容，提前准备
+- Key insights: "下周可以"是积极信号，等她主动给时间；约电影=她有预期感但需自然化
+- Relationship state: 暧昧初期，她愿意出来但有顾虑`;
+
+  let systemPrompt = `你是童锦程，两性关系专家。你的任务是把对话历史压缩成结构化摘要。
 
 压缩规则：
 1. 提取关键信息：客户诉求、女生阶段、关系状态、当前进展、待办事项
-2. 用简洁的中文描述，不要废话
-3. 优先保留：客户反馈、情绪信号、关系升级信号、经验教训
-4. 丢弃：礼貌性寒暄、重复确认、技术错误信息
-5. 用bullet point格式，便于快速浏览
+2. 用简洁中文，不要废话，每行15-50字
+3. 优先保留：客户反馈、情绪信号、关系升级信号、经验教训、教练给出的关键判断
+4. 丢弃：礼貌性寒暄、重复确认、感谢回复、无关闲聊
+5. 每行格式："- 标签: 内容"，标签从以下选取：Scope / Current work / Pending work / Key insights / Relationship state
 
 ${hasExistingSummary ? `
-【历史压缩摘要】（如有冲突，以本次对话为准）
+【历史压缩摘要】（新摘要如有冲突，以本次为准）
 ${existingSummary}
 ` : ''}
+
+${fewShot}
 
 【本次需要压缩的对话】
 ${messagesText}
 
-输出格式：
+输出格式（严格按此格式，不要写其他内容）：
 ## Summary
-（3-8行，每行一个要点）
 - Scope: （本次对话覆盖的主题）
 - Current work: （当前正在推进的事）
 - Pending work: （待处理的事项）
-- Key insights: （关键发现/教训）
-- Relationship state: （关系状态简述）
-`;
+- Key insights: （关键发现/教训，保留教练的核心判断）
+- Relationship state: （关系状态简述）`;
 
   return systemPrompt;
 }
@@ -242,11 +259,27 @@ function appendToCompactionChain(existingChain, newSummary) {
  * 构建压缩后的continuation消息
  * 这会替换被压缩的旧消息，作为新的system消息
  */
-function buildCompactContinuationMessage(compactionResult, preserveRecentMessages) {
+function buildCompactContinuationMessage(compactionResult, preserveRecentMessages, hardConstraints = null) {
   const { summary, removedCount, chain } = compactionResult;
 
   // 压缩summary以符合硬限制
   const compressedSummary = compressSummary(summary);
+
+  // 构建硬约束部分（必须保留的信息）
+  let hardConstraintsBlock = '';
+  if (hardConstraints) {
+    const { taboos, emotionalTriggers, thingsToAvoid, dealbreakers, stage } = hardConstraints;
+    const items = [];
+    if (taboos && taboos.length) items.push(`雷区：${taboos.join('、')}`);
+    if (thingsToAvoid && thingsToAvoid.length) items.push(`禁忌话题：${thingsToAvoid.join('、')}`);
+    if (emotionalTriggers && emotionalTriggers.length) items.push(`情绪触发点：${emotionalTriggers.join('、')}`);
+    if (dealbreakers && dealbreakers.length) items.push(`绝对雷区：${dealbreakers.join('、')}`);
+    if (stage) items.push(`当前阶段：${stage}`);
+
+    if (items.length > 0) {
+      hardConstraintsBlock = `\n\n【硬约束】（压缩后必须保留，下次对话时必须遵守）\n${items.join('\n')}\n`;
+    }
+  }
 
   // 构建chain信息（如果有历史压缩）
   let chainInfo = '';
@@ -265,7 +298,7 @@ function buildCompactContinuationMessage(compactionResult, preserveRecentMessage
   }
 
   return `【对话已压缩】（已移除${removedCount}条早期消息）
-${compressedSummary}${chainInfo}${note}`;
+${compressedSummary}${hardConstraintsBlock}${chainInfo}${note}`;
 }
 
 /**

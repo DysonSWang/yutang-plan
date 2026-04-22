@@ -50,8 +50,6 @@ export default function ClientDates() {
   const [interviewSubmitting, setInterviewSubmitting] = useState(false);
   const toast = useToast();
 
-  useEffect(() => { loadAll(); }, []);
-
   const loadAll = async () => {
     setLoading(true);
     try {
@@ -64,6 +62,9 @@ export default function ClientDates() {
     } catch (e) { console.error(e); }
     setLoading(false);
   };
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { loadAll(); }, []);
 
   const openDetail = async (d) => {
     setSelected(d);
@@ -382,7 +383,7 @@ export default function ClientDates() {
           <ModalBody pb={6}>
             {selected && (
               <Box>
-                <SimpleGrid columns={3} spacing={4} mb={4}>
+                <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4} mb={4}>
                   <Box bg="gray.750" p={3} borderRadius="md">
                     <Text color="gray.400" fontSize="sm">约会对象</Text>
                     <Text color="teal.300">{selected.girl?.name}</Text>

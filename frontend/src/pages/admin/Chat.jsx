@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Flex, VStack, HStack, Input, Button, Text, Heading, IconButton, Image, Spinner, useDisclosure, Menu, MenuButton, MenuList, MenuItem, Badge } from '@chakra-ui/react';
 import { chat, upload } from '../../utils/api';
 import { useSocket } from '../../contexts/SocketContext';
@@ -28,14 +28,39 @@ export default function AdminChat() {
   const recordTimerRef = useRef();
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3005';
 
+  const loadSessions = useCallback(async () => {
+    try {
+      const res = await chat.sessions();
+      if (res.success) {
+        setSessions(res.sessions);
+        if (res.sessions.length > 0 && !currentSession) {
+          setCurrentSession(res.sessions[0]);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, [currentSession]);
+
+  const loadMessages = useCallback(async (sessionId) => {
+    try {
+      const res = await chat.messages(sessionId);
+      if (res.success) {
+        setMessages(res.messages);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
   useEffect(() => {
     loadSessions();
-  }, []);
+  }, [loadSessions]);
 
   useEffect(() => {
     if (!currentSession) return;
     loadMessages(currentSession.id);
-  }, [currentSession]);
+  }, [currentSession, loadMessages]);
 
   useEffect(() => {
     const handler = (message) => {
@@ -65,36 +90,11 @@ export default function AdminChat() {
       }
     };
     on('message:recalled', recallHandler);
-  }, [currentSession]);
+  }, [currentSession, on]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  const loadSessions = async () => {
-    try {
-      const res = await chat.sessions();
-      if (res.success) {
-        setSessions(res.sessions);
-        if (res.sessions.length > 0 && !currentSession) {
-          setCurrentSession(res.sessions[0]);
-        }
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const loadMessages = async (sessionId) => {
-    try {
-      const res = await chat.messages(sessionId);
-      if (res.success) {
-        setMessages(res.messages);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
 
   const sendMediaMessage = async (url, type, duration) => {
     if (!currentSession || sending) return;

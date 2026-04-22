@@ -2,18 +2,32 @@
  * 闪图查看器 — 满屏显示图片，5秒后自动销毁
  * 类似QQ闪图：点击查看 → 满屏显示 → 5秒倒计时 → 自动burn
  */
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Text, Flex, Image, IconButton } from '@chakra-ui/react';
 import { chat } from '../utils/api';
 
-export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId, senderRole }) {
+export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId }) {
   const [remaining, setRemaining] = useState(5);
   const timerRef = useRef(null);
+  const onCloseRef = useRef(onClose);
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3005';
+
+  // Keep onClose ref fresh to avoid re-effecting on every onClose change
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+
+  const handleBurn = useCallback(async () => {
+    if (!messageId) return;
+    try {
+      await chat.burn(messageId);
+    } catch (e) {
+      console.error('[FlashImage] 销毁失败:', e);
+    }
+    onCloseRef.current();
+  }, [messageId]);
 
   useEffect(() => {
     if (!isOpen) return;
-
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setRemaining(5);
     timerRef.current = setInterval(() => {
       setRemaining(prev => {
@@ -29,17 +43,7 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isOpen]);
-
-  const handleBurn = async () => {
-    if (!messageId) return;
-    try {
-      await chat.burn(messageId);
-    } catch (e) {
-      console.error('[FlashImage] 销毁失败:', e);
-    }
-    onClose();
-  };
+  }, [isOpen, handleBurn]);
 
   const handleClose = () => {
     if (timerRef.current) clearInterval(timerRef.current);

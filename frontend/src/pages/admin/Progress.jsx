@@ -34,7 +34,6 @@ export default function AdminProgress() {
   const [clientProgress, setClientProgress] = useState([]);
   const [newStage, setNewStage] = useState(1);
   const [amountPaid, setAmountPaid] = useState('');
-  const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const { isOpen, onOpen, onClose } = useDisclosure();
 
@@ -57,7 +56,6 @@ export default function AdminProgress() {
     setSelectedClient(client);
     setNewStage(1);
     setAmountPaid('');
-    setNotes('');
 
     // 获取该客户的进度
     try {

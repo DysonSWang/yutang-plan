@@ -1,50 +1,64 @@
 /**
- * Coach Loader - 动态加载教练配置
- * 参考 Claude Code 的 Skill 加载机制
+ * Coaches Module - 情感教练系统核心模块
+ *
+ * 提供：
+ * - Loader: 加载大师skill数据（从skills/目录）
+ * - Router: 问题类型路由
+ * - PromptBuilder: 构建AI prompt
  */
 
+const loader = require('./loader');
+const router = require('./router');
+const promptBuilder = require('./promptBuilder');
+
+// 向后兼容：保留原有教练配置加载
 const fs = require('fs');
 const path = require('path');
 
-// 加载所有教练配置
 const coachesDir = path.join(__dirname, 'configs');
-const coachFiles = fs.readdirSync(coachesDir).filter(f => f.endsWith('.js'));
+let coaches = {};
 
-const coaches = {};
-for (const file of coachFiles) {
-  const coach = require(path.join(coachesDir, file));
-  coaches[coach.id] = coach;
-}
-
-// 获取教练配置
-function getCoach(coachId) {
-  return coaches[coachId] || coaches.general;
-}
-
-// 获取所有教练列表
-function listCoaches() {
-  return Object.values(coaches).map(c => ({
-    id: c.id,
-    name: c.name,
-    description: c.description
-  }));
-}
-
-// 获取教练的系统提示
-function getSystemPrompt(coachId) {
-  const coach = getCoach(coachId);
-  return coach.systemPrompt;
-}
-
-// 获取教练配置
-function getCoachConfig(coachId) {
-  return getCoach(coachId);
+try {
+  const coachFiles = fs.readdirSync(coachesDir).filter(f => f.endsWith('.js'));
+  for (const file of coachFiles) {
+    const coach = require(path.join(coachesDir, file));
+    coaches[coach.id] = coach;
+  }
+} catch (e) {
+  console.warn('[Coaches] 加载教练配置失败:', e.message);
 }
 
 module.exports = {
+  // 新模块：Skill数据加载
+  loadSkill: loader.loadSkill,
+  loadSkills: loader.loadSkills,
+  loadAllSkills: loader.loadAllSkills,
+  getRoutingConfig: loader.getRoutingConfig,
+  safeLoadSkill: loader.safeLoadSkill,
+  clearCache: loader.clearCache,
+
+  // 新模块：问题路由
+  routeQuestion: router.routeQuestion,
+  getSkillsForQuestion: router.getSkillsForQuestion,
+  getMultiDimensionalSkills: router.getMultiDimensionalSkills,
+  getMultiDimensionalSkillsWithMeta: router.getMultiDimensionalSkillsWithMeta,
+  adjustPriority: router.adjustPriority,
+
+  // 新模块：Prompt构建
+  buildMasterPrompt: promptBuilder.buildMasterPrompt,
+  buildChatAnalysisPrompt: promptBuilder.buildChatAnalysisPrompt,
+
+  // 向后兼容：原有教练配置
   coaches,
-  getCoach,
-  listCoaches,
-  getSystemPrompt,
-  getCoachConfig
+  getCoach: (coachId) => coaches[coachId] || coaches.general,
+  listCoaches: () => Object.values(coaches).map(c => ({
+    id: c.id,
+    name: c.name,
+    description: c.description
+  })),
+  getSystemPrompt: (coachId) => {
+    const coach = coaches[coachId] || coaches.general;
+    return coach?.systemPrompt;
+  },
+  getCoachConfig: (coachId) => coaches[coachId] || coaches.general
 };

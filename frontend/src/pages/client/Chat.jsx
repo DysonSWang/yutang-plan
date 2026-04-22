@@ -1,12 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, VStack, HStack, Input, Button, Text, Flex, IconButton, Image } from '@chakra-ui/react';
 import { chat, upload } from '../../utils/api';
-import { useAuth } from '../../contexts/AuthContext';
 import { useSocket } from '../../contexts/SocketContext';
 import FlashImageViewer from '../../components/FlashImageViewer';
 
 export default function ClientChat() {
-  const { user } = useAuth();
   const { on } = useSocket();
   const [sessions, setSessions] = useState([]);
   const [currentSession, setCurrentSession] = useState(null);
@@ -27,6 +25,84 @@ export default function ClientChat() {
   const [flashViewer, setFlashViewer] = useState({ isOpen: false, imageUrl: '', messageId: null, senderRole: '' });
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3005';
 
+  const loadSessions = async () => {
+    try {
+      const res = await chat.mySessions();
+      if (res.success && res.sessions.length > 0) {
+        setCurrentSession(res.sessions[0]);
+        setSessions(res.sessions);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleBurnMessage = useCallback(async (msg) => {
+    if (msg.burnedAt || msg.senderRole === 'client') return;
+    try {
+      const res = await chat.burn(msg.id);
+      if (res.success) {
+        setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, content: '[消息已销毁]', mediaUrl: null, burnedAt: new Date() } : m));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  // 启动阅后即焚倒计时
+  const startBurnTimer = useCallback((msg) => {
+    if (!msg.burnAfterSeconds || msg.burnedAt || msg.senderRole === 'client') return;
+    if (burnTimersRef.current[msg.id]) return; // 已有计时器，不重复
+
+    // 计算已过时间，剩余秒数
+    const elapsed = (Date.now() - new Date(msg.createdAt).getTime()) / 1000;
+    let remaining = Math.ceil(msg.burnAfterSeconds - elapsed);
+
+    if (remaining <= 0) {
+      // 已超时，立即销毁
+      handleBurnMessage(msg);
+      return;
+    }
+
+    // 更新倒计时显示
+    setCountdowns(prev => ({ ...prev, [msg.id]: remaining }));
+
+    const tick = () => {
+      remaining -= 1;
+      if (remaining <= 0) {
+        delete burnTimersRef.current[msg.id];
+        setCountdowns(prev => {
+          const next = { ...prev };
+          delete next[msg.id];
+          return next;
+        });
+        handleBurnMessage(msg);
+      } else {
+        setCountdowns(prev => ({ ...prev, [msg.id]: remaining }));
+        burnTimersRef.current[msg.id] = setTimeout(tick, 1000);
+      }
+    };
+
+    burnTimersRef.current[msg.id] = setTimeout(tick, 1000);
+  }, [handleBurnMessage]);
+
+  const loadMessages = useCallback(async (sessionId) => {
+    try {
+      const res = await chat.messages(sessionId);
+      if (res.success) {
+        setMessages(res.messages);
+        // 启动未销毁的阅后即焚消息倒计时
+        res.messages.forEach(msg => {
+          if (msg.isBurnAfterRead && !msg.burnedAt && msg.burnAfterSeconds && msg.senderRole !== 'client') {
+            startBurnTimer(msg);
+          }
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, [startBurnTimer]);
+
   useEffect(() => {
     loadSessions();
   }, []);
@@ -34,7 +110,7 @@ export default function ClientChat() {
   useEffect(() => {
     if (!currentSession) return;
     loadMessages(currentSession.id);
-  }, [currentSession]);
+  }, [currentSession, loadMessages]);
 
   useEffect(() => {
     const handler = (message) => {
@@ -66,47 +142,19 @@ export default function ClientChat() {
       }
     };
     on('message:recalled', recallHandler);
-  }, [currentSession]);
+  }, [currentSession, flashViewer.messageId, on, startBurnTimer]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   useEffect(() => {
+    const timers = burnTimersRef.current;
     return () => {
       // 组件卸载时清除所有倒计时
-      Object.values(burnTimersRef.current).forEach(t => clearTimeout(t));
+      Object.values(timers).forEach(t => clearTimeout(t));
     };
   }, []);
-
-  const loadSessions = async () => {
-    try {
-      const res = await chat.mySessions();
-      if (res.success && res.sessions.length > 0) {
-        setCurrentSession(res.sessions[0]);
-        setSessions(res.sessions);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const loadMessages = async (sessionId) => {
-    try {
-      const res = await chat.messages(sessionId);
-      if (res.success) {
-        setMessages(res.messages);
-        // 启动未销毁的阅后即焚消息倒计时
-        res.messages.forEach(msg => {
-          if (msg.isBurnAfterRead && !msg.burnedAt && msg.burnAfterSeconds && msg.senderRole !== 'client') {
-            startBurnTimer(msg);
-          }
-        });
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
 
   const sendMediaMessage = async (url, type, duration) => {
     if (!currentSession || sending) return;
@@ -233,55 +281,6 @@ export default function ClientChat() {
     } finally {
       setSending(false);
     }
-  };
-
-  const handleBurnMessage = async (msg) => {
-    if (msg.burnedAt || msg.senderRole === 'client') return;
-    try {
-      const res = await chat.burn(msg.id);
-      if (res.success) {
-        setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, content: '[消息已销毁]', mediaUrl: null, burnedAt: new Date() } : m));
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  // 启动阅后即焚倒计时
-  const startBurnTimer = (msg) => {
-    if (!msg.burnAfterSeconds || msg.burnedAt || msg.senderRole === 'client') return;
-    if (burnTimersRef.current[msg.id]) return; // 已有计时器，不重复
-
-    // 计算已过时间，剩余秒数
-    const elapsed = (Date.now() - new Date(msg.createdAt).getTime()) / 1000;
-    let remaining = Math.ceil(msg.burnAfterSeconds - elapsed);
-
-    if (remaining <= 0) {
-      // 已超时，立即销毁
-      handleBurnMessage(msg);
-      return;
-    }
-
-    // 更新倒计时显示
-    setCountdowns(prev => ({ ...prev, [msg.id]: remaining }));
-
-    const tick = () => {
-      remaining -= 1;
-      if (remaining <= 0) {
-        delete burnTimersRef.current[msg.id];
-        setCountdowns(prev => {
-          const next = { ...prev };
-          delete next[msg.id];
-          return next;
-        });
-        handleBurnMessage(msg);
-      } else {
-        setCountdowns(prev => ({ ...prev, [msg.id]: remaining }));
-        burnTimersRef.current[msg.id] = setTimeout(tick, 1000);
-      }
-    };
-
-    burnTimersRef.current[msg.id] = setTimeout(tick, 1000);
   };
 
   const handleRecallMessage = async (msg) => {

@@ -55,7 +55,7 @@ function SectionCard({ title, children }) {
 
 function TagRow({ label, value }) {
   if (!value) return null;
-  const tags = value.split(/[,，、\/]/).map(t => t.trim()).filter(Boolean);
+  const tags = value.split(/[,，、/]/).map(t => t.trim()).filter(Boolean);
   return (
     <Box>
       <Text color="gray.500" fontSize="xs" mb={1}>{label}</Text>
@@ -87,7 +87,7 @@ function EQBar({ label, value }) {
 }
 
 // 实战聊天组件 - 让客户能够像教练一样和女生聊天
-function GirlCombatChat({ girlsList, refreshGirls }) {
+function GirlCombatChat({ girlsList }) {
   const [selectedGirl, setSelectedGirl] = useState(null);
   const [chatHistory, setChatHistory] = useState([]);
   const [girlMessage, setGirlMessage] = useState('');
@@ -628,7 +628,7 @@ function GirlCombatChat({ girlsList, refreshGirls }) {
   );
 }
 
-function GirlDetailModal({ girl, screenshots, onPreviewImage, onPreviewUrl }) {
+function GirlDetailModal({ girl, screenshots, onPreviewUrl }) {
   if (!girl) return null;
 
   const photos = parseJSONField(girl.photos);
@@ -647,7 +647,7 @@ function GirlDetailModal({ girl, screenshots, onPreviewImage, onPreviewUrl }) {
       <ModalBody pb={6}>
         {/* 基本信息 */}
         <SectionCard title="基本信息">
-          <SimpleGrid columns={3} spacing={4}>
+          <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4}>
             <FieldRow label="姓名" value={girl.name} />
             <FieldRow label="年龄" value={girl.age ? `${girl.age}岁` : null} />
             <FieldRow label="职业" value={girl.occupation} />
@@ -661,7 +661,7 @@ function GirlDetailModal({ girl, screenshots, onPreviewImage, onPreviewUrl }) {
 
         {/* 外貌特征 */}
         <SectionCard title="外貌特征">
-          <SimpleGrid columns={3} spacing={4}>
+          <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4}>
             <FieldRow label="外貌描述" value={girl.appearance} />
             <FieldRow label="身高" value={girl.height ? `${girl.height}cm` : null} />
             <FieldRow label="体型" value={girl.bodyType} />
@@ -703,7 +703,7 @@ function GirlDetailModal({ girl, screenshots, onPreviewImage, onPreviewUrl }) {
 
         {/* 家庭背景 */}
         <SectionCard title="家庭背景">
-          <SimpleGrid columns={3} spacing={4}>
+          <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4}>
             <FieldRow label="家庭背景" value={girl.familyBackground} />
             <FieldRow label="家庭氛围" value={girl.familyAtmosphere} />
             <FieldRow label="养老负担" value={girl.familyBurden} />
@@ -713,7 +713,7 @@ function GirlDetailModal({ girl, screenshots, onPreviewImage, onPreviewUrl }) {
 
         {/* 生活状态 */}
         <SectionCard title="生活状态">
-          <SimpleGrid columns={3} spacing={4}>
+          <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4}>
             <FieldRow label="作息规律" value={girl.workSchedule} />
             <FieldRow label="社交活跃度" value={girl.socialActivity} />
             <FieldRow label="消费习惯" value={girl.financialHabits} />
@@ -743,7 +743,7 @@ function GirlDetailModal({ girl, screenshots, onPreviewImage, onPreviewUrl }) {
 
         {/* 关系状态 */}
         <SectionCard title="关系状态">
-          <SimpleGrid columns={3} spacing={4}>
+          <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4}>
             <FieldRow label="阶段" value={girl.stage} />
             <FieldRow label="状态" value={girl.status} />
             <FieldRow label="亲密度" value={`Lv.${girl.intimacyLevel || 1}`} />
@@ -944,12 +944,6 @@ export default function MyPond() {
     }
   };
 
-  const parseJSONField = (val) => {
-    if (!val) return [];
-    if (Array.isArray(val)) return val;
-    try { return JSON.parse(val); } catch { return []; }
-  };
-
   const handleAddGirl = async () => {
     if (!addForm.name.trim()) {
       toast({ title: '请输入昵称', status: 'warning', duration: 2000 });
@@ -1009,7 +1003,13 @@ export default function MyPond() {
       <Heading color="white" mb={6}>我的鱼塘</Heading>
 
       <HStack mb={4} justify="flex-end">
-        <Button colorScheme="teal" size="sm" onClick={onAddOpen}>+ 添加女生</Button>
+        <Button
+          colorScheme="teal"
+          size="sm"
+          onClick={onAddOpen}
+        >
+          + 添加女生
+        </Button>
       </HStack>
 
       <Tabs variant="soft-rounded" colorScheme="teal">
@@ -1022,7 +1022,7 @@ export default function MyPond() {
         <TabPanels>
           {/* 女生资源 */}
           <TabPanel p={0}>
-            <SimpleGrid columns={3} spacing={4}>
+            <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4}>
               {girlsList.map(girl => (
                 <Card key={girl.id} bg="gray.800" cursor="pointer" onClick={() => viewGirlDetail(girl)} _hover={{ bg: 'gray.700' }} transition="all 0.2s">
                   <CardBody>
@@ -1048,7 +1048,7 @@ export default function MyPond() {
 
           {/* 实战聊天 */}
           <TabPanel p={0}>
-            <GirlCombatChat girlsList={girlsList} refreshGirls={loadGirls} />
+            <GirlCombatChat girlsList={girlsList} />
           </TabPanel>
 
           {/* 交流记录 - 截图时间线 */}
@@ -1127,7 +1127,6 @@ export default function MyPond() {
             <GirlDetailModal
               girl={girlDetail || selectedGirl}
               screenshots={girlScreenshots}
-              onPreviewImage={null}
               onPreviewUrl={(url) => setPreviewImage(url)}
             />
           )}
@@ -1142,9 +1141,6 @@ export default function MyPond() {
           <ModalCloseButton />
           <ModalBody pb={6}>
             <VStack spacing={4} align="stretch">
-              <Text color="gray.400" fontSize="sm" mb={2}>
-                新客户默认额度 1 人，用于体验完整流程。升级后可增加更多女生名额。
-              </Text>
               <FormControl isRequired>
                 <FormLabel color="gray.400" fontSize="sm">昵称</FormLabel>
                 <Input

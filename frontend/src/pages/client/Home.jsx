@@ -1,7 +1,7 @@
-import { Box, Heading, Text, SimpleGrid, Card, CardBody, Stat, StatLabel, StatNumber, StatHelpText, Flex, Icon } from '@chakra-ui/react';
+import { Box, Heading, Text, SimpleGrid, Card, CardBody, Icon } from '@chakra-ui/react';
 import { ChatIcon, SparklesIcon, FishIcon } from '../../components/Icons';
 import { useEffect, useState } from 'react';
-import { clients, girls, dates } from '../../utils/api';
+import { clients, girls } from '../../utils/api';
 import ServiceProgressBoard from '../../components/client/ServiceProgressBoard';
 
 const STAGE_MAP = {
@@ -11,15 +11,6 @@ const STAGE_MAP = {
   '锁定': 4,
   '维护': 5,
   '未开始': 0
-};
-
-const GIRL_STAGE_COLORS = {
-  '陌生': 'gray',
-  '搭讪': 'blue',
-  '聊天': 'cyan',
-  '暧昧': 'orange',
-  '约会': 'yellow',
-  '长期': 'green',
 };
 
 export default function ClientHome() {
@@ -32,10 +23,6 @@ export default function ClientHome() {
     longTermCount: 0
   });
 
-  useEffect(() => {
-    loadStats();
-  }, []);
-
   const loadStats = async () => {
     try {
       const res = await clients.me();
@@ -46,7 +33,6 @@ export default function ClientHome() {
         const serviceStage = client.serviceStage || '未开始';
         const currentStage = STAGE_MAP[serviceStage] || 0;
 
-        // 获取女生列表计算暧昧和长期数量
         let intimacyCount = 0;
         let longTermCount = 0;
         try {
@@ -59,19 +45,17 @@ export default function ClientHome() {
           console.error(e);
         }
 
-        setStats({
-          girlCount,
-          dateCount,
-          serviceStage,
-          currentStage,
-          intimacyCount,
-          longTermCount
-        });
+        setStats({ girlCount, dateCount, serviceStage, currentStage, intimacyCount, longTermCount });
       }
     } catch (e) {
       console.error(e);
     }
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadStats();
+  }, []);
 
   return (
     <Box>
@@ -91,7 +75,7 @@ export default function ClientHome() {
       {/* 快捷入口 */}
       <Box mt={8}>
         <Heading size="md" color="white" mb={4}>快捷入口</Heading>
-        <SimpleGrid columns={3} spacing={4}>
+        <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4}>
           <Card bg="gray.800" cursor="pointer" _hover={{ bg: 'gray.700', transform: 'translateY(-2px)' }} transition="all 0.2s">
             <CardBody>
               <Icon as={ChatIcon} w={8} h={8} color="teal.400" />

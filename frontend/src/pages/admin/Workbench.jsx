@@ -1,16 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
-import { Box, Flex, Heading, Text, Card, CardBody, CardHeader, Button, Select, Textarea, SimpleGrid, Badge, VStack, HStack, Divider, Spinner, useToast, Tabs, TabList, TabPanels, Tab, TabPanel, Icon, Input, useDisclosure, Checkbox, Collapse, Alert, AlertIcon, Image, FormControl, FormLabel, Text as CText } from '@chakra-ui/react';
-import { clients, girls, chatLogs, chat, chatPartner } from '../../utils/api';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Box, Flex, Heading, Text, Card, CardBody, CardHeader, Button, Select, Textarea, SimpleGrid, Badge, VStack, HStack, Divider, Spinner, useToast, Tabs, TabList, TabPanels, Tab, TabPanel, Icon, Input, Checkbox, Collapse, Alert, AlertIcon, Image, FormControl, FormLabel, Text as CText } from '@chakra-ui/react';
+import { clients, girls, chatLogs, chat, chatPartner, aiCoach } from '../../utils/api';
 import { useSocket } from '../../contexts/SocketContext';
 import { FiSend, FiMessageSquare, FiTarget, FiZap, FiAlertCircle, FiCheck, FiCopy, FiUser } from 'react-icons/fi';
 import { HeartIcon } from '../../components/Icons';
-
-const COACHES = [
-  { id: 'general', name: '通用教练' },
-  { id: 'naye', name: '纳爷' },
-  { id: 'tuobuhua', name: '脱不花' },
-  { id: 'tong', name: '童锦程' },
-];
 
 export default function AdminWorkbench() {
   const [clientList, setClientList] = useState([]);
@@ -19,9 +12,7 @@ export default function AdminWorkbench() {
   const [selectedGirl, setSelectedGirl] = useState(null);
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState(null);
-  const [currentCoachName, setCurrentCoachName] = useState('');
   const [situation, setSituation] = useState('');
-  const [coachId, setCoachId] = useState('general');
   const [deepMode, setDeepMode] = useState(false);
   const [optimized, setOptimized] = useState(null); // deprecated - kept for backward compat
   const [sendingContent, setSendingContent] = useState('');
@@ -42,6 +33,7 @@ export default function AdminWorkbench() {
   const [chatMode, setChatMode] = useState('suggest'); // 'suggest' | 'optimize'
   const messagesEndRef = useRef(null);
   const analysisRef = useRef(null);
+  const momentRef = useRef(null);
 
   // 实战聊天模式：和客户聊天 / 和女生聊天
   const [workbenchChatMode, setWorkbenchChatMode] = useState('girl');
@@ -69,7 +61,6 @@ export default function AdminWorkbench() {
   const [pendingUpdates, setPendingUpdates] = useState([]);
   const [currentGirlState, setCurrentGirlState] = useState(null); // 用于 diff
   const [showUpdatePanel, setShowUpdatePanel] = useState(false);
-  const [feedbackAnalyzing, setFeedbackAnalyzing] = useState(false); // 采纳后"分析中"状态
   const pollingRef = useRef(null);
 
   // 档案提取待确认状态（女生聊天）
@@ -84,7 +75,6 @@ export default function AdminWorkbench() {
   const [selectedClientProfileFields, setSelectedClientProfileFields] = useState({});
 
   // 朋友圈模式状态
-  const [momentMode, setMomentMode] = useState('comment'); // 'comment' | 'dm'
   const [momentText, setMomentText] = useState('');
   const [momentImage, setMomentImage] = useState(null); // File object
   const [momentImagePreview, setMomentImagePreview] = useState('');
@@ -93,16 +83,111 @@ export default function AdminWorkbench() {
   const [dmSuggestions, setDmSuggestions] = useState([]);
   const [momentLoading, setMomentLoading] = useState(false);
 
-  useEffect(() => {
-    loadClients();
-  }, []);
+  // 主动教练状态
+  const [activeCoachText, setActiveCoachText] = useState('');
+  const [activeCoachLoading, setActiveCoachLoading] = useState(false);
+  const activeCoachRef = useRef(null);
+  const activeCoachAbortRef = useRef(null);
 
+  // 主动教练缓存：无变化不重推
+  // 缓存 key = girlId（'__none__' 表示无女生时的全局概览）
+  const coachCacheRef = useRef({}); // { [key]: { content, timestamp } }
+
+  // ========== 主动教练 ==========
+  const fetchActiveCoach = useCallback(async (forceRefresh = false) => {
+    // 取消之前的请求
+    if (activeCoachAbortRef.current) {
+      activeCoachAbortRef.current.abort();
+    }
+
+    const token = localStorage.getItem('yutang_token');
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3005';
+    const cacheKey = selectedGirl?.id ? `girl:${selectedGirl.id}` : 'overview';
+
+    // 缓存检查：5分钟内同一 key 不重推（无变化不重推）
+    if (!forceRefresh) {
+      const cached = coachCacheRef.current[cacheKey];
+      const now = Date.now();
+      if (cached && (now - cached.timestamp) < 5 * 60 * 1000) {
+        setActiveCoachText(cached.content);
+        if (activeCoachRef.current) activeCoachRef.current.textContent = cached.content;
+        return;
+      }
+    }
+
+    let url;
+    if (selectedGirl?.id) {
+      url = `${apiUrl}/api/ai-coach/girl-summary/${selectedGirl.id}`;
+    } else {
+      url = `${apiUrl}/api/ai-coach/overview`;
+    }
+
+    setActiveCoachLoading(true);
+    setActiveCoachText('');
+    if (activeCoachRef.current) activeCoachRef.current.textContent = '';
+
+    const now = Date.now();
+
+    try {
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!res.ok) {
+        setActiveCoachLoading(false);
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let text = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed === 'data: [DONE]') continue;
+          if (trimmed.startsWith('data: ')) {
+            const jsonStr = trimmed.substring(6);
+            if (!jsonStr.startsWith('{')) continue;
+            try {
+              const parsed = JSON.parse(jsonStr);
+              if (parsed.content) {
+                text += parsed.content;
+                if (activeCoachRef.current) {
+                  activeCoachRef.current.textContent = text;
+                }
+              }
+            } catch { /* ignore */ }
+          }
+        }
+      }
+
+      // 写入缓存
+      coachCacheRef.current[cacheKey] = { content: text, timestamp: now };
+      setActiveCoachText(text);
+    } catch {
+      // ignore abort errors
+    } finally {
+      setActiveCoachLoading(false);
+    }
+  }, [selectedGirl?.id]);
+
+  // 切换女生时自动触发主动教练
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatHistory, aiSuggestions]);
+    fetchActiveCoach();
+  }, [fetchActiveCoach]);
 
   // 轮询待审核更新
-  const fetchPendingUpdates = async () => {
+  const fetchPendingUpdates = useCallback(async () => {
     if (!selectedGirl?.id) return;
     try {
       const res = await chatPartner.pendingUpdates(selectedGirl.id);
@@ -113,20 +198,10 @@ export default function AdminWorkbench() {
     } catch {
       // ignore polling errors silently
     }
-  };
-
-  useEffect(() => {
-    if (selectedGirl?.id) {
-      fetchPendingUpdates();
-      pollingRef.current = setInterval(fetchPendingUpdates, 5000);
-    }
-    return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current);
-    };
   }, [selectedGirl?.id]);
 
   // 加载/创建客户会话（和客户聊天模式）
-  const loadClientSession = async () => {
+  const loadClientSession = useCallback(async () => {
     if (!selectedClient) return;
     try {
       const res = await chat.createSession(selectedClient.id);
@@ -136,9 +211,9 @@ export default function AdminWorkbench() {
     } catch {
       console.error('请求错误');
     }
-  };
+  }, [selectedClient]);
 
-  const loadClientMessages = async () => {
+  const loadClientMessages = useCallback(async () => {
     if (!clientSession) return;
     try {
       const res = await chat.messages(clientSession.id);
@@ -146,21 +221,51 @@ export default function AdminWorkbench() {
     } catch {
       console.error('请求错误');
     }
-  };
+  }, [clientSession]);
+
+  const loadClients = useCallback(async () => {
+    try {
+      const res = await clients.list();
+      if (res.success && res.clients.length > 0) {
+        setClientList(res.clients);
+        selectClient(res.clients[0]);
+      }
+    } catch {
+      console.error('请求错误');
+    }
+  }, []);
+
+  useEffect(() => {
+    loadClients();
+  }, [loadClients]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatHistory, aiSuggestions]);
+
+  useEffect(() => {
+    if (selectedGirl?.id) {
+      fetchPendingUpdates();
+      pollingRef.current = setInterval(fetchPendingUpdates, 5000);
+    }
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
+  }, [selectedGirl?.id, fetchPendingUpdates]);
 
   // 当切换到"和客户聊天"模式时，加载会话
   useEffect(() => {
     if (workbenchChatMode === 'client' && selectedClient) {
       loadClientSession();
     }
-  }, [workbenchChatMode, selectedClient?.id]);
+  }, [workbenchChatMode, selectedClient?.id, selectedClient, loadClientSession]);
 
   // 会话加载后获取消息
   useEffect(() => {
     if (clientSession) {
       loadClientMessages();
     }
-  }, [clientSession?.id]);
+  }, [clientSession?.id, clientSession, loadClientMessages]);
 
   // Socket.io 监听实时消息（和客户聊天模式）
   useEffect(() => {
@@ -173,7 +278,8 @@ export default function AdminWorkbench() {
       }
     };
     on('message:new', handler);
-  }, [workbenchChatMode, clientSession?.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workbenchChatMode, clientSession?.id, on]);
 
   // 切换实战聊天模式时重置状态
   const switchWorkbenchChatMode = (mode) => {
@@ -201,18 +307,6 @@ export default function AdminWorkbench() {
       setClientOptimizations([]);
       setClientMsg('');
       setClientMyMsg('');
-    }
-  };
-
-  const loadClients = async () => {
-    try {
-      const res = await clients.list();
-      if (res.success && res.clients.length > 0) {
-        setClientList(res.clients);
-        selectClient(res.clients[0]);
-      }
-    } catch {
-      console.error('请求错误');
     }
   };
 
@@ -259,8 +353,6 @@ export default function AdminWorkbench() {
 
     const token = localStorage.getItem('yutang_token');
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3005';
-    const coachName = COACHES.find(c => c.id === coachId)?.name || 'AI教练';
-    setCurrentCoachName(coachName);
 
     try {
       // 深度模式（useTools）走非流式，触发 coach-engine 工具调用
@@ -275,7 +367,6 @@ export default function AdminWorkbench() {
         },
         body: JSON.stringify({
           situation,
-          coachId,
           girlId: selectedGirl?.id,
           stream: doStream
         })
@@ -324,7 +415,7 @@ export default function AdminWorkbench() {
         }
 
         setAiAnalysis(analysis);
-        setResponse({ coach: coachName, analysis });
+        setResponse({ coachName: 'AI统一教练', analysis });
       } else {
         // 非流式模式（JSON，支持工具调用）
         const data = await res.json();
@@ -333,7 +424,7 @@ export default function AdminWorkbench() {
           if (analysisRef.current) {
             analysisRef.current.innerHTML = (data.analysis || '').replace(/\n/g, '<br>');
           }
-          setResponse({ coach: data.coachName || coachName, analysis: data.analysis });
+          setResponse({ coachName: data.coachName || 'AI统一教练', analysis: data.analysis });
         } else {
           throw new Error(data.error || '分析失败');
         }
@@ -431,7 +522,6 @@ export default function AdminWorkbench() {
     setBattleMode('manual');
     setOptimizations([]);
     setAiSuggestions([]);
-    setFeedbackAnalyzing(true); // 显示"分析中"
 
     // 立即把这条消息加入聊天历史
     setChatHistory(prev => [...prev, { role: 'user', content: replyText, adopted: true }]);
@@ -582,7 +672,7 @@ export default function AdminWorkbench() {
     }
   };
 
-  // 朋友圈模式 - 分析
+  // 朋友圈模式 - 分析（使用AI教练流式输出）
   const handleAnalyzeMoment = async () => {
     if (!selectedGirl) {
       toast({ title: '请先选择女生', status: 'warning' });
@@ -598,11 +688,16 @@ export default function AdminWorkbench() {
     setCommentSuggestions([]);
     setDmSuggestions([]);
 
+    if (momentRef.current) momentRef.current.textContent = '';
+
+    const token = localStorage.getItem('yutang_token');
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3005';
+
     try {
       const payload = {
         girlId: selectedGirl.id,
         momentText: momentText.trim() || undefined,
-        operatorNotes: ''
+        stream: true
       };
 
       // 如果有图片，转成 base64
@@ -615,17 +710,57 @@ export default function AdminWorkbench() {
         payload.momentImage = base64;
       }
 
-      const res = await chatPartner.analyzeMoment(payload);
+      const res = await fetch(`${apiUrl}/api/ai-coach/moment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
 
-      if (res.success) {
-        setMomentAnalysis(res.analysis || '');
-        setCommentSuggestions(res.commentSuggestions || []);
-        setDmSuggestions(res.dmSuggestions || []);
-      } else {
-        toast({ title: res.error || '分析失败', status: 'error' });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: '请求失败' }));
+        throw new Error(errData.error || `HTTP ${res.status}`);
       }
-    } catch {
-      toast({ title: '分析失败', status: 'error' });
+
+      // 流式模式（SSE）
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let analysis = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed === 'data: [DONE]') continue;
+          if (trimmed.startsWith('data: ')) {
+            const jsonStr = trimmed.substring(6);
+            if (!jsonStr.startsWith('{')) continue;
+            try {
+              const parsed = JSON.parse(jsonStr);
+              if (parsed.content) {
+                analysis += parsed.content;
+                if (momentRef.current) {
+                  momentRef.current.textContent = analysis;
+                }
+              }
+              if (parsed.error) toast({ title: '分析失败', status: 'error' });
+            } catch { /* ignore non-JSON chunk */ void 0; }
+          }
+        }
+      }
+
+      setMomentAnalysis(analysis);
+    } catch (err) {
+      toast({ title: err.message || '分析失败', status: 'error' });
     } finally {
       setMomentLoading(false);
     }
@@ -661,6 +796,7 @@ export default function AdminWorkbench() {
     setMomentAnalysis('');
     setCommentSuggestions([]);
     setDmSuggestions([]);
+    if (momentRef.current) momentRef.current.textContent = '';
   };
 
   // 发送消息给客户
@@ -812,11 +948,6 @@ export default function AdminWorkbench() {
     return '❄️❄️';
   };
 
-  // 计算热度变化后的值
-  const calcNewTension = (current, delta) => {
-    return Math.max(0, Math.min(10, current + delta));
-  };
-
   const loadGirlLogs = async () => {
     if (!selectedGirl) return;
     try {
@@ -909,16 +1040,9 @@ export default function AdminWorkbench() {
                 <Card bg="gray.800" h="calc(100vh - 280px)">
                   <CardBody>
                     <HStack mb={4} justify="space-between">
-                      <Select
-                        value={coachId}
-                        onChange={e => setCoachId(e.target.value)}
-                        bg="gray.700"
-                        w="200px"
-                      >
-                        {COACHES.map(c => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                      </Select>
+                      <Text color="teal.400" fontSize="sm" fontWeight="bold">
+                        AI统一教练
+                      </Text>
 
                       <HStack
                         bg={deepMode ? 'purple.900' : 'gray.700'}
@@ -969,7 +1093,7 @@ export default function AdminWorkbench() {
                       <Box mt={4} p={4} bg="gray.700" borderRadius="md">
                         <HStack mb={2}>
                           <Text color="teal.400" fontSize="sm">
-                            {(response || {}).coach || currentCoachName || 'AI教练'}的建议
+                            {(response || {}).coachName || 'AI统一教练'}的建议
                           </Text>
                           {deepMode && <Badge colorScheme="purple" fontSize="xs">工具已启用</Badge>}
                         </HStack>
@@ -1047,30 +1171,6 @@ export default function AdminWorkbench() {
 
                     {workbenchChatMode === 'moment' && selectedGirl && (
                       <Box>
-                        {/* 顶部：评论/私聊切换 */}
-                        <HStack mb={3} bg="gray.700" p={1} borderRadius="md" w="fit-content">
-                          <Box
-                            px={4}
-                            py={2}
-                            borderRadius="md"
-                            cursor="pointer"
-                            bg={momentMode === 'comment' ? 'purple.600' : 'transparent'}
-                            onClick={() => setMomentMode('comment')}
-                          >
-                            <Text color="white" fontSize="sm" fontWeight="bold">评论建议</Text>
-                          </Box>
-                          <Box
-                            px={4}
-                            py={2}
-                            borderRadius="md"
-                            cursor="pointer"
-                            bg={momentMode === 'dm' ? 'orange.600' : 'transparent'}
-                            onClick={() => setMomentMode('dm')}
-                          >
-                            <Text color="white" fontSize="sm" fontWeight="bold">私聊切入</Text>
-                          </Box>
-                        </HStack>
-
                         {/* 输入区：朋友圈文字 */}
                         <HStack mb={2}>
                           <Icon as={FiMessageSquare} color="purple.400" />
@@ -1135,74 +1235,39 @@ export default function AdminWorkbench() {
                           </Button>
                         </HStack>
 
-                        {/* AI 分析结果 */}
-                        {momentAnalysis && (
-                          <Box mb={3} p={3} bg="purple.900" borderRadius="md" borderLeft="3px solid" borderColor="purple.400">
-                            <Text color="purple.200" fontSize="sm" fontWeight="bold" mb={1}>AI 分析</Text>
-                            <Text color="gray.300" fontSize="sm">{momentAnalysis}</Text>
-                          </Box>
-                        )}
-
-                        {/* 评论建议 */}
-                        {(commentSuggestions.length > 0 || dmSuggestions.length > 0) && (
-                          <Box>
-                            {momentMode === 'comment' && commentSuggestions.length > 0 && (
-                              <Box mb={3}>
-                                <Text color="gray.400" fontSize="sm" mb={2}>💬 评论建议</Text>
-                                <VStack spacing={2} align="stretch">
-                                  {commentSuggestions.map((s, i) => (
-                                    <Box key={i} p={3} bg="gray.700" borderRadius="md">
-                                      <HStack justify="space-between">
-                                        <Box flex={1}>
-                                          <HStack mb={1}>
-                                            <Badge colorScheme="purple" fontSize="xs">{s.style || '评论'}</Badge>
-                                            {s.intention && <Text color="gray.500" fontSize="xs">{s.intention}</Text>}
-                                          </HStack>
-                                          <Text color="white" fontSize="sm">{s.text}</Text>
-                                        </Box>
-                                        <Button
-                                          size="sm"
-                                          colorScheme="green"
-                                          onClick={() => handleMomentSuggestion(s, 'comment')}
-                                        >
-                                          采纳
-                                        </Button>
-                                      </HStack>
-                                    </Box>
-                                  ))}
-                                </VStack>
-                              </Box>
+                        {/* AI 朋友圈分析结果（流式文本） */}
+                        <Box mb={3} p={3} bg="purple.900" borderRadius="md" borderLeft="3px solid" borderColor="purple.400">
+                          <HStack mb={2} justify="space-between">
+                            <Text color="purple.200" fontSize="sm" fontWeight="bold">AI 朋友圈分析</Text>
+                            {momentAnalysis && (
+                              <Button
+                                size="xs"
+                                variant="ghost"
+                                color="purple.300"
+                                leftIcon={<Icon as={FiCopy} boxSize={3} />}
+                                onClick={() => {
+                                  navigator.clipboard.writeText(momentAnalysis);
+                                  toast({ description: '已复制到剪贴板', duration: 1500, isClosable: false, position: 'top' });
+                                }}
+                              >
+                                复制
+                              </Button>
                             )}
-
-                            {momentMode === 'dm' && dmSuggestions.length > 0 && (
-                              <Box mb={3}>
-                                <Text color="gray.400" fontSize="sm" mb={2}>💬 私聊切入</Text>
-                                <VStack spacing={2} align="stretch">
-                                  {dmSuggestions.map((s, i) => (
-                                    <Box key={i} p={3} bg="gray.700" borderRadius="md">
-                                      <HStack justify="space-between">
-                                        <Box flex={1}>
-                                          <HStack mb={1}>
-                                            <Badge colorScheme="orange" fontSize="xs">{s.style || '私聊'}</Badge>
-                                            {s.intention && <Text color="gray.500" fontSize="xs">{s.intention}</Text>}
-                                          </HStack>
-                                          <Text color="white" fontSize="sm">{s.text}</Text>
-                                        </Box>
-                                        <Button
-                                          size="sm"
-                                          colorScheme="orange"
-                                          onClick={() => handleMomentSuggestion(s, 'dm')}
-                                        >
-                                          采纳
-                                        </Button>
-                                      </HStack>
-                                    </Box>
-                                  ))}
-                                </VStack>
-                              </Box>
-                            )}
-                          </Box>
-                        )}
+                          </HStack>
+                          <Box
+                            ref={momentRef}
+                            color="gray.300"
+                            fontSize="sm"
+                            style={{ whiteSpace: 'pre-wrap' }}
+                            minH="60px"
+                          />
+                          {momentLoading && (
+                            <HStack mt={2} spacing={2}>
+                              <Spinner size="xs" color="purple.300" />
+                              <Text color="purple.400" fontSize="xs">AI 分析中...</Text>
+                            </HStack>
+                          )}
+                        </Box>
                       </Box>
                     )}
 
@@ -1731,8 +1796,9 @@ export default function AdminWorkbench() {
                                 <VStack spacing={2} align="stretch">
                                   {pendingUpdates.map(update => {
                                     const current = currentGirlState || {};
-                                    const newTension = Math.max(0, Math.min(10, (current.tensionScore || 5) + (update.analysis.fieldChanges.tensionScore?.delta || 0)));
-                                    const tensionDelta = update.analysis.fieldChanges.tensionScore?.delta || 0;
+                                    const fieldChanges = update.analysis?.fieldChanges;
+                                    const newTension = Math.max(0, Math.min(10, (current.tensionScore || 5) + (fieldChanges?.tensionScore?.delta || 0)));
+                                    const tensionDelta = fieldChanges?.tensionScore?.delta || 0;
 
                                     return (
                                       <Box key={update.id} p={3} bg="gray.700" borderRadius="md">
@@ -1786,7 +1852,7 @@ export default function AdminWorkbench() {
                                         )}
 
                                         {/* 信号 diff */}
-                                        {update.analysis.newSignals?.map((signal, si) => (
+                                        {update.analysis?.newSignals?.map((signal, si) => (
                                           <HStack key={si} spacing={2}>
                                             <Text color="gray.400" fontSize="xs" w="60px">信号</Text>
                                             <Badge
@@ -2126,6 +2192,52 @@ export default function AdminWorkbench() {
         {/* 右侧：选中对象详情 */}
         <Box w="300px">
           <Card bg="gray.800" h="100%">
+            <CardHeader pb={2}>
+              <HStack justify="space-between">
+                <Text color="teal.400" fontSize="sm" fontWeight="bold">AI 主动教练</Text>
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  color="gray.400"
+                  onClick={() => fetchActiveCoach(true)}
+                  isLoading={activeCoachLoading}
+                  isDisabled={activeCoachLoading}
+                >
+                  刷新
+                </Button>
+              </HStack>
+            </CardHeader>
+            <CardBody pt={0}>
+              {/* 主动教练区域 */}
+              <Box
+                mb={4}
+                p={3}
+                bg="purple.900"
+                borderRadius="md"
+                borderLeft="3px solid"
+                borderColor="purple.400"
+                minH="100px"
+                maxH="200px"
+                overflowY="auto"
+              >
+                {activeCoachLoading && !activeCoachText ? (
+                  <HStack spacing={2} mt={1}>
+                    <Spinner size="xs" color="purple.300" />
+                    <Text color="purple.400" fontSize="xs">AI 教练分析中...</Text>
+                  </HStack>
+                ) : activeCoachText ? (
+                  <Box
+                    ref={activeCoachRef}
+                    color="gray.300"
+                    fontSize="sm"
+                    style={{ whiteSpace: 'pre-wrap' }}
+                  />
+                ) : (
+                  <Text color="gray.500" fontSize="xs">选中女生或保持空白，AI教练自动给出建议</Text>
+                )}
+              </Box>
+            </CardBody>
+            <Divider borderColor="gray.700" />
             <CardHeader pb={2}>
               <Text color="gray.400" fontSize="sm">
                 {workbenchChatMode === 'client' ? '选中客户' : '选中女生'}

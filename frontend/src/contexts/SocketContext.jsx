@@ -63,12 +63,13 @@ export function SocketProvider({ children }) {
   }, []);
 
   return (
-    <SocketContext.Provider value={{ socket: socketRef.current, on, emit, disconnect }}>
+    <SocketContext.Provider value={{ socketRef, on, emit, disconnect }}>
       {children}
     </SocketContext.Provider>
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useSocket() {
   const ctx = useContext(SocketContext);
   if (!ctx) throw new Error('useSocket must be within SocketProvider');

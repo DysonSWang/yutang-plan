@@ -114,6 +114,33 @@ async function runCompaction(memory) {
   // 追加到chain
   const newChain = compaction.appendToCompactionChain(memory.compactionChain, mergedSummary);
 
+  // 提取或更新硬约束（女生禁忌等信息）
+  let hardConstraints = memory.hardConstraints ? JSON.parse(memory.hardConstraints) : null;
+  if (!hardConstraints && memory.girlId) {
+    // 首次压缩：从女生档案提取硬约束
+    const girl = await prisma.girl.findUnique({
+      where: { id: memory.girlId },
+      select: {
+        personality: true,
+        thingsToAvoid: true,
+        dealbreakers: true,
+        stage: true,
+        emotionalWounds: true
+      }
+    });
+    if (girl) {
+      let personality = {};
+      try { personality = girl.personality ? JSON.parse(girl.personality) : {}; } catch (e) { /* ignore */ }
+      hardConstraints = {
+        taboos: personality.thingsToAvoid || [],
+        emotionalTriggers: personality.emotionalTriggers || [],
+        thingsToAvoid: girl.thingsToAvoid ? girl.thingsToAvoid.split(',').map(s => s.trim()).filter(Boolean) : [],
+        dealbreakers: girl.dealbreakers ? girl.dealbreakers.split(',').map(s => s.trim()).filter(Boolean) : [],
+        stage: girl.stage || null
+      };
+    }
+  }
+
   // 保留消息：压缩后的continuation + 最近的N条
   const recentMessages = messages.slice(-compaction.PRESERVE_RECENT_MESSAGES);
   const continuationText = compaction.buildCompactContinuationMessage(
@@ -122,7 +149,8 @@ async function runCompaction(memory) {
       removedCount: toCompact.length,
       chain: newChain ? JSON.parse(newChain) : []
     },
-    compaction.PRESERVE_RECENT_MESSAGES > 0
+    compaction.PRESERVE_RECENT_MESSAGES > 0,
+    hardConstraints
   );
 
   // 构建压缩后的消息列表
@@ -147,7 +175,8 @@ async function runCompaction(memory) {
       compactionCount: memory.compactionCount + 1,
       removedMessageCount: memory.removedMessageCount + toCompact.length,
       compactionChain: newChain,
-      tokenCount: remainingTokens
+      tokenCount: remainingTokens,
+      hardConstraints: hardConstraints ? JSON.stringify(hardConstraints) : memory.hardConstraints
     }
   });
 
@@ -385,6 +414,103 @@ async function cleanupOldSessions(daysOld = 30) {
 
   console.log(`[Memory] Cleaned up ${result.count} old compressed sessions`);
   return result.count;
+}
+
+/**
+ * 记录AI教练反馈（thumbs up/down）
+ * 用于分析路由准确度和教练效果
+ */
+async function addFeedback(memoryId, feedbackType, meta = {}) {
+  const { routedType, coachesUsed, reason, messageContent } = meta;
+
+  const feedback = await prisma.coachFeedback.create({
+    data: {
+      memoryId,
+      type: feedbackType, // 'helpful' | 'not_helpful'
+      routedType: routedType || null,
+      coachesUsed: coachesUsed ? JSON.stringify(coachesUsed) : null,
+      reason: reason || null,
+      messageContent: messageContent || null
+    }
+  });
+
+  console.log(`[Memory] Coach feedback: ${feedbackType} for memory ${memoryId}`);
+  return feedback;
+}
+
+/**
+ * 获取反馈统计（用于分析路由和教练效果）
+ */
+async function getFeedbackStats(opts = {}) {
+  const { clientId, startDate, endDate } = opts;
+
+  const where = {};
+  if (startDate || endDate) {
+    where.createdAt = {};
+    if (startDate) where.createdAt.gte = new Date(startDate);
+    if (endDate) where.createdAt.lte = new Date(endDate);
+  }
+
+  const feedbacks = await prisma.coachFeedback.findMany({
+    where,
+    select: {
+      type: true,
+      routedType: true,
+      coachesUsed: true,
+      reason: true,
+      createdAt: true
+    }
+  });
+
+  if (feedbacks.length === 0) {
+    return { total: 0, helpful: 0, notHelpful: 0, rate: 0, byType: {}, byCoach: {} };
+  }
+
+  const total = feedbacks.length;
+  const helpful = feedbacks.filter(f => f.type === 'helpful').length;
+  const notHelpful = feedbacks.filter(f => f.type === 'not_helpful').length;
+
+  // 按路由类型统计
+  const byType = {};
+  for (const f of feedbacks) {
+    const type = f.routedType || 'unknown';
+    if (!byType[type]) byType[type] = { total: 0, helpful: 0, rate: 0 };
+    byType[type].total++;
+    if (f.type === 'helpful') byType[type].helpful++;
+  }
+  for (const type of Object.keys(byType)) {
+    byType[type].rate = byType[type].total > 0
+      ? Math.round((byType[type].helpful / byType[type].total) * 100)
+      : 0;
+  }
+
+  // 按教练统计
+  const byCoach = {};
+  for (const f of feedbacks) {
+    if (!f.coachesUsed) continue;
+    try {
+      const coaches = JSON.parse(f.coachesUsed);
+      for (const coach of coaches) {
+        if (!byCoach[coach]) byCoach[coach] = { total: 0, helpful: 0, rate: 0 };
+        byCoach[coach].total++;
+        if (f.type === 'helpful') byCoach[coach].helpful++;
+      }
+    } catch (e) { /* ignore */ }
+  }
+  for (const coach of Object.keys(byCoach)) {
+    byCoach[coach].rate = byCoach[coach].total > 0
+      ? Math.round((byCoach[coach].helpful / byCoach[coach].total) * 100)
+      : 0;
+  }
+
+  return {
+    total,
+    helpful,
+    notHelpful,
+    rate: Math.round((helpful / total) * 100),
+    byType,
+    byCoach
+  };
 }
 
 // ---- 监控 API ----
@@ -663,6 +789,9 @@ module.exports = {
   endSession,
   forceCompaction,
   cleanupOldSessions,
+  // 反馈 API
+  addFeedback,
+  getFeedbackStats,
   // 监控 API
   listSessions,
   getClientSessions,

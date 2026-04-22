@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import {
   Box, Heading, Card, CardBody, Table, Thead, Tbody, Tr, Th, Td, Button, Badge, Modal, ModalOverlay,
   ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure, SimpleGrid, FormControl,
@@ -39,18 +39,11 @@ function parseJSON(val, fallback = null) {
   try { return JSON.parse(val); } catch { return fallback; }
 }
 
-function parseDate(val) {
-  if (!val) return '';
-  const d = new Date(val);
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}T${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-}
-
 export default function AdminDates() {
   const [datesList, setDatesList] = useState([]);
   const [clientList, setClientList] = useState([]);
   const [girlList, setGirlList] = useState([]);
   const [selectedClient, setSelectedClient] = useState('');
-  const [selectedGirl, setSelectedGirl] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -71,8 +64,6 @@ export default function AdminDates() {
   // AI生成中
   const [generating, setGenerating] = useState(false);
   const [evaluating, setEvaluating] = useState(false);
-  // AI复盘结果
-  const [reviewResult, setReviewResult] = useState(null);
   // 约会前检查清单
   const [checklist, setChecklist] = useState([]);
   const [checklistSaving, setChecklistSaving] = useState(false);
@@ -83,19 +74,49 @@ export default function AdminDates() {
   const [showDiscussion, setShowDiscussion] = useState(false);
   const discussEndRef = useRef(null);
   // 访谈相关
-  const [interviewPanelOpen, setInterviewPanelOpen] = useState(false);
   const [generatingInterview, setGeneratingInterview] = useState(false);
   const [pushingInterview, setPushingInterview] = useState(false);
   const [generatingReport, setGeneratingReport] = useState(false);
-  const [interviewQuestions, setInterviewQuestions] = useState([]);
   const [interviewOverview, setInterviewOverview] = useState('');
   const [reportResult, setReportResult] = useState(null);
 
-  useEffect(() => { loadDates(); loadClients(); }, []);
+  const loadClients = useCallback(async () => {
+    try {
+      const res = await clients.list();
+      if (res.success) setClientList(res.clients);
+    } catch (e) { console.error(e); }
+  }, []);
+
+  const loadGirlsForClient = useCallback(async (clientId) => {
+    try {
+      const res = await girlsApi.list({ clientId });
+      if (res.success) setGirlList(res.girls);
+    } catch (e) { console.error(e); }
+  }, []);
+
+  const loadDates = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = {};
+      if (selectedClient) params.clientId = selectedClient;
+      if (statusFilter) params.status = statusFilter;
+      const res = await dates.list(params);
+      if (res.success) setDatesList(res.dates);
+    } catch (e) { console.error(e); }
+    setLoading(false);
+  }, [selectedClient, statusFilter]);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { loadDates(); loadClients(); }, [loadDates, loadClients]);
+
   useEffect(() => {
-    if (selectedClient) loadGirlsForClient(selectedClient);
-    else setGirlList([]);
-  }, [selectedClient]);
+    if (selectedClient) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      loadGirlsForClient(selectedClient);
+    } else {
+      setGirlList([]);
+    }
+  }, [selectedClient, loadGirlsForClient]);
 
   function getInitForm() {
     return {
@@ -127,34 +148,8 @@ export default function AdminDates() {
     };
   }
 
-  const loadDates = async () => {
-    setLoading(true);
-    try {
-      const params = {};
-      if (selectedClient) params.clientId = selectedClient;
-      if (statusFilter) params.status = statusFilter;
-      const res = await dates.list(params);
-      if (res.success) setDatesList(res.dates);
-    } catch (e) { console.error(e); }
-    setLoading(false);
-  };
-
-  const loadClients = async () => {
-    try {
-      const res = await clients.list();
-      if (res.success) setClientList(res.clients);
-    } catch (e) { console.error(e); }
-  };
-
-  const loadGirlsForClient = async (clientId) => {
-    try {
-      const res = await girlsApi.list({ clientId });
-      if (res.success) setGirlList(res.girls);
-    } catch (e) { console.error(e); }
-  };
-
   const openCreateModal = () => {
-    setSelectedClient(''); setSelectedGirl('');
+    setSelectedClient('');
     setForm(getInitForm()); setGirlList([]);
     openCreate();
   };
@@ -187,8 +182,7 @@ export default function AdminDates() {
       const res = await dates.get(date.id);
       if (res.success) {
         setSelectedDate(res.date);
-        setReviewResult(null);
-        // 初始化检查清单
+                // 初始化检查清单
         if (res.date.preDateChecklist) {
           setChecklist(parseJSON(res.date.preDateChecklist, []));
         } else {
@@ -290,7 +284,6 @@ export default function AdminDates() {
     try {
       const res = await dates.generateInterview(selectedDate.id);
       if (res.success) {
-        setInterviewQuestions(res.questions || []);
         setInterviewOverview(res.interviewOverview || '');
         const updated = await dates.get(selectedDate.id);
         if (updated.success) setSelectedDate(updated.date);
@@ -360,8 +353,7 @@ export default function AdminDates() {
         expenseRecord: expList, totalExpense: total
       });
       if (res.success) {
-        if (res.review) setReviewResult(res.review);
-        setSelectedDate(res.date);
+                setSelectedDate(res.date);
         toast({ title: '评价已保存', status: 'success', duration: 3000 });
         closeEvaluate();
         loadDates();
@@ -521,110 +513,6 @@ export default function AdminDates() {
     );
   };
 
-  const renderReview = (review) => {
-    if (!review) return null;
-    return (
-      <Box mt={4}>
-        <Divider mb={4} borderColor="gray.600" />
-        <Heading size="sm" color="teal.400" mb={4}>AI 约会复盘</Heading>
-        <Alert status="info" mb={4} borderRadius="md"><AlertIcon /><AlertDescription>{review.summary}</AlertDescription></Alert>
-
-        {review.tensionAnalysis && (
-          <Card bg="gray.750" mb={4}>
-            <CardBody>
-              <Text color="orange.400" fontWeight="bold" mb={2}>热度分析</Text>
-              <Text color="white" fontSize="sm">{review.tensionAnalysis}</Text>
-            </CardBody>
-          </Card>
-        )}
-
-        {review.positiveSignalsDetailed?.length > 0 && (
-          <Card bg="gray.750" mb={4}>
-            <CardBody>
-              <Text color="green.400" fontWeight="bold" mb={3}>正面信号</Text>
-              <VStack spacing={2} align="stretch">
-                {review.positiveSignalsDetailed.map((s, i) => (
-                  <Flex key={i} p={2} bg="gray.700" borderRadius="md" gap={2}>
-                    <Badge colorScheme="green">{s.significance || ''}</Badge>
-                    <Box>
-                      <Text color="green.300" fontSize="sm">{s.signal}</Text>
-                      <Text color="gray.400" fontSize="xs">{s.analysis}</Text>
-                    </Box>
-                  </Flex>
-                ))}
-              </VStack>
-            </CardBody>
-          </Card>
-        )}
-
-        {review.negativeSignalsDetailed?.length > 0 && (
-          <Card bg="gray.750" mb={4}>
-            <CardBody>
-              <Text color="red.400" fontWeight="bold" mb={3}>需要注意的信号</Text>
-              <VStack spacing={2} align="stretch">
-                {review.negativeSignalsDetailed.map((s, i) => (
-                  <Flex key={i} p={2} bg="gray.700" borderRadius="md" gap={2}>
-                    <Badge colorScheme="red">{s.analysis}</Badge>
-                    <Box>
-                      <Text color="red.300" fontSize="sm">{s.signal}</Text>
-                      <Text color="gray.400" fontSize="xs">{s.mitigation}</Text>
-                    </Box>
-                  </Flex>
-                ))}
-              </VStack>
-            </CardBody>
-          </Card>
-        )}
-
-        {review.nextActions?.length > 0 && (
-          <Card bg="gray.750" mb={4}>
-            <CardBody>
-              <Text color="blue.400" fontWeight="bold" mb={3}>下一步行动</Text>
-              <VStack spacing={2} align="stretch">
-                {review.nextActions.map((a, i) => (
-                  <Flex key={i} p={2} bg="gray.700" borderRadius="md" gap={3} align="center">
-                    <Badge colorScheme={a.priority === '高' ? 'red' : a.priority === '中' ? 'orange' : 'gray'}>{a.priority}</Badge>
-                    <Box flex={1}>
-                      <Text color="white" fontSize="sm">{a.action}</Text>
-                      <Text color="gray.400" fontSize="xs">{a.timing} — {a.reason}</Text>
-                    </Box>
-                  </Flex>
-                ))}
-              </VStack>
-            </CardBody>
-          </Card>
-        )}
-
-        {review.recommendedTopics?.length > 0 && (
-          <Card bg="gray.750" mb={4}>
-            <CardBody>
-              <Text color="purple.400" fontWeight="bold" mb={2}>推荐话题</Text>
-              <Wrap>
-                {review.recommendedTopics.map((t, i) => <WrapItem key={i}><Tag colorScheme="purple" size="sm">{t}</Tag></WrapItem>)}
-              </Wrap>
-            </CardBody>
-          </Card>
-        )}
-
-        {review.relationshipProgress && (
-          <Card bg="gray.750">
-            <CardBody>
-              <Text color="teal.400" fontWeight="bold" mb={2}>关系进度</Text>
-              <Text color="white" fontSize="sm">{review.relationshipProgress}</Text>
-              {review.warningSigns?.length > 0 && review.warningSigns[0] !== '无' && (
-                <Alert status="warning" mt={3} borderRadius="md">
-                  <AlertIcon /><AlertDescription>
-                    <Text fontSize="sm">警示信号：{review.warningSigns.join('、')}</Text>
-                  </AlertDescription>
-                </Alert>
-              )}
-            </CardBody>
-          </Card>
-        )}
-      </Box>
-    );
-  };
-
   return (
     <Box>
       <Flex justify="space-between" align="center" mb={6}>
@@ -649,70 +537,110 @@ export default function AdminDates() {
           ) : datesList.length === 0 ? (
             <Text color="gray.500" textAlign="center" py={8}>暂无约会记录</Text>
           ) : (
-            <Table variant="simple" color="gray.300" size="sm">
-              <Thead>
-                <Tr>
-                  <Th color="gray.400">约会</Th>
-                  <Th color="gray.400">女生</Th>
-                  <Th color="gray.400">客户</Th>
-                  <Th color="gray.400">时间</Th>
-                  <Th color="gray.400">状态</Th>
-                  <Th color="gray.400">地点</Th>
-                  <Th color="gray.400">花费</Th>
-                  <Th color="gray.400">评价</Th>
-                  <Th color="gray.400">操作</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {datesList.map(d => {
-                  const cfg = STATUS_CONFIG[d.status] || { label: d.status, color: 'gray' };
-                  const parsedPlan = parseJSON(d.aiPlan);
-                  return (
-                    <Tr key={d.id} _hover={{ bg: 'gray.750' }} transition="background 0.15s">
-                      <Td>
-                        <Text color="white" fontWeight="bold" fontSize="sm">{d.title || '约会'}</Text>
-                        {d.planStatus === 'generating' && <Spinner size="xs" color="teal.400" />}
-                        {d.planStatus === 'generated' && parsedPlan?.venue && (
-                          <Text color="gray.500" fontSize="xs">{parsedPlan.venue.name}</Text>
-                        )}
-                      </Td>
-                      <Td>
-                        <Text color="teal.300" fontSize="sm">{d.girl?.name || '-'}</Text>
-                        {d.girl?.stage && <Badge colorScheme="teal" size="xs">{d.girl.stage}</Badge>}
-                      </Td>
-                      <Td><Text color="gray.300" fontSize="sm">{d.user?.nickname || '-'}</Text></Td>
-                      <Td><Text color="gray.300" fontSize="xs">{d.dateTime ? new Date(d.dateTime).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'}</Text></Td>
-                      <Td><Badge colorScheme={cfg.color}>{cfg.label}</Badge></Td>
-                      <Td><Text color="gray.400" fontSize="xs" maxW="100px" noOfLines={1}>{d.location || '-'}</Text></Td>
-                      <Td><Text color="gray.300" fontSize="sm">{d.totalExpense ? `¥${d.totalExpense}` : '-'}</Text></Td>
-                      <Td>
-                        {d.rating ? (
-                          <HStack spacing={1}>
-                            {Array.from({ length: 5 }).map((_, i) => (
-                              <Icon key={i} as={FireIcon} color={i < d.rating ? 'orange.400' : 'gray.600'} boxSize={3} />
-                            ))}
-                          </HStack>
-                        ) : <Text color="gray.600">-</Text>}
-                      </Td>
-                      <Td>
-                        <HStack spacing={2}>
-                          <Button size="xs" colorScheme="teal" variant="ghost" onClick={() => openDetail(d)}>详情</Button>
-                          {(d.status === 'pending_plan') && (
-                            <Button size="xs" colorScheme="orange" variant="ghost" onClick={async () => {
-                              setSelectedDate(d);
-                              await openDetail(d);
-                            }}>策划</Button>
-                          )}
-                          {d.status === 'planned' && (
-                            <Button size="xs" colorScheme="green" variant="ghost" onClick={() => { setSelectedDate(d); openEval(); }}>评价</Button>
-                          )}
-                        </HStack>
-                      </Td>
+            <>
+              {/* 桌面端表格 */}
+              <Box display={{ base: 'none', lg: 'block' }}>
+                <Table variant="simple" color="gray.300" size="sm">
+                  <Thead>
+                    <Tr>
+                      <Th color="gray.400">约会</Th>
+                      <Th color="gray.400">女生</Th>
+                      <Th color="gray.400">客户</Th>
+                      <Th color="gray.400">时间</Th>
+                      <Th color="gray.400">状态</Th>
+                      <Th color="gray.400">地点</Th>
+                      <Th color="gray.400">花费</Th>
+                      <Th color="gray.400">评价</Th>
+                      <Th color="gray.400">操作</Th>
                     </Tr>
-                  );
-                })}
-              </Tbody>
-            </Table>
+                  </Thead>
+                  <Tbody>
+                    {datesList.map(d => {
+                      const cfg = STATUS_CONFIG[d.status] || { label: d.status, color: 'gray' };
+                      const parsedPlan = parseJSON(d.aiPlan);
+                      return (
+                        <Tr key={d.id} _hover={{ bg: 'gray.750' }} transition="background 0.15s">
+                          <Td>
+                            <Text color="white" fontWeight="bold" fontSize="sm">{d.title || '约会'}</Text>
+                            {d.planStatus === 'generating' && <Spinner size="xs" color="teal.400" />}
+                            {d.planStatus === 'generated' && parsedPlan?.venue && (
+                              <Text color="gray.500" fontSize="xs">{parsedPlan.venue.name}</Text>
+                            )}
+                          </Td>
+                          <Td>
+                            <Text color="teal.300" fontSize="sm">{d.girl?.name || '-'}</Text>
+                            {d.girl?.stage && <Badge colorScheme="teal" size="xs">{d.girl.stage}</Badge>}
+                          </Td>
+                          <Td><Text color="gray.300" fontSize="sm">{d.user?.nickname || '-'}</Text></Td>
+                          <Td><Text color="gray.300" fontSize="xs">{d.dateTime ? new Date(d.dateTime).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'}</Text></Td>
+                          <Td><Badge colorScheme={cfg.color}>{cfg.label}</Badge></Td>
+                          <Td><Text color="gray.400" fontSize="xs" maxW="100px" noOfLines={1}>{d.location || '-'}</Text></Td>
+                          <Td><Text color="gray.300" fontSize="sm">{d.totalExpense ? `¥${d.totalExpense}` : '-'}</Text></Td>
+                          <Td>
+                            {d.rating ? (
+                              <HStack spacing={1}>
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                  <Icon key={i} as={FireIcon} color={i < d.rating ? 'orange.400' : 'gray.600'} boxSize={3} />
+                                ))}
+                              </HStack>
+                            ) : <Text color="gray.600">-</Text>}
+                          </Td>
+                          <Td>
+                            <HStack spacing={2}>
+                              <Button size="xs" colorScheme="teal" variant="ghost" onClick={() => openDetail(d)}>详情</Button>
+                              {(d.status === 'pending_plan') && (
+                                <Button size="xs" colorScheme="orange" variant="ghost" onClick={async () => {
+                                  setSelectedDate(d);
+                                  await openDetail(d);
+                                }}>策划</Button>
+                              )}
+                              {d.status === 'planned' && (
+                                <Button size="xs" colorScheme="green" variant="ghost" onClick={() => { setSelectedDate(d); openEval(); }}>评价</Button>
+                              )}
+                            </HStack>
+                          </Td>
+                        </Tr>
+                      );
+                    })}
+                  </Tbody>
+                </Table>
+              </Box>
+
+              {/* 移动端卡片列表 */}
+              <Box display={{ base: 'block', lg: 'none' }}>
+                <VStack spacing={2} align="stretch">
+                  {datesList.map(d => {
+                    const cfg = STATUS_CONFIG[d.status] || { label: d.status, color: 'gray' };
+                    return (
+                      <Card key={d.id} bg="gray.750" size="sm" cursor="pointer" onClick={() => openDetail(d)} _hover={{ bg: 'gray.700' }}>
+                        <CardBody py={3} px={4}>
+                          <Flex justify="space-between" align="center" mb={2}>
+                            <Text color="white" fontWeight="bold" fontSize="sm">{d.title || '约会'}</Text>
+                            <Badge colorScheme={cfg.color}>{cfg.label}</Badge>
+                          </Flex>
+                          <HStack spacing={3} wrap="wrap" mb={2}>
+                            <Text color="teal.300" fontSize="xs">{d.girl?.name || '-'}</Text>
+                            <Text color="gray.400" fontSize="xs">{d.user?.nickname || '-'}</Text>
+                            <Text color="gray.400" fontSize="xs">{d.dateTime ? new Date(d.dateTime).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'}</Text>
+                          </HStack>
+                          <HStack spacing={2}>
+                            {d.rating && (
+                              <HStack spacing={0}>
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                  <Icon key={i} as={FireIcon} color={i < d.rating ? 'orange.400' : 'gray.600'} boxSize={3} />
+                                ))}
+                              </HStack>
+                            )}
+                            {d.totalExpense && <Text color="gray.400" fontSize="xs">¥{d.totalExpense}</Text>}
+                            <Button size="xs" colorScheme="teal" variant="ghost" onClick={(e) => { e.stopPropagation(); openDetail(d); }}>详情</Button>
+                          </HStack>
+                        </CardBody>
+                      </Card>
+                    );
+                  })}
+                </VStack>
+              </Box>
+            </>
           )}
         </CardBody>
       </Card>
@@ -757,7 +685,7 @@ export default function AdminDates() {
               <Divider borderColor="gray.600" />
               <Text color="gray.400" fontSize="sm">以下信息用于AI生成约会方案（选填，但越详细越精准）</Text>
 
-              <SimpleGrid columns={3} spacing={4}>
+              <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
                 <FormControl>
                   <FormLabel color="gray.400" fontSize="sm">约会风格</FormLabel>
                   <Select value={form.dateStyle} onChange={e => setForm({...form, dateStyle: e.target.value})} bg="gray.700" color="white">
@@ -819,7 +747,7 @@ export default function AdminDates() {
           <ModalBody pb={6}>
             {selectedDate && (
               <Box>
-                <SimpleGrid columns={4} spacing={4} mb={4}>
+                <SimpleGrid columns={{ base: 1, sm: 2, md: 4 }} spacing={4} mb={4}>
                   <Box bg="gray.750" p={3} borderRadius="md">
                     <Text color="gray.400" fontSize="sm">女生</Text>
                     <Text color="teal.300">{selectedDate.girl?.name || '-'}</Text>
@@ -1064,7 +992,7 @@ export default function AdminDates() {
                   <Box>
                     <Divider mb={4} borderColor="gray.600" />
                     <Heading size="sm" color="white" mb={4}>约会后记录</Heading>
-                    <SimpleGrid columns={4} spacing={4} mb={4}>
+                    <SimpleGrid columns={{ base: 1, sm: 2, md: 4 }} spacing={4} mb={4}>
                       <Box bg="gray.750" p={3} borderRadius="md">
                         <Text color="gray.400" fontSize="sm">评价</Text>
                         <HStack>
@@ -1161,7 +1089,7 @@ export default function AdminDates() {
                         <Card bg="gray.750" mb={4}>
                           <CardBody>
                             <Text color="teal.400" fontWeight="bold" mb={3}>访谈详情</Text>
-                            <SimpleGrid columns={3} spacing={3} mb={3}>
+                            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={3} mb={3}>
                               {iv.girlAppearance && <Box><Text color="gray.400" fontSize="xs">穿着打扮</Text><Tag size="sm" colorScheme="purple">{iv.girlAppearance}</Tag></Box>}
                               {iv.girlOnTime && <Box><Text color="gray.400" fontSize="xs">赴约情况</Text><Tag size="sm" colorScheme="blue">{iv.girlOnTime}</Tag></Box>}
                               {iv.girlGreetedFirst && <Box><Text color="gray.400" fontSize="xs">打招呼</Text><Tag size="sm" colorScheme="cyan">{iv.girlGreetedFirst}</Tag></Box>}
@@ -1201,7 +1129,7 @@ export default function AdminDates() {
                                 </HStack>
                               </Box>
                             )}
-                            <SimpleGrid columns={3} spacing={3} mt={3}>
+                            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={3} mt={3}>
                               {iv.comfortBehaviors && <Box><Text color="gray.400" fontSize="xs">舒适行为</Text><Text color="green.300" fontSize="xs">{iv.comfortBehaviors}</Text></Box>}
                               {iv.topicDepth && <Box><Text color="gray.400" fontSize="xs">话题深度</Text><Tag size="sm" colorScheme="purple">{iv.topicDepth}</Tag></Box>}
                               {iv.clientAnchor && <Box><Text color="gray.400" fontSize="xs">关键观察</Text><Text color="cyan.300" fontSize="xs">{iv.clientAnchor}</Text></Box>}
@@ -1237,7 +1165,6 @@ export default function AdminDates() {
                           生成访谈问题
                         </Button>
                         {(() => {
-                          const iv = parseJSON(selectedDate.postDateInterview, {});
                           const status = getInterviewStatus(selectedDate);
                           if (status === 'draft') {
                             return <Button size="xs" colorScheme="purple" variant="outline" onClick={handlePushInterview} isLoading={pushingInterview}>推送客户</Button>;
@@ -1332,7 +1259,7 @@ export default function AdminDates() {
                             </Alert>
 
                             {report.compatibilityScore && (
-                              <SimpleGrid columns={4} spacing={4} mb={4}>
+                              <SimpleGrid columns={{ base: 1, sm: 2, md: 4 }} spacing={4} mb={4}>
                                 <Box bg="green.800" p={3} borderRadius="md" textAlign="center">
                                   <Text color="gray.400" fontSize="xs">匹配度</Text>
                                   <Text color="teal.300" fontSize="2xl" fontWeight="bold">{report.compatibilityScore}</Text>
@@ -1504,7 +1431,7 @@ export default function AdminDates() {
           <ModalCloseButton />
           <ModalBody pb={6}>
             <VStack spacing={4} align="stretch">
-              <SimpleGrid columns={3} spacing={4}>
+              <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
                 <FormControl>
                   <FormLabel color="gray.400" fontSize="sm">约会时长</FormLabel>
                   <Select value={evalForm.duration} onChange={e => setEvalForm({...evalForm, duration: e.target.value})} bg="gray.700" color="white">
@@ -1554,7 +1481,7 @@ export default function AdminDates() {
               {/* 见面时刻 */}
               <Divider borderColor="gray.600" />
               <Text color="gray.300" fontSize="sm" fontWeight="bold">见面时刻</Text>
-              <SimpleGrid columns={3} spacing={3}>
+              <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={3}>
                 <FormControl>
                   <FormLabel color="gray.400" fontSize="xs">女生穿着打扮</FormLabel>
                   <Select value={evalForm.girlAppearance || ''} onChange={e => setEvalForm({...evalForm, girlAppearance: e.target.value})} bg="gray.700" color="white" size="sm">
@@ -1733,7 +1660,7 @@ export default function AdminDates() {
               </FormControl>
 
               {/* 舒适行为 & 话题深度 & 客户锚点（评审团新增） */}
-              <SimpleGrid columns={3} spacing={3}>
+              <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={3}>
                 <FormControl>
                   <FormLabel color="gray.400" fontSize="xs">女生舒适行为</FormLabel>
                   <Input value={evalForm.comfortBehaviors || ''} onChange={e => setEvalForm({...evalForm, comfortBehaviors: e.target.value})} placeholder="如：主动倒水/递纸巾..." bg="gray.700" size="sm" />

@@ -259,7 +259,6 @@ function getInitialFormData() {
 export default function AdminClients() {
   const [clientList, setClientList] = useState([]);
   const [selectedClient, setSelectedClient] = useState(null);
-  const [learnings, setLearnings] = useState([]);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { isOpen: isCreateOpen, onOpen: onCreateOpen, onClose: onCreateClose } = useDisclosure();
   const { isOpen: isExtractOpen, onOpen: onExtractOpen, onClose: onExtractClose } = useDisclosure();
@@ -277,8 +276,7 @@ export default function AdminClients() {
   // 交流提取相关状态
   const [chatExtracting, setChatExtracting] = useState(false);
   const [chatAnalysis, setChatAnalysis] = useState(null);
-  const [chatPreview, setChatPreview] = useState([]);
-  const [chatMessageCount, setChatMessageCount] = useState(20);
+    const [chatMessageCount, setChatMessageCount] = useState(20);
   const [chatPendingUpdates, setChatPendingUpdates] = useState({});
   const [chatConfirmSelections, setChatConfirmSelections] = useState({});
   const toast = useToast();
@@ -347,7 +345,6 @@ export default function AdminClients() {
 
   const handleConfirmExtract = () => {
     if (!extractedProfile) return;
-    const p = extractedProfile;
     const updates = {};
     Object.entries(pendingFields).forEach(([key, { value }]) => {
       if (confirmSelections[key]) {
@@ -386,12 +383,10 @@ export default function AdminClients() {
     setChatAnalysis(null);
     setChatPendingUpdates({});
     setChatConfirmSelections({});
-    setChatPreview([]);
     try {
       const res = await clientsApi.extractFromChat(selectedClient.id, chatMessageCount);
       if (res.success && res.analysis) {
         setChatAnalysis(res.analysis);
-        setChatPreview(res.chatPreview || []);
         // 构建待确认更新
         const updates = res.analysis.updatedFields || {};
         const strategic = res.analysis.strategicAnalysis || {};
@@ -449,7 +444,6 @@ export default function AdminClients() {
     setChatAnalysis(null);
     setChatPendingUpdates({});
     setChatConfirmSelections({});
-    setChatPreview([]);
     if (!isEditing) {
       startEdit();
     }
@@ -460,7 +454,6 @@ export default function AdminClients() {
     setChatAnalysis(null);
     setChatPendingUpdates({});
     setChatConfirmSelections({});
-    setChatPreview([]);
   };
 
   
@@ -469,8 +462,7 @@ export default function AdminClients() {
       const res = await clientsApi.get(client.id);
       if (res.success) {
         setSelectedClient(res.client);
-        setLearnings(res.client.learnings || []);
-        setFormData(getInitialFormData());
+                setFormData(getInitialFormData());
         setIsEditing(false);
         onOpen();
       }
@@ -600,7 +592,7 @@ export default function AdminClients() {
         const updated = await clientsApi.get(selectedClient.id);
         if (updated.success) setSelectedClient(updated.client);
       }
-    } catch (e) {
+    } catch {
       toast({ title: '保存失败', status: 'error' });
     } finally {
       setSaving(false);
@@ -622,7 +614,7 @@ export default function AdminClients() {
         onCreateClose();
         loadClients();
       }
-    } catch (e) {
+    } catch {
       toast({ title: '创建失败', status: 'error' });
     } finally {
       setCreating(false);
@@ -633,12 +625,6 @@ export default function AdminClients() {
     if (score >= 7) return 'red.400';
     if (score >= 5) return 'orange.400';
     return 'gray.400';
-  };
-
-  const getHeatIcon = (score) => {
-    if (score >= 7) return <Icon as={FireIcon} color="red.400" />;
-    if (score >= 5) return <Icon as={FireIcon} color="orange.400" />;
-    return <Icon as={SnowIcon} color="gray.400" />;
   };
 
   const getCooperationColor = (coop) => {
@@ -666,57 +652,93 @@ export default function AdminClients() {
 
       {/* 客户列表卡片 */}
       <Card bg="gray.800" borderRadius="xl" overflow="hidden">
-        <Table variant="simple" color="gray.300">
-          <Thead bg="gray.750">
-            <Tr>
-              <Th color="gray.400" borderColor="gray.700">客户</Th>
-              <Th color="gray.400" borderColor="gray.700" isNumeric>年龄</Th>
-              <Th color="gray.400" borderColor="gray.700">职业</Th>
-              <Th color="gray.400" borderColor="gray.700">阶段</Th>
-              <Th color="gray.400" borderColor="gray.700">配合度</Th>
-              <Th color="gray.400" borderColor="gray.700" isNumeric>热度</Th>
-              <Th color="gray.400" borderColor="gray.700" isNumeric>女生</Th>
-              <Th color="gray.400" borderColor="gray.700">操作</Th>
-            </Tr>
-          </Thead>
-          <Tbody>
-            {clientList.map(client => (
-              <Tr key={client.id} _hover={{ bg: 'gray.750' }} cursor="pointer" onClick={() => viewClient(client)}>
-                <Td fontWeight="600" color="white" borderColor="gray.700">
-                  <HStack spacing={3}>
-                    <Avatar size="sm" name={client.nickname || client.username} bg="teal.500" color="white" />
-                    <Box>
-                      <Text color="white">{client.nickname || client.username}</Text>
-                      <Text color="gray.500" fontSize="xs">{client.username}</Text>
-                    </Box>
-                  </HStack>
-                </Td>
-                <Td color="gray.300" borderColor="gray.700" isNumeric>{client.age || '-'}</Td>
-                <Td color="gray.300" borderColor="gray.700">{client.occupation || '-'}</Td>
-                <Td borderColor="gray.700">
-                  <Badge colorScheme="teal" borderRadius="md" px={2}>{client.serviceStage || '未开始'}</Badge>
-                </Td>
-                <Td borderColor="gray.700">
-                  <Badge colorScheme={getCooperationColor(client.coachCooperation)} borderRadius="md" px={2}>
-                    {client.coachCooperation || '-'}
-                  </Badge>
-                </Td>
-                <Td color={getHeatColor(client.interactionHeat)} fontWeight="bold" borderColor="gray.700" isNumeric>
-                  {client.interactionHeat?.toFixed(1) || '5.0'}
-                </Td>
-                <Td color="gray.300" borderColor="gray.700" isNumeric>{client.girlCount || 0}</Td>
-                <Td borderColor="gray.700">
-                  <Button size="sm" colorScheme="teal" variant="ghost" onClick={(e) => { e.stopPropagation(); viewClient(client); }}>
-                    查看
-                  </Button>
-                </Td>
+        {/* 桌面端表格 */}
+        <Box display={{ base: 'none', lg: 'block' }}>
+          <Table variant="simple" color="gray.300">
+            <Thead bg="gray.750">
+              <Tr>
+                <Th color="gray.400" borderColor="gray.700">客户</Th>
+                <Th color="gray.400" borderColor="gray.700" isNumeric>年龄</Th>
+                <Th color="gray.400" borderColor="gray.700">职业</Th>
+                <Th color="gray.400" borderColor="gray.700">阶段</Th>
+                <Th color="gray.400" borderColor="gray.700">配合度</Th>
+                <Th color="gray.400" borderColor="gray.700" isNumeric>热度</Th>
+                <Th color="gray.400" borderColor="gray.700" isNumeric>女生</Th>
+                <Th color="gray.400" borderColor="gray.700">操作</Th>
               </Tr>
-            ))}
-            {clientList.length === 0 && (
-              <Tr><Td colSpan={8} textAlign="center" color="gray.500" py={8}>暂无客户，点击上方按钮新建</Td></Tr>
-            )}
-          </Tbody>
-        </Table>
+            </Thead>
+            <Tbody>
+              {clientList.map(client => (
+                <Tr key={client.id} _hover={{ bg: 'gray.750' }} cursor="pointer" onClick={() => viewClient(client)}>
+                  <Td fontWeight="600" color="white" borderColor="gray.700">
+                    <HStack spacing={3}>
+                      <Avatar size="sm" name={client.nickname || client.username} bg="teal.500" color="white" />
+                      <Box>
+                        <Text color="white">{client.nickname || client.username}</Text>
+                        <Text color="gray.500" fontSize="xs">{client.username}</Text>
+                      </Box>
+                    </HStack>
+                  </Td>
+                  <Td color="gray.300" borderColor="gray.700" isNumeric>{client.age || '-'}</Td>
+                  <Td color="gray.300" borderColor="gray.700">{client.occupation || '-'}</Td>
+                  <Td borderColor="gray.700">
+                    <Badge colorScheme="teal" borderRadius="md" px={2}>{client.serviceStage || '未开始'}</Badge>
+                  </Td>
+                  <Td borderColor="gray.700">
+                    <Badge colorScheme={getCooperationColor(client.coachCooperation)} borderRadius="md" px={2}>
+                      {client.coachCooperation || '-'}
+                    </Badge>
+                  </Td>
+                  <Td color={getHeatColor(client.interactionHeat)} fontWeight="bold" borderColor="gray.700" isNumeric>
+                    {client.interactionHeat?.toFixed(1) || '5.0'}
+                  </Td>
+                  <Td color="gray.300" borderColor="gray.700" isNumeric>{client.girlCount || 0}</Td>
+                  <Td borderColor="gray.700">
+                    <Button size="sm" colorScheme="teal" variant="ghost" onClick={(e) => { e.stopPropagation(); viewClient(client); }}>
+                      查看
+                    </Button>
+                  </Td>
+                </Tr>
+              ))}
+              {clientList.length === 0 && (
+                <Tr><Td colSpan={8} textAlign="center" color="gray.500" py={8}>暂无客户，点击上方按钮新建</Td></Tr>
+              )}
+            </Tbody>
+          </Table>
+        </Box>
+
+        {/* 移动端卡片列表 */}
+        <Box display={{ base: 'block', lg: 'none' }}>
+          {clientList.length === 0 ? (
+            <Text color="gray.500" textAlign="center" py={8}>暂无客户，点击上方按钮新建</Text>
+          ) : (
+            <VStack spacing={2} align="stretch" p={2}>
+              {clientList.map(client => (
+                <Card key={client.id} bg="gray.750" size="sm" cursor="pointer" onClick={() => viewClient(client)} _hover={{ bg: 'gray.700' }}>
+                  <CardBody py={3} px={4}>
+                    <Flex justify="space-between" align="center" mb={2}>
+                      <HStack spacing={2}>
+                        <Avatar size="sm" name={client.nickname || client.username} bg="teal.500" color="white" />
+                        <Box>
+                          <Text color="white" fontSize="sm" fontWeight="bold">{client.nickname || client.username}</Text>
+                          <Text color="gray.500" fontSize="xs">{client.username}</Text>
+                        </Box>
+                      </HStack>
+                      <Button size="sm" colorScheme="teal" variant="ghost">查看</Button>
+                    </Flex>
+                    <HStack spacing={3} wrap="wrap">
+                      <Badge colorScheme="teal" fontSize="xs">{client.serviceStage || '未开始'}</Badge>
+                      <Badge colorScheme={getCooperationColor(client.coachCooperation)} fontSize="xs">{client.coachCooperation || '-'}</Badge>
+                      <Text color={getHeatColor(client.interactionHeat)} fontSize="xs">{client.interactionHeat?.toFixed(1) || '5.0'}</Text>
+                      <Text color="gray.400" fontSize="xs">{client.occupation || '-'}</Text>
+                      <Text color="gray.400" fontSize="xs">{client.girlCount || 0}人</Text>
+                    </HStack>
+                  </CardBody>
+                </Card>
+              ))}
+            </VStack>
+          )}
+        </Box>
       </Card>
 
       {/* 新建客户弹窗 */}
@@ -1490,7 +1512,7 @@ export default function AdminClients() {
                   {/* 【评审团新增 P1】外表吸引力评估 */}
                   <Box mt={4}>
                     <FieldCard title="外表吸引力评估" icon={InfoIcon} colorScheme="pink">
-                      <SimpleGrid columns={3} spacing={4}>
+                      <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
                         <FormControl>
                           <FieldLabel fieldKey="appearanceSelfAssessment" isEditing={isEditing} />
                           {isEditing ? (
@@ -1528,7 +1550,7 @@ export default function AdminClients() {
 
                 {/* 学习能力 */}
                 <TabPanel px={0} pt={4}>
-                  <SimpleGrid columns={3} spacing={4}>
+                  <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
                     <FieldCard title="学习特征" icon={InfoIcon} colorScheme="blue">
                       <VStack spacing={3} align="stretch">
                         <FormControl>

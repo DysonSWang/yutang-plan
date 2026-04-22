@@ -1,24 +1,39 @@
-import { useState } from 'react';
-import { Box, Button, FormControl, FormLabel, Input, VStack, Text, Card, CardBody, Heading, Textarea, HStack, IconButton } from '@chakra-ui/react';
+import { useState, useEffect } from 'react';
+import { Box, Button, FormControl, FormLabel, Input, VStack, Text, Card, CardBody, Heading, HStack, IconButton, Popover, PopoverTrigger, PopoverContent, PopoverBody, PopoverHeader, Switch, Flex, Tooltip } from '@chakra-ui/react';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
+  const [showLogin, setShowLogin] = useState(true);
   const [notes, setNotes] = useState([
     { id: 1, text: '欢迎使用记事本' }
   ]);
   const [newNote, setNewNote] = useState('');
+  const [disguiseMode, setDisguiseMode] = useState(false);
   const { login } = useAuth();
+
+  useEffect(() => {
+    setDisguiseMode(localStorage.getItem('yutang_disguise') === 'true');
+  }, []);
+
+  const toggleDisguise = (enabled) => {
+    localStorage.setItem('yutang_disguise', enabled ? 'true' : 'false');
+    setDisguiseMode(enabled);
+    if (enabled) {
+      setShowLogin(false);
+    } else {
+      setShowLogin(true);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
       await login(username, password);
-    } catch (err) {
+    } catch {
       // 静默失败 - 留在记事本
     } finally {
       setLoading(false);
@@ -36,21 +51,49 @@ export default function Login() {
     setNotes(notes.filter(n => n.id !== id));
   };
 
-  // 直接显示记事本 + 登录按钮
+  const effectiveShowLogin = disguiseMode ? showLogin : true;
+
   return (
-    <Box minH="100vh" bg="gray.900" p={4}>
-      <Card maxW="600px" mx="auto" mt={8} bg="gray.800" shadow="lg">
-        <CardBody p={6}>
+    <Box minH="100vh" bg="gray.900" p={{ base: 2, sm: 4 }}>
+      <Card maxW="600px" mx="auto" mt={{ base: 4, sm: 8 }} bg="gray.800" shadow="lg">
+        <CardBody p={{ base: 4, sm: 6 }}>
           <HStack justify="space-between" mb={4}>
-            <Heading size="md" color="white">记事本</Heading>
-            {!showLogin && (
-              <Button size="sm" colorScheme="blue" variant="outline" onClick={() => setShowLogin(true)}>
-                登录
-              </Button>
-            )}
+            <Heading size="md" color="white">
+              {effectiveShowLogin ? '登录' : '记事本'}
+            </Heading>
+            <Popover placement="bottom-end">
+              <PopoverTrigger>
+                <IconButton
+                  icon={<Text fontSize="lg">⚙</Text>}
+                  size="sm"
+                  variant="ghost"
+                  color="gray.500"
+                  aria-label="设置"
+                  _hover={{ color: 'gray.300' }}
+                />
+              </PopoverTrigger>
+              <PopoverContent bg="gray.700" borderColor="gray.600" w="220px">
+                <PopoverHeader borderColor="gray.600">
+                  <Text color="gray.300" fontSize="sm" fontWeight="bold">设置</Text>
+                </PopoverHeader>
+                <PopoverBody>
+                  <Flex align="center" justify="space-between">
+                    <Box>
+                      <Text color="white" fontSize="sm">伪装模式</Text>
+                      <Text color="gray.500" fontSize="xs">开启后登录页显示为记事本</Text>
+                    </Box>
+                    <Switch
+                      isChecked={disguiseMode}
+                      onChange={e => toggleDisguise(e.target.checked)}
+                      colorScheme="teal"
+                    />
+                  </Flex>
+                </PopoverBody>
+              </PopoverContent>
+            </Popover>
           </HStack>
 
-          {showLogin ? (
+          {effectiveShowLogin ? (
             <form onSubmit={handleSubmit}>
               <VStack spacing={3}>
                 <FormControl>
@@ -75,12 +118,14 @@ export default function Login() {
                   />
                 </FormControl>
                 <HStack w="100%">
-                  <Button type="submit" colorScheme="blue" size="sm" flex={1} isLoading={loading}>
-                    确定
+                  <Button type="submit" colorScheme="teal" size="sm" flex={1} isLoading={loading}>
+                    登录
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setShowLogin(false)}>
-                    取消
-                  </Button>
+                  {disguiseMode && (
+                    <Button size="sm" variant="ghost" color="gray.400" onClick={() => setShowLogin(false)}>
+                      记事本
+                    </Button>
+                  )}
                 </HStack>
               </VStack>
             </form>
@@ -115,6 +160,18 @@ export default function Login() {
                   <Text color="gray.400" textAlign="center" py={4}>暂无记录</Text>
                 )}
               </VStack>
+
+              {disguiseMode && (
+                <Button
+                  size="sm"
+                  variant="link"
+                  color="gray.500"
+                  mt={3}
+                  onClick={() => setShowLogin(true)}
+                >
+                  登录
+                </Button>
+              )}
             </>
           )}
         </CardBody>

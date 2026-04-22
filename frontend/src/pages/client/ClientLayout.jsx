@@ -1,4 +1,4 @@
-import { Box, Flex, VStack, Icon, Text, Badge, Popover, PopoverTrigger, PopoverContent, PopoverBody, PopoverHeader, Button, HStack, useBreakpointValue } from '@chakra-ui/react';
+import { Box, Flex, VStack, Icon, Text, Badge, Popover, PopoverTrigger, PopoverContent, PopoverBody, PopoverHeader, Button, HStack } from '@chakra-ui/react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -23,10 +23,6 @@ function DesktopSidebar() {
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
 
-  useEffect(() => {
-    loadUnreadCount();
-  }, []);
-
   const loadUnreadCount = async () => {
     try {
       const res = await notifApi.list();
@@ -38,6 +34,11 @@ function DesktopSidebar() {
       console.error(e);
     }
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadUnreadCount();
+  }, []);
 
   const markAllAsRead = async () => {
     try {
@@ -165,7 +166,7 @@ function MobileBottomNav() {
     on('notification:new', () => {
       setUnreadCount(prev => prev + 1);
     });
-  }, []);
+  }, [on]);
 
   return (
     <Box

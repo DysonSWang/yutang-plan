@@ -206,7 +206,10 @@ export const aiCoach = {
   situation: (data) => api.post('/api/ai-coach/situation', data),
   analyzeChat: (data) => api.post('/api/ai-coach/analyze-chat', data),
   replySuggestions: (data) => api.post('/api/ai-coach/reply-suggestions', data),
-  optimizeReply: (data) => api.post('/api/ai-coach/optimize-reply', data)
+  optimizeReply: (data) => api.post('/api/ai-coach/optimize-reply', data),
+moment: (data) => api.post('/api/ai-coach/moment', data),
+  overview: () => api.get('/api/ai-coach/overview'),
+  girlSummary: (girlId) => api.get(`/api/ai-coach/girl-summary/${girlId}`)
 };
 
 // 实战聊天（操盘手帮客户和女生聊）

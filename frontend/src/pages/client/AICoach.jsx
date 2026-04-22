@@ -3,13 +3,6 @@ import { Box, VStack, HStack, Input, Button, Text, Card, CardBody, CardHeader, H
 import { girls as girlsApi } from '../../utils/api';
 import { FireIcon, SnowIcon } from '../../components/Icons';
 
-const COACHES = [
-  { id: 'general', name: '通用教练' },
-  { id: 'naye', name: '纳爷' },
-  { id: 'tuobuhua', name: '脱不花' },
-  { id: 'tong', name: '童锦程' },
-];
-
 const STAGE_COLORS = {
   '陌生': 'gray',
   '搭讪': 'blue',
@@ -24,10 +17,8 @@ export default function AICoach() {
   const [selectedGirlId, setSelectedGirlId] = useState('');
   const [selectedGirl, setSelectedGirl] = useState(null);
   const [question, setQuestion] = useState('');
-  const [coachId, setCoachId] = useState('general');
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState(null);
-  const [coachName, setCoachName] = useState('');
   const analysisRef = useRef(null);
   const analysisText = useRef('');
 
@@ -62,8 +53,6 @@ export default function AICoach() {
 
     const token = localStorage.getItem('yutang_token');
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3005';
-    const currentCoachName = COACHES.find(c => c.id === coachId)?.name || 'AI教练';
-    setCoachName(currentCoachName);
 
     // 初始化显示区域
     analysisText.current = '';
@@ -78,7 +67,7 @@ export default function AICoach() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ situation: question, coachId, stream: true, girlId: selectedGirlId || undefined })
+        body: JSON.stringify({ situation: question, stream: true, girlId: selectedGirlId || undefined })
       });
 
       if (!res.ok) {
@@ -114,13 +103,13 @@ export default function AICoach() {
                   analysisRef.current.innerHTML = analysisText.current.replace(/\n/g, '<br>');
                 }
               }
-            } catch (e) {}
+            } catch { /* ignore parse errors */ }
           }
         }
       }
 
       // 流式结束后更新React状态
-      setResponse({ coach: currentCoachName, analysis: analysisText.current });
+      setResponse({ coachName: 'AI统一教练', analysis: analysisText.current });
     } catch (e) {
       console.error(e);
     } finally {
@@ -140,18 +129,9 @@ export default function AICoach() {
         <CardBody>
           <VStack spacing={4} align="stretch">
             <HStack spacing={4}>
-              <Select
-                value={coachId}
-                onChange={e => setCoachId(e.target.value)}
-                bg="gray.700"
-                border="none"
-                color="white"
-                flex={1}
-              >
-                {COACHES.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </Select>
+              <Text color="teal.400" fontSize="sm" fontWeight="bold" px={3} py={2} bg="gray.700" borderRadius="md">
+                AI统一教练
+              </Text>
               <Select
                 value={selectedGirlId}
                 onChange={e => setSelectedGirlId(e.target.value)}
@@ -219,7 +199,7 @@ export default function AICoach() {
         <Card bg="gray.800">
           <CardHeader>
             <Heading size="sm" color="teal.400">
-              {response?.coach || coachName || 'AI教练'}的建议
+              {response?.coachName || 'AI统一教练'}的建议
             </Heading>
           </CardHeader>
           <CardBody>

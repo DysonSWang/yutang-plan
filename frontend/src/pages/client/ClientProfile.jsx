@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Box, Heading, Card, CardBody, SimpleGrid, Badge, Text, VStack, HStack, Flex, Avatar, Button, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure, FormControl, FormLabel, Input, Select, Textarea, useToast, Spinner } from '@chakra-ui/react';
 import { clients } from '../../utils/api';
-import { useAuth } from '../../contexts/AuthContext';
 import RegionSelector from '../../components/RegionSelector';
 
 const STAGE_COLORS = {
@@ -127,7 +126,6 @@ function ProfileField({ field, value, onChange }) {
 }
 
 export default function ClientProfile() {
-  const { user } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

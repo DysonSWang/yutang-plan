@@ -1,24 +1,34 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { ChakraProvider } from '@chakra-ui/react';
+import { ChakraProvider, Spinner, Center } from '@chakra-ui/react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
 import theme from './theme';
 import Login from './pages/Login';
 import ClientLayout from './pages/client/ClientLayout';
 import AdminLayout from './pages/admin/AdminLayout';
-import ClientHome from './pages/client/Home';
-import ClientProfile from './pages/client/ClientProfile';
-import ClientChat from './pages/client/Chat';
-import AICoach from './pages/client/AICoach';
-import MyPond from './pages/client/MyPond';
-import ClientDates from './pages/client/ClientDates';
-import AdminDashboard from './pages/admin/Dashboard';
-import AdminClients from './pages/admin/Clients';
-import AdminGirls from './pages/admin/Girls';
-import AdminChat from './pages/admin/Chat';
-import AdminWorkbench from './pages/admin/Workbench';
-import AdminProgress from './pages/admin/Progress';
-import AdminDates from './pages/admin/Dates';
+
+const ClientHome = lazy(() => import('./pages/client/Home'));
+const ClientProfile = lazy(() => import('./pages/client/ClientProfile'));
+const ClientChat = lazy(() => import('./pages/client/Chat'));
+const AICoach = lazy(() => import('./pages/client/AICoach'));
+const MyPond = lazy(() => import('./pages/client/MyPond'));
+const ClientDates = lazy(() => import('./pages/client/ClientDates'));
+const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
+const AdminClients = lazy(() => import('./pages/admin/Clients'));
+const AdminGirls = lazy(() => import('./pages/admin/Girls'));
+const AdminChat = lazy(() => import('./pages/admin/Chat'));
+const AdminWorkbench = lazy(() => import('./pages/admin/Workbench'));
+const AdminProgress = lazy(() => import('./pages/admin/Progress'));
+const AdminDates = lazy(() => import('./pages/admin/Dates'));
+
+function PageLoader() {
+  return (
+    <Center h="100vh">
+      <Spinner size="xl" color="blue.500" />
+    </Center>
+  );
+}
 
 function ProtectedRoute({ children, requireOperator = false }) {
   const { user, loading } = useAuth();
@@ -35,6 +45,7 @@ function AppRoutes() {
   if (loading) return null;
 
   return (
+    <Suspense fallback={<PageLoader />}>
     <Routes>
       <Route path="/login" element={user ? <Navigate to={user.role === 'client' ? '/' : '/admin'} /> : <Login />} />
       <Route path="/" element={<ProtectedRoute><ClientLayout /></ProtectedRoute>}>
@@ -55,6 +66,7 @@ function AppRoutes() {
         <Route path="dates" element={<AdminDates />} />
       </Route>
     </Routes>
+    </Suspense>
   );
 }
 

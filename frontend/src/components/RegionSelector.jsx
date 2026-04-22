@@ -317,33 +317,8 @@ const REGION_DATA = {
       { code: '610900', name: '安康市' },
       { code: '611000', name: '商洛市' },
     ],
-    '510000': [
-      { code: '510100', name: '成都市' },
-      { code: '510300', name: '自贡市' },
-      { code: '510400', name: '攀枝花市' },
-      { code: '510500', name: '泸州市' },
-      { code: '510600', name: '德阳市' },
-      { code: '510700', name: '绵阳市' },
-      { code: '510800', name: '广元市' },
-      { code: '510900', name: '遂宁市' },
-      { code: '511000', name: '内江市' },
-      { code: '511100', name: '乐山市' },
-      { code: '511300', name: '南充市' },
-      { code: '511400', name: '眉山市' },
-      { code: '511500', name: '宜宾市' },
-      { code: '511600', name: '广安市' },
-      { code: '511700', name: '达州市' },
-      { code: '511800', name: '雅安市' },
-      { code: '511900', name: '巴中市' },
-      { code: '512000', name: '资阳市' },
-    ],
   }
 };
-
-// 获取城市列表（根据省份编码）
-function getCities(provinceCode) {
-  return REGION_DATA.cities[provinceCode] || [];
-}
 
 // 通用城市数据（省份编码前2位映射到城市列表，省略市辖区等细节）
 const CITY_BY_PROVINCE = {
@@ -552,7 +527,7 @@ const CITY_BY_PROVINCE = {
  * @param {function} onChange - 值变化回调
  * @param {string} placeholder - 占位符
  */
-export default function RegionSelector({ value, onChange, placeholder = '请选择省市区' }) {
+export default function RegionSelector({ value, onChange }) {
   const parts = value ? value.split(' ') : [];
   const [province, setProvince] = useState(parts[0] || '');
   const [city, setCity] = useState(parts[1] || '');

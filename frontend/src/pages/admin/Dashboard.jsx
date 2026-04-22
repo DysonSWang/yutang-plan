@@ -1,15 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   Box, Heading, SimpleGrid, Card, CardBody, Stat, StatLabel, StatNumber, StatHelpText,
   Table, Thead, Tbody, Tr, Th, Td, Text, Badge, Button, HStack, VStack, Flex, Select,
   Spinner, Progress, Divider, Icon
 } from '@chakra-ui/react';
-import { dashboard as dashboardApi, clients as clientsApi, girls as girlsApi } from '../../utils/api';
+import { dashboard as dashboardApi, clients as clientsApi } from '../../utils/api';
 import { RefreshIcon, SparklesIcon, ClipboardIcon, WarningIcon, CalendarIcon, FireIcon, SnowIcon, InfoIcon } from '../../components/Icons';
 
 const STAGE_COLORS = {
   '背调': 'blue', '建池': 'cyan', '约会': 'green', '锁定': 'orange', '维护': 'teal',
-  '陌生': 'gray', '搭讪': 'blue', '聊天': 'cyan', '暧昧': 'orange', '约会': 'green', '长期': 'teal'
+  '陌生': 'gray', '搭讪': 'blue', '聊天': 'cyan', '暧昧': 'orange', '长期': 'teal'
 };
 
 const ALERT_COLORS = {
@@ -33,27 +33,7 @@ export default function AdminDashboard() {
   const [analyzeProgress, setAnalyzeProgress] = useState('');
   const [briefUpdatedAt, setBriefUpdatedAt] = useState(null);
 
-  useEffect(() => {
-    loadInitialData();
-    loadStats();
-  }, []);
-
-  useEffect(() => {
-    loadStats();
-  }, [selectedClientId]);
-
-  const loadInitialData = async () => {
-    try {
-      const res = await clientsApi.list();
-      if (res.success) {
-        setClientList(res.clients);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     setLoading(true);
     try {
       const statsRes = await dashboardApi.stats(selectedClientId);
@@ -71,7 +51,27 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false);
     }
+  }, [selectedClientId]);
+
+  const loadInitialData = async () => {
+    try {
+      const res = await clientsApi.list();
+      if (res.success) {
+        setClientList(res.clients);
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
+
+  useEffect(() => {
+    loadInitialData();
+    loadStats();
+  }, [loadStats]);
+
+  useEffect(() => {
+    loadStats();
+  }, [selectedClientId, loadStats]);
 
   // 轮询异步分析结果
   const pollAnalyzeResult = async (jobId, maxAttempts = 90) => {

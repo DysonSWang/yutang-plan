@@ -1,4 +1,4 @@
-import { Box, Flex, VStack, Text, Badge, Icon, useBreakpointValue, HStack, Spacer } from '@chakra-ui/react';
+import { Box, Flex, VStack, Text, Badge, Icon, HStack } from '@chakra-ui/react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { DashboardIcon, UsersIcon, FemaleIcon, ChatIcon, BrainIcon, ChartIcon, FishIcon, CalendarIcon } from '../../components/Icons';
@@ -107,8 +107,6 @@ function MobileBottomNav() {
 }
 
 export default function AdminLayout() {
-  const isMobile = useBreakpointValue({ base: true, lg: false });
-
   return (
     <Box minH="100vh" bg="gray.900">
       {/* 桌面端侧边导航 */}

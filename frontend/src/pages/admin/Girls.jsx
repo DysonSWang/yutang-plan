@@ -73,6 +73,28 @@ export default function AdminGirls() {
   const momentFileRef = useRef(null);
   const toast = useToast();
 
+  const loadGirls = async () => {
+    try {
+      const res = await girls.list();
+      if (res.success) {
+        setGirlsList(res.girls);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const loadClients = async () => {
+    try {
+      const res = await clients.list();
+      if (res.success) {
+        setClientList(res.clients);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   useEffect(() => {
     loadGirls();
     loadClients();
@@ -114,31 +136,9 @@ export default function AdminGirls() {
       // 匹配相关
       matchScore: '', matchScoreBasis: '', matePreferences: '',
       // 元数据
-      sourcePlatform: '', homepageUrl: '', photos: '', videos: '', notes: ''
+      sourcePlatform: '', homepageUrl: '', videos: '', notes: ''
     };
   }
-
-  const loadGirls = async () => {
-    try {
-      const res = await girls.list();
-      if (res.success) {
-        setGirlsList(res.girls);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const loadClients = async () => {
-    try {
-      const res = await clients.list();
-      if (res.success) {
-        setClientList(res.clients);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
 
   // 切换客户时更新配额信息
   const handleClientChange = (clientId) => {
@@ -194,7 +194,6 @@ export default function AdminGirls() {
       appearance: girl.appearance || '',
       height: girl.height || '',
       bodyType: girl.bodyType || '',
-      photos: girl.photos || '',
       styleTags: girl.styleTags || '',
       familyBackground: girl.familyBackground || '',
       familyAtmosphere: girl.familyAtmosphere || '',
@@ -482,7 +481,7 @@ export default function AdminGirls() {
               setMomentScreenshots(found.momentPhotos ? JSON.parse(found.momentPhotos) : []);
             }
           }
-        } catch {}
+        } catch { /* ignore refresh error */ }
 
         // 触发 AI 分析
         if (data.screenshot?.id) {
@@ -491,7 +490,7 @@ export default function AdminGirls() {
           try {
             const aiRes = await chatScreenshots.aiNotes(data.screenshot.id);
             if (aiRes.success) setMomentAiResult(aiRes.notes || '');
-          } catch {}
+          } catch { /* ignore ai error */ }
           setAnalyzingMoment(false);
         }
         // 如果有 AI 识别的额外字段（如年龄/职业/城市等），弹窗让用户选择录入
@@ -528,7 +527,7 @@ export default function AdminGirls() {
       await girls.update(selectedGirl.id, { momentPhotos: JSON.stringify(updated) });
       setMomentScreenshots(updated);
       toast({ title: '已删除', status: 'success', duration: 1500 });
-    } catch {}
+    } catch { /* ignore delete error */ }
   };
 
   const renderField = (label, value, parseJSON = false) => {
@@ -542,17 +541,6 @@ export default function AdminGirls() {
     if (!displayValue) return <Text color="gray.500">-</Text>;
     return <Text color="white">{displayValue}</Text>;
   };
-
-  const renderFormField = (field, label, placeholder = '', isTextarea = false) => (
-    <FormControl>
-      <FormLabel color="gray.400" fontSize="sm">{label}</FormLabel>
-      {isTextarea ? (
-        <Textarea value={formData[field]} onChange={e => setFormData({...formData, [field]: e.target.value})} placeholder={placeholder} bg="gray.700" rows={2} />
-      ) : (
-        <Input value={formData[field]} onChange={e => setFormData({...formData, [field]: e.target.value})} placeholder={placeholder} bg="gray.700" />
-      )}
-    </FormControl>
-  );
 
   const getTensionColor = (score) => {
     if (score >= 7) return 'red.400';
@@ -578,61 +566,103 @@ export default function AdminGirls() {
 
       <Card bg="gray.800">
         <CardBody>
-          <Table variant="simple" color="gray.300" size="sm">
-            <Thead>
-              <Tr>
-                <Th color="gray.400">昵称</Th>
-                <Th color="gray.400">年龄</Th>
-                <Th color="gray.400">职业</Th>
-                <Th color="gray.400">阶段</Th>
-                <Th color="gray.400">热度</Th>
-                <Th color="gray.400">亲密度</Th>
-                <Th color="gray.400">Kink</Th>
-                <Th color="gray.400">操作</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {girlsList.map(girl => (
-                <Tr key={girl.id} _hover={{ bg: 'gray.750' }} transition="background 0.15s ease" cursor="pointer" onClick={() => openDetailModal(girl)}>
-                  <Td fontWeight="bold">{girl.name}</Td>
-                  <Td>{girl.age || '-'}</Td>
-                  <Td>{girl.occupation || '-'}</Td>
-                  <Td><Badge colorScheme="teal">{girl.stage || '陌生'}</Badge></Td>
-                  <Td>
-                    <Text color={getTensionColor(girl.tensionScore)} fontSize="sm">
-                      {girl.tensionScore?.toFixed(1) || '5.0'} {getTensionIcon(girl.tensionScore)}
-                    </Text>
-                  </Td>
-                  <Td>
-                    <HStack>
-                      {Array.from({ length: girl.intimacyLevel || 1 }).map((_, i) => (
-                        <Icon key={i} as={HeartIcon} color="red.400" boxSize={4} />
-                      ))}
-                    </HStack>
-                  </Td>
-                  <Td>
-                    {girl.isKinkOriented ? <Badge colorScheme="purple">K</Badge> : <Text color="gray.600">-</Text>}
-                  </Td>
-                  <Td>
-                    <HStack spacing={2}>
-                      <Button size="xs" colorScheme="teal" variant="ghost" onClick={() => openDetailModal(girl)}>详情</Button>
-                      <Button size="xs" colorScheme="blue" variant="ghost" onClick={(e) => { e.stopPropagation(); openEditModal(girl); }}>编辑</Button>
-                      <Button size="xs" colorScheme="orange" variant="ghost" onClick={(e) => { e.stopPropagation(); openScreenshotModal(girl); }}>截图</Button>
-                      <Button size="xs" colorScheme="red" variant="ghost" onClick={(e) => { e.stopPropagation(); deleteGirl(girl.id); }}>删除</Button>
-                    </HStack>
-                  </Td>
+          {/* 桌面端表格 */}
+          <Box display={{ base: 'none', lg: 'block' }}>
+            <Table variant="simple" color="gray.300" size="sm">
+              <Thead>
+                <Tr>
+                  <Th color="gray.400">昵称</Th>
+                  <Th color="gray.400">年龄</Th>
+                  <Th color="gray.400">职业</Th>
+                  <Th color="gray.400">阶段</Th>
+                  <Th color="gray.400">热度</Th>
+                  <Th color="gray.400">亲密度</Th>
+                  <Th color="gray.400">Kink</Th>
+                  <Th color="gray.400">操作</Th>
                 </Tr>
-              ))}
-              {girlsList.length === 0 && (
-                <Tr><Td colSpan={8} textAlign="center" color="gray.500">暂无女生资源</Td></Tr>
-              )}
-            </Tbody>
-          </Table>
+              </Thead>
+              <Tbody>
+                {girlsList.map(girl => (
+                  <Tr key={girl.id} _hover={{ bg: 'gray.750' }} transition="background 0.15s ease" cursor="pointer" onClick={() => openDetailModal(girl)}>
+                    <Td fontWeight="bold">{girl.name}</Td>
+                    <Td>{girl.age || '-'}</Td>
+                    <Td>{girl.occupation || '-'}</Td>
+                    <Td><Badge colorScheme="teal">{girl.stage || '陌生'}</Badge></Td>
+                    <Td>
+                      <Text color={getTensionColor(girl.tensionScore)} fontSize="sm">
+                        {girl.tensionScore?.toFixed(1) || '5.0'} {getTensionIcon(girl.tensionScore)}
+                      </Text>
+                    </Td>
+                    <Td>
+                      <HStack>
+                        {Array.from({ length: girl.intimacyLevel || 1 }).map((_, i) => (
+                          <Icon key={i} as={HeartIcon} color="red.400" boxSize={4} />
+                        ))}
+                      </HStack>
+                    </Td>
+                    <Td>
+                      {girl.isKinkOriented ? <Badge colorScheme="purple">K</Badge> : <Text color="gray.600">-</Text>}
+                    </Td>
+                    <Td>
+                      <HStack spacing={2}>
+                        <Button size="xs" colorScheme="teal" variant="ghost" onClick={() => openDetailModal(girl)}>详情</Button>
+                        <Button size="xs" colorScheme="blue" variant="ghost" onClick={(e) => { e.stopPropagation(); openEditModal(girl); }}>编辑</Button>
+                        <Button size="xs" colorScheme="orange" variant="ghost" onClick={(e) => { e.stopPropagation(); openScreenshotModal(girl); }}>截图</Button>
+                        <Button size="xs" colorScheme="red" variant="ghost" onClick={(e) => { e.stopPropagation(); deleteGirl(girl.id); }}>删除</Button>
+                      </HStack>
+                    </Td>
+                  </Tr>
+                ))}
+                {girlsList.length === 0 && (
+                  <Tr><Td colSpan={8} textAlign="center" color="gray.500">暂无女生资源</Td></Tr>
+                )}
+              </Tbody>
+            </Table>
+          </Box>
+
+          {/* 移动端卡片列表 */}
+          <Box display={{ base: 'block', lg: 'none' }}>
+            {girlsList.length === 0 ? (
+              <Text color="gray.500" textAlign="center" py={8}>暂无女生资源</Text>
+            ) : (
+              <VStack spacing={3} align="stretch">
+                {girlsList.map(girl => (
+                  <Card key={girl.id} bg="gray.700" size="sm" cursor="pointer" onClick={() => openDetailModal(girl)} _hover={{ bg: 'gray.650' }} transition="background 0.15s">
+                    <CardBody py={3} px={4}>
+                      <Flex justify="space-between" align="center" mb={2}>
+                        <HStack>
+                          <Text fontWeight="bold" color="white">{girl.name}</Text>
+                          <Badge colorScheme="teal">{girl.stage || '陌生'}</Badge>
+                          {girl.isKinkOriented && <Badge colorScheme="purple">K</Badge>}
+                        </HStack>
+                        <HStack spacing={1}>
+                          <Button size="xs" colorScheme="blue" variant="ghost" onClick={(e) => { e.stopPropagation(); openEditModal(girl); }}>编辑</Button>
+                          <Button size="xs" colorScheme="red" variant="ghost" onClick={(e) => { e.stopPropagation(); deleteGirl(girl.id); }}>删除</Button>
+                        </HStack>
+                      </Flex>
+                      <HStack spacing={4} wrap="wrap">
+                        <Text color="gray.400" fontSize="xs">{girl.age || '-'}岁</Text>
+                        <Text color="gray.400" fontSize="xs">{girl.occupation || '-'}</Text>
+                        <HStack spacing={1}>
+                          {Array.from({ length: girl.intimacyLevel || 1 }).map((_, i) => (
+                            <Icon key={i} as={HeartIcon} color="red.400" boxSize={3} />
+                          ))}
+                        </HStack>
+                        <Text color={getTensionColor(girl.tensionScore)} fontSize="xs">
+                          {girl.tensionScore?.toFixed(1) || '5.0'}
+                        </Text>
+                      </HStack>
+                    </CardBody>
+                  </Card>
+                ))}
+              </VStack>
+            )}
+          </Box>
         </CardBody>
       </Card>
 
       {/* 添加/编辑女生弹窗 */}
-      <Modal isOpen={isOpen} onClose={onClose} size="4xl">
+      <Modal isOpen={isOpen} onClose={onClose} size={{ base: 'full', lg: '4xl' }}>
         <ModalOverlay />
         <ModalContent bg="gray.800">
           <ModalHeader color="white">{selectedGirl ? '编辑女生' : '添加女生'}</ModalHeader>
@@ -671,7 +701,7 @@ export default function AdminGirls() {
                       <FormLabel color="gray.400">昵称</FormLabel>
                       <Input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} bg="gray.700" />
                     </FormControl>
-                    <SimpleGrid columns={4} spacing={4}>
+                    <SimpleGrid columns={{ base: 1, sm: 2, md: 4 }} spacing={4}>
                       <FormControl>
                         <FormLabel color="gray.400">年龄</FormLabel>
                         <NumberInput value={formData.age} onChange={(_, v) => setFormData({...formData, age: v})} bg="gray.700" min={18} max={60}>
@@ -697,7 +727,7 @@ export default function AdminGirls() {
                         <Input value={formData.major} onChange={e => setFormData({...formData, major: e.target.value})} bg="gray.700" />
                       </FormControl>
                     </SimpleGrid>
-                    <SimpleGrid columns={3} spacing={4}>
+                    <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
                       <FormControl>
                         <FormLabel color="gray.400">籍贯</FormLabel>
                         <Select value={formData.hometown} onChange={e => setFormData({...formData, hometown: e.target.value})} bg="gray.700" color="white">
@@ -741,7 +771,7 @@ export default function AdminGirls() {
                       <FormLabel color="gray.400">外貌描述</FormLabel>
                       <Textarea value={formData.appearance} onChange={e => setFormData({...formData, appearance: e.target.value})} placeholder="穿着风格、发型、肤色..." bg="gray.700" rows={2} />
                     </FormControl>
-                    <SimpleGrid columns={4} spacing={4}>
+                    <SimpleGrid columns={{ base: 1, sm: 2, md: 4 }} spacing={4}>
                       <FormControl>
                         <FormLabel color="gray.400">身高(cm)</FormLabel>
                         <NumberInput value={formData.height} onChange={(_, v) => setFormData({...formData, height: v})} bg="gray.700" min={140} max={200}>
@@ -808,7 +838,7 @@ export default function AdminGirls() {
                 <TabPanel px={0}>
                   <VStack spacing={4} align="stretch">
                     <Text color="white" fontWeight="bold">生活状态</Text>
-                    <SimpleGrid columns={3} spacing={4}>
+                    <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
                       <FormControl>
                         <FormLabel color="gray.400">工作作息</FormLabel>
                         <Select value={formData.workSchedule} onChange={e => setFormData({...formData, workSchedule: e.target.value})} bg="gray.700" color="white">
@@ -918,7 +948,7 @@ export default function AdminGirls() {
                     </FormControl>
                     {formData.isKinkOriented && (
                       <>
-                        <SimpleGrid columns={3} spacing={4}>
+                        <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
                           <FormControl>
                             <FormLabel color="gray.400">身份</FormLabel>
                             <Select value={formData.kinkIdentity} onChange={e => setFormData({...formData, kinkIdentity: e.target.value})} bg="gray.700" color="white">
@@ -961,7 +991,7 @@ export default function AdminGirls() {
                 <TabPanel px={0}>
                   <VStack spacing={4} align="stretch">
                     <Text color="white" fontWeight="bold">内在画像（AI提炼）</Text>
-                    <SimpleGrid columns={3} spacing={4}>
+                    <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
                       <FormControl>
                         <FormLabel color="gray.400">性格/MBTI</FormLabel>
                         <Select value={formData.personality} onChange={e => setFormData({...formData, personality: e.target.value})} bg="gray.700" color="white">
@@ -1050,7 +1080,7 @@ export default function AdminGirls() {
                     </SimpleGrid>
 
                     <Text color="white" fontWeight="bold" mt={2}>谙世画像（EQ维度）</Text>
-                    <SimpleGrid columns={5} spacing={4}>
+                    <SimpleGrid columns={{ base: 1, sm: 2, md: 5 }} spacing={4}>
                       {[
                         { key: 'empathy', label: '同理心' },
                         { key: 'selfAwareness', label: '自我认知' },
@@ -1073,7 +1103,7 @@ export default function AdminGirls() {
                 <TabPanel px={0}>
                   <VStack spacing={4} align="stretch">
                     <Text color="white" fontWeight="bold">关系状态</Text>
-                    <SimpleGrid columns={4} spacing={4}>
+                    <SimpleGrid columns={{ base: 1, sm: 2, md: 4 }} spacing={4}>
                       <FormControl>
                         <FormLabel color="gray.400">阶段</FormLabel>
                         <Select value={formData.stage} onChange={e => setFormData({...formData, stage: e.target.value})} bg="gray.700" color="white">
@@ -1153,13 +1183,28 @@ export default function AdminGirls() {
                 </TabPanel>
               </TabPanels>
             </Tabs>
-            <Button colorScheme="teal" w="100%" mt={6} onClick={handleSubmit} isDisabled={!selectedGirl && selectedClientQuota && selectedClientQuota.count >= selectedClientQuota.quota} transition="all 0.15s ease" _hover={{ transform: 'translateY(-1px)' }}>{selectedGirl ? '保存修改' : '添加女生'}</Button>
+            <Button
+              colorScheme="teal"
+              w="100%"
+              mt={6}
+              onClick={handleSubmit}
+              isDisabled={!selectedGirl && selectedClientQuota && selectedClientQuota.count >= selectedClientQuota.quota}
+              transition="all 0.15s ease"
+              _hover={{ transform: 'translateY(-1px)' }}
+            >
+              {selectedGirl ? '保存修改' : '添加女生'}
+            </Button>
+            {!selectedGirl && selectedClientQuota && selectedClientQuota.count >= selectedClientQuota.quota && (
+              <Text color="red.400" fontSize="xs" textAlign="center" mt={2}>
+                配额不足，请先在 Clients 页面调整该客户额度
+              </Text>
+            )}
           </ModalBody>
         </ModalContent>
       </Modal>
 
       {/* 女生详情弹窗 */}
-      <Modal isOpen={isDetailOpen} onClose={onDetailClose} size="4xl">
+      <Modal isOpen={isDetailOpen} onClose={onDetailClose} size={{ base: 'full', lg: '4xl' }}>
         <ModalOverlay />
         <ModalContent bg="gray.800" overflow="auto">
           <ModalHeader color="white">
@@ -1180,7 +1225,7 @@ export default function AdminGirls() {
                 </TabList>
                 <TabPanels>
                   <TabPanel px={0}>
-                    <SimpleGrid columns={3} spacing={4}>
+                    <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
                       <Box><Text color="gray.400" fontSize="sm">年龄</Text>{renderField('age', selectedGirl.age)}</Box>
                       <Box><Text color="gray.400" fontSize="sm">身高</Text>{renderField('height', selectedGirl.height ? selectedGirl.height + 'cm' : '')}</Box>
                       <Box><Text color="gray.400" fontSize="sm">职业</Text>{renderField('occupation', selectedGirl.occupation)}</Box>
@@ -1214,7 +1259,7 @@ export default function AdminGirls() {
                     {selectedGirl.photos && (
                       <Box mb={4}>
                         <Text color="gray.400" fontSize="sm" mb={2}>照片</Text>
-                        <SimpleGrid columns={3} spacing={2}>
+                        <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={2}>
                           {(parseJSONField(selectedGirl.photos) || []).map((url, i) => (
                             <Image key={i} src={url} alt="照片" h="100px" objectFit="cover" borderRadius="md" cursor="pointer" onClick={() => window.open(url, '_blank')} _hover={{ opacity: 0.8 }} />
                           ))}
@@ -1262,7 +1307,7 @@ export default function AdminGirls() {
                       <>
                         <Divider my={4} borderColor="gray.600" />
                         <Text color="purple.400" fontWeight="bold" mb={2}>字母圈属性</Text>
-                        <SimpleGrid columns={3} spacing={4}>
+                        <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
                           <Box><Text color="gray.400" fontSize="sm">身份</Text>{renderField('kinkIdentity', selectedGirl.kinkIdentity)}</Box>
                           <Box><Text color="gray.400" fontSize="sm">经验</Text>{renderField('kinkExperience', selectedGirl.kinkExperience)}</Box>
                           <Box><Text color="gray.400" fontSize="sm">边界</Text>{renderField('kinkBoundaries', selectedGirl.kinkBoundaries)}</Box>
@@ -1274,7 +1319,7 @@ export default function AdminGirls() {
                   </TabPanel>
                   <TabPanel px={0}>
                     <Text color="white" fontWeight="bold" mb={2}>内在画像</Text>
-                    <SimpleGrid columns={3} spacing={4} mb={4}>
+                    <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4} mb={4}>
                       <Box><Text color="gray.400" fontSize="sm">性格</Text>{renderField('personality', selectedGirl.personality)}</Box>
                       <Box><Text color="gray.400" fontSize="sm">价值观</Text>{renderField('values_', selectedGirl.values_)}</Box>
                       <Box><Text color="gray.400" fontSize="sm">沟通风格</Text>{renderField('communicationStyle', selectedGirl.communicationStyle)}</Box>
@@ -1286,7 +1331,7 @@ export default function AdminGirls() {
                       <Box><Text color="gray.400" fontSize="sm">兴趣爱好</Text>{renderField('interests', selectedGirl.interests)}</Box>
                     </SimpleGrid>
                     <Text color="white" fontWeight="bold" mb={2}>谙世EQ维度</Text>
-                    <SimpleGrid columns={5} spacing={4} mb={4}>
+                    <SimpleGrid columns={{ base: 1, sm: 2, md: 5 }} spacing={4} mb={4}>
                       {[
                         { key: 'empathy', label: '同理心' },
                         { key: 'selfAwareness', label: '自我认知' },
@@ -1314,7 +1359,7 @@ export default function AdminGirls() {
                   </TabPanel>
                   <TabPanel px={0}>
                     <Text color="white" fontWeight="bold" mb={2}>关系状态</Text>
-                    <SimpleGrid columns={4} spacing={4} mb={4}>
+                    <SimpleGrid columns={{ base: 1, sm: 2, md: 4 }} spacing={4} mb={4}>
                       <Box><Text color="gray.400" fontSize="sm">阶段</Text><Badge colorScheme="teal">{selectedGirl.stage}</Badge></Box>
                       <Box><Text color="gray.400" fontSize="sm">状态</Text><Badge>{selectedGirl.status}</Badge></Box>
                       <Box><Text color="gray.400" fontSize="sm">亲密度</Text>
@@ -1424,7 +1469,7 @@ export default function AdminGirls() {
                             <Text color="gray.500">暂无朋友圈截图</Text>
                           </Flex>
                         ) : (
-                          <SimpleGrid columns={4} spacing={4}>
+                          <SimpleGrid columns={{ base: 1, sm: 2, md: 4 }} spacing={4}>
                             {momentScreenshots.map(m => (
                               <Box key={m.id} position="relative" bg="gray.700" borderRadius="md" overflow="hidden">
                                 <Image
@@ -1464,7 +1509,7 @@ export default function AdminGirls() {
       </Modal>
 
       {/* 截图管理弹窗 */}
-      <Modal isOpen={isScreenshotOpen} onClose={onScreenshotClose} size="4xl">
+      <Modal isOpen={isScreenshotOpen} onClose={onScreenshotClose} size={{ base: 'full', lg: '4xl' }}>
         <ModalOverlay />
         <ModalContent bg="gray.800" maxH="85vh" overflow="auto">
           <ModalHeader color="white">
@@ -1499,7 +1544,7 @@ export default function AdminGirls() {
                     <Text color="gray.500">暂无截图记录</Text>
                   </Flex>
                 ) : (
-                  <SimpleGrid columns={4} spacing={4}>
+                  <SimpleGrid columns={{ base: 2, sm: 3, md: 4 }} spacing={4}>
                     {screenshots.map(ss => (
                       <Box
                         key={ss.id}
@@ -1642,7 +1687,7 @@ export default function AdminGirls() {
       </Modal>
 
       {/* 图片预览弹窗 */}
-      <Modal isOpen={!!previewImage} onClose={() => setPreviewImage(null)} size="4xl">
+      <Modal isOpen={!!previewImage} onClose={() => setPreviewImage(null)} size={{ base: 'full', md: '4xl' }}>
         <ModalOverlay bg="blackAlpha.800" />
         <ModalContent bg="transparent" boxShadow="none">
           <ModalCloseButton color="white" zIndex={10} />

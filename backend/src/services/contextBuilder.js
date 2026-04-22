@@ -6,13 +6,86 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+// ---- Relevance Filtering ----
+
 /**
- * 构建AI教练的上下文Prompt
+ * Extract Chinese/English keywords from user message for relevance scoring
+ */
+function extractKeywords(text, minLen = 2) {
+  if (!text) return [];
+  // Match Chinese chars, English words, and numbers
+  const matches = text.match(/[一-鿿]{2,}/g) || [];
+  const english = text.match(/[a-zA-Z]{3,}/g) || [];
+  return [...matches, ...english].filter(w => w.length >= minLen);
+}
+
+/**
+ * Score a context item by keyword overlap with user message
+ * Returns 0 (irrelevant) to 1 (highly relevant)
+ */
+function scoreRelevance(item, keywords, textExtractor) {
+  if (!keywords.length) return 0.5; // neutral if no keywords
+  const text = textExtractor(item).toLowerCase();
+  const hits = keywords.filter(k => text.includes(k.toLowerCase()));
+  return hits.length / keywords.length;
+}
+
+/**
+ * Filter and rank signals by relevance to current user message
+ */
+function filterSignalsByRelevance(signals, keywords) {
+  if (!keywords.length) return signals;
+  const scored = signals.map(s => ({
+    ...s,
+    score: scoreRelevance(s, keywords, i => `${i.event || ''} ${i.type || ''}`)
+  }));
+  return scored.sort((a, b) => b.score - a.score);
+}
+
+/**
+ * Filter learnings by relevance (keyword overlap on content/scene/type)
+ */
+function filterLearningsByRelevance(learnings, keywords) {
+  if (!keywords.length) return learnings.slice(0, 10);
+  const scored = learnings.map(l => ({
+    ...l,
+    score: scoreRelevance(l, keywords, i => `${i.content || ''} ${i.scene || ''} ${i.type || ''}`)
+  }));
+  return scored
+    .filter(l => l.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10);
+}
+
+/**
+ * Budget-aware context section builder
+ * Truncates sections to fit within maxChars
+ */
+function buildContextSection(label, content, maxChars) {
+  if (!content) return '';
+  const header = `\n【${label}】\n`;
+  const available = maxChars - header.length;
+  if (available <= 0) return '';
+  if (content.length <= available) return header + content;
+  // Truncate with ellipsis
+  return header + content.slice(0, available - 4) + '...';
+}
+
+// ---- Main Context Builder ----
+
+/**
+ * 构建AI教练的上下文Prompt（预算感知 + 相关性过滤）
  * @param {string} clientId - 客户ID
  * @param {string} girlId - 女生ID（可选）
- * @param {string} userMessage - 用户当前问题
+ * @param {string} userMessage - 用户当前问题（用于相关性过滤）
+ * @param {Object} opts - 选项
+ * @param {number} opts.maxContextChars - 最大上下文字符数（预算感知）
+ * @param {number} opts.turnCount - 当前对话轮次（深度感知）
+ * @param {number} opts.compactionCount - 已压缩次数（深度感知）
  */
-async function buildAICoachContext(clientId, girlId, userMessage) {
+async function buildAICoachContext(clientId, girlId, userMessage, opts = {}) {
+  const { maxContextChars = 2000, turnCount = 0, compactionCount = 0 } = opts;
+  const keywords = extractKeywords(userMessage);
   // 1. 获取客户信息
   const client = await prisma.user.findUnique({
     where: { id: clientId },
@@ -105,21 +178,74 @@ async function buildAICoachContext(clientId, girlId, userMessage) {
     }
   }
 
-  // 3. 获取客户经验（按场景召回 - 暂时取所有，后期可优化为语义搜索）
-  const learnings = await prisma.clientLearning.findMany({
+  // 3. 获取客户经验（先取更多，再做相关性过滤）
+  const rawLearnings = await prisma.clientLearning.findMany({
     where: {
       clientId,
       OR: [{ girlId: null }, { girlId: girlId || undefined }]
     },
     orderBy: { createdAt: 'desc' },
-    take: 10
+    take: 20
   });
+  const learnings = filterLearningsByRelevance(rawLearnings, keywords);
 
-  // 4. 组装上下文
+  // 3b. 相关性过滤 signals
+  const filteredSignals = filterSignalsByRelevance(recentSignals, keywords);
+
+  // 4. 组装上下文（按优先级分配预算）
+  const sections = [];
+
+  // 女生档案（固定，无关预算，AI需要基本信息）
+  if (girlInfo) {
+    const profile = `${girlInfo.name} | ${girlInfo.stage || '未知'} | 热度${girlInfo.tensionScore || 5}/10 | 亲密度${girlInfo.intimacyLevel || 1}`;
+    sections.push({ label: '女生档案', content: profile, priority: 0 });
+    sections.push({ label: '性格', content: `沟通风格:${girlInfo.personality?.communicationStyle || '未知'} MBTI:${girlInfo.personality?.mbti || '未知'}`, priority: 1 });
+  }
+
+  // 近期信号（相关性过滤后）
+  if (filteredSignals.length > 0) {
+    const signalsText = filteredSignals.map(s => {
+      const icon = s.type === 'positive' ? '[+]' : s.type === 'negative' ? '[-]' : '[*]';
+      return `${icon} ${s.event} — ${s.date}`;
+    }).join('\n');
+    sections.push({ label: '近期关键信号', content: signalsText, priority: 2 });
+  }
+
+  // 待推进事项（相关性过滤）
+  if (pendingActions.length > 0) {
+    const scoredActions = pendingActions.map(a => ({
+      content: a,
+      score: scoreRelevance({ event: a }, keywords, i => i.event || '')
+    })).sort((a, b) => b.score - a.score);
+    const topActions = scoredActions.slice(0, 3);
+    if (topActions.length > 0) {
+      sections.push({ label: '待推进事项', content: topActions.map(a => `- ${a.content}`).join('\n'), priority: 3 });
+    }
+  }
+
+  // 观察记录
+  if (observations.length > 0) {
+    sections.push({ label: '观察记录', content: observations.slice(0, 3).map(o => `- ${o}`).join('\n'), priority: 4 });
+  }
+
+  // 经验教训（相关性过滤后）
+  if (learnings.length > 0) {
+    const learningsText = learnings.map(l => `[${l.type}] ${l.scene}: ${l.content}`).join('\n');
+    sections.push({ label: '经验教训', content: learningsText, priority: 5 });
+  }
+
+  // 对话摘要（如果存在）
+  if (conversationSummary) {
+    sections.push({ label: '对话摘要', content: conversationSummary, priority: 6 });
+  }
+
+  // 按优先级填充预算
+  const contextInfo = sections.map(s => buildContextSection(s.label, s.content, maxContextChars / sections.length)).join('');
+
   return {
     client,
     girlInfo,
-    recentSignals,
+    recentSignals: filteredSignals,
     pendingActions,
     observations,
     conversationSummary,
@@ -129,6 +255,15 @@ async function buildAICoachContext(clientId, girlId, userMessage) {
       signals: recentSignals,
       pendingActions,
       observations
+    },
+    // 预算感知上下文（主使用）
+    contextInfo,
+    contextMeta: {
+      turnCount,
+      compactionCount,
+      maxContextChars,
+      keywordCount: keywords.length,
+      sectionCount: sections.length
     }
   };
 }

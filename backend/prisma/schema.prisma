@@ -598,8 +598,39 @@ model ConversationMemory {
   compactionChain      String? // JSON: [{seq, summary, timestamp}] 递归压缩链
   tokenCount           Int @default(0)  // 累计消息token数（估算）
 
+  // ---- 硬约束（压缩时必须保留）----
+  hardConstraints String? // JSON: { taboos, emotionalTriggers, thingsToAvoid, ... } 女生禁忌等信息
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  feedbacks CoachFeedback[]
+
   @@map("conversation_memories")
+}
+
+// ========== AI教练反馈 ==========
+model CoachFeedback {
+  id           String   @id @default(uuid())
+  memoryId     String
+  memory       ConversationMemory @relation(fields: [memoryId], references: [id])
+
+  // 反馈类型
+  type         String   // 'helpful' | 'not_helpful'
+
+  // 路由相关（用于分析路由准确度）
+  routedType   String?  // 路由到的类型
+  coachesUsed  String?  // JSON array: 使用的教练ID列表
+
+  // 可选：用户可选填的简短原因
+  reason       String?
+
+  // 反馈的消息内容（便于回溯）
+  messageContent String?
+
+  createdAt    DateTime @default(now())
+
+  @@index([memoryId])
+  @@index([type])
+  @@map("coach_feedbacks")
 }
