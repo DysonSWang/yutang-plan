@@ -13,6 +13,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const { buildAICoachContext } = require('../services/contextBuilder');
 const { buildMasterPrompt, getSkillsForQuestion, getMultiDimensionalSkillsWithMeta } = require('../coaches');
 const { chatWithTools, toolDefinitions } = require('../services/coach-engine');
@@ -1478,5 +1479,120 @@ ${girl.notes || '暂无'}
     res.status(500).json({ error: '获取女生分析失败' });
   }
 });
+
+// ============================================================
+// dataHash 缓存失效函数（双维度）
+// ============================================================
+
+const HYSTERESIS = 2; // emotionalStable / antiFrustrationLevel 变化阈值
+
+/**
+ * 计算女生侧 dataHash
+ * 字段：tensionScore + intimacyLevel + stage + signals.length + pendingActions.length
+ */
+function computeGirlDataHash(girl) {
+  const signals = parseJson(girl.signals);
+  const pendingActions = parseJson(girl.pendingActions);
+  const raw = [
+    girl.tensionScore ?? 5.0,
+    girl.intimacyLevel ?? 1,
+    girl.stage || '',
+    (signals || []).length,
+    (pendingActions || []).length
+  ].join('|');
+  return crypto.createHash('md5').update(raw).digest('hex');
+}
+
+/**
+ * 计算用户侧 dataHash
+ * 字段：currentStage + stageProgress + trustLevel + interactionHeat
+ *       + serviceStage + emotionalStable + antiFrustrationLevel
+ *       + coachCooperation + clientType
+ *       + signals.length + pendingActions.length
+ */
+function computeUserDataHash(user) {
+  const signals = parseJson(user.signals);
+  const pendingActions = parseJson(user.pendingActions);
+  const raw = [
+    user.currentStage || '',
+    user.stageProgress ?? 0,
+    user.trustLevel ?? 1,
+    user.interactionHeat ?? 5.0,
+    user.serviceStage || '',
+    user.emotionalStable ?? 5,
+    user.antiFrustrationLevel ?? 5,
+    user.coachCooperation || '',
+    user.clientType || '',
+    (signals || []).length,
+    (pendingActions || []).length
+  ].join('|');
+  return crypto.createHash('md5').update(raw).digest('hex');
+}
+
+/**
+ * 生成失联提醒
+ * lastContact 超过 1 天才触发提醒
+ */
+function computeStaleAlert(girl) {
+  if (!girl.lastContact) return null;
+  const daysSince = Math.floor((Date.now() - new Date(girl.lastContact).getTime()) / (1000 * 60 * 60 * 24));
+  if (daysSince < 1) return null;
+  if (daysSince <= 3) return `⚠️ ${girl.name || '该女生'} 已 ${daysSince} 天没联系了`;
+  if (daysSince <= 7) return `🔴 ${girl.name || '该女生'} 已 ${daysSince} 天没联系，优先级上调`;
+  return `🚨 ${girl.name || '该女生'} 已 ${daysSince} 天没联系，需要主动破冰`;
+}
+
+/**
+ * 检测变化原因（双维度）
+ * prev: { girlHash, userHash, emotionalStable, antiFrustrationLevel, signalsLength }
+ * curr: same shape
+ */
+function detectChangeReason(prev, curr) {
+  const reasons = [];
+
+  if (prev.girlHash !== curr.girlHash) {
+    // 女生侧变化：需从数据本身比对，以下为标签近似
+    if (prev.tensionScore !== curr.tensionScore) reasons.push('🔥 热度变化');
+    if (prev.intimacyLevel !== curr.intimacyLevel) reasons.push('❤️ 亲密度变化');
+    if (prev.stage !== curr.stage) reasons.push('📍 阶段变化');
+    if (prev.signalsLength !== curr.signalsLength) reasons.push('📡 新信号');
+    if (prev.pendingActionsLength !== curr.pendingActionsLength) reasons.push('📋 待办变化');
+  }
+
+  if (prev.userHash !== curr.userHash) {
+    // 用户侧：hysteresis 保护
+    if (prev.emotionalStable !== undefined && curr.emotionalStable !== undefined) {
+      if (Math.abs((prev.emotionalStable ?? 5) - (curr.emotionalStable ?? 5)) >= HYSTERESIS) {
+        reasons.push('😤 情绪波动');
+      }
+    }
+    if (prev.antiFrustrationLevel !== undefined && curr.antiFrustrationLevel !== undefined) {
+      if (Math.abs((prev.antiFrustrationLevel ?? 5) - (curr.antiFrustrationLevel ?? 5)) >= HYSTERESIS) {
+        reasons.push('💪 抗压变化');
+      }
+    }
+    if (prev.trustLevel !== curr.trustLevel) reasons.push('🤝 信任度变化');
+    if (prev.stageProgress !== curr.stageProgress) reasons.push('📈 阶段进度变化');
+    if (prev.serviceStage !== curr.serviceStage) reasons.push('🎯 服务阶段变化');
+    if (prev.coachCooperation !== curr.coachCooperation) reasons.push('🤝 配合度变化');
+    if (prev.clientType !== curr.clientType) reasons.push('👤 客户类型变化');
+    if (prev.signalsLength !== curr.signalsLength) reasons.push('📡 用户信号变化');
+    if (prev.pendingActionsLength !== curr.pendingActionsLength) reasons.push('📋 用户待办变化');
+  }
+
+  return reasons.join(' + ') || '数据更新';
+}
+
+/**
+ * 统一 JSON 解析（兼容 null / undefined / 字符串 / 对象）
+ */
+function parseJson(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try { return JSON.parse(value); } catch { return []; }
+  }
+  return [];
+}
 
 module.exports = router;
