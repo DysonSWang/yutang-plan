@@ -609,6 +609,35 @@ model ConversationMemory {
   @@map("conversation_memories")
 }
 
+// ========== GirlSummary 缓存 ==========
+model GirlSummaryCache {
+  id        String   @id @default(uuid())
+  cacheKey  String   @unique // daily:{clientId}:{girlId}:{YYYYMMDD}
+  clientId  String
+  girlId    String
+
+  // 缓存内容（流式响应的累积文本）
+  content   String
+
+  // 用于失效判断的双 hash
+  girlDataHash String
+  userDataHash String
+
+  // 原始请求参数快照（用于 changeReason 比对）
+  prevSnapshot String? // JSON: { emotionalStable, antiFrustrationLevel, signalsLength, pendingActionsLength }
+
+  // daily key（用于按日期清理）
+  dailyKey String   // YYYYMMDD
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId])
+  @@index([girlId])
+  @@index([dailyKey])
+  @@map("girl_summary_caches")
+}
+
 // ========== AI教练反馈 ==========
 model CoachFeedback {
   id           String   @id @default(uuid())

@@ -22,6 +22,7 @@ const { streamGuardrails, runGuardrails } = require('../services/guardrails');
 
 const { JWT_SECRET, getAIConfig, getVLModelConfig } = require('../config');
 const prisma = require('../prisma');
+const { getCache, setCache, getOverviewCache, setOverviewCache } = require('../services/girlSummaryCache');
 
 // ---- Token Budget Config ----
 const ESTIMATION_FACTOR = 4;   // chars / factor ~= tokens
@@ -1172,7 +1173,11 @@ router.get('/feedback-stats', authMiddleware, async (req, res) => {
  * 主动教练 - 全局概览（无女生选中时）
  * GET /api/ai-coach/overview
  *
- * 汇总所有客户的女生资源状态，AI教练主动给出行动建议
+ * 缓存策略（userDataHash）：
+ * - hash 匹配 → 缓存返回
+ * - 不匹配 → 重新生成 → 写缓存
+ *
+ * 支持 mode=daily 查询参数（每日计划模式）
  */
 router.get('/overview', authMiddleware, async (req, res) => {
   try {
@@ -1180,15 +1185,71 @@ router.get('/overview', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: '无权限' });
     }
 
-    // 获取所有女生（带客户信息）
+    const operatorId = req.user.id;
+    const { cachedUserHash, mode } = req.query;
+
+    // 计算当前 userDataHash（从当前操盘手的客户池整体状态）
+    const allClients = await prisma.user.findMany({ where: { role: 'client' } });
+    const clientIds = allClients.map(c => c.id);
+
     const allGirls = await prisma.girl.findMany({
+      where: { clientId: { in: clientIds } },
       include: { client: { select: { id: true, nickname: true, username: true, age: true } } },
       orderBy: { tensionScore: 'desc' }
     });
 
     if (allGirls.length === 0) {
-      return res.json({ success: true, content: '鱼塘还是空的，先去捞鱼吧～' });
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no');
+      res.flushHeaders();
+      res.write(`data: ${JSON.stringify({ cached: false, userDataHash: '', changeReason: null, staleAlerts: [] })}\n\n`);
+      res.write(`data: ${JSON.stringify({ content: '鱼塘还是空的，先去捞鱼吧～' })}\n\n`);
+      res.write('data: [DONE]\n\n');
+      res.end();
+      return;
     }
+
+    // 概览 hash 基于：总鱼数 + 各客户池整体热度分布
+    const hotCount = allGirls.filter(g => (g.tensionScore || 5) >= 7).length;
+    const warmCount = allGirls.filter(g => (g.tensionScore || 5) >= 5 && (g.tensionScore || 5) < 7).length;
+    const coldCount = allGirls.filter(g => (g.tensionScore || 5) < 5).length;
+    const overviewRaw = [allGirls.length, hotCount, warmCount, coldCount].join('|');
+    const currentUserHash = crypto.createHash('md5').update(overviewRaw).digest('hex');
+
+    // ---- 分支 1：缓存命中 ----
+    if (cachedUserHash && cachedUserHash === currentUserHash) {
+      console.log(`[overview] cache hit for operatorId=${operatorId}`);
+      const cached = await getOverviewCache(operatorId);
+      if (cached) {
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('X-Accel-Buffering', 'no');
+        res.flushHeaders();
+
+        const staleAlerts = allGirls.map(g => computeStaleAlert(g)).filter(Boolean);
+
+        res.write(`data: ${JSON.stringify({
+          cached: true, userDataHash: currentUserHash,
+          changeReason: null, staleAlerts
+        })}\n\n`);
+
+        const content = cached.content;
+        const chunkSize = 100;
+        for (let i = 0; i < content.length; i += chunkSize) {
+          res.write(`data: ${JSON.stringify({ content: content.slice(i, i + chunkSize) })}\n\n`);
+          await new Promise(r => setTimeout(r, 10));
+        }
+
+        res.write('data: [DONE]\n\n');
+        res.end();
+        return;
+      }
+    }
+
+    console.log(`[overview] cache miss for operatorId=${operatorId}, mode=${mode || 'normal'}`);
 
     // 构建女生状态摘要
     const girlsSummary = allGirls.map(g => {
@@ -1208,6 +1269,16 @@ router.get('/overview', authMiddleware, async (req, res) => {
     const hotGirls = allGirls.filter(g => (g.tensionScore || 5) >= 7);
     const warmGirls = allGirls.filter(g => (g.tensionScore || 5) >= 5 && (g.tensionScore || 5) < 7);
     const coldGirls = allGirls.filter(g => (g.tensionScore || 5) < 5);
+
+    // 失联提醒
+    const staleAlerts = allGirls.map(g => computeStaleAlert(g)).filter(Boolean);
+
+    let promptSuffix = '';
+    if (mode === 'daily') {
+      promptSuffix = `
+5. 如果今天只能做一件事，应该做什么？
+6. 今晚给客户发一条什么样的每日计划提醒？`;
+    }
 
     const systemPrompt = `你是鱼塘AI情感教练，帮操盘手分析当前全局情况，主动给出学习和行动建议。
 
@@ -1232,7 +1303,7 @@ ${girlsSummary}
 1. 当前整体情况怎么样，哪些女生值得关注重点关注
 2. 最需要推进的是哪1-2个，为什么
 3. 操盘手今天应该重点做什么
-4. 有没有需要学习/注意的情感知识点（结合当前实际案例讲）
+4. 有没有需要学习/注意的情感知识点（结合当前实际案例讲）${promptSuffix}
 
 用聊天语气说，像朋友一样给建议。`;
 
@@ -1245,6 +1316,12 @@ ${girlsSummary}
     res.setHeader('Content-Encoding', 'identity');
     res.flushHeaders();
 
+    // 先发 meta 帧
+    res.write(`data: ${JSON.stringify({
+      cached: false, userDataHash: currentUserHash,
+      changeReason: '数据更新', staleAlerts
+    })}\n\n`);
+
     try {
       const response = await fetch(aiConfig.url, {
         method: 'POST',
@@ -1256,7 +1333,7 @@ ${girlsSummary}
           model: aiConfig.model,
           messages: [{ role: 'user', content: systemPrompt }],
           temperature: 0.7,
-          max_tokens: 800,
+          max_tokens: mode === 'daily' ? 1000 : 800,
           stream: true
         })
       });
@@ -1270,6 +1347,7 @@ ${girlsSummary}
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
+      let fullContent = '';
 
       while (true) {
         const { done, value } = await reader.read();
@@ -1292,6 +1370,7 @@ ${girlsSummary}
                   const guardResult = streamGuardrails(content);
                   const safeContent = guardResult.safe ? content : guardResult.filtered;
                   if (safeContent) {
+                    fullContent += safeContent;
                     res.write(`data: ${JSON.stringify({ content: safeContent })}\n\n`);
                   }
                 }
@@ -1299,6 +1378,15 @@ ${girlsSummary}
             }
           }
         }
+      }
+
+      // 写缓存
+      if (fullContent) {
+        setOverviewCache(operatorId, {
+          content: fullContent,
+          userDataHash: currentUserHash,
+          prevSnapshot: { hotCount, warmCount, coldCount, totalGirls: allGirls.length }
+        }).catch(err => console.error('[overview] cache write failed:', err));
       }
 
       res.write('data: [DONE]\n\n');
@@ -1318,7 +1406,15 @@ ${girlsSummary}
  * 主动教练 - 女生专项（选中女生时）
  * GET /api/ai-coach/girl-summary/:girlId
  *
- * 选中女生后自动汇总状态，给出当下行动建议
+ * 缓存策略（双维度 hash）：
+ * - girlDataHash 来自女生侧（tensionScore / intimacyLevel / stage / signals / pendingActions）
+ * - userDataHash 来自用户侧（currentStage / stageProgress / trustLevel / interactionHeat /
+ *                                  serviceStage / emotionalStable / antiFrustrationLevel /
+ *                                  coachCooperation / clientType / signals / pendingActions）
+ *
+ * 三路分支：
+ *   1. 两 hash 都匹配 → { cached: true, content, girlDataHash, userDataHash }
+ *   2. 任一不匹配 → 重新生成（附 changeReason 标签）→ 写缓存 → 流式返回
  */
 router.get('/girl-summary/:girlId', authMiddleware, async (req, res) => {
   try {
@@ -1327,6 +1423,8 @@ router.get('/girl-summary/:girlId', authMiddleware, async (req, res) => {
     }
 
     const { girlId } = req.params;
+    const { cachedGirlHash, cachedUserHash } = req.query;
+    const clientId = req.user.id;
 
     // 安全验证
     const girl = await prisma.girl.findUnique({
@@ -1341,6 +1439,89 @@ router.get('/girl-summary/:girlId', authMiddleware, async (req, res) => {
     if (!girl) {
       return res.status(404).json({ error: '女生不存在' });
     }
+
+    // 读取用户数据（用于 userDataHash）
+    const user = await prisma.user.findUnique({
+      where: { id: clientId },
+      select: {
+        currentStage: true, stageProgress: true, trustLevel: true, interactionHeat: true,
+        serviceStage: true, emotionalStable: true, antiFrustrationLevel: true,
+        coachCooperation: true, clientType: true, signals: true, pendingActions: true
+      }
+    });
+
+    // 计算当前 hash
+    const currentGirlHash = computeGirlDataHash(girl);
+    const currentUserHash = user ? computeUserDataHash(user) : '';
+
+    // ---- 分支 1：缓存命中 ----
+    if (cachedGirlHash && cachedUserHash &&
+        cachedGirlHash === currentGirlHash &&
+        cachedUserHash === currentUserHash) {
+      console.log(`[girl-summary] cache hit for girlId=${girlId}, clientId=${clientId}`);
+      const cached = await getCache(clientId, girlId);
+      if (cached) {
+        // 流式返回缓存内容（模拟流式发送）
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('X-Accel-Buffering', 'no');
+        res.flushHeaders();
+
+        const staleAlert = computeStaleAlert(girl);
+
+        // 先发 meta 帧
+        res.write(`data: ${JSON.stringify({
+          cached: true,
+          girlDataHash: currentGirlHash,
+          userDataHash: currentUserHash,
+          changeReason: null,
+          staleAlert
+        })}\n\n`);
+
+        // 分块发送缓存内容（每 100 字符一块，模拟流式）
+        const content = cached.content;
+        const chunkSize = 100;
+        for (let i = 0; i < content.length; i += chunkSize) {
+          res.write(`data: ${JSON.stringify({ content: content.slice(i, i + chunkSize) })}\n\n`);
+          await new Promise(r => setTimeout(r, 10)); // 小延迟模拟流式
+        }
+
+        res.write('data: [DONE]\n\n');
+        res.end();
+        return;
+      }
+      // 缓存记录不在 DB 但 hash 匹配（迁移场景），fallthrough
+    }
+
+    // ---- 分支 2/3：需要重新生成 ----
+    let changeReason = '数据更新';
+    if (cachedGirlHash || cachedUserHash) {
+      // 构建 prev snapshot（从缓存记录恢复，若无则用传入的 hash 估算）
+      const cached = await getCache(clientId, girlId);
+      if (cached) {
+        const prevSnapshot = cached.prevSnapshot ? JSON.parse(cached.prevSnapshot) : {};
+        const currSnapshot = {
+          emotionalStable: user?.emotionalStable,
+          antiFrustrationLevel: user?.antiFrustrationLevel,
+          signalsLength: parseJson(user?.signals).length,
+          pendingActionsLength: parseJson(user?.pendingActions).length,
+          tensionScore: girl.tensionScore,
+          intimacyLevel: girl.intimacyLevel,
+          stage: girl.stage,
+          signalsLength: parseJson(girl.signals).length,
+          pendingActionsLength: parseJson(girl.pendingActions).length,
+          girlHash: cached.girlDataHash,
+          userHash: cached.userDataHash
+        };
+        changeReason = detectChangeReason(prevSnapshot, currSnapshot);
+      } else {
+        // 无缓存记录但前端有 hash → 首次或过期后首次
+        changeReason = '数据更新';
+      }
+    }
+
+    console.log(`[girl-summary] cache miss for girlId=${girlId}, clientId=${clientId}, reason: ${changeReason}`);
 
     // 解析 personality
     let personality = {};
@@ -1361,6 +1542,9 @@ router.get('/girl-summary/:girlId', authMiddleware, async (req, res) => {
       ? girl.chatLogs.map(l => `${l.isFromUser ? '操盘手' : '女生'}：${l.content.slice(0, 50)}`).join('\n')
       : '暂无聊天记录';
 
+    // 失联提醒（不参与 hash）
+    const staleAlert = computeStaleAlert(girl);
+
     const systemPrompt = `你是鱼塘AI情感教练，帮操盘手分析当前选中的女生，主动给出行动建议。
 
 要求：
@@ -1371,6 +1555,7 @@ router.get('/girl-summary/:girlId', authMiddleware, async (req, res) => {
 - 不要说置信度、框架、原则等专业术语
 - 不要出现**符号
 
+${changeReason !== '数据更新' ? `【数据变化原因】\n${changeReason}\n\n` : ''}
 【女生档案】
 昵称：${girl.name}
 客户：${girl.client?.nickname || girl.client?.username || '未知'}
@@ -1411,6 +1596,15 @@ ${girl.notes || '暂无'}
     res.setHeader('Content-Encoding', 'identity');
     res.flushHeaders();
 
+    // 先发 meta 帧（包含 hash 和 changeReason）
+    res.write(`data: ${JSON.stringify({
+      cached: false,
+      girlDataHash: currentGirlHash,
+      userDataHash: currentUserHash,
+      changeReason,
+      staleAlert
+    })}\n\n`);
+
     try {
       const response = await fetch(aiConfig.url, {
         method: 'POST',
@@ -1436,6 +1630,7 @@ ${girl.notes || '暂无'}
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
+      let fullContent = ''; // 累积用于写缓存
 
       while (true) {
         const { done, value } = await reader.read();
@@ -1458,6 +1653,7 @@ ${girl.notes || '暂无'}
                   const guardResult = streamGuardrails(content);
                   const safeContent = guardResult.safe ? content : guardResult.filtered;
                   if (safeContent) {
+                    fullContent += safeContent;
                     res.write(`data: ${JSON.stringify({ content: safeContent })}\n\n`);
                   }
                 }
@@ -1465,6 +1661,22 @@ ${girl.notes || '暂无'}
             }
           }
         }
+      }
+
+      // 写缓存（异步，不阻塞响应）
+      if (fullContent) {
+        const prevSnapshot = user ? {
+          emotionalStable: user.emotionalStable,
+          antiFrustrationLevel: user.antiFrustrationLevel,
+          signalsLength: parseJson(user.signals).length,
+          pendingActionsLength: parseJson(user.pendingActions).length
+        } : {};
+        setCache(clientId, girlId, {
+          content: fullContent,
+          girlDataHash: currentGirlHash,
+          userDataHash: currentUserHash,
+          prevSnapshot
+        }).catch(err => console.error('[girl-summary] cache write failed:', err));
       }
 
       res.write('data: [DONE]\n\n');

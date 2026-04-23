@@ -86,14 +86,63 @@ export default function AdminWorkbench() {
   // 主动教练状态
   const [activeCoachText, setActiveCoachText] = useState('');
   const [activeCoachLoading, setActiveCoachLoading] = useState(false);
+  const [activeCoachCached, setActiveCoachCached] = useState(false);   // 缓存命中标记
+  const [activeCoachChangeReason, setActiveCoachChangeReason] = useState(null); // 变化原因标签
   const activeCoachRef = useRef(null);
   const activeCoachAbortRef = useRef(null);
 
-  // 主动教练缓存：无变化不重推
-  // 缓存 key = girlId（'__none__' 表示无女生时的全局概览）
-  const coachCacheRef = useRef({}); // { [key]: { content, timestamp } }
+  // 主动教练 hash 缓存（替代 5 分钟 TTL）
+  // { [key]: { content, girlDataHash, userDataHash, timestamp } }
+  const coachCacheRef = useRef({});
 
   // ========== 主动教练 ==========
+  // 计算女生侧 dataHash（前端用，与后端 computeGirlDataHash 对应）
+  const computeGirlDataHash = (girl) => {
+    if (!girl) return '';
+    const signals = (girl.signals?.length || 0);
+    const pendingActions = (girl.pendingActions?.length || 0);
+    const raw = [
+      girl.tensionScore ?? 5.0,
+      girl.intimacyLevel ?? 1,
+      girl.stage || '',
+      signals,
+      pendingActions
+    ].join('|');
+    // 简单 hash（不需要 crypto，MD5 在前端太重）
+    let hash = 0;
+    for (let i = 0; i < raw.length; i++) {
+      hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+      hash |= 0;
+    }
+    return hash.toString(16);
+  };
+
+  // 计算用户侧 dataHash（前端用，与后端 computeUserDataHash 对应）
+  const computeUserDataHash = (user) => {
+    if (!user) return '';
+    const signals = (user.signals?.length || 0);
+    const pendingActions = (user.pendingActions?.length || 0);
+    const raw = [
+      user.currentStage || '',
+      user.stageProgress ?? 0,
+      user.trustLevel ?? 1,
+      user.interactionHeat ?? 5.0,
+      user.serviceStage || '',
+      user.emotionalStable ?? 5,
+      user.antiFrustrationLevel ?? 5,
+      user.coachCooperation || '',
+      user.clientType || '',
+      signals,
+      pendingActions
+    ].join('|');
+    let hash = 0;
+    for (let i = 0; i < raw.length; i++) {
+      hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+      hash |= 0;
+    }
+    return hash.toString(16);
+  };
+
   const fetchActiveCoach = useCallback(async (forceRefresh = false) => {
     // 取消之前的请求
     if (activeCoachAbortRef.current) {
@@ -104,29 +153,44 @@ export default function AdminWorkbench() {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3005';
     const cacheKey = selectedGirl?.id ? `girl:${selectedGirl.id}` : 'overview';
 
-    // 缓存检查：5分钟内同一 key 不重推（无变化不重推）
+    // 计算当前 hash
+    const currentGirlHash = selectedGirl ? computeGirlDataHash(selectedGirl) : '';
+    const currentUserHash = selectedClient ? computeUserDataHash(selectedClient) : '';
+
+    // Hash 比对缓存：hash 匹配则用缓存内容，不调 AI
     if (!forceRefresh) {
       const cached = coachCacheRef.current[cacheKey];
-      const now = Date.now();
-      if (cached && (now - cached.timestamp) < 5 * 60 * 1000) {
+      if (cached &&
+          cached.girlDataHash === currentGirlHash &&
+          cached.userDataHash === currentUserHash) {
+        setActiveCoachCached(true);
+        setActiveCoachChangeReason(null);
         setActiveCoachText(cached.content);
         if (activeCoachRef.current) activeCoachRef.current.textContent = cached.content;
+        console.log('[coach] cache hit, reason: hash match');
         return;
       }
     }
 
+    // 构建 URL（带 hash 参数）
     let url;
     if (selectedGirl?.id) {
       url = `${apiUrl}/api/ai-coach/girl-summary/${selectedGirl.id}`;
+      if (currentGirlHash || currentUserHash) {
+        url += `?cachedGirlHash=${encodeURIComponent(currentGirlHash)}&cachedUserHash=${encodeURIComponent(currentUserHash)}`;
+      }
     } else {
       url = `${apiUrl}/api/ai-coach/overview`;
+      if (currentUserHash) {
+        url += `?cachedUserHash=${encodeURIComponent(currentUserHash)}`;
+      }
     }
 
     setActiveCoachLoading(true);
+    setActiveCoachCached(false);
+    setActiveCoachChangeReason(null);
     setActiveCoachText('');
     if (activeCoachRef.current) activeCoachRef.current.textContent = '';
-
-    const now = Date.now();
 
     try {
       const res = await fetch(url, {
@@ -143,6 +207,7 @@ export default function AdminWorkbench() {
       const decoder = new TextDecoder();
       let buffer = '';
       let text = '';
+      let metaReceived = false;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -160,6 +225,20 @@ export default function AdminWorkbench() {
             if (!jsonStr.startsWith('{')) continue;
             try {
               const parsed = JSON.parse(jsonStr);
+
+              // 处理 meta 帧（第一帧：cached / changeReason）
+              if (!metaReceived && parsed.cached !== undefined) {
+                metaReceived = true;
+                setActiveCoachCached(parsed.cached === true);
+                if (parsed.changeReason) {
+                  setActiveCoachChangeReason(parsed.changeReason);
+                  console.log(`[coach] cache miss, reason: ${parsed.changeReason}`);
+                } else {
+                  console.log('[coach] cache hit from backend');
+                }
+                continue; // 不渲染 meta 帧内容
+              }
+
               if (parsed.content) {
                 text += parsed.content;
                 if (activeCoachRef.current) {
@@ -171,15 +250,20 @@ export default function AdminWorkbench() {
         }
       }
 
-      // 写入缓存
-      coachCacheRef.current[cacheKey] = { content: text, timestamp: now };
+      // 写入缓存（存 content + 当前 hash）
+      coachCacheRef.current[cacheKey] = {
+        content: text,
+        girlDataHash: currentGirlHash,
+        userDataHash: currentUserHash,
+        timestamp: Date.now()
+      };
       setActiveCoachText(text);
     } catch {
       // ignore abort errors
     } finally {
       setActiveCoachLoading(false);
     }
-  }, [selectedGirl?.id]);
+  }, [selectedGirl?.id, selectedClient]);
 
   // 切换女生时自动触发主动教练
   useEffect(() => {
@@ -2192,9 +2276,17 @@ export default function AdminWorkbench() {
         {/* 右侧：选中对象详情 */}
         <Box w="300px">
           <Card bg="gray.800" h="100%">
-            <CardHeader pb={2}>
-              <HStack justify="space-between">
-                <Text color="teal.400" fontSize="sm" fontWeight="bold">AI 主动教练</Text>
+            <CardHeader pb={1}>
+              <HStack justify="space-between" flexWrap="wrap" gap={1}>
+                <HStack spacing={2}>
+                  <Text color="teal.400" fontSize="sm" fontWeight="bold">AI 主动教练</Text>
+                  {/* 缓存命中/变化标签 */}
+                  {activeCoachLoading ? null : activeCoachCached ? (
+                    <Badge colorScheme="green" fontSize="xs">缓存命中</Badge>
+                  ) : activeCoachChangeReason ? (
+                    <Badge colorScheme="orange" fontSize="xs">{activeCoachChangeReason}</Badge>
+                  ) : null}
+                </HStack>
                 <Button
                   size="xs"
                   variant="ghost"
@@ -2207,12 +2299,12 @@ export default function AdminWorkbench() {
                 </Button>
               </HStack>
             </CardHeader>
-            <CardBody pt={0}>
+            <CardBody pt={1}>
               {/* 主动教练区域 */}
               <Box
                 mb={4}
                 p={3}
-                bg="purple.900"
+                bg={activeCoachCached ? 'green.900' : 'purple.900'}
                 borderRadius="md"
                 borderLeft="3px solid"
                 borderColor="purple.400"
