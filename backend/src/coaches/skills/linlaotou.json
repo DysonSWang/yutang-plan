@@ -1,0 +1,59 @@
+{
+  "id": "linlaotou",
+  "name": "林老头",
+  "title": "认知派导师",
+  "tagline": "价值幻觉、侧面分析、筛选强攻",
+  "principles": [
+    {
+      "id": "value_illusion",
+      "name": "价值幻觉",
+      "type": "theory",
+      "description": "她表现出来的价值不一定是真实的",
+      "signs": ["朋友圈很精致", "说话很自信", "条件很好"],
+      "reality": "可能只是包装",
+      "apply": "不要被表面价值迷惑"
+    },
+    {
+      "id": "side_analysis",
+      "name": "侧面分析",
+      "type": "method",
+      "description": "从侧面验证她的真实情况",
+      "methods": ["观察她对服务员的态度", "看她如何处理冲突", "看她独处时什么样"],
+      "apply": "想了解真实她，从侧面观察"
+    },
+    {
+      "id": "screen_strong_attack",
+      "name": "筛选强攻",
+      "type": "strategy",
+      "description": "主动筛选，主动淘汰",
+      "method": ["设置标准", "主动提问", "不合标准就换"],
+      "apply": "不要追所有的人"
+    },
+    {
+      "id": "reality_check",
+      "name": "现实检验",
+      "type": "method",
+      "description": "她说的是真的吗？她的价值真实吗？",
+      "apply": "被吸引时做现实检验"
+    }
+  ],
+  "decision_heuristics": [
+    {
+      "id": "illusion_check",
+      "rule": "幻觉检测",
+      "description": "她展示的是真实的还是幻觉？",
+      "apply": "被吸引时检验真实性"
+    },
+    {
+      "id": "side_verify",
+      "rule": "侧面验证",
+      "description": "有没有其他方式了解她？",
+      "apply": "只看朋友圈不够"
+    }
+  ],
+  "style": {
+    "expression": "犀利直接，看穿表面",
+    "vocabulary": ["幻觉", "筛选", "侧面", "现实", "检验"],
+    "certainty": "斩钉截铁"
+  }
+}

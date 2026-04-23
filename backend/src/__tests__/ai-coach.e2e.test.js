@@ -59,13 +59,14 @@ describe('POST /api/ai-coach/situation 情况咨询', () => {
     expect(res.status).not.toBe(401);
   });
 
-  it('不指定 girlId 也可咨询', async () => {
+  it('不指定 girlId 也可咨询（通用教练模式）', async () => {
     const res = await request(app)
       .post('/api/ai-coach/situation')
       .set('Authorization', `Bearer ${tokens.operator}`)
       .send({ situation: '女生不回消息怎么办' });
 
     expect(res.status).not.toBe(403);
+    expect(res.status).not.toBe(401);
   });
 
   it('缺少 situation 返回 400', async () => {
@@ -141,6 +142,28 @@ describe('POST /api/ai-coach/reply-suggestions 回复建议', () => {
       .send({});
 
     expect(res.status).toBe(400);
+  });
+});
+
+describe('GET /api/ai-coach/overview 全局概览', () => {
+  it('operator 获取概览应返回 staleAlerts 字段', async () => {
+    const res = await request(app)
+      .get('/api/ai-coach/overview')
+      .set('Authorization', `Bearer ${tokens.operator}`);
+
+    expect(res.status).not.toBe(403);
+    expect(res.status).not.toBe(401);
+  });
+
+  it('无女生时概览返回有效 meta 帧', async () => {
+    const res = await request(app)
+      .get('/api/ai-coach/overview')
+      .set('Authorization', `Bearer ${tokens.operator}`);
+
+    // SSE 流式响应，第一帧包含 staleAlerts
+    const body = res.text;
+    expect(body).toContain('data: ');
+    expect(body).toMatch(/staleAlerts/);
   });
 });
 

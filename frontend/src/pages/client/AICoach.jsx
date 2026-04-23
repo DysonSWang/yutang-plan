@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Box, VStack, HStack, Input, Button, Text, Card, CardBody, CardHeader, Heading, Select, Textarea, Spinner, Flex, Badge, Icon } from '@chakra-ui/react';
+import { Box, VStack, HStack, Input, Button, Text, Card, CardBody, CardHeader, Heading, Select, Textarea, Spinner, Flex, Badge, Icon, Progress, SimpleGrid, Alert, AlertIcon, AlertDescription, Wrap, WrapItem } from '@chakra-ui/react';
 import { girls as girlsApi } from '../../utils/api';
 import { FireIcon, SnowIcon } from '../../components/Icons';
 
@@ -12,6 +12,33 @@ const STAGE_COLORS = {
   '长期': 'teal'
 };
 
+function getHeatLevel(score) {
+  if (score >= 7) return 'hot';
+  if (score >= 5) return 'warm';
+  return 'cold';
+}
+
+function sortByPriority(girls, staleAlerts) {
+  const alertMap = {};
+  staleAlerts.forEach(a => {
+    const name = a.replace(/^[^\s]+\s/, '').replace(/\s已.*$/, '');
+    alertMap[name] = a;
+  });
+
+  return [...girls].sort((a, b) => {
+    const aAlert = alertMap[a.name];
+    const bAlert = alertMap[b.name];
+    const aDays = aAlert ? parseInt(aAlert.match(/(\d+)天没联系/)?.[1] || '0') : 0;
+    const bDays = bAlert ? parseInt(bAlert.match(/(\d+)天没联系/)?.[1] || '0') : 0;
+    const aScore = a.tensionScore || 5;
+    const bScore = b.tensionScore || 5;
+
+    const aPriority = aDays * 10 + aScore;
+    const bPriority = bDays * 10 + bScore;
+    return bPriority - aPriority;
+  });
+}
+
 export default function AICoach() {
   const [girls, setGirls] = useState([]);
   const [selectedGirlId, setSelectedGirlId] = useState('');
@@ -19,6 +46,8 @@ export default function AICoach() {
   const [question, setQuestion] = useState('');
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState(null);
+  const [overview, setOverview] = useState(null);
+  const [overviewLoading, setOverviewLoading] = useState(false);
   const analysisRef = useRef(null);
   const analysisText = useRef('');
 
@@ -34,6 +63,65 @@ export default function AICoach() {
       setSelectedGirl(null);
     }
   }, [selectedGirlId, girls]);
+
+  // 无女生时加载概览
+  useEffect(() => {
+    if (!selectedGirlId && girls.length > 0) {
+      fetchOverview();
+    } else {
+      setOverview(null);
+    }
+  }, [selectedGirlId, girls]);
+
+  const fetchOverview = async () => {
+    const token = localStorage.getItem('yutang_token');
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3005';
+    setOverviewLoading(true);
+    try {
+      const res = await fetch(`${apiUrl}/api/ai-coach/overview`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        // SSE 格式，取第一帧
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('data: ')) {
+              const jsonStr = trimmed.substring(6);
+              if (!jsonStr.startsWith('{')) continue;
+              try {
+                const parsed = JSON.parse(jsonStr);
+                if (parsed.cached !== undefined || parsed.staleAlerts) {
+                  // 过滤掉 content 类型的帧，只取 meta 帧
+                  const hot = girls.filter(g => (g.tensionScore || 5) >= 7).length;
+                  const warm = girls.filter(g => (g.tensionScore || 5) >= 5 && (g.tensionScore || 5) < 7).length;
+                  const cold = girls.filter(g => (g.tensionScore || 5) < 5).length;
+                  setOverview({
+                    hot, warm, cold,
+                    total: girls.length,
+                    staleAlerts: parsed.staleAlerts || [],
+                    cached: parsed.cached
+                  });
+                  return;
+                }
+              } catch {}
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error('[AICoach] overview fetch failed:', e);
+    } finally {
+      setOverviewLoading(false);
+    }
+  };
 
   const loadGirls = async () => {
     try {
@@ -121,6 +209,122 @@ export default function AICoach() {
     <Box>
       <Heading color="white" mb={6}>AI教练</Heading>
       <Text color="gray.400" mb={6}>24小时在线，AI撩妹军师</Text>
+
+      {/* 无女生时：概览面板 */}
+      {!selectedGirlId && girls.length > 0 && (
+        <Box mb={6}>
+          {overviewLoading ? (
+            <Card bg="gray.800" mb={4}>
+              <CardBody textAlign="center" py={8}>
+                <Spinner size="lg" color="teal.400" />
+                <Text color="gray.400" mt={4}>加载鱼塘概况...</Text>
+              </CardBody>
+            </Card>
+          ) : overview ? (
+            <>
+              {/* 今日鱼塘概况 */}
+              <Card bg="gray.800" mb={4}>
+                <CardHeader pb={2}>
+                  <Heading size="sm" color="teal.400" data-testid="今日概况">📊 今日鱼塘概况</Heading>
+                </CardHeader>
+                <CardBody pt={0}>
+                  <HStack spacing={6} mb={3}>
+                    <Text color="white" fontSize="lg" fontWeight="bold">总鱼数：{overview.total}</Text>
+                    <Badge colorScheme="green" fontSize="md" px={2} py={1}>🔥 {overview.hot} 高</Badge>
+                    <Badge colorScheme="orange" fontSize="md" px={2} py={1}>🌡️ {overview.warm} 中</Badge>
+                    <Badge colorScheme="blue" fontSize="md" px={2} py={1}>❄️ {overview.cold} 低</Badge>
+                  </HStack>
+                  {/* 热度分布 */}
+                  <Text data-testid="热度分布" display="none">热度分布</Text>
+                  <Progress
+                    value={overview.hot}
+                    max={Math.max(overview.total, 1)}
+                    size="sm"
+                    colorScheme="orange"
+                    bg="gray.700"
+                    borderRadius="full"
+                    mb={1}
+                  />
+                  <HStack spacing={0} fontSize="xs" color="gray.500">
+                    <Text flex={overview.hot} textAlign="center" color="orange.400">🔥{overview.hot}</Text>
+                    <Text flex={overview.warm} textAlign="center" color="orange.300">🌡️{overview.warm}</Text>
+                    <Text flex={overview.cold} textAlign="center" color="blue.400">❄️{overview.cold}</Text>
+                  </HStack>
+                  {overview.cached && (
+                    <Text fontSize="xs" color="green.400" mt={2}>✨ 数据未变化，复用缓存</Text>
+                  )}
+                </CardBody>
+              </Card>
+
+              {/* 失联提醒 */}
+              {overview.staleAlerts.length > 0 && (
+                <Card bg="gray.800" mb={4} borderLeft="4px solid" borderLeftColor="red.500">
+                  <CardHeader pb={2}>
+                    <Heading size="sm" color="red.400">🚨 失联提醒</Heading>
+                  </CardHeader>
+                  <CardBody pt={0}>
+                    <VStack spacing={2} align="stretch">
+                      {overview.staleAlerts.map((alert, i) => {
+                        const colorScheme = alert.includes('🚨') ? 'red' : alert.includes('🔴') ? 'orange' : 'yellow';
+                        const bg = colorScheme === 'red' ? 'red.900' : colorScheme === 'orange' ? 'orange.900' : 'yellow.900';
+                        return (
+                          <Alert key={i} status={colorScheme === 'yellow' ? 'warning' : colorScheme} bg={bg} borderRadius="md" py={2}>
+                            <AlertIcon />
+                            <AlertDescription color="white" fontSize="sm">{alert}</AlertDescription>
+                          </Alert>
+                        );
+                      })}
+                    </VStack>
+                  </CardBody>
+                </Card>
+              )}
+
+              {/* 行动优先级 */}
+              <Card bg="gray.800" mb={4}>
+                <CardHeader pb={2}>
+                  <Heading size="sm" color="purple.400">🎯 今日行动优先级</Heading>
+                </CardHeader>
+                <CardBody pt={0}>
+                  <VStack spacing={2} align="stretch">
+                    {sortByPriority(girls, overview.staleAlerts).slice(0, 5).map((girl, i) => {
+                      const heat = getHeatLevel(girl.tensionScore || 5);
+                      const heatEmoji = heat === 'hot' ? '🔥' : heat === 'warm' ? '🌡️' : '❄️';
+                      const heatColor = heat === 'hot' ? 'red.400' : heat === 'warm' ? 'orange.400' : 'blue.400';
+                      const girlAlert = overview.staleAlerts.find(a => a.includes(girl.name));
+                      const priorityBadge = girlAlert?.includes('🚨') ? 'red' : girlAlert?.includes('🔴') ? 'orange' : girlAlert?.includes('⚠️') ? 'yellow' : 'gray';
+                      return (
+                        <HStack key={girl.id} justify="space-between" bg="gray.700" p={2} borderRadius="md">
+                          <HStack>
+                            <Text color="gray.500" fontSize="sm" minW="20px">{i + 1}.</Text>
+                            <Text color="white" fontWeight="bold">{girl.name}</Text>
+                            <Badge colorScheme={STAGE_COLORS[girl.stage] || 'gray'} fontSize="xs">{girl.stage || '未知'}</Badge>
+                            {girlAlert && <Badge colorScheme={priorityBadge} fontSize="xs">{girlAlert.match(/^[^\s]+/)?.[0]}</Badge>}
+                          </HStack>
+                          <HStack>
+                            <Text color={heatColor} fontSize="sm">{heatEmoji} {(girl.tensionScore || 5).toFixed(1)}</Text>
+                            <Icon as={girl.tensionScore >= 5 ? FireIcon : SnowIcon} color={girl.tensionScore >= 5 ? 'orange.400' : 'blue.400'} boxSize={4} />
+                          </HStack>
+                        </HStack>
+                      );
+                    })}
+                  </VStack>
+                </CardBody>
+              </Card>
+
+              {overview.staleAlerts.length === 0 && (
+                <Alert status="info" bg="blue.900" mb={4} borderRadius="md">
+                  <AlertIcon />
+                  <AlertDescription color="white">鱼塘状态良好，所有女生近期都有互动 🎉</AlertDescription>
+                </Alert>
+              )}
+            </>
+          ) : null}
+
+          <Text color="gray.500" fontSize="sm" textAlign="center" mt={2}>
+            选择上方女生，开始针对性咨询
+          </Text>
+        </Box>
+      )}
 
       <Card bg="gray.800" mb={6}>
         <CardHeader>

@@ -1,0 +1,182 @@
+{
+  "skills": {
+    "分手与挽回": {
+      "name": "分手与挽回",
+      "file": "分手与挽回.json",
+      "specialties": []
+    },
+    "吸引": {
+      "name": "吸引",
+      "file": "吸引.json",
+      "specialties": []
+    },
+    "女性心理": {
+      "name": "女性心理",
+      "file": "女性心理.json",
+      "specialties": []
+    },
+    "婚姻": {
+      "name": "婚姻",
+      "file": "婚姻.json",
+      "specialties": []
+    },
+    "废物测试": {
+      "name": "废物测试",
+      "file": "废物测试.json",
+      "specialties": []
+    },
+    "形象": {
+      "name": "形象",
+      "file": "形象.json",
+      "specialties": []
+    },
+    "心态建设": {
+      "name": "心态建设",
+      "file": "心态建设.json",
+      "specialties": []
+    },
+    "情绪判断": {
+      "name": "情绪判断",
+      "file": "情绪判断.json",
+      "specialties": []
+    },
+    "拉伸": {
+      "name": "拉伸",
+      "file": "拉伸.json",
+      "specialties": []
+    },
+    "拉近对线": {
+      "name": "拉近对线",
+      "file": "拉近对线.json",
+      "specialties": []
+    },
+    "搭讪": {
+      "name": "搭讪",
+      "file": "搭讪.json",
+      "specialties": []
+    },
+    "框架规则": {
+      "name": "框架规则",
+      "file": "框架规则.json",
+      "specialties": []
+    },
+    "沟通": {
+      "name": "沟通",
+      "file": "沟通.json",
+      "specialties": []
+    },
+    "法律安全": {
+      "name": "法律安全",
+      "file": "法律安全.json",
+      "specialties": []
+    },
+    "特殊群体约会": {
+      "name": "特殊群体约会",
+      "file": "特殊群体约会.json",
+      "specialties": []
+    },
+    "社交软件": {
+      "name": "社交软件",
+      "file": "社交软件.json",
+      "specialties": []
+    },
+    "窗口识别": {
+      "name": "窗口识别",
+      "file": "窗口识别.json",
+      "specialties": []
+    },
+    "约会": {
+      "name": "约会",
+      "file": "约会.json",
+      "specialties": []
+    },
+    "线上社交": {
+      "name": "线上社交",
+      "file": "线上社交.json",
+      "specialties": []
+    },
+    "群体社交": {
+      "name": "群体社交",
+      "file": "群体社交.json",
+      "specialties": []
+    },
+    "聊天": {
+      "name": "聊天",
+      "file": "聊天.json",
+      "specialties": []
+    },
+    "话术": {
+      "name": "话术",
+      "file": "话术.json",
+      "specialties": []
+    },
+    "资源获取": {
+      "name": "资源获取",
+      "file": "资源获取.json",
+      "specialties": []
+    },
+    "邀约": {
+      "name": "邀约",
+      "file": "邀约.json",
+      "specialties": []
+    },
+    "长期关系": {
+      "name": "长期关系",
+      "file": "长期关系.json",
+      "specialties": []
+    },
+    "防骗": {
+      "name": "防骗",
+      "file": "防骗.json",
+      "specialties": []
+    },
+    "障碍区": {
+      "name": "障碍区",
+      "file": "障碍区.json",
+      "specialties": []
+    },
+    "需求感": {
+      "name": "需求感",
+      "file": "需求感.json",
+      "specialties": []
+    }
+  },
+  "routing": {
+    "通用": [
+      "kaige",
+      "linlaotou",
+      "wang"
+    ],
+    "聊天卡壳": [
+      "wang",
+      "dadi",
+      "linlaotou"
+    ],
+    "关系拉伸": [
+      "kaige",
+      "linlaotou"
+    ],
+    "长期关系": [
+      "moge",
+      "tuobuhua"
+    ],
+    "分手挽回": [
+      "xuge",
+      "haoge"
+    ],
+    "心态问题": [
+      "xunuo"
+    ],
+    "吸引": [
+      "kaige",
+      "linlaotou"
+    ],
+    "形象": [
+      "wang"
+    ],
+    "社交软件": [
+      "wang",
+      "shege"
+    ]
+  }
+}
