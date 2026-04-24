@@ -177,6 +177,7 @@ model User {
 
   // ===== 关系 =====
   clientGirls      Girl[]            @relation("ClientGirls")
+  events           Event[]
   operatorSessions ChatSession[]     @relation("OperatorSessions")
   dates            Date[]
   payments         Payment[]
@@ -302,6 +303,7 @@ model Girl {
   chatLogs        ChatLog[]
   chatScreenshots ChatScreenshot[]
   dates           Date[]
+  events          Event[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -505,6 +507,52 @@ model Payment {
   @@map("payments")
 }
 
+// ========== 日历事件 ==========
+// 统一管理：约会 + AI教练行动项 + 手动添加事件
+model Event {
+  id        String   @id @default(uuid())
+  clientId  String
+  client    User     @relation(fields: [clientId], references: [id])
+  girlId    String?
+  girl      Girl?    @relation(fields: [girlId], references: [id])
+
+  // 基础字段
+  title     String   // 事件标题
+  content   String?  // 事件内容/描述
+  eventTime DateTime // 事件时间
+  endTime   DateTime? // 结束时间（可选）
+
+  // 类型：date(约会) | action(AI行动项) | manual(手动添加)
+  type      String   @default("manual")
+
+  // 状态
+  status    String   @default("pending") // pending | completed | cancelled
+
+  // AI教练来源（action类型时）
+  source    String?  // 'ai_coach' | 'chat_selection' | 'manual'
+  aiContext String?  // AI响应原文片段（action类型时保存，方便回溯）
+
+  // 来源ID（用于关联）
+  dateId    String?  // 关联的约会ID（type=date时）
+  chatLogId String?  // 关联的聊天记录ID（选中文本添加时）
+
+  // 颜色标签（前端用）
+  color     String?  // hex颜色，不填则按类型默认
+
+  // 元数据
+  notes     String?
+  metadata  String?  // JSON: { channel, contact, ... }
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId])
+  @@index([girlId])
+  @@index([eventTime])
+  @@index([type])
+  @@map("events")
+}
+
 // ========== 操作日志 ==========
 model AuditLog {
   id        String   @id @default(uuid())
@@ -662,4 +710,28 @@ model CoachFeedback {
   @@index([memoryId])
   @@index([type])
   @@map("coach_feedbacks")
+}
+
+// ========== 客户教练画像（个性化权重）==========
+// 每个客户对每个教练在每类问题上有个性化的反馈权重
+// 用于：反馈闭环驱动路由个性化
+model ClientCoachProfile {
+  id            String   @id @default(uuid())
+  clientId      String
+  coachId       String   // coach ID e.g. 'tuobuhua', 'tong'
+  questionType  String   // e.g. '关系拉伸', '心态问题', '通用'
+
+  helpfulCount     Int @default(0)
+  notHelpfulCount  Int @default(0)
+
+  // 动态权重调整量：从反馈历史中学到的 bonus
+  // 正数 = 该教练对这类问题对这个客户有加成
+  // 负数 = 减益
+  feedbackBonus Float @default(0)
+
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@unique([clientId, coachId, questionType])
+  @@map("client_coach_profiles")
 }

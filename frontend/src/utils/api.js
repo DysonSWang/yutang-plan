@@ -267,3 +267,14 @@ export const dashboard = {
   analyzeAll: (clientId) => api.post('/api/dashboard/analyze-all' + (clientId ? '?clientId=' + clientId : '')),
   analyzeResult: (jobId) => api.get(`/api/dashboard/analyze-result/${jobId}`)
 };
+
+// 日历事件
+export const events = {
+  list: (params) => api.get('/api/events' + (params ? '?' + new URLSearchParams(params) : '')),
+  get: (id) => api.get(`/api/events/${id}`),
+  create: (data) => api.post('/api/events', data),
+  update: (id, data) => api.put(`/api/events/${id}`, data),
+  delete: (id) => api.delete(`/api/events/${id}`),
+  updateStatus: (id, status) => api.patch(`/api/events/${id}/status`, { status }),
+  batch: (data) => api.post('/api/events/batch', data),
+};

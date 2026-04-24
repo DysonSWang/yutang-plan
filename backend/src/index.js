@@ -24,6 +24,7 @@ const notificationsRoutes = require('./routes/notifications');
 const chatPartnerRoutes = require('./routes/chatPartner');
 const chatScreenshotRoutes = require('./routes/chatScreenshot');
 const dashboardRoutes = require('./routes/dashboard');
+const eventsRoutes = require('./routes/events');
 const uploadRoutes = require('./routes/upload');
 const videoCompressRoutes = require('./routes/video-compress');
 
@@ -57,6 +58,7 @@ app.use('/api/notifications', notificationsRoutes(io));
 app.use('/api/chat-partner', chatPartnerRoutes);
 app.use('/api/chat-screenshots', chatScreenshotRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/events', eventsRoutes);
 
 // 静态文件服务 - 截图图片
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
