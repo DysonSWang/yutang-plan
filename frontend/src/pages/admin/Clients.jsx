@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   Box, Heading, Card, CardBody, Table, Thead, Tbody, Tr, Th, Td, Button, Badge, Modal, ModalOverlay,
   ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton, useDisclosure, SimpleGrid,
@@ -6,8 +6,9 @@ import {
   Text, Divider, useToast, Tabs, TabList, TabPanels, Tab, TabPanel, Flex, Tooltip, IconButton,
   createIcon, Avatar, Stat, StatLabel, StatNumber, StatHelpText, Progress, Switch, Stack, Icon
 } from '@chakra-ui/react';
-import { clients as clientsApi } from '../../utils/api';
-import { FireIcon, SnowIcon, UsersIcon } from '../../components/Icons';
+import { clients as clientsApi, girls as girlsApi } from '../../utils/api';
+import { FireIcon, SnowIcon, UsersIcon, CalendarIcon } from '../../components/Icons';
+import ClientCalendar from '../../components/ClientCalendar';
 
 // 创建自定义问号图标
 const HelpIcon = createIcon({
@@ -264,6 +265,9 @@ export default function AdminClients() {
   const { isOpen: isExtractOpen, onOpen: onExtractOpen, onClose: onExtractClose } = useDisclosure();
   const { isOpen: isPreviewOpen, onOpen: onPreviewOpen, onClose: onPreviewClose } = useDisclosure();
   const { isOpen: isChatExtractOpen, onOpen: onChatExtractOpen, onClose: onChatExtractClose } = useDisclosure();
+  // 日历弹窗
+  const { isOpen: isCalendarOpen, onOpen: onCalendarOpen, onClose: onCalendarClose } = useDisclosure();
+  const [calendarClient, setCalendarClient] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState(getInitialFormData());
   const [creating, setCreating] = useState(false);
@@ -276,13 +280,17 @@ export default function AdminClients() {
   // 交流提取相关状态
   const [chatExtracting, setChatExtracting] = useState(false);
   const [chatAnalysis, setChatAnalysis] = useState(null);
-    const [chatMessageCount, setChatMessageCount] = useState(20);
+  const [chatMessageCount, setChatMessageCount] = useState(20);
   const [chatPendingUpdates, setChatPendingUpdates] = useState({});
   const [chatConfirmSelections, setChatConfirmSelections] = useState({});
   const toast = useToast();
+  const [girlList, setGirlList] = useState([]);
 
-  useEffect(() => {
-    loadClients();
+  const loadGirlsForClient = useCallback(async (clientId) => {
+    try {
+      const res = await girlsApi.list({ clientId });
+      if (res.success) setGirlList(res.girls);
+    } catch (e) { console.error(e); }
   }, []);
 
   const loadClients = async () => {
@@ -462,13 +470,21 @@ export default function AdminClients() {
       const res = await clientsApi.get(client.id);
       if (res.success) {
         setSelectedClient(res.client);
-                setFormData(getInitialFormData());
+        setFormData(getInitialFormData());
         setIsEditing(false);
         onOpen();
+        loadGirlsForClient(client.id);
       }
     } catch (e) {
       console.error(e);
     }
+  };
+
+  const handleCalendarClick = async (client, e) => {
+    e.stopPropagation();
+    setCalendarClient(client);
+    loadGirlsForClient(client.id);
+    onCalendarOpen();
   };
 
   const startEdit = () => {
@@ -694,9 +710,21 @@ export default function AdminClients() {
                   </Td>
                   <Td color="gray.300" borderColor="gray.700" isNumeric>{client.girlCount || 0}</Td>
                   <Td borderColor="gray.700">
-                    <Button size="sm" colorScheme="teal" variant="ghost" onClick={(e) => { e.stopPropagation(); viewClient(client); }}>
-                      查看
-                    </Button>
+                    <HStack spacing={2}>
+                      <Tooltip label="日历" hasArrow>
+                        <IconButton
+                          size="sm"
+                          variant="ghost"
+                          icon={<Icon as={CalendarIcon} />}
+                          color="blue.400"
+                          onClick={(e) => handleCalendarClick(client, e)}
+                          aria-label="日历"
+                        />
+                      </Tooltip>
+                      <Button size="sm" colorScheme="teal" variant="ghost" onClick={(e) => { e.stopPropagation(); viewClient(client); }}>
+                        查看
+                      </Button>
+                    </HStack>
                   </Td>
                 </Tr>
               ))}
@@ -936,7 +964,8 @@ export default function AdminClients() {
                 <Tab _selected={{ bg: 'orange.600', color: 'white' }} color="gray.400" borderRadius="md" fontSize="sm">代聊风格</Tab>
                 <Tab _selected={{ bg: 'purple.600', color: 'white' }} color="gray.400" borderRadius="md" fontSize="sm">价值画像</Tab>
                 <Tab _selected={{ bg: 'red.600', color: 'white' }} color="gray.400" borderRadius="md" fontSize="sm">依恋分析</Tab>
-                <Tab _selected={{ bg: 'cyan.600', color: 'white' }} color="gray.400" borderRadius="md" fontSize="sm">AI战略</Tab>
+<Tab _selected={{ bg: 'cyan.600', color: 'white' }} color="gray.400" borderRadius="md" fontSize="sm">AI战略</Tab>
+                <Tab _selected={{ bg: 'blue.600', color: 'white' }} color="gray.400" borderRadius="md" fontSize="sm">约会日历</Tab>
               </TabList>
 
               <TabPanels>
@@ -1985,6 +2014,14 @@ export default function AdminClients() {
                     </FieldCard>
                   </Box>
                 </TabPanel>
+                {/* 约会日历 */}
+                <TabPanel px={0} pt={4}>
+                  <ClientCalendar
+                    clientId={selectedClient?.id}
+                    clientNickname={selectedClient?.nickname}
+                    girlList={girlList}
+                  />
+                </TabPanel>
               </TabPanels>
             </Tabs>
           </ModalBody>
@@ -2188,6 +2225,28 @@ export default function AdminClients() {
                 </HStack>
               </VStack>
             )}
+          </ModalBody>
+</ModalContent>
+      </Modal>
+
+      {/* 客户日历弹窗 */}
+      <Modal isOpen={isCalendarOpen} onClose={onCalendarClose} size="5xl">
+        <ModalOverlay bg="blackAlpha.700" />
+        <ModalContent bg="gray.800" borderRadius="xl">
+          <ModalHeader borderBottom="1px solid" borderColor="gray.700">
+            <HStack spacing={3}>
+              <Icon as={CalendarIcon} color="blue.400" boxSize={5} />
+              <Text color="white">{calendarClient?.nickname || calendarClient?.username} 的约会日历</Text>
+              <Badge colorScheme="teal">{calendarClient?.serviceStage}</Badge>
+            </HStack>
+          </ModalHeader>
+          <ModalCloseButton />
+          <ModalBody py={4}>
+            <ClientCalendar
+              clientId={calendarClient?.id}
+              clientNickname={calendarClient?.nickname || calendarClient?.username}
+              girlList={girlList}
+            />
           </ModalBody>
         </ModalContent>
       </Modal>
