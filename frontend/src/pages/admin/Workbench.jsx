@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Flex, Heading, Text, Card, CardBody, CardHeader, Button, Select, Textarea, SimpleGrid, Badge, VStack, HStack, Divider, Spinner, useToast, Tabs, TabList, TabPanels, Tab, TabPanel, Icon, Input, Checkbox, Collapse, Alert, AlertIcon, Image, FormControl, FormLabel, Text as CText } from '@chakra-ui/react';
-import { clients, girls, chatLogs, chat, chatPartner, aiCoach } from '../../utils/api';
+import { clients, girls, chatLogs, chat, chatPartner, aiCoach, events as eventsApi } from '../../utils/api';
 import { useSocket } from '../../contexts/SocketContext';
 import { FiSend, FiMessageSquare, FiTarget, FiZap, FiAlertCircle, FiCheck, FiCopy, FiUser } from 'react-icons/fi';
 import { HeartIcon } from '../../components/Icons';
@@ -89,6 +89,10 @@ export default function AdminWorkbench() {
   const [activeCoachLoading, setActiveCoachLoading] = useState(false);
   const [activeCoachCached, setActiveCoachCached] = useState(false);   // 缓存命中标记
   const [activeCoachChangeReason, setActiveCoachChangeReason] = useState(null); // 变化原因标签
+
+  // AI教练行动建议
+  const [coachRecommendations, setCoachRecommendations] = useState([]); // [{ id, action, girlId, girlName, added }]
+  const [addingRecommendation, setAddingRecommendation] = useState(null); // 正在添加的 recommendation id
   const activeCoachRef = useRef(null);
   const activeCoachAbortRef = useRef(null);
 
@@ -542,6 +546,7 @@ export default function AdminWorkbench() {
 
         setAiAnalysis(analysis);
         setResponse({ coachName: 'AI统一教练', analysis });
+        processRecommendations(analysis);
       } else {
         // 非流式模式（JSON，支持工具调用）
         const data = await res.json();
@@ -551,6 +556,7 @@ export default function AdminWorkbench() {
             analysisRef.current.textContent = stripMarkdown(data.analysis || '');
           }
           setResponse({ coachName: data.coachName || 'AI统一教练', analysis: data.analysis });
+          processRecommendations(data.analysis || '');
         } else {
           throw new Error(data.error || '分析失败');
         }
@@ -561,6 +567,76 @@ export default function AdminWorkbench() {
       setLoading(false);
     }
   };
+
+  // ========== AI教练行动建议提取 ==========
+  const extractRecommendations = useCallback((text, selGirl, gList) => {
+    if (!text) return [];
+    const recs = [];
+    const allGirls = gList || [];
+    const girlNames = allGirls.map(g => g.name).filter(Boolean);
+    if (selGirl?.name && !girlNames.includes(selGirl.name)) {
+      girlNames.push(selGirl.name);
+    }
+    const patterns = [
+      new RegExp(`(给${selGirl?.name || 'X'}[^，。！？]{0,30})`, 'g'),
+      new RegExp(`(${selGirl?.name || 'X'}[该]?[^，。！？]{0,10}(?:联系|发消息|约|跟进)\\s*[^，。！？]{0,20})`, 'g'),
+    ];
+    if (selGirl?.id && selGirl?.name) {
+      for (const p of patterns) {
+        let match;
+        while ((match = p.exec(text)) !== null) {
+          const action = match[1]?.trim();
+          if (action && action.length > 2 && action.length < 100) {
+            recs.push({ id: `g:${selGirl.id}:${recs.length}`, action, girlId: selGirl.id, girlName: selGirl.name, added: false });
+          }
+        }
+      }
+    }
+    for (const name of girlNames) {
+      if (name === selGirl?.name) continue;
+      const p = new RegExp(`(给${name}[^，。！？]{0,30})`, 'g');
+      let match;
+      while ((match = p.exec(text)) !== null) {
+        const action = match[1]?.trim();
+        if (action && action.length > 3 && action.length < 100) {
+          const girl = allGirls.find(g => g.name === name);
+          recs.push({ id: `p:${name}:${recs.length}`, action, girlId: girl?.id || null, girlName: name, added: false });
+        }
+      }
+    }
+    const seen = new Set();
+    return recs.filter(r => {
+      const k = r.action.replace(/\s+/g, '');
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    }).slice(0, 5);
+  }, []);
+
+  const handleAddRecommendation = async (rec, clientId) => {
+    if (!clientId) { toast({ title: '请先选择客户', status: 'warning', duration: 2000 }); return; }
+    setAddingRecommendation(rec.id);
+    try {
+      const now = new Date(); now.setHours(now.getHours() + 2, 0, 0, 0);
+      const res = await eventsApi.create({
+        clientId, girlId: rec.girlId || null,
+        title: rec.action.length > 60 ? rec.action.slice(0, 60) : rec.action,
+        content: rec.action, eventTime: now, type: 'action', source: 'ai_coach',
+        aiContext: rec.action, status: 'pending'
+      });
+      if (res.success) {
+        setCoachRecommendations(prev => prev.map(r => r.id === rec.id ? { ...r, added: true } : r));
+        toast({ title: '已添加到日历', status: 'success', duration: 2000 });
+      } else {
+        toast({ title: res.error || '添加失败', status: 'error', duration: 2000 });
+      }
+    } catch (e) { console.error(e); toast({ title: '添加失败', status: 'error', duration: 2000 }); }
+    finally { setAddingRecommendation(null); }
+  };
+
+  const processRecommendations = useCallback((text) => {
+    setCoachRecommendations(extractRecommendations(text, selectedGirl, girlsList));
+  }, [extractRecommendations, selectedGirl, girlsList]);
 
   // ========== 实战聊天 ==========
   const handleGirlMessage = async () => {
@@ -1563,6 +1639,48 @@ export default function AdminWorkbench() {
                                   <Text color="purple.300" fontSize="sm" fontWeight="bold">AI 分析</Text>
                                 </HStack>
                                 <Text color="gray.200" fontSize="sm" style={{ whiteSpace: 'pre-wrap' }}>{stripMarkdown(clientAiAnalysis)}</Text>
+                              </Box>
+                            )}
+
+                            {/* AI教练行动建议 */}
+                            {coachRecommendations.length > 0 && (
+                              <Box p={3} bg="orange.900" borderRadius="lg" borderLeft="3px solid" borderColor="orange.400">
+                                <HStack mb={3}>
+                                  <Icon as={FiZap} color="orange.400" boxSize={4} />
+                                  <Text color="orange.300" fontSize="sm" fontWeight="bold">AI 推荐行动</Text>
+                                  <Badge colorScheme="orange" fontSize="xs">{coachRecommendations.filter(r => !r.added).length} 待添加</Badge>
+                                </HStack>
+                                <VStack spacing={2} align="stretch">
+                                  {coachRecommendations.map((rec) => (
+                                    <HStack
+                                      key={rec.id}
+                                      bg="gray.700"
+                                      p={2}
+                                      borderRadius="md"
+                                      justify="space-between"
+                                      opacity={rec.added ? 0.5 : 1}
+                                    >
+                                      <VStack align="start" spacing={0} flex={1}>
+                                        <Text color="gray.200" fontSize="sm">{rec.action}</Text>
+                                        {rec.girlName && (
+                                          <Text color="gray.400" fontSize="xs">
+                                            关联: {rec.girlName}
+                                          </Text>
+                                        )}
+                                      </VStack>
+                                      <Button
+                                        size="sm"
+                                        colorScheme={rec.added ? 'gray' : 'orange'}
+                                        variant={rec.added ? 'ghost' : 'solid'}
+                                        leftIcon={rec.added ? <Icon as={FiCheck} /> : <Icon as={FiZap} />}
+                                        onClick={() => handleAddRecommendation(rec, selectedClient?.id)}
+                                        isLoading={addingRecommendation === rec.id}
+                                      >
+                                        {rec.added ? '已添加' : '添加到日历'}
+                                      </Button>
+                                    </HStack>
+                                  ))}
+                                </VStack>
                               </Box>
                             )}
 
