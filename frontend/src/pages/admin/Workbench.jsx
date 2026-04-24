@@ -4,6 +4,7 @@ import { clients, girls, chatLogs, chat, chatPartner, aiCoach } from '../../util
 import { useSocket } from '../../contexts/SocketContext';
 import { FiSend, FiMessageSquare, FiTarget, FiZap, FiAlertCircle, FiCheck, FiCopy, FiUser } from 'react-icons/fi';
 import { HeartIcon } from '../../components/Icons';
+import SelectionToCalendar from '../../components/SelectionToCalendar';
 
 export default function AdminWorkbench() {
   const [clientList, setClientList] = useState([]);
@@ -144,14 +145,16 @@ export default function AdminWorkbench() {
   };
 
   const fetchActiveCoach = useCallback(async (forceRefresh = false) => {
-    // 取消之前的请求
+    // 取消之前的请求并创建新的 AbortController
     if (activeCoachAbortRef.current) {
       activeCoachAbortRef.current.abort();
     }
+    activeCoachAbortRef.current = new AbortController();
 
     const token = localStorage.getItem('yutang_token');
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3005';
-    const cacheKey = selectedGirl?.id ? `girl:${selectedGirl.id}` : 'overview';
+    // 缓存 key 要区分三级：全局概览 / 客户池分析 / 女生专项
+    const cacheKey = selectedGirl?.id ? `girl:${selectedGirl.id}` : selectedClient?.id ? `client:${selectedClient.id}` : 'overview';
 
     // 计算当前 hash
     const currentGirlHash = selectedGirl ? computeGirlDataHash(selectedGirl) : '';
@@ -166,25 +169,37 @@ export default function AdminWorkbench() {
         setActiveCoachCached(true);
         setActiveCoachChangeReason(null);
         setActiveCoachText(cached.content);
-        if (activeCoachRef.current) activeCoachRef.current.textContent = cached.content;
+        if (activeCoachRef.current) activeCoachRef.current.textContent = stripMarkdown(cached.content);
         console.log('[coach] cache hit, reason: hash match');
         return;
       }
     }
 
     // 构建 URL（带 hash 参数）
+    // 三级逻辑：无女生但无客户 → /overview 全局分析
+    //          无女生但有客户 → /client-pool/:clientId 客户池分析
+    //          有女生 → /girl-summary/:girlId 女生专项分析
     let url;
     if (selectedGirl?.id) {
       url = `${apiUrl}/api/ai-coach/girl-summary/${selectedGirl.id}`;
       if (currentGirlHash || currentUserHash) {
         url += `?cachedGirlHash=${encodeURIComponent(currentGirlHash)}&cachedUserHash=${encodeURIComponent(currentUserHash)}`;
       }
+    } else if (selectedClient?.id) {
+      url = `${apiUrl}/api/ai-coach/client-pool/${selectedClient.id}`;
+      if (currentUserHash) {
+        url += `?cachedClientHash=${encodeURIComponent(currentUserHash)}`;
+      }
     } else {
+      // 无客户 → 全局概览
       url = `${apiUrl}/api/ai-coach/overview`;
       if (currentUserHash) {
         url += `?cachedUserHash=${encodeURIComponent(currentUserHash)}`;
       }
     }
+
+    // 保存旧文本用于错误时恢复
+    const prevText = activeCoachText;
 
     setActiveCoachLoading(true);
     setActiveCoachCached(false);
@@ -192,13 +207,31 @@ export default function AdminWorkbench() {
     setActiveCoachText('');
     if (activeCoachRef.current) activeCoachRef.current.textContent = '';
 
+    // 15秒超时
+    const timeoutId = setTimeout(() => {
+      activeCoachAbortRef.current?.abort();
+    }, 15000);
+
     try {
       const res = await fetch(url, {
         method: 'GET',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}` },
+        signal: activeCoachAbortRef.current?.signal
       });
 
+      clearTimeout(timeoutId);
+
       if (!res.ok) {
+        // 恢复旧文本
+        setActiveCoachText(prevText);
+        if (activeCoachRef.current) activeCoachRef.current.textContent = prevText;
+        setActiveCoachLoading(false);
+        return;
+      }
+
+      if (!res.body) {
+        setActiveCoachText(prevText);
+        if (activeCoachRef.current) activeCoachRef.current.textContent = prevText;
         setActiveCoachLoading(false);
         return;
       }
@@ -242,7 +275,7 @@ export default function AdminWorkbench() {
               if (parsed.content) {
                 text += parsed.content;
                 if (activeCoachRef.current) {
-                  activeCoachRef.current.textContent = text;
+                  activeCoachRef.current.textContent = stripMarkdown(text);
                 }
               }
             } catch { /* ignore */ }
@@ -258,17 +291,22 @@ export default function AdminWorkbench() {
         timestamp: Date.now()
       };
       setActiveCoachText(text);
-    } catch {
-      // ignore abort errors
+    } catch (err) {
+      // abort 或网络错误：恢复旧文本
+      if (err.name !== 'AbortError') {
+        console.error('[coach] SSE error:', err);
+        setActiveCoachText(prevText);
+        if (activeCoachRef.current) activeCoachRef.current.textContent = prevText;
+      }
     } finally {
       setActiveCoachLoading(false);
     }
-  }, [selectedGirl?.id, selectedClient]);
+  }, [selectedGirl?.id, selectedClient?.id]);
 
   // 切换女生时自动触发主动教练
   useEffect(() => {
     fetchActiveCoach();
-  }, [fetchActiveCoach]);
+  }, [fetchActiveCoach, selectedGirl?.id, selectedClient?.id]);
 
   // 轮询待审核更新
   const fetchPendingUpdates = useCallback(async () => {
@@ -307,12 +345,15 @@ export default function AdminWorkbench() {
     }
   }, [clientSession]);
 
+  // 加载客户列表（不自动选中第一个，保留空白状态让用户主动选择）
   const loadClients = useCallback(async () => {
     try {
       const res = await clients.list();
-      if (res.success && res.clients.length > 0) {
+      if (res.success) {
         setClientList(res.clients);
-        selectClient(res.clients[0]);
+        // 不自动选中第一个 — 空状态是合理的入口点
+        // setSelectedClient 和 setSelectedGirl 都保持 null
+        // 主动教练在空客户时会调用 /overview 全局分析
       }
     } catch {
       console.error('请求错误');
@@ -397,6 +438,7 @@ export default function AdminWorkbench() {
   const selectClient = async (client) => {
     setSelectedClient(client);
     setSelectedGirl(null);
+    setGirlsList([]); // 清空女生列表，切换客户时重新加载
     setResponse(null);
     try {
       const res = await girls.list({ clientId: client.id });
@@ -489,7 +531,7 @@ export default function AdminWorkbench() {
                 if (parsed.content) {
                   analysis += parsed.content;
                   if (analysisRef.current) {
-                    analysisRef.current.innerHTML = analysis.replace(/\n/g, '<br>');
+                    analysisRef.current.textContent = stripMarkdown(analysis);
                   }
                 }
                 if (parsed.error) toast({ title: '分析失败', status: 'error' });
@@ -506,7 +548,7 @@ export default function AdminWorkbench() {
         if (data.success) {
           setAiAnalysis(data.analysis || '');
           if (analysisRef.current) {
-            analysisRef.current.innerHTML = (data.analysis || '').replace(/\n/g, '<br>');
+            analysisRef.current.textContent = stripMarkdown(data.analysis || '');
           }
           setResponse({ coachName: data.coachName || 'AI统一教练', analysis: data.analysis });
         } else {
@@ -833,7 +875,7 @@ export default function AdminWorkbench() {
               if (parsed.content) {
                 analysis += parsed.content;
                 if (momentRef.current) {
-                  momentRef.current.textContent = analysis;
+                  momentRef.current.textContent = stripMarkdown(analysis);
                 }
               }
               if (parsed.error) toast({ title: '分析失败', status: 'error' });
@@ -916,7 +958,7 @@ export default function AdminWorkbench() {
       const res = await chatPartner.analyzeClient({
         clientId: selectedClient.id,
         message: clientMsg,
-        history: clientChatHistory.map(m => ({ role: m.role, content: m.content }))
+        history: newHistory.map(m => ({ role: m.role, content: m.content }))
       });
       if (res.success) {
         setClientAiAnalysis(res.analysis || '');
@@ -1024,12 +1066,27 @@ export default function AdminWorkbench() {
     setClientMsg('');
     setClientMyMsg('');
   };
+  // 去掉 markdown 符号（* # ` 等），纯文本展示
+  const stripMarkdown = (text) => {
+    if (!text) return '';
+    return text
+      .replace(/#{1,6}\s?/g, '')           // 去掉 # 标题
+      .replace(/\*\*(.+?)\*\*/g, '$1')    // 去掉 **bold**
+      .replace(/\*(.+?)\*/g, '$1')        // 去掉 *italic*
+      .replace(/`(.+?)`/g, '$1')          // 去掉 `code`
+      .replace(/^[-*+]\s+/gm, '')          // 去掉列表前缀
+      .replace(/^\d+\.\s+/gm, '')          // 去掉数字列表
+      .replace(/^>\s?/gm, '')              // 去掉引用符号
+      .replace(/\n{3,}/g, '\n\n');         // 压缩多余空行
+  };
+
+  // 关系热度 emoji
   const getTensionEmoji = (score) => {
-    if (score >= 8) return '🔥🔥🔥';
-    if (score >= 7) return '🔥🔥';
-    if (score >= 5) return '🔥';
-    if (score >= 3) return '❄️';
-    return '❄️❄️';
+    if (score >= 8) return '🔥';
+    if (score >= 6) return '💗';
+    if (score >= 4) return '💬';
+    if (score >= 2) return '❄️';
+    return '🧊';
   };
 
   const loadGirlLogs = async () => {
@@ -1066,6 +1123,7 @@ export default function AdminWorkbench() {
             <CardBody pt={0}>
               <Select
                 value={selectedClient?.id || ''}
+                placeholder="请选择客户"
                 onChange={e => {
                   const c = clientList.find(c => c.id === e.target.value);
                   if (c) selectClient(c);
@@ -1504,7 +1562,7 @@ export default function AdminWorkbench() {
                                   <Icon as={FiTarget} color="purple.400" boxSize={4} />
                                   <Text color="purple.300" fontSize="sm" fontWeight="bold">AI 分析</Text>
                                 </HStack>
-                                <Text color="gray.200" fontSize="sm" whiteSpace="pre-wrap">{clientAiAnalysis}</Text>
+                                <Text color="gray.200" fontSize="sm" style={{ whiteSpace: 'pre-wrap' }}>{stripMarkdown(clientAiAnalysis)}</Text>
                               </Box>
                             )}
 
@@ -2000,7 +2058,7 @@ export default function AdminWorkbench() {
                                   <Icon as={FiTarget} color="purple.400" boxSize={4} />
                                   <Text color="purple.300" fontSize="sm" fontWeight="bold">AI分析</Text>
                                 </HStack>
-                                <Text color="gray.200" fontSize="sm" whiteSpace="pre-wrap">{aiAnalysis}</Text>
+                                <Text color="gray.200" fontSize="sm" style={{ whiteSpace: 'pre-wrap' }}>{stripMarkdown(aiAnalysis)}</Text>
                               </Box>
                             )}
 
@@ -2446,6 +2504,9 @@ export default function AdminWorkbench() {
           </Card>
         </Box>
       </Flex>
+
+      {/* 选中文本添加到日历 */}
+      <SelectionToCalendar clientId={selectedClient?.id} girlList={girlsList} />
     </Box>
   );
 }
