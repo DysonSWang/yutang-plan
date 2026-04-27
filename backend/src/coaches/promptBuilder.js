@@ -356,7 +356,7 @@ ${historyText}
  * 构建聊天分析prompt
  */
 function buildChatAnalysisPrompt(chatHistory, context) {
-  const skills = getMultiDimensionalSkills('聊天分析', context);
+  const { skills } = getMultiDimensionalSkillsWithMeta('聊天分析', context);
 
   return `
 你是聊天分析专家，分析以下聊天记录，识别对话双方的意图、情绪和关系状态。
@@ -366,9 +366,12 @@ ${chatHistory}
 
 【分析框架】
 ${skills.map(s => {
-  const framework = s.principles?.find(p => p.type === 'framework');
-  return framework ? `${framework.name}：${framework.steps?.map((step, i) => `${i+1}.${typeof step === 'string' ? step : step.name}`).join(' → ')}` : '';
-}).filter(Boolean).join('\n')}
+  // 提取所有有 steps 的 principle（兼容 framework/core_theory 等类型）
+  const principlesWithSteps = (s.principles || []).filter(p => p.steps && Array.isArray(p.steps));
+  return principlesWithSteps.map(p =>
+    `${p.name}：${p.steps.map((step, i) => `${i+1}.${typeof step === 'string' ? step : step.name}`).join(' → ')}`
+  ).join('\n');
+}).filter(Boolean).join('\n') || '（无结构化框架，依赖通用分析）'}
 
 请按以下10个维度输出 JSON 分析结果，直接写字段名和值，不要加说明：
 1. userIntention：用户意图

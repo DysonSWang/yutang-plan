@@ -19,6 +19,8 @@ const { buildMasterPrompt, getSkillsForQuestion, getMultiDimensionalSkillsWithMe
 const { chatWithTools, toolDefinitions } = require('../services/coach-engine');
 const { getOrCreateSession, addMessage, getConversationHistory, listSessions, getClientSessions, getSystemStats, getSessionDetail, addFeedback, getFeedbackStats, endSession } = require('../services/memory');
 const { streamGuardrails, runGuardrails, stripMarkdown, estimateTokens: guardEstimateTokens, createChunkDeduplicator } = require('../services/guardrails');
+const { runInputGuardrails } = require('../guardrails/input');
+const { triage } = require('../agents');
 const { recordFeedback, getClientCoachPreferences, getProfileSummary } = require('../services/clientCoachProfile');
 const { extractLearningsFromConversation } = require('../services/learning');
 const { buildDynamicPersona, buildPersonaSection, buildFullPersona } = require('../services/coachPersona');
@@ -53,7 +55,69 @@ function sanitizeRoutingMeta(meta) {
 }
 
 /**
- * Calculate the remaining budget (in chars) for context injection.
+ * 运行输入 Guardrail 检查（异步，非阻塞）
+ * @param {string} inputText - 用户输入文本
+ * @param {string} clientId - 客户ID
+ * @param {string} coachId - 教练ID
+ * @param {string} girlId - 女生ID（可选）
+ * @param {string} endpoint - 端点名
+ */
+async function logGuardrailCheck(inputText, clientId, coachId, girlId, endpoint) {
+  const text = typeof inputText === 'string' ? inputText.slice(0, 100) : '';
+  try {
+    const { results } = await runInputGuardrails(inputText || '');
+    for (const r of results) {
+      await prisma.guardrailLog.create({
+        data: {
+          clientId: clientId || null,
+          coachId: coachId || 'unified',
+          girlId: girlId || null,
+          checkType: r.name.toLowerCase(),
+          passed: r.passed,
+          reason: r.reason || null,
+          reasoning: r.info?.reasoning || null,
+          inputText: text || null,
+          endpoint: endpoint || null,
+        }
+      });
+    }
+  } catch (err) {
+    console.warn('[Guardrail] 日志记录失败:', err.message);
+  }
+}
+
+/**
+ * 记录 Triage 路由结果到日志（用于统计）
+ * @param {string} clientId - 客户ID
+ * @param {string} girlId - 女生ID
+ * @param {string} routeType - 路由类型
+ * @param {number} confidence - 置信度 0-1
+ * @param {string} method - 路由方法
+ * @param {string} endpoint - 端点
+ */
+async function logTriageResult(clientId, girlId, routeType, confidence, method, endpoint = '/agent-chat') {
+  try {
+    await prisma.guardrailLog.create({
+      data: {
+        clientId: clientId || null,
+        coachId: 'unified',
+        girlId: girlId || null,
+        checkType: 'triage',
+        passed: true,
+        routeType: routeType || null,
+        confidence: confidence || null,
+        method: method || null,
+        endpoint: endpoint,
+      }
+    });
+  } catch (err) {
+    console.warn('[Triage] 日志记录失败:', err.message);
+  }
+}
+
+/**
+ * 计算剩余上下文预算（字符数）
+ * Static parts consume: coach system prompt + user situation + history + overhead.
  * Static parts consume: coach system prompt + user situation + history + overhead.
  */
 function calcContextBudget(coachSystemPrompt, situation, historyText) {
@@ -348,6 +412,48 @@ router.post('/situation', authMiddleware, async (req, res) => {
 
     const aiConfig = getAIConfig();
 
+    // ---- 输入 Guardrail 检查 ----
+    let guardrailPassed = true;
+    let guardrailResults = [];
+    try {
+      const { passed, results, reason } = await runInputGuardrails(situation);
+      guardrailPassed = passed;
+      guardrailResults = results;
+      if (!passed) {
+        // 拦截不相关或可疑输入
+        if (stream) {
+          res.setHeader('Content-Type', 'text/event-stream');
+          res.setHeader('Cache-Control', 'no-cache');
+          res.setHeader('Connection', 'keep-alive');
+          res.setHeader('X-Accel-Buffering', 'no');
+          res.flushHeaders();
+          const failedCheck = results.find(r => !r.passed);
+          res.write(`data: ${JSON.stringify({
+            meta: {
+              guardrail: {
+                name: failedCheck?.name || 'unknown',
+                passed: false,
+                reason: reason || '输入检查未通过'
+              }
+            }
+          })}\n\n`);
+          res.write(`data: ${JSON.stringify({ content: '抱歉，我无法回答与情感咨询无关的问题。请描述一下你遇到的情况～' })}\n\n`);
+          res.write('data: [DONE]\n\n');
+          res.end();
+        } else {
+          res.json({ success: false, error: reason || '输入检查未通过', guardrailFailed: true });
+        }
+        // 异步记录日志
+        logGuardrailCheck(situation, req.user.id, unifiedCoachId, girlId, '/situation').catch(() => {});
+        return;
+      }
+      // 异步记录（成功不阻塞响应）
+      logGuardrailCheck(situation, req.user.id, unifiedCoachId, girlId, '/situation').catch(() => {});
+    } catch (err) {
+      console.warn('[situation] Guardrail 检查异常:', err.message);
+      // Guardrail 异常时降级放行
+    }
+
     // 添加用户消息到记忆（在prompt构建之后）
     await addMessage(sessionMemory.id, 'user', situation);
 
@@ -385,9 +491,16 @@ router.post('/situation', authMiddleware, async (req, res) => {
         {
           deduplicator,
           onMeta: () => {
-            // 先发送路由 meta + 新鲜度信息
+            // 先发送路由 meta + 新鲜度信息 + guardrail 结果
             const meta = sanitizeRoutingMeta(routingMeta);
             if (staleAlert) meta.staleAlert = staleAlert;
+            if (guardrailResults.length > 0) {
+              meta.guardrail = guardrailResults.map(r => ({
+                name: r.name,
+                passed: r.passed,
+                reasoning: r.info?.reasoning || (r.passed ? '通过' : r.reason)
+              }));
+            }
             res.write(`data: ${JSON.stringify({ meta })}\n\n`);
           },
           onChunk: (content) => {
@@ -680,6 +793,24 @@ ${clientProfile ? buildPersonaSection(await buildDynamicPersona({ clientProfile,
 
 只输出 JSON，不要其他内容。`;
 
+    // ---- 输入 Guardrail 检查 ----
+    try {
+      const { passed, results, reason } = await runInputGuardrails(historyText);
+      if (!passed) {
+        const failedCheck = results.find(r => !r.passed);
+        logGuardrailCheck(historyText, req.user.id, unifiedCoachId, girlId, '/analyze-chat').catch(() => {});
+        return res.status(400).json({
+          success: false,
+          error: reason || '输入检查未通过',
+          guardrailFailed: true,
+          guardrailMeta: { name: failedCheck?.name, reason }
+        });
+      }
+      logGuardrailCheck(historyText, req.user.id, unifiedCoachId, girlId, '/analyze-chat').catch(() => {});
+    } catch (err) {
+      console.warn('[analyze-chat] Guardrail 检查异常:', err.message);
+    }
+
     const aiConfig = getAIConfig();
     const response = await fetch(aiConfig.url, {
       method: 'POST',
@@ -843,6 +974,24 @@ ${context ? `【对话背景】\n${context}` : ''}
 
 只输出 JSON，不要其他内容。`;
 
+    // ---- 输入 Guardrail 检查 ----
+    try {
+      const { passed, results, reason } = await runInputGuardrails(lastMessage);
+      if (!passed) {
+        const failedCheck = results.find(r => !r.passed);
+        logGuardrailCheck(lastMessage, req.user.id, unifiedCoachId, girlId, '/reply-suggestions').catch(() => {});
+        return res.status(400).json({
+          success: false,
+          error: reason || '输入检查未通过',
+          guardrailFailed: true,
+          guardrailMeta: { name: failedCheck?.name, reason }
+        });
+      }
+      logGuardrailCheck(lastMessage, req.user.id, unifiedCoachId, girlId, '/reply-suggestions').catch(() => {});
+    } catch (err) {
+      console.warn('[reply-suggestions] Guardrail 检查异常:', err.message);
+    }
+
     const aiConfig = getAIConfig();
     const response = await fetch(aiConfig.url, {
       method: 'POST',
@@ -1003,6 +1152,24 @@ ${goalHint}
 }
 
 只输出 JSON，不要其他内容。`;
+
+    // ---- 输入 Guardrail 检查 ----
+    try {
+      const { passed, results, reason } = await runInputGuardrails(originalReply);
+      if (!passed) {
+        const failedCheck = results.find(r => !r.passed);
+        logGuardrailCheck(originalReply, req.user.id, unifiedCoachId, girlId, '/optimize-reply').catch(() => {});
+        return res.status(400).json({
+          success: false,
+          error: reason || '输入检查未通过',
+          guardrailFailed: true,
+          guardrailMeta: { name: failedCheck?.name, reason }
+        });
+      }
+      logGuardrailCheck(originalReply, req.user.id, unifiedCoachId, girlId, '/optimize-reply').catch(() => {});
+    } catch (err) {
+      console.warn('[optimize-reply] Guardrail 检查异常:', err.message);
+    }
 
     const aiConfig = getAIConfig();
     const response = await fetch(aiConfig.url, {
@@ -1328,6 +1495,33 @@ ${stageContext}
 ${clientProfile ? buildPersonaSection(await buildDynamicPersona({ clientProfile, clientId: null })) : ''}
 `;
 
+    // ---- 输入 Guardrail 检查 ----
+    const momentInput = momentText || (momentImage ? '（图片）' : '');
+    try {
+      const { passed, results, reason } = await runInputGuardrails(momentInput);
+      if (!passed) {
+        const failedCheck = results.find(r => !r.passed);
+        logGuardrailCheck(momentInput, req.user.id, unifiedCoachId, girlId, '/moment').catch(() => {});
+        if (stream) {
+          res.setHeader('Content-Type', 'text/event-stream');
+          res.setHeader('Cache-Control', 'no-cache');
+          res.setHeader('Connection', 'keep-alive');
+          res.setHeader('X-Accel-Buffering', 'no');
+          res.flushHeaders();
+          res.write(`data: ${JSON.stringify({ guardrail: { name: failedCheck?.name, passed: false, reason: reason || '输入检查未通过' } })}\n\n`);
+          res.write(`data: ${JSON.stringify({ content: '抱歉，我无法分析与此无关的内容。请描述一下朋友圈的内容～' })}\n\n`);
+          res.write('data: [DONE]\n\n');
+          res.end();
+        } else {
+          res.status(400).json({ success: false, error: reason || '输入检查未通过', guardrailFailed: true });
+        }
+        return;
+      }
+      logGuardrailCheck(momentInput, req.user.id, unifiedCoachId, girlId, '/moment').catch(() => {});
+    } catch (err) {
+      console.warn('[moment] Guardrail 检查异常:', err.message);
+    }
+
     const aiConfig = getAIConfig();
 
     // 流式模式
@@ -1602,6 +1796,120 @@ router.get('/feedback-stats', authMiddleware, async (req, res) => {
     res.json({ success: true, data: stats });
   } catch (error) {
     console.error('[AICoach] 反馈统计失败:', error);
+    res.status(500).json({ error: '获取统计失败' });
+  }
+});
+
+/**
+ * Guardrail 检查统计
+ * GET /api/ai-coach/guardrail-stats
+ */
+router.get('/guardrail-stats', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const { startDate, endDate, days = '7' } = req.query;
+    const daysNum = parseInt(days, 10) || 7;
+
+    const since = new Date();
+    since.setDate(since.getDate() - daysNum);
+
+    const where = {
+      createdAt: { gte: since }
+    };
+    if (startDate) where.createdAt.gte = new Date(startDate);
+    if (endDate) where.createdAt.lte = new Date(endDate);
+
+    const logs = await prisma.guardrailLog.findMany({
+      where,
+      select: {
+        checkType: true,
+        passed: true,
+        reason: true,
+        endpoint: true,
+        createdAt: true
+      }
+    });
+
+    const total = logs.length;
+    const passed = logs.filter(l => l.passed).length;
+    const failed = logs.filter(l => !l.passed).length;
+
+    // 按检查类型统计
+    const byType = {};
+    for (const log of logs) {
+      const key = log.checkType;
+      if (!byType[key]) byType[key] = { total: 0, passed: 0, failed: 0 };
+      byType[key].total++;
+      if (log.passed) byType[key].passed++;
+      else byType[key].failed++;
+    }
+    for (const key of Object.keys(byType)) {
+      const t = byType[key];
+      t.passRate = t.total > 0 ? Math.round((t.passed / t.total) * 100) : 0;
+    }
+
+    // 按端点统计
+    const byEndpoint = {};
+    for (const log of logs) {
+      const key = log.endpoint || 'unknown';
+      if (!byEndpoint[key]) byEndpoint[key] = { total: 0, passed: 0, failed: 0 };
+      byEndpoint[key].total++;
+      if (log.passed) byEndpoint[key].passed++;
+      else byEndpoint[key].failed++;
+    }
+    for (const key of Object.keys(byEndpoint)) {
+      const t = byEndpoint[key];
+      t.passRate = t.total > 0 ? Math.round((t.passed / t.total) * 100) : 0;
+    }
+
+    // 失败原因分布（最近失败的前10个）
+    const failureReasons = logs
+      .filter(l => !l.passed && l.reason)
+      .reduce((acc, l) => {
+        const key = l.reason?.slice(0, 80) || 'unknown';
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {});
+    const topFailureReasons = Object.entries(failureReasons)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([reason, count]) => ({ reason, count }));
+
+    // 最近拦截记录
+    const recentFailed = await prisma.guardrailLog.findMany({
+      where: { passed: false, ...where },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+      select: {
+        checkType: true,
+        reason: true,
+        inputText: true,
+        endpoint: true,
+        createdAt: true
+      }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        period: { days: daysNum, since: since.toISOString() },
+        summary: {
+          total,
+          passed,
+          failed,
+          passRate: total > 0 ? Math.round((passed / total) * 100) : 0
+        },
+        byType,
+        byEndpoint,
+        topFailureReasons,
+        recentFailed
+      }
+    });
+  } catch (error) {
+    console.error('[AICoach] Guardrail 统计失败:', error);
     res.status(500).json({ error: '获取统计失败' });
   }
 });
@@ -2592,5 +2900,418 @@ function getProfileFreshnessInfo(girlInfo) {
 
   return { tensionAgeHours, intimacyAgeHours, hasStaleField, warnings };
 }
+
+/**
+ * Agent 统一入口 - 流式对话端点
+ * POST /api/ai-coach/agent-chat
+ *
+ * 统一入口：Triage Agent 自动识别意图 → 路由到专业 Agent → 流式返回结果
+ *
+ * 请求体：
+ * {
+ *   message: string,          // 用户输入
+ *   girlId?: string,          // 女生ID（可选）
+ *   sessionMemoryId?: string,  // 记忆会话ID（可选）
+ *   conversationHistory?: Array<{role, content}>, // 对话历史（可选，优先用 sessionMemoryId）
+ *   stream?: boolean           // 是否流式（默认 true）
+ * }
+ *
+ * SSE meta 帧结构：
+ * { meta: {
+ *     guardrail: { name, passed, reasoning },
+ *     triage: { routeType, confidence, method, keywordMatch },
+ *     handoff: { from, to, reason },
+ *     agent: { current, turnCount, compactionCount },
+ *     ...
+ *   }
+ * }
+ */
+router.post('/agent-chat', authMiddleware, async (req, res) => {
+  try {
+    if (!['operator', 'admin', 'client'].includes(req.user.role)) {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const { message, girlId, sessionMemoryId, conversationHistory: providedHistory, stream = true } = req.body;
+
+    if (!message || typeof message !== 'string' || message.trim().length === 0) {
+      return res.status(400).json({ error: '消息内容是必需的' });
+    }
+
+    const trimmedMessage = message.trim();
+
+    // 安全：验证女生归属权
+    if (girlId) {
+      const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+      if (!girl) return res.status(404).json({ error: '女生不存在' });
+      if (req.user.role === 'operator') {
+        const session = await prisma.chatSession.findFirst({
+          where: { operatorId: req.user.id, clientId: girl.clientId }
+        });
+        if (!session) return res.status(403).json({ error: '无权限访问此女生数据' });
+      }
+    }
+
+    // ---- 输入 Guardrail ----
+    let guardrailPassed = true;
+    let guardrailResults = [];
+    try {
+      const result = await runInputGuardrails(trimmedMessage);
+      guardrailPassed = result.passed;
+      guardrailResults = result.results;
+      if (!guardrailPassed) {
+        if (stream) {
+          res.setHeader('Content-Type', 'text/event-stream');
+          res.setHeader('Cache-Control', 'no-cache');
+          res.setHeader('Connection', 'keep-alive');
+          res.setHeader('X-Accel-Buffering', 'no');
+          res.flushHeaders();
+          const failed = result.results?.find(r => !r.passed);
+          res.write(`data: ${JSON.stringify({
+            meta: { guardrail: { name: failed?.name || 'unknown', passed: false, reason: result.reason || '检查未通过' } }
+          })}\n\n`);
+          res.write(`data: ${JSON.stringify({ content: '抱歉，我无法回答与情感咨询无关的问题。请换个方式描述你的情况～' })}\n\n`);
+          res.write('data: [DONE]\n\n');
+          res.end();
+        } else {
+          res.json({ success: false, error: result.reason || '输入检查未通过', guardrailFailed: true });
+        }
+        logGuardrailCheck(trimmedMessage, req.user.id, 'unified', girlId, '/agent-chat').catch(() => {});
+        return;
+      }
+      logGuardrailCheck(trimmedMessage, req.user.id, 'unified', girlId, '/agent-chat').catch(() => {});
+    } catch (err) {
+      console.warn('[agent-chat] Guardrail 异常:', err.message);
+    }
+
+    // ---- 构建 UnifiedContext ----
+    const { memory: sessionMemory } = await getOrCreateSession(req.user.id, 'unified', girlId);
+    const memSessionId = sessionMemoryId || sessionMemory.id;
+    const history = providedHistory?.length > 0
+      ? providedHistory
+      : await getConversationHistory(memSessionId);
+
+    const aiConfig = getAIConfig();
+
+    // ---- Triage 路由 ----
+    const triageResult = await triage(trimmedMessage, {
+      girlId,
+      girlProfile: null,
+      clientProfile: null,
+      recentSignals: [],
+    }, aiConfig);
+
+    const routeType = triageResult.routeType;
+    const routeName = triageResult.routeType.replace('_', ' ');
+
+    // ---- 记录 Triage 结果到日志 ----
+    logTriageResult(req.user.id, girlId, triageResult.routeType, triageResult.confidence, triageResult.method, '/agent-chat').catch(() => {});
+
+    // ---- 追加用户消息到记忆 ----
+    await addMessage(memSessionId, 'user', trimmedMessage);
+
+    // 流式模式
+    if (stream) {
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no');
+      res.flushHeaders();
+
+      const deduplicator = createChunkDeduplicator();
+
+      // 构建上下文（用于各 Agent）
+      const context = await buildAICoachContext(req.user.id, girlId, trimmedMessage, {
+        maxContextChars: calcContextBudget('', trimmedMessage, history.map(m => m.content).join('')),
+        turnCount: history.length,
+        compactionCount: sessionMemory.compactionCount || 0,
+      });
+
+      // 根据路由类型构建 system prompt
+      const agentPrompts = await buildAgentPrompt(routeType, trimmedMessage, context, {
+        history,
+        turnCount: history.length,
+        compactionCount: sessionMemory.compactionCount || 0,
+        userId: req.user.id,
+      });
+
+      const systemPrompt = agentPrompts.systemPrompt;
+      const userPrompt = agentPrompts.userPrompt;
+
+      // 发送初始 meta（guardrail + triage + agent 信息）
+      res.write(`data: ${JSON.stringify({
+        meta: {
+          guardrail: guardrailResults.map(r => ({ name: r.name, passed: r.passed })),
+          triage: {
+            routeType: triageResult.routeType,
+            routeName: triageResult.routeType === 'situation' ? '情况咨询'
+              : triageResult.routeType === 'chat_analysis' ? '聊天分析'
+              : triageResult.routeType === 'reply' ? '回复建议'
+              : triageResult.routeType === 'moment' ? '朋友圈分析'
+              : triageResult.routeType === 'overview' ? '全局概览'
+              : triageResult.routeType === 'optimize_reply' ? '话术优化'
+              : '通用教练',
+            confidence: triageResult.confidence,
+            method: triageResult.method,
+            meta: triageResult.meta
+          },
+          agent: {
+            current: routeType,
+            sessionId: memSessionId,
+            turnCount: history.length + 1,
+            compactionCount: sessionMemory.compactionCount || 0,
+          }
+        }
+      })}\n\n`);
+
+      // 流式 AI 调用
+      await callAIStream(
+        aiConfig,
+        {
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 500,
+          stream: true
+        },
+        {
+          deduplicator,
+          onChunk: (content) => {
+            res.write(`data: ${JSON.stringify({ content })}\n\n`);
+          },
+          onDone: async () => {
+            // 记录 AI 响应到记忆
+            // 注意：由于是流式，我们只记录一条 assistant 消息占位
+            // 完整内容需要客户端上传，这里不做处理
+            res.write('data: [DONE]\n\n');
+            res.end();
+          },
+          onError: (err) => {
+            res.write(`data: ${JSON.stringify({ error: err })}\n\n`);
+            res.write('data: [DONE]\n\n');
+            res.end();
+          }
+        }
+      );
+    } else {
+      // 非流式模式
+      const context = await buildAICoachContext(req.user.id, girlId, trimmedMessage);
+      const agentPrompts = await buildAgentPrompt(routeType, trimmedMessage, context, {
+        history,
+        userId: req.user.id,
+      });
+
+      const response = await fetch(aiConfig.url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${aiConfig.key}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: aiConfig.model,
+          messages: [
+            { role: 'system', content: agentPrompts.systemPrompt },
+            { role: 'user', content: agentPrompts.userPrompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 500,
+          stream: false
+        })
+      });
+
+      if (!response.ok) {
+        return res.status(502).json({ error: 'AI 服务请求失败' });
+      }
+
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content || '';
+
+      await addMessage(memSessionId, 'assistant', content);
+
+      res.json({
+        success: true,
+        data: {
+          content,
+          routeType: triageResult.routeType,
+          meta: {
+            triage: triageResult,
+            agent: { current: routeType, sessionId: memSessionId }
+          }
+        }
+      });
+    }
+  } catch (error) {
+    console.error('[AICoach] agent-chat 异常:', error);
+    res.status(500).json({ error: '服务暂时不可用' });
+  }
+});
+
+/**
+ * 根据路由类型构建 Agent 对应的 prompt
+ *
+ * S03 变更：路由到独立 Agent 模块，各 Agent 自己构建 prompt
+ * @param {string} routeType - 路由类型
+ * @param {string} message - 用户输入
+ * @param {object} context - 上下文
+ * @param {object} opts - { history, turnCount, compactionCount, userId }
+ */
+async function buildAgentPrompt(routeType, message, context, opts) {
+  const { history, turnCount = 0, compactionCount = 0, userId } = opts;
+
+  // 构建 UnifiedContext（用于专业 Agent）
+  const { UnifiedContext, AGENT_MAP } = require('../agents');
+  const ctx = new UnifiedContext(userId);
+  ctx.girlProfile = context.girlInfo ? {
+    ...context.girlInfo,
+    personality: (() => {
+      try {
+        return typeof context.girlInfo.personality === 'string'
+          ? JSON.parse(context.girlInfo.personality)
+          : context.girlInfo.personality || {};
+      } catch (e) { return {}; }
+    })(),
+  } : null;
+  ctx.recentSignals = context.recentSignals || [];
+  ctx.conversationHistory = history || [];
+  ctx.turnCount = turnCount;
+  ctx.compactionCount = compactionCount;
+  ctx.conversationSummary = context.conversationSummary || null;
+  ctx.clientProfile = context.clientProfile || null;
+
+  const agentModule = AGENT_MAP[routeType];
+  if (!agentModule) {
+    // fallback 到 SituationAgent
+    return AGENT_MAP['situation'].buildPrompt(message, ctx, { clientId: userId });
+  }
+
+  // ReplyAgent 需要区分普通回复和优化模式
+  if (agentModule === require('../agents/ReplyAgent') && routeType === 'optimize_reply') {
+    return agentModule.buildOptimizePrompt(message, null, ctx, { clientId: userId });
+  }
+
+  return agentModule.buildPrompt(message, ctx, { clientId: userId });
+}
+
+/**
+ * Triage 路由统计
+ * GET /api/ai-coach/triage-stats
+ *
+ * 返回：按路由类型分布、置信度分布、平均置信度
+ */
+router.get('/triage-stats', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const { days = '7' } = req.query;
+    const daysNum = parseInt(days, 10) || 7;
+    const since = new Date();
+    since.setDate(since.getDate() - daysNum);
+
+    // 从 GuardrailLog 中查询 Triage 记录（checkType='triage'）
+    // agent-chat 端点每次调用会记录一条 triage 类型的日志
+    const triageLogs = await prisma.guardrailLog.findMany({
+      where: {
+        checkType: 'triage',
+        createdAt: { gte: since }
+      },
+      select: {
+        routeType: true,
+        confidence: true,
+        method: true,
+        endpoint: true,
+        passed: true,
+        reason: true,
+        createdAt: true
+      }
+    });
+
+    const totalRequests = triageLogs.length;
+
+    // 按路由类型统计
+    const byRouteType = {};
+    let confidenceSum = 0;
+    let confidenceCount = 0;
+    let methodCounts = {};
+    let endpointCounts = {};
+
+    for (const log of triageLogs) {
+      const rt = log.routeType || 'unknown';
+      if (!byRouteType[rt]) byRouteType[rt] = { total: 0, passed: 0, failed: 0 };
+      byRouteType[rt].total++;
+      if (log.passed) byRouteType[rt].passed++;
+      else byRouteType[rt].failed++;
+
+      if (log.confidence != null) {
+        confidenceSum += log.confidence;
+        confidenceCount++;
+      }
+
+      if (log.method) methodCounts[log.method] = (methodCounts[log.method] || 0) + 1;
+      if (log.endpoint) endpointCounts[log.endpoint] = (endpointCounts[log.endpoint] || 0) + 1;
+    }
+
+    const avgConfidence = confidenceCount > 0 ? Math.round((confidenceSum / confidenceCount) * 100) / 100 : null;
+
+    // 排序：按总量降序
+    const topRouteTypes = Object.entries(byRouteType)
+      .sort((a, b) => b[1].total - a[1].total)
+      .slice(0, 10)
+      .map(([routeType, stats]) => ({
+        routeType,
+        total: stats.total,
+        passed: stats.passed,
+        failed: stats.failed,
+        passRate: stats.total > 0 ? Math.round((stats.passed / stats.total) * 100) : 0
+      }));
+
+    // 方法分布
+    const methodDistribution = Object.entries(methodCounts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([method, count]) => ({ method, count, percent: totalRequests > 0 ? Math.round((count / totalRequests) * 100) : 0 }));
+
+    // 端点分布
+    const endpointDistribution = Object.entries(endpointCounts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([endpoint, count]) => ({ endpoint, count, percent: totalRequests > 0 ? Math.round((count / totalRequests) * 100) : 0 }));
+
+    // 失败原因（用于调试 Triage 分类质量）
+    const failureReasons = triageLogs
+      .filter(l => !l.passed && l.reason)
+      .reduce((acc, l) => {
+        const key = l.reason?.slice(0, 80) || 'unknown';
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {});
+    const topFailureReasons = Object.entries(failureReasons)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([reason, count]) => ({ reason, count }));
+
+    res.json({
+      success: true,
+      data: {
+        period: { days: daysNum, since: since.toISOString() },
+        summary: {
+          totalRequests,
+          avgConfidence,
+          totalMethods: Object.keys(methodCounts).length,
+          totalEndpoints: Object.keys(endpointCounts).length
+        },
+        byRouteType: topRouteTypes,
+        methodDistribution,
+        endpointDistribution,
+        topFailureReasons,
+        note: 'Triage 统计基于 checkType=triage 的日志记录。需要 /agent-chat 端点启用 triage 日志记录。'
+      }
+    });
+  } catch (error) {
+    console.error('[AICoach] Triage 统计失败:', error);
+    res.status(500).json({ error: '获取统计失败' });
+  }
+});
 
 module.exports = router;

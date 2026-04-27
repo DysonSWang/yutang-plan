@@ -897,3 +897,33 @@ model ClientCoachProfile {
   @@unique([clientId, coachId, questionType])
   @@map("client_coach_profiles")
 }
+
+// ========== Guardrail 检查日志 ==========
+model GuardrailLog {
+  id        String   @id @default(uuid())
+  clientId  String?
+  coachId   String   @default("unified")
+  girlId    String?
+
+  checkType  String   // 'relevance' | 'jailbreak' | 'triage'
+  passed     Boolean
+  reason     String?  // 失败原因
+  reasoning  String?  // LLM 返回的判断理由
+  inputText  String? // 被检查的输入文本（脱敏后存前100字）
+
+  endpoint   String?  // 调用的端点，如 '/situation', '/moment', '/agent-chat'
+  model      String?  // 使用的 guardrail 模型
+
+  // Triage 专用字段（当 checkType='triage' 时使用）
+  routeType   String?  // 'situation' | 'chat_analysis' | 'reply' | 'moment' | 'overview' | 'optimize_reply' | 'general'
+  confidence Float?   // 0-1 置信度
+  method     String?  // 'keyword' | 'llm' | 'coach'
+
+  createdAt DateTime @default(now())
+
+  @@index([clientId, createdAt])
+  @@index([checkType, createdAt])
+  @@index([passed, createdAt])
+  @@index([endpoint, createdAt])
+  @@map("guardrail_logs")
+}
