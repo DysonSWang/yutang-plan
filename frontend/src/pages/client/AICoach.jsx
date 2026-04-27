@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Box, VStack, HStack, Input, Button, Text, Card, CardBody, CardHeader, Heading, Select, Textarea, Spinner, Flex, Badge, Icon, Progress, SimpleGrid, Alert, AlertIcon, AlertDescription, Wrap, WrapItem } from '@chakra-ui/react';
+import { Box, VStack, HStack, Input, Button, Text, Card, CardBody, CardHeader, Heading, Select, Textarea, Spinner, Flex, Badge, Icon, Progress, SimpleGrid, Alert, AlertIcon, AlertDescription, Wrap, WrapItem, Tooltip, useToast } from '@chakra-ui/react';
 import { girls as girlsApi } from '../../utils/api';
 import { FireIcon, SnowIcon } from '../../components/Icons';
 
@@ -46,10 +46,14 @@ export default function AICoach() {
   const [question, setQuestion] = useState('');
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState(null);
+  const [staleAlert, setStaleAlert] = useState(null);   // 女生档案新鲜度警告
+  const [feedbackGiven, setFeedbackGiven] = useState(false); // 是否已反馈
   const [overview, setOverview] = useState(null);
   const [overviewLoading, setOverviewLoading] = useState(false);
   const analysisRef = useRef(null);
   const analysisText = useRef('');
+  const toast = useToast();
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3005';
 
   useEffect(() => {
     loadGirls();
@@ -138,9 +142,10 @@ export default function AICoach() {
     if (!question.trim()) return;
     setLoading(true);
     setResponse(null);
+    setStaleAlert(null);
+    setFeedbackGiven(false);
 
     const token = localStorage.getItem('yutang_token');
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3005';
 
     // 初始化显示区域
     analysisText.current = '';
@@ -186,22 +191,88 @@ export default function AICoach() {
               const parsed = JSON.parse(jsonStr);
               if (parsed.content) {
                 analysisText.current += parsed.content;
-                // 直接更新 DOM 实现真流式
                 if (analysisRef.current) {
                   analysisRef.current.innerHTML = analysisText.current.replace(/\n/g, '<br>');
                 }
+              }
+              // 捕获 meta 帧（含 staleAlert）
+              if (parsed.meta?.staleAlert) {
+                setStaleAlert(parsed.meta.staleAlert);
               }
             } catch { /* ignore parse errors */ }
           }
         }
       }
 
-      // 流式结束后更新React状态
       setResponse({ coachName: 'AI统一教练', analysis: analysisText.current });
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleNewConversation = async () => {
+    try {
+      const token = localStorage.getItem('yutang_token');
+      await fetch(`${apiUrl}/api/ai-coach/new-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ girlId: selectedGirlId || undefined })
+      });
+    } catch (e) {
+      console.error('[AICoach] new-session failed:', e);
+    }
+    setQuestion('');
+    setResponse(null);
+    setFeedbackGiven(false);
+    setStaleAlert(null);
+    analysisText.current = '';
+    if (analysisRef.current) {
+      analysisRef.current.innerHTML = '';
+    }
+    toast({
+      title: '已开启新对话',
+      status: 'info',
+      duration: 2000,
+      isClosable: true,
+    });
+  };
+
+  const handleFeedback = async (type) => {
+    if (feedbackGiven) return;
+    try {
+      const token = localStorage.getItem('yutang_token');
+      await fetch(`${apiUrl}/api/ai-coach/feedback`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          // memoryId 由后端从用户 token 推断，暂传空
+          type,
+          routedType: 'situation'
+        })
+      });
+      setFeedbackGiven(true);
+      toast({
+        title: '感谢反馈',
+        status: 'success',
+        duration: 2000,
+        isClosable: true,
+      });
+    } catch (e) {
+      console.error('[Feedback] 提交失败:', e);
+      toast({
+        title: '反馈提交失败',
+        status: 'error',
+        duration: 2000,
+        isClosable: true,
+      });
     }
   };
 
@@ -336,6 +407,18 @@ export default function AICoach() {
               <Text color="teal.400" fontSize="sm" fontWeight="bold" px={3} py={2} bg="gray.700" borderRadius="md">
                 AI统一教练
               </Text>
+              <Tooltip label="新建对话，清空当前上下文" placement="top">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  colorScheme="gray"
+                  onClick={handleNewConversation}
+                  aria-label="新建对话"
+                  fontSize="xs"
+                >
+                  🔄 新对话
+                </Button>
+              </Tooltip>
               <Select
                 value={selectedGirlId}
                 onChange={e => setSelectedGirlId(e.target.value)}
@@ -402,11 +485,49 @@ export default function AICoach() {
       {(loading || response) && (
         <Card bg="gray.800">
           <CardHeader>
-            <Heading size="sm" color="teal.400">
-              {response?.coachName || 'AI统一教练'}的建议
-            </Heading>
+            <Flex justify="space-between" align="center">
+              <Heading size="sm" color="teal.400">
+                {response?.coachName || 'AI统一教练'}的建议
+              </Heading>
+              {!loading && response && !feedbackGiven && (
+                <HStack spacing={2}>
+                  <Tooltip label="有用" placement="top">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      colorScheme="green"
+                      onClick={() => handleFeedback('helpful')}
+                      aria-label="有用"
+                    >
+                      👍
+                    </Button>
+                  </Tooltip>
+                  <Tooltip label="不够有用" placement="top">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      colorScheme="red"
+                      onClick={() => handleFeedback('not_helpful')}
+                      aria-label="不够有用"
+                    >
+                      👎
+                    </Button>
+                  </Tooltip>
+                </HStack>
+              )}
+              {feedbackGiven && (
+                <Text fontSize="xs" color="gray.500">感谢反馈</Text>
+              )}
+            </Flex>
           </CardHeader>
           <CardBody>
+            {/* 女生档案新鲜度警告 */}
+            {staleAlert && (
+              <Alert status="warning" bg="yellow.900" borderRadius="md" mb={3} py={2}>
+                <AlertIcon />
+                <Text color="yellow.200" fontSize="sm">{staleAlert.message}</Text>
+              </Alert>
+            )}
             <Box
               ref={analysisRef}
               color="gray.300"

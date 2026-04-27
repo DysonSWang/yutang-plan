@@ -7,8 +7,7 @@
  * 新增 confirmAnalysis / rejectAnalysis 用于旧接口的兼容确认。
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../prisma');
 const { BASE_URL, getAIConfig } = require('../config');
 const girlProfileExtractor = require('./girlProfileExtractor');
 const extractorExtractFromNotes = girlProfileExtractor.extractFromNotes;

@@ -7,6 +7,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 
 const { JWT_SECRET } = require('../config');
+const prisma = require('../prisma');
 
 const { generateDailyBrief, getDashboardStats, getCachedBrief } = require('../services/dailyBriefGenerator');
 
@@ -46,6 +47,12 @@ const operatorOnly = (req, res, next) => {
 router.get('/stats', authMiddleware, operatorOnly, async (req, res) => {
   try {
     const { clientId } = req.query;
+    if (clientId) {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId }
+      });
+      if (!session) return res.status(403).json({ error: '无权限访问此客户的数据' });
+    }
     const stats = await getDashboardStats(clientId);
     res.json({ success: true, ...stats });
   } catch (error) {
@@ -61,6 +68,12 @@ router.get('/stats', authMiddleware, operatorOnly, async (req, res) => {
 router.get('/brief', authMiddleware, operatorOnly, async (req, res) => {
   try {
     const { clientId } = req.query;
+    if (clientId) {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId }
+      });
+      if (!session) return res.status(403).json({ error: '无权限访问此客户的数据' });
+    }
     const brief = await generateDailyBrief(clientId);
     res.json({
       success: true,
@@ -82,6 +95,12 @@ router.get('/brief', authMiddleware, operatorOnly, async (req, res) => {
 router.get('/today-tasks', authMiddleware, operatorOnly, async (req, res) => {
   try {
     const { clientId } = req.query;
+    if (clientId) {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId }
+      });
+      if (!session) return res.status(403).json({ error: '无权限访问此客户的数据' });
+    }
     const brief = await generateDailyBrief(clientId);
     res.json({ success: true, tasks: brief.todayTasks || [] });
   } catch (error) {
@@ -97,6 +116,12 @@ router.get('/today-tasks', authMiddleware, operatorOnly, async (req, res) => {
 router.get('/week-tasks', authMiddleware, operatorOnly, async (req, res) => {
   try {
     const { clientId } = req.query;
+    if (clientId) {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId }
+      });
+      if (!session) return res.status(403).json({ error: '无权限访问此客户的数据' });
+    }
     const brief = await generateDailyBrief(clientId);
     res.json({ success: true, tasks: brief.weekTasks || [] });
   } catch (error) {
@@ -112,6 +137,12 @@ router.get('/week-tasks', authMiddleware, operatorOnly, async (req, res) => {
 router.get('/alerts', authMiddleware, operatorOnly, async (req, res) => {
   try {
     const { clientId } = req.query;
+    if (clientId) {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId }
+      });
+      if (!session) return res.status(403).json({ error: '无权限访问此客户的数据' });
+    }
     const brief = await generateDailyBrief(clientId);
     res.json({ success: true, alerts: brief.alerts || [] });
   } catch (error) {
@@ -128,6 +159,12 @@ router.get('/alerts', authMiddleware, operatorOnly, async (req, res) => {
 router.post('/analyze-all', authMiddleware, operatorOnly, async (req, res) => {
   try {
     const { clientId } = req.query;
+    if (clientId) {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId }
+      });
+      if (!session) return res.status(403).json({ error: '无权限访问此客户的数据' });
+    }
     const jobId = `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     // 立即返回 jobId

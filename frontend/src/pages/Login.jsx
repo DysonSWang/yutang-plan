@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Box, Button, FormControl, FormLabel, Input, VStack, Text, Card, CardBody, Heading, HStack, IconButton, Popover, PopoverTrigger, PopoverContent, PopoverBody, PopoverHeader, Switch, Flex, Tooltip } from '@chakra-ui/react';
+import { Box, Button, FormControl, FormLabel, Input, VStack, Text, Card, CardBody, Heading, HStack, IconButton, Popover, PopoverTrigger, PopoverContent, PopoverBody, PopoverHeader, Switch, Flex, Tooltip, useToast, Alert, AlertIcon, AlertDescription } from '@chakra-ui/react';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Login() {
@@ -7,12 +7,14 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showLogin, setShowLogin] = useState(true);
+  const [loginError, setLoginError] = useState('');
   const [notes, setNotes] = useState([
     { id: 1, text: '欢迎使用记事本' }
   ]);
   const [newNote, setNewNote] = useState('');
   const [disguiseMode, setDisguiseMode] = useState(false);
   const { login } = useAuth();
+  const toast = useToast();
 
   useEffect(() => {
     setDisguiseMode(localStorage.getItem('yutang_disguise') === 'true');
@@ -30,11 +32,16 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoginError('');
     setLoading(true);
     try {
-      await login(username, password);
-    } catch {
-      // 静默失败 - 留在记事本
+      const result = await login(username, password);
+      if (!result.success) {
+        setLoginError(result.error || '用户名或密码错误');
+      }
+    } catch (err) {
+      setLoginError(err.message || '用户名或密码错误');
+      toast({ title: '登录失败', description: err.message || '用户名或密码错误', status: 'error', duration: 3000 });
     } finally {
       setLoading(false);
     }
@@ -100,7 +107,7 @@ export default function Login() {
                   <FormLabel color="gray.600" fontSize="sm">用户名</FormLabel>
                   <Input
                     value={username}
-                    onChange={e => setUsername(e.target.value)}
+                    onChange={e => { setUsername(e.target.value); setLoginError(''); }}
                     placeholder="请输入用户名"
                     bg="gray.700" color="white"
                     size="sm"
@@ -111,12 +118,18 @@ export default function Login() {
                   <Input
                     type="password"
                     value={password}
-                    onChange={e => setPassword(e.target.value)}
+                    onChange={e => { setPassword(e.target.value); setLoginError(''); }}
                     placeholder="请输入密码"
                     bg="gray.700" color="white"
                     size="sm"
                   />
                 </FormControl>
+                {loginError && (
+                  <Alert status="error" borderRadius="md" fontSize="sm">
+                    <AlertIcon />
+                    <AlertDescription>{loginError}</AlertDescription>
+                  </Alert>
+                )}
                 <HStack w="100%">
                   <Button type="submit" colorScheme="teal" size="sm" flex={1} isLoading={loading}>
                     登录

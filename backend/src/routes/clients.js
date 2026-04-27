@@ -837,4 +837,85 @@ router.post('/:id/learnings', authMiddleware, async (req, res) => {
   }
 });
 
+// 入职完成（M007 S05）
+router.post('/onboarding-complete', authMiddleware, async (req, res) => {
+  try {
+    // 任何已登录客户都可以调用自己的入职完成
+    if (req.user.role !== 'client') {
+      return res.status(403).json({ error: '只有客户可以完成入职' });
+    }
+
+    const data = req.body;
+    const clientId = req.user.id;
+
+    // 获取当前客户信息，找到对应的操盘手
+    const session = await prisma.chatSession.findFirst({
+      where: { clientId },
+      include: { operator: true }
+    });
+
+    // 更新客户档案
+    const updated = await prisma.user.update({
+      where: { id: clientId },
+      data: {
+        nickname: data.nickname || undefined,
+        age: data.age ? parseInt(data.age) : undefined,
+        occupation: data.occupation || undefined,
+        residence: data.residence || undefined,
+        emotionalGoal: data.emotionalGoal || undefined,
+        relationshipGoal: data.relationshipGoal || undefined,
+        appearanceSelfAssessment: data.appearanceSelfAssessment || undefined,
+        personality: data.personality || undefined,
+        emotionalStable: data.emotionalStable ? parseInt(data.emotionalStable) : undefined,
+        eqLevel: data.eqLevel ? parseInt(data.eqLevel) : undefined,
+        emotionalMaturityLevel: data.emotionalMaturityLevel ? parseInt(data.emotionalMaturityLevel) : undefined,
+        communicationStyle: data.communicationStyle || undefined,
+        learningAbility: data.learningAbility || undefined,
+        coachCooperationLevel: data.coachCooperationLevel ? parseInt(data.coachCooperationLevel) : undefined,
+        antiFrustrationLevel: data.antiFrustrationLevel ? parseInt(data.antiFrustrationLevel) : undefined,
+        pacePreference: data.pacePreference || undefined,
+        clientType: data.clientType || undefined,
+        profileBio: data.profileBio || undefined,
+        serviceStage: '背调',
+      }
+    });
+
+    // 异步生成战略档案（不阻塞响应）
+    const { generateStrategicProfile } = require('../services/onboardingService');
+    generateStrategicProfile(data).then(profile => {
+      if (profile.generated) {
+        prisma.user.update({
+          where: { id: clientId },
+          data: {
+            clientBestApproach: profile.clientBestApproach,
+            clientRecommendedTopics: JSON.stringify(profile.clientRecommendedTopics),
+            clientRiskFactors: JSON.stringify(profile.clientRiskFactors),
+            clientUpgradeConditions: JSON.stringify(profile.clientUpgradeConditions),
+            clientStrategicNotes: profile.clientStrategicNotes,
+          }
+        }).catch(err => console.warn('[Onboarding] 更新战略档案失败:', err));
+      }
+    }).catch(err => console.warn('[Onboarding] 战略档案生成失败:', err));
+
+    // 通知操盘手
+    if (session?.operatorId) {
+      const io = req.app.get('io') || global._io;
+      if (io) {
+        io.to(`operator:${session.operatorId}`).emit('notification:new', {
+          type: 'onboarding_complete',
+          title: '新客户入职完成',
+          message: `${updated.nickname || '客户'}已完成入职引导，请审核档案并开始服务。`,
+          clientId,
+          createdAt: new Date().toISOString(),
+        });
+      }
+    }
+
+    res.json({ success: true, message: '入职完成' });
+  } catch (error) {
+    console.error('[Clients] 入职完成失败:', error);
+    res.status(500).json({ error: '入职完成失败' });
+  }
+});
+
 module.exports = router;

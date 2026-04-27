@@ -69,7 +69,14 @@ export const girls = {
   create: (data) => api.post('/api/girls', data),
   clientAdd: (data) => api.post('/api/girls/client-add', data),
   update: (id, data) => api.put('/api/girls/' + id, data),
-  delete: (id) => api.delete('/api/girls/' + id)
+  delete: (id) => api.delete('/api/girls/' + id),
+  // M007 S01: 关系阶段
+  evaluateStage: (girlId) => api.post(`/api/girls/${girlId}/evaluate-stage`),
+  setRelationshipStage: (girlId, data) => api.put(`/api/girls/${girlId}/relationship-stage`, data),
+  getStageHistory: (girlId) => api.get(`/api/girls/${girlId}/stage-history`),
+  // M007 S03: 反撇分析
+  analyzeReversal: (girlId) => api.post(`/api/girls/${girlId}/analyze-reversal`),
+  getReversalRisk: (girlId) => api.get(`/api/girls/${girlId}/reversal-risk`),
 };
 
 // 客户
@@ -80,7 +87,9 @@ export const clients = {
   update: (id, data) => api.put(`/api/clients/${id}`, data),
   create: (data) => api.post('/api/clients', data),
   extractProfile: (text) => api.post('/api/clients/extract-profile', { text }),
-  extractFromChat: (clientId, messageCount) => api.post(`/api/clients/${clientId}/extract-from-chat`, { messageCount })
+  extractFromChat: (clientId, messageCount) => api.post(`/api/clients/${clientId}/extract-from-chat`, { messageCount }),
+  // M007 S05: 入职完成
+  onboardingComplete: (data) => api.post('/api/clients/onboarding-complete', data),
 };
 
 // 聊天
@@ -201,6 +210,13 @@ export const notifications = {
   readAll: () => api.post('/api/notifications/read-all')
 };
 
+// 周报（M007 S04）
+export const weeklyReview = {
+  get: (clientId) => api.get(`/api/clients/${clientId}/weekly-review`),
+  history: (clientId, limit = 8) => api.get(`/api/clients/${clientId}/weekly-review/history?limit=${limit}`),
+  generate: (clientId) => api.post(`/api/clients/${clientId}/weekly-review/generate`),
+};
+
 // AI军师
 export const aiCoach = {
   situation: (data) => api.post('/api/ai-coach/situation', data),
@@ -266,6 +282,16 @@ export const dashboard = {
   alerts: (clientId) => api.get('/api/dashboard/alerts' + (clientId ? '?clientId=' + clientId : '')),
   analyzeAll: (clientId) => api.post('/api/dashboard/analyze-all' + (clientId ? '?clientId=' + clientId : '')),
   analyzeResult: (jobId) => api.get(`/api/dashboard/analyze-result/${jobId}`)
+};
+
+// 主动预警（M007 S02）
+export const alerts = {
+  list: (params) => api.get('/api/alerts' + (params ? '?' + new URLSearchParams(params) : '')),
+  stats: (clientId) => api.get('/api/alerts/stats' + (clientId ? '?clientId=' + clientId : '')),
+  evaluate: (clientId) => api.post('/api/alerts/evaluate' + (clientId ? '?clientId=' + clientId : '')),
+  acknowledge: (id) => api.post(`/api/alerts/${id}/acknowledge`),
+  dismiss: (id) => api.post(`/api/alerts/${id}/dismiss`),
+  resolve: (id, reason) => api.post(`/api/alerts/${id}/resolve`, { reason }),
 };
 
 // 日历事件

@@ -5,8 +5,8 @@ import {
   Textarea, NumberInput, NumberInputField, VStack, HStack, Image, Text, Divider, Flex, useToast, Checkbox,
   Accordion, AccordionItem, AccordionButton, AccordionPanel, AccordionIcon, Tabs, TabList, TabPanels, Tab, TabPanel, Icon, IconButton, Spinner, Switch
 } from '@chakra-ui/react';
-import { FiX } from 'react-icons/fi';
-import { girls, clients, chatScreenshots } from '../../utils/api';
+import { FiX, FiArrowRight, FiAlertTriangle } from 'react-icons/fi';
+import { girls, clients, chatScreenshots, alerts as alertsApi } from '../../utils/api';
 import { HeartIcon, FireIcon, SnowIcon, SparklesIcon } from '../../components/Icons';
 
 const STAGES = ['陌生', '搭讪', '聊天', '暧昧', '约会', '长期'];
@@ -41,6 +41,15 @@ const BODY_TYPES = ['偏瘦', '标准', '微胖', '偏胖'];
 const MAJOR_CATEGORIES = ['计算机/互联网', '金融/经济', '法律', '医学', '教育', '工程', '艺术/设计', '传媒', '语言', '管理', '其他'];
 const CITIES = ['北京', '上海', '广州', '深圳', '杭州', '南京', '苏州', '成都', '重庆', '武汉', '西安', '天津', '长沙', '郑州', '东莞', '佛山', '青岛', '沈阳', '大连', '厦门', '宁波', '其他'];
 
+// M007 S01: 关系阶段
+const RELATIONSHIP_STAGES = [
+  { value: 'EXPLORATION', label: '探索期', color: 'gray', desc: '刚认识，以日常寒暄为主' },
+  { value: 'FLIRTING', label: '暧昧期', color: 'pink', desc: '有明显兴趣信号，但未正式确认' },
+  { value: 'ADVANCEMENT', label: '推进期', color: 'orange', desc: '主动升级，经常约会，感情话题' },
+  { value: 'CONFIRMATION', label: '确认期', color: 'green', desc: '有意愿，表白或确认关系' },
+  { value: 'STABLE', label: '稳定期', color: 'blue', desc: '关系确立，进入长期维护' }
+];
+
 export default function AdminGirls() {
   const [girlsList, setGirlsList] = useState([]);
   const [clientList, setClientList] = useState([]);
@@ -71,6 +80,21 @@ export default function AdminGirls() {
   const [momentAiResult, setMomentAiResult] = useState('');
   const [previewMomentImage, setPreviewMomentImage] = useState('');
   const momentFileRef = useRef(null);
+
+  // M007 S01: 关系阶段状态
+  const [stageHistory, setStageHistory] = useState([]);
+  const [stageEvaluating, setStageEvaluating] = useState(false);
+  const [stageEvalResult, setStageEvalResult] = useState(null);
+  const [stageReason, setStageReason] = useState('');
+
+  // M007 S02: 预警数据
+  const [girlAlerts, setGirlAlerts] = useState({}); // { [girlId]: [alert, ...] }
+
+  // M007 S03: 反撇分析状态
+  const [reversalRisk, setReversalRisk] = useState(null);
+  const [reversalAnalysis, setReversalAnalysis] = useState(null);
+  const [reversalAnalyzing, setReversalAnalyzing] = useState(false);
+
   const toast = useToast();
 
   const loadGirls = async () => {
@@ -98,6 +122,19 @@ export default function AdminGirls() {
   useEffect(() => {
     loadGirls();
     loadClients();
+    // M007 S02: 加载预警数据
+    alertsApi.list({ status: 'active' }).then(res => {
+      if (res.success && res.alerts) {
+        const grouped = {};
+        res.alerts.forEach(a => {
+          if (a.girlId) {
+            if (!grouped[a.girlId]) grouped[a.girlId] = [];
+            grouped[a.girlId].push(a);
+          }
+        });
+        setGirlAlerts(grouped);
+      }
+    }).catch(() => {});
   }, []);
 
   function getInitialFormData() {
@@ -124,7 +161,7 @@ export default function AdminGirls() {
       talkingTopics: '', thingsToAvoid: '',
       // 关系状态
       stage: '陌生', status: 'available', intimacyLevel: 1, tensionScore: 5.0,
-      lastContact: '', responsePattern: '',
+      relationshipStage: '', lastContact: '', responsePattern: '',
       // 上下文记忆（JSON字符串）
       signals: '', pendingActions: '', observations: '', conversationSummary: '',
       // AI战略分析
@@ -176,6 +213,20 @@ export default function AdminGirls() {
     // 加载朋友圈截图
     setMomentScreenshots(girl.momentPhotos ? JSON.parse(girl.momentPhotos) : []);
     setMomentAiResult('');
+    // M007 S01: 加载关系阶段历史
+    setStageEvalResult(null);
+    setStageReason('');
+    try {
+      const res = await girls.getStageHistory(girl.id);
+      if (res.success) setStageHistory(res.history || []);
+    } catch { setStageHistory([]); }
+    // M007 S03: 加载反撇风险
+    setReversalAnalysis(null);
+    setReversalRisk(null);
+    try {
+      const riskRes = await girls.getReversalRisk(girl.id);
+      if (riskRes.success) setReversalRisk(riskRes);
+    } catch {}
     onDetailOpen();
   };
 
@@ -227,6 +278,7 @@ export default function AdminGirls() {
       status: girl.status || 'available',
       intimacyLevel: girl.intimacyLevel || 1,
       tensionScore: girl.tensionScore || 5.0,
+      relationshipStage: girl.relationshipStage || '',
       lastContact: girl.lastContact || '',
       responsePattern: girl.responsePattern || '',
       signals: girl.signals || '',
@@ -283,6 +335,8 @@ export default function AdminGirls() {
       else data.height = undefined;
       if (data.intimacyLevel) data.intimacyLevel = parseInt(data.intimacyLevel);
       if (data.tensionScore) data.tensionScore = parseFloat(data.tensionScore);
+      // M007 S01: relationshipStage 为空时删除该字段
+      if (data.relationshipStage === '') data.relationshipStage = undefined;
       // JSON字段处理
       if (data.signals && !data.signals.startsWith('[')) data.signals = '';
       if (data.pendingActions && !data.pendingActions.startsWith('[')) data.pendingActions = '';
@@ -325,6 +379,71 @@ export default function AdminGirls() {
     } catch (e) {
       console.error(e);
     }
+  };
+
+  // M007 S01: 关系阶段评估
+  const handleEvaluateStage = async (girl) => {
+    setStageEvaluating(true);
+    setStageEvalResult(null);
+    setStageReason('');
+    try {
+      const res = await girls.evaluateStage(girl.id);
+      if (res.success) {
+        setStageEvalResult(res.evaluation);
+        toast({ title: '评估完成', status: 'info', duration: 2000 });
+      } else {
+        toast({ title: res.error || '评估失败', status: 'error', duration: 3000 });
+      }
+    } catch (e) {
+      console.error(e);
+      toast({ title: '评估失败', status: 'error', duration: 3000 });
+    }
+    setStageEvaluating(false);
+  };
+
+  // M007 S01: 设置关系阶段
+  const handleSetRelationshipStage = async (girl, stage, reason) => {
+    try {
+      const res = await girls.setRelationshipStage(girl.id, { stage, reason, source: 'manual' });
+      if (res.success) {
+        // 更新 selectedGirl 和本地列表
+        const updated = { ...girl, relationshipStage: stage };
+        setSelectedGirl(updated);
+        // 刷新历史
+        const histRes = await girls.getStageHistory(girl.id);
+        if (histRes.success) setStageHistory(histRes.history || []);
+        // 刷新列表中的阶段
+        setGirlsList(prev => prev.map(g => g.id === girl.id ? updated : g));
+        setStageEvalResult(null);
+        setStageReason('');
+        toast({ title: '阶段已更新', status: 'success', duration: 2000 });
+      } else {
+        toast({ title: res.error || '设置失败', status: 'error', duration: 3000 });
+      }
+    } catch (e) {
+      console.error(e);
+      toast({ title: '设置失败', status: 'error', duration: 3000 });
+    }
+  };
+
+  // M007 S03: 触发反撇分析
+  const handleAnalyzeReversal = async () => {
+    if (!selectedGirl) return;
+    setReversalAnalyzing(true);
+    setReversalAnalysis(null);
+    try {
+      const res = await girls.analyzeReversal(selectedGirl.id);
+      if (res.success) {
+        setReversalAnalysis(res.analysis);
+        toast({ title: '反撇分析完成', status: 'info', duration: 2000 });
+      } else {
+        toast({ title: res.error || '分析失败', status: 'error', duration: 3000 });
+      }
+    } catch (e) {
+      console.error(e);
+      toast({ title: '分析失败', status: 'error', duration: 3000 });
+    }
+    setReversalAnalyzing(false);
   };
 
   // 截图上传
@@ -554,6 +673,16 @@ export default function AdminGirls() {
     return <Icon as={SnowIcon} color="gray.400" />;
   };
 
+  const getRelationshipStageColor = (stage) => {
+    const map = { EXPLORATION: 'gray', FLIRTING: 'pink', ADVANCEMENT: 'orange', CONFIRMATION: 'green', STABLE: 'blue' };
+    return map[stage] || 'gray';
+  };
+
+  const getRelationshipStageLabel = (stage) => {
+    const map = { EXPLORATION: '探索期', FLIRTING: '暧昧期', ADVANCEMENT: '推进期', CONFIRMATION: '确认期', STABLE: '稳定期' };
+    return map[stage] || stage || '未设置';
+  };
+
   return (
     <Box>
       <Heading color="white" mb={6}>女生资源</Heading>
@@ -584,10 +713,41 @@ export default function AdminGirls() {
               <Tbody>
                 {girlsList.map(girl => (
                   <Tr key={girl.id} _hover={{ bg: 'gray.750' }} transition="background 0.15s ease" cursor="pointer" onClick={() => openDetailModal(girl)}>
-                    <Td fontWeight="bold">{girl.name}</Td>
+                    <Td fontWeight="bold">
+                      <HStack spacing={2}>
+                        {girl.name}
+                        {/* M007 S02: 预警指示器 */}
+                        {girlAlerts[girl.id] && girlAlerts[girl.id].length > 0 && (
+                          <Icon as={FiAlertTriangle} color={
+                            girlAlerts[girl.id].some(a => a.severity === 'P0') ? 'red.400' :
+                            girlAlerts[girl.id].some(a => a.severity === 'P1') ? 'orange.400' : 'gray.400'
+                          } boxSize={4} title={`${girlAlerts[girl.id].length}条预警`} />
+                        )}
+                      </HStack>
+                    </Td>
                     <Td>{girl.age || '-'}</Td>
                     <Td>{girl.occupation || '-'}</Td>
-                    <Td><Badge colorScheme="teal">{girl.stage || '陌生'}</Badge></Td>
+                    <Td>
+                      <VStack spacing={1} align="start">
+                        <Badge colorScheme="teal" fontSize="xs">{girl.stage || '陌生'}</Badge>
+                        {girl.relationshipStage && (
+                          <Badge colorScheme={
+                            girl.relationshipStage === 'EXPLORATION' ? 'gray' :
+                            girl.relationshipStage === 'FLIRTING' ? 'pink' :
+                            girl.relationshipStage === 'ADVANCEMENT' ? 'orange' :
+                            girl.relationshipStage === 'CONFIRMATION' ? 'green' :
+                            girl.relationshipStage === 'STABLE' ? 'blue' : 'gray'
+                          } fontSize="xs">
+                          {girl.relationshipStage === 'EXPLORATION' ? '探索' :
+                           girl.relationshipStage === 'FLIRTING' ? '暧昧' :
+                           girl.relationshipStage === 'ADVANCEMENT' ? '推进' :
+                           girl.relationshipStage === 'CONFIRMATION' ? '确认' :
+                           girl.relationshipStage === 'STABLE' ? '稳定' :
+                           girl.relationshipStage}
+                        </Badge>
+                        )}
+                      </VStack>
+                    </Td>
                     <Td>
                       <Text color={getTensionColor(girl.tensionScore)} fontSize="sm">
                         {girl.tensionScore?.toFixed(1) || '5.0'} {getTensionIcon(girl.tensionScore)}
@@ -632,7 +792,30 @@ export default function AdminGirls() {
                       <Flex justify="space-between" align="center" mb={2}>
                         <HStack>
                           <Text fontWeight="bold" color="white">{girl.name}</Text>
+                          {/* M007 S02: 预警指示器 */}
+                          {girlAlerts[girl.id] && girlAlerts[girl.id].length > 0 && (
+                            <Icon as={FiAlertTriangle} color={
+                              girlAlerts[girl.id].some(a => a.severity === 'P0') ? 'red.400' :
+                              girlAlerts[girl.id].some(a => a.severity === 'P1') ? 'orange.400' : 'gray.400'
+                            } boxSize={4} />
+                          )}
                           <Badge colorScheme="teal">{girl.stage || '陌生'}</Badge>
+                          {girl.relationshipStage && (
+                            <Badge colorScheme={
+                              girl.relationshipStage === 'EXPLORATION' ? 'gray' :
+                              girl.relationshipStage === 'FLIRTING' ? 'pink' :
+                              girl.relationshipStage === 'ADVANCEMENT' ? 'orange' :
+                              girl.relationshipStage === 'CONFIRMATION' ? 'green' :
+                              girl.relationshipStage === 'STABLE' ? 'blue' : 'gray'
+                            }>
+                              {girl.relationshipStage === 'EXPLORATION' ? '探索' :
+                               girl.relationshipStage === 'FLIRTING' ? '暧昧' :
+                               girl.relationshipStage === 'ADVANCEMENT' ? '推进' :
+                               girl.relationshipStage === 'CONFIRMATION' ? '确认' :
+                               girl.relationshipStage === 'STABLE' ? '稳定' :
+                               girl.relationshipStage}
+                            </Badge>
+                          )}
                           {girl.isKinkOriented && <Badge colorScheme="purple">K</Badge>}
                         </HStack>
                         <HStack spacing={1}>
@@ -1103,9 +1286,100 @@ export default function AdminGirls() {
                 <TabPanel px={0}>
                   <VStack spacing={4} align="stretch">
                     <Text color="white" fontWeight="bold">关系状态</Text>
+
+                    {/* M007 S01: 关系阶段选择器 */}
+                    <Box bg="gray.750" p={4} borderRadius="md">
+                      <Flex justify="space-between" align="center" mb={3}>
+                        <Text color="white" fontWeight="bold" fontSize="sm">关系阶段（新）</Text>
+                        {selectedGirl && (
+                          <Button
+                            size="xs"
+                            colorScheme="blue"
+                            variant="outline"
+                            onClick={() => handleEvaluateStage(selectedGirl)}
+                            isLoading={stageEvaluating}
+                            loadingText="评估中"
+                          >
+                            AI评估
+                          </Button>
+                        )}
+                      </Flex>
+
+                      {/* AI 评估结果 */}
+                      {stageEvalResult && (
+                        <Box bg="blue.900" p={3} borderRadius="md" mb={3}>
+                          <Text color="blue.200" fontSize="xs" mb={1}>AI 推荐：</Text>
+                          <Badge colorScheme={
+                            stageEvalResult.recommendedStage === 'EXPLORATION' ? 'gray' :
+                            stageEvalResult.recommendedStage === 'FLIRTING' ? 'pink' :
+                            stageEvalResult.recommendedStage === 'ADVANCEMENT' ? 'orange' :
+                            stageEvalResult.recommendedStage === 'CONFIRMATION' ? 'green' : 'blue'
+                          } fontSize="sm" mr={2}>
+                            {stageEvalResult.stageLabel}
+                          </Badge>
+                          <Text color="blue.200" fontSize="xs" mt={1}>
+                            置信度：{stageEvalResult.confidence}%
+                          </Text>
+                          <Text color="gray.300" fontSize="xs" mt={1}>
+                            {stageEvalResult.reasoning}
+                          </Text>
+                          {stageEvalResult.warnings?.length > 0 && (
+                            <Text color="yellow.300" fontSize="xs" mt={1}>
+                              ⚠️ {stageEvalResult.warnings.join(' ')}
+                            </Text>
+                          )}
+                          <HStack mt={2}>
+                            <Button
+                              size="sm"
+                              colorScheme="green"
+                              onClick={() => handleSetRelationshipStage(selectedGirl, stageEvalResult.recommendedStage, `AI评估推荐: ${stageEvalResult.reasoning}`)}
+                            >
+                              采纳推荐
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              colorScheme="gray"
+                              onClick={() => setStageEvalResult(null)}
+                            >
+                              取消
+                            </Button>
+                          </HStack>
+                        </Box>
+                      )}
+
+                      {/* 5阶段选择器 */}
+                      <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={2}>
+                        {RELATIONSHIP_STAGES.map(s => (
+                          <Box
+                            key={s.value}
+                            p={2}
+                            borderRadius="md"
+                            bg={formData.relationshipStage === s.value ? `${s.color}.900` : 'gray.700'}
+                            borderWidth={formData.relationshipStage === s.value ? '2px' : '1px'}
+                            borderColor={formData.relationshipStage === s.value ? `${s.color}.400` : 'gray.600'}
+                            cursor="pointer"
+                            onClick={() => setFormData({...formData, relationshipStage: formData.relationshipStage === s.value ? '' : s.value})}
+                            _hover={{ borderColor: `${s.color}.400` }}
+                          >
+                            <HStack justify="space-between">
+                              <Badge colorScheme={s.color}>{s.label}</Badge>
+                              {formData.relationshipStage === s.value && <Text color={`${s.color}.300`} fontSize="xs">✓</Text>}
+                            </HStack>
+                            <Text color="gray.400" fontSize="xs" mt={1}>{s.desc}</Text>
+                          </Box>
+                        ))}
+                      </SimpleGrid>
+                      {formData.relationshipStage && (
+                        <Text color="gray.500" fontSize="xs">
+                          当前：{RELATIONSHIP_STAGES.find(s => s.value === formData.relationshipStage)?.label || formData.relationshipStage}
+                        </Text>
+                      )}
+                    </Box>
+
                     <SimpleGrid columns={{ base: 1, sm: 2, md: 4 }} spacing={4}>
                       <FormControl>
-                        <FormLabel color="gray.400">阶段</FormLabel>
+                        <FormLabel color="gray.400">阶段（旧）</FormLabel>
                         <Select value={formData.stage} onChange={e => setFormData({...formData, stage: e.target.value})} bg="gray.700" color="white">
                           {STAGES.map(s => <option key={s} value={s}>{s}</option>)}
                         </Select>
@@ -1210,6 +1484,11 @@ export default function AdminGirls() {
           <ModalHeader color="white">
             {selectedGirl?.name} - 详情
             {selectedGirl?.isKinkOriented && <Badge colorScheme="purple" ml={2}>Kink</Badge>}
+            {selectedGirl?.relationshipStage && (
+              <Badge colorScheme={getRelationshipStageColor(selectedGirl.relationshipStage)} ml={2}>
+                {getRelationshipStageLabel(selectedGirl.relationshipStage)}
+              </Badge>
+            )}
           </ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={6}>
@@ -1221,6 +1500,8 @@ export default function AdminGirls() {
                   <Tab>情感</Tab>
                   <Tab>AI画像</Tab>
                   <Tab>上下文</Tab>
+                  <Tab>关系阶段</Tab>
+                  <Tab>反撇分析</Tab>
                   <Tab>朋友圈截图</Tab>
                 </TabList>
                 <TabPanels>
@@ -1392,7 +1673,7 @@ export default function AdminGirls() {
                               <Badge colorScheme={s.type === 'positive' ? 'green' : s.type === 'negative' ? 'red' : 'gray'} mr={2}>
                                 {s.type === 'positive' ? '[+]' : s.type === 'negative' ? '[-]' : '[*]'}
                               </Badge>
-                              <Text color="white" fontSize="sm">{s.event}</Text>
+                              <Text color="white" fontSize="sm">{typeof s.event === 'string' ? s.event : ''}</Text>
                               <Text color="gray.500" fontSize="xs" ml={2}>{s.date}</Text>
                             </Flex>
                           ));
@@ -1501,6 +1782,216 @@ export default function AdminGirls() {
                       </Box>
                     </VStack>
                   </TabPanel>
+
+                  {/* 关系阶段 Tab */}
+                  <TabPanel px={0}>
+                    {/* 当前阶段 */}
+                    <Flex align="center" justify="space-between" mb={4} bg="gray.700" p={4} borderRadius="md">
+                      <Box>
+                        <Text color="gray.400" fontSize="sm">当前阶段</Text>
+                        <HStack mt={1}>
+                          <Badge colorScheme={getRelationshipStageColor(selectedGirl.relationshipStage)} fontSize="md">
+                            {getRelationshipStageLabel(selectedGirl.relationshipStage)}
+                          </Badge>
+                          {selectedGirl.relationshipStageUpdatedAt && (
+                            <Text color="gray.500" fontSize="xs">
+                              更新于 {new Date(selectedGirl.relationshipStageUpdatedAt).toLocaleString()}
+                            </Text>
+                          )}
+                        </HStack>
+                      </Box>
+                      <Button
+                        size="sm"
+                        colorScheme="blue"
+                        variant="outline"
+                        onClick={() => handleEvaluateStage(selectedGirl)}
+                        isLoading={stageEvaluating}
+                        loadingText="评估中"
+                      >
+                        AI 评估
+                      </Button>
+                    </Flex>
+
+                    {/* AI 评估结果 */}
+                    {stageEvalResult && (
+                      <Box bg="blue.900" p={3} borderRadius="md" mb={4} borderLeft="3px solid" borderColor="blue.400">
+                        <Text color="blue.200" fontSize="sm" fontWeight="bold" mb={1}>AI 评估结果</Text>
+                        <HStack mb={2}>
+                          <Badge colorScheme={getRelationshipStageColor(stageEvalResult.recommendedStage)} fontSize="sm">
+                            {stageEvalResult.stageLabel}
+                          </Badge>
+                          <Text color="blue.200" fontSize="xs">
+                            置信度：{stageEvalResult.confidence}%
+                          </Text>
+                        </HStack>
+                        <Text color="gray.300" fontSize="sm" mb={2}>
+                          {stageEvalResult.reasoning}
+                        </Text>
+                        {stageEvalResult.warnings?.length > 0 && (
+                          <Text color="yellow.300" fontSize="xs" mb={2}>
+                            ⚠️ {stageEvalResult.warnings.join(' ')}
+                          </Text>
+                        )}
+                        <HStack>
+                          <Button
+                            size="sm"
+                            colorScheme="green"
+                            onClick={() => handleSetRelationshipStage(selectedGirl, stageEvalResult.recommendedStage, `AI评估推荐: ${stageEvalResult.reasoning}`)}
+                          >
+                            采纳推荐
+                          </Button>
+                          <Button
+                            size="sm"
+                            colorScheme="gray"
+                            variant="outline"
+                            onClick={() => { setStageEvalResult(null); setStageReason(''); }}
+                          >
+                            忽略
+                          </Button>
+                        </HStack>
+                      </Box>
+                    )}
+
+                    {/* 阶段变更历史 */}
+                    <Text color="white" fontWeight="bold" mb={3}>变更历史</Text>
+                    {stageHistory.length === 0 ? (
+                      <Flex h="100px" align="center" justify="center" bg="gray.700" borderRadius="md">
+                        <Text color="gray.500" fontSize="sm">暂无历史记录</Text>
+                      </Flex>
+                    ) : (
+                      <VStack spacing={2} align="stretch">
+                        {stageHistory.map((h, i) => (
+                          <Box key={i} bg="gray.700" p={3} borderRadius="md">
+                            <Flex align="center" justify="space-between" mb={1}>
+                              <HStack>
+                                <Badge colorScheme="gray" fontSize="xs">{h.fromStage ? getRelationshipStageLabel(h.fromStage) : '新建'}</Badge>
+                                <Icon as={FiArrowRight} color="gray.500" boxSize={3} />
+                                <Badge colorScheme={getRelationshipStageColor(h.toStage)} fontSize="xs">
+                                  {getRelationshipStageLabel(h.toStage)}
+                                </Badge>
+                              </HStack>
+                              <Text color="gray.500" fontSize="xs">
+                                {new Date(h.createdAt).toLocaleString()}
+                              </Text>
+                            </Flex>
+                            <Text color="gray.400" fontSize="xs">
+                              {h.reason || '无备注'} {h.source && `(${h.source === 'ai' ? 'AI评估' : h.source === 'manual' ? '手动设置' : h.source})`}
+                            </Text>
+                            {h.changedBy && (
+                              <Text color="gray.600" fontSize="xs">by {h.changedBy}</Text>
+                            )}
+                          </Box>
+                        ))}
+                      </VStack>
+                    )}
+                  </TabPanel>
+
+                  {/* M007 S03: 反撇分析 Tab */}
+                  <TabPanel px={0}>
+                    <VStack spacing={4} align="stretch">
+                      {/* 快速风险判断 */}
+                      {reversalRisk && (
+                        <Flex align="center" justify="space-between" bg="gray.700" p={4} borderRadius="md">
+                          <HStack spacing={3}>
+                            <Badge colorScheme={
+                              reversalRisk.riskLevel === 'high' ? 'red' :
+                              reversalRisk.riskLevel === 'medium' ? 'orange' : 'green'
+                            } fontSize="sm">
+                              {reversalRisk.riskLevel === 'high' ? '高风险' :
+                               reversalRisk.riskLevel === 'medium' ? '中风险' : '低风险'}
+                            </Badge>
+                            {reversalRisk.matchedKeywords && reversalRisk.matchedKeywords.length > 0 && (
+                              <Text color="gray.400" fontSize="sm">
+                                关键词: {reversalRisk.matchedKeywords.join(', ')}
+                              </Text>
+                            )}
+                          </HStack>
+                          <Button
+                            size="sm"
+                            colorScheme="purple"
+                            variant="outline"
+                            isLoading={reversalAnalyzing}
+                            onClick={handleAnalyzeReversal}
+                          >
+                            AI深度分析
+                          </Button>
+                        </Flex>
+                      )}
+
+                      {/* AI 分析结果 */}
+                      {reversalAnalyzing && (
+                        <Flex align="center" justify="center" py={8} gap={2}>
+                          <Spinner size="sm" color="purple.400" />
+                          <Text color="gray.400" fontSize="sm">AI 分析中...</Text>
+                        </Flex>
+                      )}
+
+                      {reversalAnalysis && (
+                        <Box bg="gray.700" p={4} borderRadius="md">
+                          {/* 风险标签 */}
+                          <HStack mb={3} spacing={2} flexWrap="wrap">
+                            <Badge colorScheme={
+                              reversalAnalysis.riskLevel === 'high' ? 'red' :
+                              reversalAnalysis.riskLevel === 'medium' ? 'orange' : 'green'
+                            } fontSize="sm">
+                              {reversalAnalysis.riskLevel === 'high' ? '反撇确认' :
+                               reversalAnalysis.riskLevel === 'medium' ? '有反撇苗头' : '正常'}
+                            </Badge>
+                            {reversalAnalysis.type && (
+                              <Badge colorScheme="purple">{reversalAnalysis.type}</Badge>
+                            )}
+                            <Badge colorScheme="teal">置信度 {reversalAnalysis.confidence}%</Badge>
+                          </HStack>
+
+                          {/* 建议 */}
+                          {reversalAnalysis.suggestion && (
+                            <Box mb={3}>
+                              <Text color="gray.400" fontSize="sm" mb={1}>操盘手建议</Text>
+                              <Text color="teal.300" fontSize="sm">{reversalAnalysis.suggestion}</Text>
+                            </Box>
+                          )}
+
+                          {/* 证据 */}
+                          {reversalAnalysis.evidence && reversalAnalysis.evidence.length > 0 && (
+                            <Box mb={3}>
+                              <Text color="gray.400" fontSize="sm" mb={1}>分析证据</Text>
+                              <VStack spacing={1} align="stretch">
+                                {reversalAnalysis.evidence.map((e, i) => (
+                                  <Text key={i} color="gray.300" fontSize="xs">{i + 1}. {e}</Text>
+                                ))}
+                              </VStack>
+                            </Box>
+                          )}
+
+                          {/* 鉴别诊断 */}
+                          {reversalAnalysis.differential && (
+                            <Box>
+                              <Text color="gray.400" fontSize="sm" mb={1}>鉴别诊断</Text>
+                              <Text color="gray.400" fontSize="xs">{reversalAnalysis.differential}</Text>
+                            </Box>
+                          )}
+
+                          <Text color="gray.600" fontSize="xs" mt={3}>
+                            分析时间: {new Date(reversalAnalysis.analyzedAt).toLocaleString()}
+                          </Text>
+                        </Box>
+                      )}
+
+                      {!reversalRisk && !reversalAnalyzing && !reversalAnalysis && (
+                        <Flex align="center" justify="center" py={8} direction="column" gap={3}>
+                          <Icon as={FiAlertTriangle} color="gray.600" boxSize={8} />
+                          <Text color="gray.500" fontSize="sm">点击下方按钮启动 AI 反撇分析</Text>
+                          <Button
+                            size="sm"
+                            colorScheme="purple"
+                            onClick={handleAnalyzeReversal}
+                          >
+                            启动反撇分析
+                          </Button>
+                        </Flex>
+                      )}
+                    </VStack>
+                  </TabPanel>
                 </TabPanels>
               </Tabs>
             )}
@@ -1563,7 +2054,7 @@ export default function AdminGirls() {
                           w="100%"
                           h="140px"
                           objectFit="cover"
-                          fallbackSrc="https://via.placeholder.com/200x140?text=..."
+                          fallbackSrc="https://picsum.photos/200/140"
                         />
                         <Box position="absolute" bottom={0} left={0} right={0} bg="blackAlpha.700" p={2}>
                           <Text fontSize="xs" color="gray.300" noOfLines={1}>
@@ -1593,7 +2084,7 @@ export default function AdminGirls() {
                           cursor="pointer"
                           onClick={() => setPreviewImage(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}${ss.imageUrl}`)}
                           _hover={{ opacity: 0.8 }}
-                          fallbackSrc="https://via.placeholder.com/80x60?text=..."
+                          fallbackSrc="https://picsum.photos/80/60"
                         />
                         <Box flex={1}>
                           <Flex gap={2} mb={1}>

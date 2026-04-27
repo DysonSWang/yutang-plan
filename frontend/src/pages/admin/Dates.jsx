@@ -6,15 +6,16 @@ import {
   Spinner, NumberInput, NumberInputField, Tabs, TabList, TabPanels, Tab, TabPanel, Progress, Alert,
   AlertIcon, AlertDescription, Wrap, WrapItem, Tag
 } from '@chakra-ui/react';
-import { dates, clients, girls as girlsApi } from '../../utils/api';
+import { dates, clients, girls as girlsApi, events as eventsApi } from '../../utils/api';
 import { CalendarIcon, SparklesIcon, FireIcon, WarningIcon, CheckCircleIcon, QuestionIcon } from '../../components/Icons';
+import ClientCalendar from '../../components/ClientCalendar';
 
 const STATUS_CONFIG = {
   'pending_plan': { label: '待策划', color: 'orange' },
   'planned': { label: '已策划', color: 'teal' },
-  'pending_client_confirm': { label: '待客户确认', color: 'purple' },
-  'confirmed': { label: '客户已确认', color: 'green' },
-  'completed': { label: '已完成', color: 'green' },
+  'pending_client_confirm': { label: '待确认', color: 'purple' },
+  'confirmed': { label: '已确认', color: 'green' },
+  'completed': { label: '已完成', color: 'cyan' },
   'cancelled': { label: '已取消', color: 'gray' }
 };
 
@@ -79,6 +80,12 @@ export default function AdminDates() {
   const [generatingReport, setGeneratingReport] = useState(false);
   const [interviewOverview, setInterviewOverview] = useState('');
   const [reportResult, setReportResult] = useState(null);
+  // 日历视图相关
+  const [calendarViewClient, setCalendarViewClient] = useState(null);
+  const [calendarGirlList, setCalendarGirlList] = useState([]);
+  const [calendarClientList, setCalendarClientList] = useState([]);
+  // 日历刷新令牌：每次日期操作后+1，驱动 ClientCalendar 重载
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const loadClients = useCallback(async () => {
     try {
@@ -173,6 +180,7 @@ export default function AdminDates() {
         toast({ title: '约会创建成功', status: 'success', duration: 2000 });
         closeCreate();
         loadDates();
+        setRefreshKey(n => n + 1);
       }
     } catch (e) { console.error(e); toast({ title: '创建失败', status: 'error', duration: 2000 }); }
   };
@@ -268,6 +276,7 @@ export default function AdminDates() {
         if (updated.success) setSelectedDate(updated.date);
         toast({ title: '方案已推送，等待客户确认', status: 'success', duration: 3000 });
         loadDates();
+        setRefreshKey(n => n + 1);
       } else {
         toast({ title: res.error || '推送失败', status: 'error', duration: 2500 });
       }
@@ -357,6 +366,7 @@ export default function AdminDates() {
         toast({ title: '评价已保存', status: 'success', duration: 3000 });
         closeEvaluate();
         loadDates();
+        setRefreshKey(n => n + 1);
       }
     } catch (e) { console.error(e); toast({ title: '保存失败', status: 'error', duration: 2000 }); }
     setEvaluating(false);
@@ -369,6 +379,10 @@ export default function AdminDates() {
       if (res.success) {
         setSelectedDate(res.date);
         toast({ title: '已更新', status: 'success', duration: 1500 });
+        if (updates.status === 'cancelled') {
+          loadDates();
+          setRefreshKey(n => n + 1);
+        }
       }
     } catch (e) { console.error(e); }
   };
@@ -423,7 +437,7 @@ export default function AdminDates() {
           </Card>
         )}
 
-        {p.schedule?.length > 0 && (
+        {Array.isArray(p.schedule) && p.schedule.length > 0 && (
           <Card bg="gray.750" mb={4}>
             <CardBody>
               <Text color="teal.400" fontWeight="bold" mb={3}>时间安排</Text>
@@ -530,120 +544,154 @@ export default function AdminDates() {
         </HStack>
       </Flex>
 
-      <Card bg="gray.800">
-        <CardBody>
-          {loading ? (
-            <Flex justify="center" py={8}><Spinner /></Flex>
-          ) : datesList.length === 0 ? (
-            <Text color="gray.500" textAlign="center" py={8}>暂无约会记录</Text>
-          ) : (
-            <>
-              {/* 桌面端表格 */}
-              <Box display={{ base: 'none', lg: 'block' }}>
-                <Table variant="simple" color="gray.300" size="sm">
-                  <Thead>
-                    <Tr>
-                      <Th color="gray.400">约会</Th>
-                      <Th color="gray.400">女生</Th>
-                      <Th color="gray.400">客户</Th>
-                      <Th color="gray.400">时间</Th>
-                      <Th color="gray.400">状态</Th>
-                      <Th color="gray.400">地点</Th>
-                      <Th color="gray.400">花费</Th>
-                      <Th color="gray.400">评价</Th>
-                      <Th color="gray.400">操作</Th>
-                    </Tr>
-                  </Thead>
-                  <Tbody>
-                    {datesList.map(d => {
-                      const cfg = STATUS_CONFIG[d.status] || { label: d.status, color: 'gray' };
-                      const parsedPlan = parseJSON(d.aiPlan);
-                      return (
-                        <Tr key={d.id} _hover={{ bg: 'gray.750' }} transition="background 0.15s">
-                          <Td>
-                            <Text color="white" fontWeight="bold" fontSize="sm">{d.title || '约会'}</Text>
-                            {d.planStatus === 'generating' && <Spinner size="xs" color="teal.400" />}
-                            {d.planStatus === 'generated' && parsedPlan?.venue && (
-                              <Text color="gray.500" fontSize="xs">{parsedPlan.venue.name}</Text>
-                            )}
-                          </Td>
-                          <Td>
-                            <Text color="teal.300" fontSize="sm">{d.girl?.name || '-'}</Text>
-                            {d.girl?.stage && <Badge colorScheme="teal" size="xs">{d.girl.stage}</Badge>}
-                          </Td>
-                          <Td><Text color="gray.300" fontSize="sm">{d.user?.nickname || '-'}</Text></Td>
-                          <Td><Text color="gray.300" fontSize="xs">{d.dateTime ? new Date(d.dateTime).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'}</Text></Td>
-                          <Td><Badge colorScheme={cfg.color}>{cfg.label}</Badge></Td>
-                          <Td><Text color="gray.400" fontSize="xs" maxW="100px" noOfLines={1}>{d.location || '-'}</Text></Td>
-                          <Td><Text color="gray.300" fontSize="sm">{d.totalExpense ? `¥${d.totalExpense}` : '-'}</Text></Td>
-                          <Td>
-                            {d.rating ? (
-                              <HStack spacing={1}>
-                                {Array.from({ length: 5 }).map((_, i) => (
-                                  <Icon key={i} as={FireIcon} color={i < d.rating ? 'orange.400' : 'gray.600'} boxSize={3} />
-                                ))}
-                              </HStack>
-                            ) : <Text color="gray.600">-</Text>}
-                          </Td>
-                          <Td>
-                            <HStack spacing={2}>
-                              <Button size="xs" colorScheme="teal" variant="ghost" onClick={() => openDetail(d)}>详情</Button>
-                              {(d.status === 'pending_plan') && (
-                                <Button size="xs" colorScheme="orange" variant="ghost" onClick={async () => {
-                                  setSelectedDate(d);
-                                  await openDetail(d);
-                                }}>策划</Button>
-                              )}
-                              {d.status === 'planned' && (
-                                <Button size="xs" colorScheme="green" variant="ghost" onClick={() => { setSelectedDate(d); openEval(); }}>评价</Button>
-                              )}
-                            </HStack>
-                          </Td>
-                        </Tr>
-                      );
-                    })}
-                  </Tbody>
-                </Table>
-              </Box>
+      <Tabs colorScheme="teal" variant="enclosed">
+        <TabList bg="gray.750" borderRadius="lg" p={1} mb={4}>
+          <Tab _selected={{ bg: 'teal.600', color: 'white' }} color="gray.400" borderRadius="md" fontSize="sm">
+            表格 ({datesList.length})
+          </Tab>
+          <Tab _selected={{ bg: 'teal.600', color: 'white' }} color="gray.400" borderRadius="md" fontSize="sm">
+            日历
+          </Tab>
+        </TabList>
 
-              {/* 移动端卡片列表 */}
-              <Box display={{ base: 'block', lg: 'none' }}>
-                <VStack spacing={2} align="stretch">
-                  {datesList.map(d => {
-                    const cfg = STATUS_CONFIG[d.status] || { label: d.status, color: 'gray' };
-                    return (
-                      <Card key={d.id} bg="gray.750" size="sm" cursor="pointer" onClick={() => openDetail(d)} _hover={{ bg: 'gray.700' }}>
-                        <CardBody py={3} px={4}>
-                          <Flex justify="space-between" align="center" mb={2}>
-                            <Text color="white" fontWeight="bold" fontSize="sm">{d.title || '约会'}</Text>
-                            <Badge colorScheme={cfg.color}>{cfg.label}</Badge>
-                          </Flex>
-                          <HStack spacing={3} wrap="wrap" mb={2}>
-                            <Text color="teal.300" fontSize="xs">{d.girl?.name || '-'}</Text>
-                            <Text color="gray.400" fontSize="xs">{d.user?.nickname || '-'}</Text>
-                            <Text color="gray.400" fontSize="xs">{d.dateTime ? new Date(d.dateTime).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'}</Text>
-                          </HStack>
-                          <HStack spacing={2}>
-                            {d.rating && (
-                              <HStack spacing={0}>
-                                {Array.from({ length: 5 }).map((_, i) => (
-                                  <Icon key={i} as={FireIcon} color={i < d.rating ? 'orange.400' : 'gray.600'} boxSize={3} />
-                                ))}
+        <TabPanel px={0}>
+          <Card bg="gray.800">
+            <CardBody>
+              {loading ? (
+                <Flex justify="center" py={8}><Spinner /></Flex>
+              ) : datesList.length === 0 ? (
+                <Text color="gray.500" textAlign="center" py={8}>暂无约会记录</Text>
+              ) : (
+                <>
+                  {/* 桌面端表格 */}
+                  <Box display={{ base: 'none', lg: 'block' }}>
+                    <Table variant="simple" color="gray.300" size="sm">
+                      <Thead>
+                        <Tr>
+                          <Th color="gray.400">约会</Th>
+                          <Th color="gray.400">女生</Th>
+                          <Th color="gray.400">客户</Th>
+                          <Th color="gray.400">时间</Th>
+                          <Th color="gray.400">状态</Th>
+                          <Th color="gray.400">地点</Th>
+                          <Th color="gray.400">花费</Th>
+                          <Th color="gray.400">评价</Th>
+                          <Th color="gray.400">操作</Th>
+                        </Tr>
+                      </Thead>
+                      <Tbody>
+                        {datesList.map(d => {
+                          const cfg = STATUS_CONFIG[d.status] || { label: d.status, color: 'gray' };
+                          const parsedPlan = parseJSON(d.aiPlan);
+                          return (
+                            <Tr key={d.id} _hover={{ bg: 'gray.750' }} transition="background 0.15s">
+                              <Td>
+                                <Text color="white" fontWeight="bold" fontSize="sm">{d.title || '约会'}</Text>
+                                {d.planStatus === 'generating' && <Spinner size="xs" color="teal.400" />}
+                                {d.planStatus === 'generated' && parsedPlan?.venue && (
+                                  <Text color="gray.500" fontSize="xs">{parsedPlan.venue.name}</Text>
+                                )}
+                              </Td>
+                              <Td>
+                                <Text color="teal.300" fontSize="sm">{d.girl?.name || '-'}</Text>
+                                {d.girl?.stage && <Badge colorScheme="teal" size="xs">{d.girl.stage}</Badge>}
+                              </Td>
+                              <Td><Text color="gray.300" fontSize="sm">{d.user?.nickname || '-'}</Text></Td>
+                              <Td><Text color="gray.300" fontSize="xs">{d.dateTime ? new Date(d.dateTime).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'}</Text></Td>
+                              <Td><Badge colorScheme={cfg.color}>{cfg.label}</Badge></Td>
+                              <Td><Text color="gray.400" fontSize="xs" maxW="100px" noOfLines={1}>{d.location || '-'}</Text></Td>
+                              <Td><Text color="gray.300" fontSize="sm">{d.totalExpense ? `¥${d.totalExpense}` : '-'}</Text></Td>
+                              <Td>
+                                {d.rating ? (
+                                  <HStack spacing={1}>
+                                    {Array.from({ length: 5 }).map((_, i) => (
+                                      <Icon key={i} as={FireIcon} color={i < d.rating ? 'orange.400' : 'gray.600'} boxSize={3} />
+                                    ))}
+                                  </HStack>
+                                ) : <Text color="gray.600">-</Text>}
+                              </Td>
+                              <Td>
+                                <HStack spacing={2}>
+                                  <Button size="xs" colorScheme="teal" variant="ghost" onClick={() => openDetail(d)}>详情</Button>
+                                  {(d.status === 'pending_plan') && (
+                                    <Button size="xs" colorScheme="orange" variant="ghost" onClick={async () => {
+                                      setSelectedDate(d);
+                                      await openDetail(d);
+                                    }}>策划</Button>
+                                  )}
+                                  {d.status === 'planned' && (
+                                    <Button size="xs" colorScheme="green" variant="ghost" onClick={() => { setSelectedDate(d); openEval(); }}>评价</Button>
+                                  )}
+                                </HStack>
+                              </Td>
+                            </Tr>
+                          );
+                        })}
+                      </Tbody>
+                    </Table>
+                  </Box>
+
+                  {/* 移动端卡片列表 */}
+                  <Box display={{ base: 'block', lg: 'none' }}>
+                    <VStack spacing={2} align="stretch">
+                      {datesList.map(d => {
+                        const cfg = STATUS_CONFIG[d.status] || { label: d.status, color: 'gray' };
+                        return (
+                          <Card key={d.id} bg="gray.750" size="sm" cursor="pointer" onClick={() => openDetail(d)} _hover={{ bg: 'gray.700' }}>
+                            <CardBody py={3} px={4}>
+                              <Flex justify="space-between" align="center" mb={2}>
+                                <Text color="white" fontWeight="bold" fontSize="sm">{d.title || '约会'}</Text>
+                                <Badge colorScheme={cfg.color}>{cfg.label}</Badge>
+                              </Flex>
+                              <HStack spacing={3} wrap="wrap" mb={2}>
+                                <Text color="teal.300" fontSize="xs">{d.girl?.name || '-'}</Text>
+                                <Text color="gray.400" fontSize="xs">{d.user?.nickname || '-'}</Text>
+                                <Text color="gray.400" fontSize="xs">{d.dateTime ? new Date(d.dateTime).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'}</Text>
                               </HStack>
-                            )}
-                            {d.totalExpense && <Text color="gray.400" fontSize="xs">¥{d.totalExpense}</Text>}
-                            <Button size="xs" colorScheme="teal" variant="ghost" onClick={(e) => { e.stopPropagation(); openDetail(d); }}>详情</Button>
-                          </HStack>
-                        </CardBody>
-                      </Card>
-                    );
-                  })}
-                </VStack>
-              </Box>
-            </>
-          )}
-        </CardBody>
-      </Card>
+                              <HStack spacing={2}>
+                                {d.rating && (
+                                  <HStack spacing={0}>
+                                    {Array.from({ length: 5 }).map((_, i) => (
+                                      <Icon key={i} as={FireIcon} color={i < d.rating ? 'orange.400' : 'gray.600'} boxSize={3} />
+                                    ))}
+                                  </HStack>
+                                )}
+                                {d.totalExpense && <Text color="gray.400" fontSize="xs">¥{d.totalExpense}</Text>}
+                                <Button size="xs" colorScheme="teal" variant="ghost" onClick={(e) => { e.stopPropagation(); openDetail(d); }}>详情</Button>
+                              </HStack>
+                            </CardBody>
+                          </Card>
+                        );
+                      })}
+                    </VStack>
+                  </Box>
+                </>
+              )}
+            </CardBody>
+          </Card>
+        </TabPanel>
+
+        <TabPanel px={0}>
+          <Card bg="gray.800">
+            <CardBody>
+              {selectedClient ? (
+                <ClientCalendar
+                  clientId={selectedClient}
+                  clientNickname={clientList.find(c => c.id === selectedClient)?.nickname || ''}
+                  girlList={girlList}
+                  refreshKey={refreshKey}
+                />
+              ) : (
+                <Flex direction="column" align="center" py={12} gap={3}>
+                  <Icon as={CalendarIcon} color="gray.500" boxSize={10} />
+                  <Text color="gray.400">请先在上方选择客户</Text>
+                  <Text color="gray.500" fontSize="sm">切换到「表格」标签可在全部客户视图中筛选</Text>
+                </Flex>
+              )}
+            </CardBody>
+          </Card>
+        </TabPanel>
+      </Tabs>
 
       {/* 创建约会 */}
       <Modal isOpen={isCreateOpen} onClose={closeCreate} size="xl">

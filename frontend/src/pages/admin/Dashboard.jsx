@@ -4,8 +4,8 @@ import {
   Table, Thead, Tbody, Tr, Th, Td, Text, Badge, Button, HStack, VStack, Flex, Select,
   Spinner, Progress, Divider, Icon
 } from '@chakra-ui/react';
-import { dashboard as dashboardApi, clients as clientsApi } from '../../utils/api';
-import { RefreshIcon, SparklesIcon, ClipboardIcon, WarningIcon, CalendarIcon, FireIcon, SnowIcon, InfoIcon } from '../../components/Icons';
+import { dashboard as dashboardApi, clients as clientsApi, weeklyReview as weeklyReviewApi } from '../../utils/api';
+import { RefreshIcon, SparklesIcon, ClipboardIcon, WarningIcon, CalendarIcon, FireIcon, SnowIcon, InfoIcon, ChartIcon } from '../../components/Icons';
 
 const STAGE_COLORS = {
   '背调': 'blue', '建池': 'cyan', '约会': 'green', '锁定': 'orange', '维护': 'teal',
@@ -32,6 +32,8 @@ export default function AdminDashboard() {
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeProgress, setAnalyzeProgress] = useState('');
   const [briefUpdatedAt, setBriefUpdatedAt] = useState(null);
+  const [weeklyReport, setWeeklyReport] = useState(null);
+  const [weeklyLoading, setWeeklyLoading] = useState(false);
 
   const loadStats = useCallback(async () => {
     setLoading(true);
@@ -123,6 +125,26 @@ export default function AdminDashboard() {
       setTimeout(() => setAnalyzeProgress(''), 3000);
     }
   };
+
+  const loadWeeklyReview = useCallback(async () => {
+    if (!selectedClientId) {
+      setWeeklyReport(null);
+      return;
+    }
+    setWeeklyLoading(true);
+    try {
+      const res = await weeklyReviewApi.get(selectedClientId);
+      if (res.success) setWeeklyReport(res.data);
+    } catch (e) {
+      console.error('加载周报失败:', e);
+    } finally {
+      setWeeklyLoading(false);
+    }
+  }, [selectedClientId]);
+
+  useEffect(() => {
+    loadWeeklyReview();
+  }, [loadWeeklyReview]);
 
   const getTensionIcon = (score) => {
     if (score >= 7) return <Icon as={FireIcon} color="red.400" />;
@@ -389,6 +411,163 @@ export default function AdminDashboard() {
                     ))}
                   </Tbody>
                 </Table>
+              )}
+            </CardBody>
+          </Card>
+
+          {/* 本周复盘报告 */}
+          <Card bg="gray.800">
+            <CardBody>
+              <Flex justify="space-between" align="center" mb={4} wrap="wrap" gap={2}>
+                <HStack>
+                  <Icon as={ChartIcon} color="teal.400" />
+                  <Text color="white" fontWeight="bold">本周复盘报告</Text>
+                  {weeklyReport?.generatedAt && (
+                    <Text color="gray.500" fontSize="xs">
+                      生成: {new Date(weeklyReport.generatedAt).toLocaleString('zh-CN')}
+                    </Text>
+                  )}
+                </HStack>
+                <HStack>
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    colorScheme="teal"
+                    isLoading={weeklyLoading}
+                    onClick={loadWeeklyReview}
+                    isDisabled={!selectedClientId}
+                  >
+                    刷新
+                  </Button>
+                  <Button
+                    size="xs"
+                    colorScheme="teal"
+                    onClick={async () => {
+                      if (!selectedClientId) return;
+                      setWeeklyLoading(true);
+                      try {
+                        const res = await weeklyReviewApi.generate(selectedClientId);
+                        if (res.success) setWeeklyReport(res.data);
+                      } catch (e) {
+                        console.error('生成周报失败:', e);
+                      } finally {
+                        setWeeklyLoading(false);
+                      }
+                    }}
+                    isLoading={weeklyLoading}
+                    isDisabled={!selectedClientId}
+                  >
+                    重新生成
+                  </Button>
+                </HStack>
+              </Flex>
+
+              {!selectedClientId ? (
+                <Text color="gray.500" textAlign="center" py={4}>请先选择客户以查看周报</Text>
+              ) : weeklyLoading && !weeklyReport ? (
+                <Text color="gray.500" textAlign="center" py={4}>加载中...</Text>
+              ) : weeklyReport ? (
+                <VStack spacing={4} align="stretch">
+                  {/* 数据总览 */}
+                  <SimpleGrid columns={{ base: 2, md: 6 }} spacing={3}>
+                    {[
+                      { label: '女生总数', value: weeklyReport.totalGirls, color: 'teal.400' },
+                      { label: '新增', value: weeklyReport.newGirlsThisWeek, color: 'green.400', help: '本周新增' },
+                      { label: '约会', value: weeklyReport.datesThisWeek, color: 'blue.400', help: `完成${weeklyReport.completedDates}次` },
+                      { label: '聊天', value: weeklyReport.chatLogsThisWeek, color: 'orange.400', help: `${weeklyReport.chatTrend > 0 ? '↑' : weeklyReport.chatTrend < 0 ? '↓' : ''}${Math.abs(weeklyReport.chatTrend)}%` },
+                      { label: '活跃预警', value: weeklyReport.activeAlerts, color: weeklyReport.activeAlerts > 0 ? 'red.400' : 'gray.400' },
+                      { label: 'AI评分', value: weeklyReport.overallScore ?? '-', color: weeklyReport.overallScore ? (weeklyReport.overallScore >= 7 ? 'green.400' : weeklyReport.overallScore >= 4 ? 'orange.400' : 'red.400') : 'gray.400' },
+                    ].map(item => (
+                      <Card key={item.label} bg="gray.700" variant="outline">
+                        <CardBody py={3} px={3}>
+                          <Stat size="sm">
+                            <StatLabel color="gray.400" fontSize="xs">{item.label}</StatLabel>
+                            <StatNumber color={item.color} fontSize="lg">{item.value}</StatNumber>
+                            {item.help && <StatHelpText color="gray.500" fontSize="xs">{item.help}</StatHelpText>}
+                          </Stat>
+                        </CardBody>
+                      </Card>
+                    ))}
+                  </SimpleGrid>
+
+                  {/* 阶段变更 + AI点评 */}
+                  <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={4}>
+                    <Box>
+                      <Text color="gray.400" fontSize="sm" mb={2}>阶段变更</Text>
+                      <HStack spacing={4}>
+                        <HStack>
+                          <Text color="green.400" fontWeight="bold">{weeklyReport.stageChanges.upgrades}</Text>
+                          <Text color="gray.400" fontSize="sm">升级</Text>
+                        </HStack>
+                        <HStack>
+                          <Text color="red.400" fontWeight="bold">{weeklyReport.stageChanges.downgrades}</Text>
+                          <Text color="gray.400" fontSize="sm">降级</Text>
+                        </HStack>
+                        <HStack>
+                          <Text color="gray.400" fontWeight="bold">{weeklyReport.avgTension}</Text>
+                          <Text color="gray.400" fontSize="sm">/10 平均热度</Text>
+                        </HStack>
+                      </HStack>
+                      {weeklyReport.alertStats.total > 0 && (
+                        <HStack mt={2} spacing={2} flexWrap="wrap">
+                          {weeklyReport.alertStats.byType.P0 > 0 && <Badge colorScheme="red">P0 {weeklyReport.alertStats.byType.P0}</Badge>}
+                          {weeklyReport.alertStats.byType.P1 > 0 && <Badge colorScheme="orange">P1 {weeklyReport.alertStats.byType.P1}</Badge>}
+                          {weeklyReport.alertStats.byType.P2 > 0 && <Badge colorScheme="gray">P2 {weeklyReport.alertStats.byType.P2}</Badge>}
+                          <Text color="gray.500" fontSize="xs">本周预警</Text>
+                        </HStack>
+                      )}
+                    </Box>
+
+                    <Box>
+                      <Text color="gray.400" fontSize="sm" mb={2}>整体评估</Text>
+                      {weeklyReport.generated ? (
+                        <VStack align="stretch" spacing={2}>
+                          <Text color="white" fontSize="sm">{weeklyReport.overallComment || '暂无点评'}</Text>
+                          {weeklyReport.strengths?.length > 0 && (
+                            <Box>
+                              {weeklyReport.strengths.map((s, i) => (
+                                <Text key={i} color="green.300" fontSize="xs">+ {s}</Text>
+                              ))}
+                            </Box>
+                          )}
+                          {weeklyReport.concerns?.length > 0 && (
+                            <Box>
+                              {weeklyReport.concerns.map((c, i) => (
+                                <Text key={i} color="orange.300" fontSize="xs">⚠ {c}</Text>
+                              ))}
+                            </Box>
+                          )}
+                        </VStack>
+                      ) : (
+                        <Text color="gray.500" fontSize="sm">AI 未生成评估（可点击"重新生成"）</Text>
+                      )}
+                    </Box>
+                  </SimpleGrid>
+
+                  {/* 下周优先级 */}
+                  {weeklyReport.generated && weeklyReport.nextWeekPriorities?.length > 0 && (
+                    <Box>
+                      <Text color="gray.400" fontSize="sm" mb={2}>下周行动优先级</Text>
+                      <VStack spacing={2} align="stretch">
+                        {weeklyReport.nextWeekPriorities.map((p, i) => (
+                          <Card key={i} bg="gray.700" variant="outline" size="sm">
+                            <CardBody py={2} px={3}>
+                              <Flex justify="space-between" align="center" wrap="wrap" gap={2}>
+                                <HStack>
+                                  <Badge colorScheme={p.girlName === 'ALL' ? 'teal' : 'blue'}>{p.girlName}</Badge>
+                                  <Text color="gray.300" fontSize="sm">{p.priority}</Text>
+                                </HStack>
+                                <Text color="gray.500" fontSize="xs">{p.reason}</Text>
+                              </Flex>
+                            </CardBody>
+                          </Card>
+                        ))}
+                      </VStack>
+                    </Box>
+                  )}
+                </VStack>
+              ) : (
+                <Text color="gray.500" textAlign="center" py={4}>暂无周报数据</Text>
               )}
             </CardBody>
           </Card>

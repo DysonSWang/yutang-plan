@@ -31,6 +31,13 @@ router.get('/', authMiddleware, async (req, res) => {
     if (req.user.role === 'client') {
       where.clientId = req.user.id;
     } else if (clientId) {
+      // 安全：操盘手只能查询自己负责的客户
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId }
+      });
+      if (!session) {
+        return res.status(403).json({ error: '无权限访问此客户的数据' });
+      }
       where.clientId = clientId;
     }
     if (girlId) where.girlId = girlId;
@@ -65,6 +72,16 @@ router.post('/', authMiddleware, async (req, res) => {
 
     if (!clientId || !title || !eventTime) {
       return res.status(400).json({ error: '缺少必填字段（clientId、title、eventTime）' });
+    }
+
+    // 安全：操盘手只能为自己的客户创建事件（客户可为自身创建）
+    if (req.user.role === 'operator' || req.user.role === 'admin') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId }
+      });
+      if (!session) {
+        return res.status(403).json({ error: '无权限为该客户创建事件' });
+      }
     }
 
     const event = await prisma.event.create({
@@ -110,6 +127,16 @@ router.get('/:id', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: '无权访问' });
     }
 
+    // 安全：操盘手只能访问自己负责的客户的事件
+    if (req.user.role === 'operator') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: event.clientId }
+      });
+      if (!session) {
+        return res.status(403).json({ error: '无权访问' });
+      }
+    }
+
     res.json({ success: true, event });
   } catch (error) {
     console.error('[Events] 获取事件失败:', error);
@@ -128,6 +155,15 @@ router.put('/:id', authMiddleware, async (req, res) => {
     }
     if (req.user.role === 'client' && existing.type === 'date') {
       return res.status(403).json({ error: '约会由操盘手管理' });
+    }
+    // 安全：操盘手只能操作自己负责的客户的事件
+    if (req.user.role === 'operator') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: existing.clientId }
+      });
+      if (!session) {
+        return res.status(403).json({ error: '无权修改此事件' });
+      }
     }
 
     const { title, content, eventTime, endTime, status, girlId, color, notes, metadata } = req.body;
@@ -168,6 +204,15 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     if (req.user.role === 'client' && existing.type === 'date') {
       return res.status(403).json({ error: '约会由操盘手管理' });
     }
+    // 安全：操盘手只能操作自己负责的客户的事件
+    if (req.user.role === 'operator') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: existing.clientId }
+      });
+      if (!session) {
+        return res.status(403).json({ error: '无权删除此事件' });
+      }
+    }
 
     await prisma.event.delete({ where: { id: req.params.id } });
     res.json({ success: true });
@@ -185,6 +230,15 @@ router.patch('/:id/status', authMiddleware, async (req, res) => {
 
     if (req.user.role === 'client' && existing.clientId !== req.user.id) {
       return res.status(403).json({ error: '无权修改' });
+    }
+    // 安全：操盘手只能操作自己负责的客户的事件
+    if (req.user.role === 'operator') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: existing.clientId }
+      });
+      if (!session) {
+        return res.status(403).json({ error: '无权修改此事件' });
+      }
     }
 
     const { status } = req.body;
@@ -210,6 +264,16 @@ router.post('/batch', authMiddleware, async (req, res) => {
     const { clientId, startDate, endDate } = req.body;
 
     if (!clientId) return res.status(400).json({ error: 'clientId 是必需的' });
+
+    // 安全：操盘手只能查询自己负责的客户
+    if (req.user.role !== 'client' && req.user.role !== 'admin') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId }
+      });
+      if (!session) {
+        return res.status(403).json({ error: '无权限访问此客户的数据' });
+      }
+    }
 
     let where = { clientId };
     if (startDate) where.eventTime = { ...where.eventTime, gte: new Date(startDate) };

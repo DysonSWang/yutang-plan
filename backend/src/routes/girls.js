@@ -8,6 +8,7 @@ const jwt = require('jsonwebtoken');
 
 const { JWT_SECRET } = require('../config');
 const prisma = require('../prisma');
+const { evaluateRelationshipStage, setRelationshipStage, getStageHistory, VALID_STAGES, STAGE_LABELS } = require('../services/relationshipStage');
 
 // Auth middleware
 const authMiddleware = async (req, res, next) => {
@@ -36,6 +37,13 @@ router.get('/', authMiddleware, async (req, res) => {
     if (req.user.role === 'client') {
       where.clientId = req.user.id;
     } else if (clientId) {
+      // 安全：操盘手只能查询自己负责的客户
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId }
+      });
+      if (!session) {
+        return res.status(403).json({ error: '无权限访问此客户的数据' });
+      }
       where.clientId = clientId;
     }
 
@@ -78,6 +86,15 @@ router.get('/:id', authMiddleware, async (req, res) => {
     if (req.user.role === 'client' && girl.clientId !== req.user.id) {
       return res.status(403).json({ error: '无权限' });
     }
+    // 安全：操盘手只能访问其负责客户的女生
+    if (req.user.role === 'operator') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: girl.clientId }
+      });
+      if (!session) {
+        return res.status(403).json({ error: '无权限' });
+      }
+    }
 
     res.json({ success: true, girl });
   } catch (error) {
@@ -99,6 +116,14 @@ router.post('/', authMiddleware, async (req, res) => {
       if (!data[field]) {
         return res.status(400).json({ error: `${field}是必需的` });
       }
+    }
+
+    // 安全：操盘手只能为自己的客户创建女生
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId: data.clientId }
+    });
+    if (!session) {
+      return res.status(403).json({ error: '无权限为该客户创建女生' });
     }
 
     // 检查客户女生配额
@@ -207,6 +232,14 @@ router.put('/:id', authMiddleware, async (req, res) => {
 
     if (!existing) {
       return res.status(404).json({ error: '女生不存在' });
+    }
+
+    // 安全：操盘手只能操作自己负责的客户的女生
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId: existing.clientId }
+    });
+    if (!session) {
+      return res.status(403).json({ error: '无权操作此女生数据' });
     }
 
     const data = req.body;
@@ -327,6 +360,18 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: '无权限' });
     }
 
+    const existing = await prisma.girl.findUnique({ where: { id: req.params.id } });
+    if (!existing) {
+      return res.status(404).json({ error: '女生不存在' });
+    }
+    // 安全：操盘手只能操作自己负责的客户的女生
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId: existing.clientId }
+    });
+    if (!session) {
+      return res.status(403).json({ error: '无权删除此女生' });
+    }
+
     await prisma.girl.delete({
       where: { id: req.params.id }
     });
@@ -343,6 +388,18 @@ router.post('/:id/intimacy', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'operator' && req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
+    }
+
+    const existing = await prisma.girl.findUnique({ where: { id: req.params.id } });
+    if (!existing) {
+      return res.status(404).json({ error: '女生不存在' });
+    }
+    // 安全：操盘手只能操作自己负责的客户的女生
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId: existing.clientId }
+    });
+    if (!session) {
+      return res.status(403).json({ error: '无权操作此女生' });
     }
 
     const { level } = req.body;
@@ -401,6 +458,91 @@ router.post('/client-add', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('[Girls] 客户添加女生失败:', error);
     res.status(500).json({ error: '添加失败' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// 关系阶段路由（M007 S01 T02）
+// ---------------------------------------------------------------------------
+
+// 所有权校验辅助函数
+async function checkGirlOwnership(girlId, user) {
+  const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+  if (!girl) return { error: '女生不存在', girl: null };
+  if (user.role === 'client' && girl.clientId !== user.id) return { error: '无权限', girl };
+  if (user.role === 'operator') {
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: user.id, clientId: girl.clientId }
+    });
+    if (!session) return { error: '无权限', girl };
+  }
+  return { error: null, girl };
+}
+
+// 获取关系阶段变更历史
+router.get('/:id/stage-history', authMiddleware, async (req, res) => {
+  try {
+    const { error } = await checkGirlOwnership(req.params.id, req.user);
+    if (error) return res.status(403).json({ error });
+
+    const history = await getStageHistory(req.params.id);
+    res.json({ success: true, history });
+  } catch (error) {
+    console.error('[Girls] 获取阶段历史失败:', error);
+    res.status(500).json({ error: '获取失败' });
+  }
+});
+
+// AI 评估关系阶段（返回推荐，不自动写入）
+router.post('/:id/evaluate-stage', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: '无权限' });
+    }
+    const { error } = await checkGirlOwnership(req.params.id, req.user);
+    if (error) return res.status(403).json({ error });
+
+    const result = await evaluateRelationshipStage(req.params.id, req.user.id);
+    res.json({
+      success: true,
+      evaluation: result,
+      validStages: VALID_STAGES.map(s => ({ value: s, label: STAGE_LABELS[s] }))
+    });
+  } catch (error) {
+    console.error('[Girls] AI 阶段评估失败:', error);
+    res.status(500).json({ error: error.message || '评估失败' });
+  }
+});
+
+// 手动设置关系阶段
+router.put('/:id/relationship-stage', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: '无权限' });
+    }
+    const { error } = await checkGirlOwnership(req.params.id, req.user);
+    if (error) return res.status(403).json({ error });
+
+    const { stage, reason, source } = req.body;
+    if (!stage) {
+      return res.status(400).json({ error: 'stage 是必需的' });
+    }
+    if (!VALID_STAGES.includes(stage)) {
+      return res.status(400).json({ error: `无效阶段值。有效值: ${VALID_STAGES.join(', ')}` });
+    }
+
+    const result = await setRelationshipStage(
+      req.params.id,
+      stage,
+      reason || null,
+      req.user.id,
+      source || 'manual'
+    );
+
+    res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('[Girls] 设置关系阶段失败:', error);
+    res.status(500).json({ error: error.message || '设置失败' });
   }
 });
 

@@ -3,6 +3,10 @@
  */
 
 const { getMultiDimensionalSkillsWithMeta } = require('./router');
+const { buildStructuredFusion } = require('./fusion');
+const { getAllLearnings, formatLearningsForPrompt } = require('../services/learning');
+const { buildDynamicPersona, buildPersonaSection } = require('../services/coachPersona');
+const { STAGE_LABELS } = require('../services/relationshipStage');
 
 /**
  * 构建综合教练prompt
@@ -10,11 +14,14 @@ const { getMultiDimensionalSkillsWithMeta } = require('./router');
  * @param {Object} context - 上下文对象
  * @param {Object} options - 配置选项
  */
-function buildMasterPrompt(question, context = {}, options = {}) {
+async function buildMasterPrompt(question, context = {}, options = {}) {
   const {
     girlInfo = null,
     conversationHistory = [],
-    turnCount = 0
+    turnCount = 0,
+    clientProfile = null,
+    girlProfile = null,
+    clientId = null
   } = options;
 
   // 获取相关skill（会返回多个coach视角）
@@ -23,14 +30,42 @@ function buildMasterPrompt(question, context = {}, options = {}) {
   // 构建大师视角部分（多coach融合）
   const masterSection = skills.map(skill => buildMasterSection(skill)).join('\n\n');
 
-  // 构建女生上下文
+  // 构建女生上下文（基础信息）
   const contextSection = buildContextSection(girlInfo);
 
   // 构建历史对话
   const historySection = buildHistorySection(conversationHistory, turnCount);
 
-  // 构建融合提示（当多coach视角冲突时）
-  const fusionHint = buildFusionHint(skills, meta);
+  // 构建结构化融合提示（替代原有简单融合）
+  // 传入 clientId 以加载个性化权重（反馈驱动）
+  const fusionHint = await buildStructuredFusion(skills, meta, {
+    clientId,
+    clientProfile,
+    girlProfile,
+    routedType: meta?.routedType
+  });
+
+  // 加载历史 learnings 并注入 prompt（Learning 接入对话流）
+  let learningsSection = '';
+  if (clientId) {
+    try {
+      const learnings = await getAllLearnings(clientId, girlId);
+      learningsSection = buildLearningsSection(learnings, girlId);
+    } catch (e) {
+      console.warn('[promptBuilder] 加载 learnings 失败:', e.message);
+    }
+  }
+
+  // 加载人格适配参数（Coach 人格适配）
+  let personaSection = '';
+  if (clientId) {
+    try {
+      const persona = await buildDynamicPersona({ clientProfile, clientId, girlId });
+      personaSection = buildPersonaSection(persona);
+    } catch (e) {
+      console.warn('[promptBuilder] 加载人格适配失败:', e.message);
+    }
+  }
 
   // 核心：question 必须插入 prompt，否则AI看不到用户的问题
   return `
@@ -52,6 +87,14 @@ ${masterSection}
 ${fusionHint}
 
 ${contextSection}
+
+${buildClientProfileSection(clientProfile)}
+
+${buildGirlProfileSection(girlProfile)}
+
+${learningsSection}
+
+${personaSection}
 
 ${historySection}
 
@@ -124,6 +167,66 @@ function buildFusionHint(skills, meta = {}) {
 }
 
 /**
+ * 构建客户画像语气提示（影响AI教练的语气深度和策略）
+ */
+function buildClientProfileSection(cp) {
+  if (!cp) return '';
+
+  const lines = [];
+
+  // emotionalMaturity
+  const maturityLevel = cp.emotionalMaturityLevel || (cp.emotionalMaturity === '成熟' ? 3 : cp.emotionalMaturity === '幼稚' ? 1 : 2);
+  if (maturityLevel <= 1) {
+    lines.push('语气：更鼓励、更耐心，少用专业术语，多用通俗易懂的语言，避免给客户太大压力');
+  } else if (maturityLevel >= 3) {
+    lines.push('语气：可以用更深度、抽象的策略思维，语言更精炼、直接');
+  } else {
+    lines.push('语气：平衡风格，既要有温度，也要有逻辑');
+  }
+
+  // antiFrustrationLevel
+  const antiFrustration = cp.antiFrustrationLevel || 5;
+  if (antiFrustration <= 3) {
+    lines.push('策略：优先心态支持，避免激进拉伸建议，不要给客户施压，多给正向反馈');
+  } else if (antiFrustration >= 8) {
+    lines.push('策略：可以接受高风险高回报的建议，不会因为激进策略崩溃');
+  }
+
+  // pacePreference
+  if (cp.pacePreference === '快节奏') {
+    lines.push('节奏：可以更紧凑，建议更有进攻性，推进关系不要拖泥带水');
+  } else if (cp.pacePreference === '慢热型') {
+    lines.push('节奏：建议更稳妥，不要急于推进，先建立舒适感再考虑拉伸');
+  } else if (cp.pacePreference === '稳健型') {
+    lines.push('节奏：稳步推进，保持节奏稳定，既不冒进也不拖沓');
+  }
+
+  // clientType — 语气调整（少说"你应该"，多说"我建议这样因为"）
+  if (cp.clientType === '质疑型') {
+    lines.push('语气风格：少说"你应该"，多说"我建议这样，因为..."，多提供理由和逻辑，少用命令式');
+  } else if (cp.clientType === '执行型') {
+    lines.push('语气风格：简洁直接，给明确的步骤和行动指引，不要绕弯子');
+  } else if (cp.clientType === '自主型') {
+    lines.push('语气风格：给框架和方向，让客户自己做决定，不要过度指令');
+  }
+
+  // coachCooperation — 配合度影响详细程度
+  const coopLevel = cp.coachCooperationLevel || (cp.coachCooperation === '配合' ? 3 : cp.coachCooperation === '抵触' ? 1 : 2);
+  if (coopLevel <= 1) {
+    lines.push('客户配合度低，建议精简到最核心的1-2条行动，不要给太多信息');
+  } else if (coopLevel >= 3) {
+    lines.push('客户配合度高，可以给更完整的分析和多步行动计划');
+  }
+
+  if (lines.length === 0) return '';
+
+  return `
+【客户画像提示】
+${lines.join('\n')}
+`;
+}
+
+/**
  * 构建女生上下文
  */
 function buildContextSection(girlInfo) {
@@ -133,10 +236,12 @@ function buildContextSection(girlInfo) {
 
   const personality = girlInfo.personality || {};
 
+  const { STAGE_LABELS } = require('./stageGuard');
+  const relStageLabel = girlInfo.relationshipStage ? STAGE_LABELS[girlInfo.relationshipStage] || girlInfo.relationshipStage : null;
   return `
 【女生上下文】
 - 昵称：${girlInfo.name || '未知'}
-- 当前阶段：${girlInfo.stage || '未知'}
+- 关系阶段：${relStageLabel || '未设置'}
 - 关系热度：${girlInfo.tensionScore || 5}/10
 - 亲密度：${girlInfo.intimacyLevel || 1}
 
@@ -145,6 +250,85 @@ function buildContextSection(girlInfo) {
 - 情绪触发点：${(personality.emotionalTriggers || []).join('、') || '暂无'}
 - 聊天禁忌：${(personality.thingsToAvoid || []).join('、') || '暂无'}
 - 喜欢话题：${(personality.talkingTopics || []).join('、') || '未知'}
+`;
+}
+
+/**
+ * 构建女生画像策略提示（影响AI教练对女生的策略深度）
+ */
+function buildGirlProfileSection(gp) {
+  if (!gp) return '';
+
+  const lines = [];
+  const tension = gp.tensionScore || 5;
+
+  // 热度：冷女生 -> 缓节奏、共鸣切入；热女生 -> 可激进拉伸、制造张力
+  if (tension <= 5) {
+    lines.push('女生策略：热度偏低（' + tension + '/10），节奏放慢，先找共鸣和舒适感，不要急于拉伸');
+  } else if (tension >= 7) {
+    lines.push('女生策略：热度较高（' + tension + '/10），可以更积极拉伸、制造张力，适时升级关系');
+  } else {
+    lines.push('女生策略：热度适中，保持稳定节奏，稳步推进关系');
+  }
+
+  // 阶段策略（使用新的 relationshipStage 系统）
+  const relStage = gp.relationshipStage;
+  if (relStage === 'EXPLORATION') {
+    lines.push('阶段：探索期，刚认识不久，重点是建立基础沟通和吸引，不要急于推进');
+  } else if (relStage === 'FLIRTING') {
+    lines.push('阶段：暧昧期，可以适度拉伸，注意窗口信号，制造心动时刻');
+  } else if (relStage === 'ADVANCEMENT') {
+    lines.push('阶段：推进期，积极拉伸关系，创造约会机会，争取升级');
+  } else if (relStage === 'CONFIRMATION') {
+    lines.push('阶段：确认期，关系基本明确，重点是加深亲密度和维护稳定');
+  } else if (relStage === 'STABLE') {
+    lines.push('阶段：稳定期，长期关系，重点是维护和深化亲密度');
+  }
+
+  // 亲密度权重
+  const intimacy = gp.intimacyLevel || 1;
+  if (intimacy <= 2) {
+    lines.push('亲密度低(' + intimacy + ')，策略偏向建立信任，避免过度进攻');
+  } else if (intimacy >= 4) {
+    lines.push('亲密度高(' + intimacy + ')，可以谈更深入的话题，适度推进');
+  }
+
+  // recentSignals 影响
+  const recentSignals = gp.recentSignals || [];
+  const hasNegative = recentSignals.some(s => s.type === 'negative');
+  const hasPositive = recentSignals.some(s => s.type === 'positive');
+  if (hasNegative) {
+    lines.push('近期有负面信号，需要谨慎，优先修复关系氛围');
+  } else if (hasPositive) {
+    lines.push('近期有正面信号，可以更积极推进');
+  }
+
+  if (lines.length === 0) return '';
+
+  return `
+【女生策略提示】
+${lines.join('\n')}
+`;
+}
+
+/**
+ * 构建历史经验注入区块
+ */
+function buildLearningsSection(learnings, girlId) {
+  if (!learnings || learnings.length === 0) {
+    return '';
+  }
+
+  // 优先使用当前女生的 learnings，其次是全局的
+  const girlLearnings = girlId ? learnings.filter(l => l.girlId === girlId) : [];
+  const displayLearnings = girlLearnings.length > 0 ? girlLearnings.slice(0, 5) : learnings.slice(0, 5);
+
+  const formatted = formatLearningsForPrompt(displayLearnings);
+
+  return `
+【历史经验】
+${formatted}
+（这些是从你们之前的对话中提炼出来的经验，可以参考但不要生搬硬套）
 `;
 }
 

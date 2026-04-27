@@ -102,13 +102,117 @@ function routeQuestion(question, context = {}) {
     }
   }
 
-  // 上下文增强（在已有得分基础上加权）
-  if (context.girlStage) {
-    if (['约会', '暧昧', '女朋友'].includes(context.girlStage)) {
+  // ---- 女生上下文增强 ----
+  const girlProfile = context.girlProfile;
+  if (girlProfile?.stage) {
+    if (['约会', '暧昧', '女朋友'].includes(girlProfile.stage)) {
       if (q.includes('冷淡') || q.includes('不回')) {
         typeScores['长期关系'] = (typeScores['长期关系'] || 0) + 0.5;
         matchDetails.push({ keyword: 'context_stage_boost', weight: 0.5, type: '长期关系' });
       }
+    }
+    // 阶段权重：陌生/朋友 -> 基础沟通和搭讪；暧昧/亲密 -> 拉伸和长期关系
+    if (girlProfile.stage === '陌生') {
+      typeScores['社交软件'] = (typeScores['社交软件'] || 0) + 0.3;
+      typeScores['沟通问题'] = (typeScores['沟通问题'] || 0) + 0.2;
+      matchDetails.push({ keyword: 'girl_stage_cold', weight: 0.3, type: '社交软件' });
+    } else if (girlProfile.stage === '朋友') {
+      typeScores['关系拉伸'] = (typeScores['关系拉伸'] || 0) + 0.2;
+      typeScores['沟通问题'] = (typeScores['沟通问题'] || 0) + 0.15;
+    } else if (['暧昧', '约会', '女朋友'].includes(girlProfile.stage)) {
+      typeScores['关系拉伸'] = (typeScores['关系拉伸'] || 0) + 0.3;
+      typeScores['长期关系'] = (typeScores['长期关系'] || 0) + 0.25;
+      matchDetails.push({ keyword: 'girl_stage_warm', weight: 0.3, type: '关系拉伸' });
+    }
+  }
+
+  // ---- 女生热度权重调整 ----
+  if (girlProfile) {
+    const tension = girlProfile.tensionScore || 5;
+    const recentSignals = girlProfile.recentSignals || [];
+    const hasPositiveSignal = recentSignals.some(s => s.type === 'positive');
+    const hasNegativeSignal = recentSignals.some(s => s.type === 'negative');
+
+    if (tension <= 5) {
+      // 冷女生：惩罚激进拉伸，奖励聊天卡壳
+      if (typeScores['关系拉伸']) {
+        typeScores['关系拉伸'] -= 0.3;
+        matchDetails.push({ keyword: 'girl_cold_penalize_stretch', weight: -0.3, type: '关系拉伸' });
+      }
+      typeScores['聊天卡壳'] = (typeScores['聊天卡壳'] || 0) + 0.4;
+      matchDetails.push({ keyword: 'girl_cold_boost_chat', weight: 0.4, type: '聊天卡壳' });
+      if (hasNegativeSignal) {
+        typeScores['心态问题'] = (typeScores['心态问题'] || 0) + 0.3;
+        matchDetails.push({ keyword: 'girl_cold_negative_signal', weight: 0.3, type: '心态问题' });
+      }
+    } else if (tension >= 7) {
+      // 热女生：奖励拉伸，惩罚价值判断
+      typeScores['关系拉伸'] = (typeScores['关系拉伸'] || 0) + 0.35;
+      typeScores['性张力不足'] = (typeScores['性张力不足'] || 0) + 0.2;
+      typeScores['价值判断'] = Math.max(0, (typeScores['价值判断'] || 0) - 0.2);
+      matchDetails.push({ keyword: 'girl_hot_boost_stretch', weight: 0.35, type: '关系拉伸' });
+      if (hasPositiveSignal) {
+        typeScores['长期关系'] = (typeScores['长期关系'] || 0) + 0.2;
+        matchDetails.push({ keyword: 'girl_hot_positive_signal', weight: 0.2, type: '长期关系' });
+      }
+    }
+
+    // 亲密度权重
+    const intimacy = girlProfile.intimacyLevel || 1;
+    if (intimacy >= 4) {
+      typeScores['长期关系'] = (typeScores['长期关系'] || 0) + 0.25;
+      typeScores['性张力不足'] = (typeScores['性张力不足'] || 0) + 0.2;
+    } else if (intimacy <= 2) {
+      typeScores['聊天卡壳'] = (typeScores['聊天卡壳'] || 0) + 0.2;
+      typeScores['关系拉伸'] = Math.max(0, (typeScores['关系拉伸'] || 0) - 0.15);
+    }
+  }
+
+  // ---- 客户画像权重调整 ----
+  const cp = context.clientProfile;
+  if (cp) {
+    // emotionalMaturity: 幼稚(1) -> 多用脱不花基础沟通; 成熟(3) -> 可用纳爷财富观
+    const maturityLevel = cp.emotionalMaturityLevel || (cp.emotionalMaturity === '成熟' ? 3 : cp.emotionalMaturity === '幼稚' ? 1 : 2);
+    if (maturityLevel <= 1) {
+      // 幼稚客户：增强心态支持，抑制激进拉伸
+      typeScores['心态问题'] = (typeScores['心态问题'] || 0) + 0.4;
+      typeScores['关系拉伸'] = Math.max(0, (typeScores['关系拉伸'] || 0) - 0.2);
+      matchDetails.push({ keyword: 'client_immature_boost', weight: 0.4, type: '心态问题' });
+    } else if (maturityLevel >= 3) {
+      // 成熟客户：可接受更深度策略
+      typeScores['长期关系'] = (typeScores['长期关系'] || 0) + 0.3;
+      typeScores['价值判断'] = (typeScores['价值判断'] || 0) + 0.2;
+      matchDetails.push({ keyword: 'client_mature_boost', weight: 0.3, type: '长期关系' });
+    }
+
+    // antiFrustrationLevel: 低 -> 避免激进拉伸建议，优先心态支持
+    const antiFrustration = cp.antiFrustrationLevel || 5;
+    if (antiFrustration <= 3) {
+      typeScores['心态问题'] = (typeScores['心态问题'] || 0) + 0.5;
+      typeScores['关系拉伸'] = Math.max(0, (typeScores['关系拉伸'] || 0) - 0.3);
+      typeScores['分手挽回'] = Math.max(0, (typeScores['分手挽回'] || 0) - 0.2);
+      matchDetails.push({ keyword: 'client_low_frustration_tone', weight: 0.5, type: '心态问题' });
+    } else if (antiFrustration >= 8) {
+      // 高抗压：可接受激进拉伸建议
+      typeScores['关系拉伸'] = (typeScores['关系拉伸'] || 0) + 0.2;
+      matchDetails.push({ keyword: 'client_high_frustration_tone', weight: 0.2, type: '关系拉伸' });
+    }
+
+    // pacePreference: 快节奏 -> 优先进攻型策略; 慢热型 -> 优先稳妥型策略
+    if (cp.pacePreference === '快节奏') {
+      typeScores['关系拉伸'] = (typeScores['关系拉伸'] || 0) + 0.2;
+      typeScores['性张力不足'] = (typeScores['性张力不足'] || 0) + 0.15;
+    } else if (cp.pacePreference === '慢热型') {
+      typeScores['聊天卡壳'] = (typeScores['聊天卡壳'] || 0) + 0.2;
+      typeScores['心态问题'] = (typeScores['心态问题'] || 0) + 0.15;
+      matchDetails.push({ keyword: 'client_slow_pace_preference', weight: 0.2, type: '聊天卡壳' });
+    }
+
+    // clientType: 质疑型 -> 调整语气策略（少说"你应该"，多说"我建议这样因为"）
+    if (cp.clientType === '质疑型') {
+      typeScores['价值判断'] = (typeScores['价值判断'] || 0) + 0.2;
+      typeScores['沟通问题'] = (typeScores['沟通问题'] || 0) + 0.15;
+      matchDetails.push({ keyword: 'client_skeptical_type', weight: 0.2, type: '价值判断' });
     }
   }
 
@@ -127,7 +231,18 @@ function routeQuestion(question, context = {}) {
     matchedKeywords: matchDetails.map(m => m.keyword),
     typeScores,
     bestScore,
-    routedType: bestType
+    routedType: bestType,
+    clientProfileBoost: cp ? {
+      maturityLevel: cp.emotionalMaturityLevel,
+      antiFrustrationLevel: cp.antiFrustrationLevel,
+      pacePreference: cp.pacePreference,
+      clientType: cp.clientType
+    } : null,
+    girlProfileBoost: girlProfile ? {
+      tensionScore: girlProfile.tensionScore,
+      intimacyLevel: girlProfile.intimacyLevel,
+      stage: girlProfile.stage
+    } : null
   };
 
   return { type: bestType, score: bestScore, meta };

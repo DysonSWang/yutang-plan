@@ -74,6 +74,14 @@ router.get('/girl/:girlId', authMiddleware, async (req, res) => {
     const { girlId } = req.params;
     const { limit = 50 } = req.query;
 
+    // 安全：验证操盘手拥有此女生
+    const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+    if (!girl) return res.status(404).json({ error: '女生不存在' });
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId: girl.clientId }
+    });
+    if (!session) return res.status(403).json({ error: '无权限访问此女生数据' });
+
     const screenshots = await prisma.chatScreenshot.findMany({
       where: { girlId },
       orderBy: { createdAt: 'desc' },
@@ -117,6 +125,14 @@ router.post('/', authMiddleware, async (req, res) => {
 
       if (!girl) {
         return res.status(404).json({ error: '女生不存在' });
+      }
+
+      // 安全：操盘手只能为自己负责的客户的女生上传截图
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: girl.clientId }
+      });
+      if (!session) {
+        return res.status(403).json({ error: '无权限为该客户上传截图' });
       }
 
       const imageUrl = `/uploads/chat-screenshots/${req.file.filename}`;
@@ -187,6 +203,14 @@ router.post('/confirm-fields', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: '参数不完整，需要 girlId 和 pendingId' });
     }
 
+    // 安全：操盘手只能操作自己负责的客户的女生
+    const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+    if (!girl) return res.status(404).json({ error: '女生不存在' });
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId: girl.clientId }
+    });
+    if (!session) return res.status(403).json({ error: '无权限操作此女生数据' });
+
     // 调用新的确认接口
     const result = await confirmAnalysis(girlId, pendingId, selectedFields);
 
@@ -211,12 +235,20 @@ router.patch('/:id/notes', authMiddleware, async (req, res) => {
     const { id } = req.params;
     const { notes } = req.body;
 
-    const screenshot = await prisma.chatScreenshot.update({
+    const screenshot = await prisma.chatScreenshot.findUnique({ where: { id } });
+    if (!screenshot) return res.status(404).json({ error: '截图不存在' });
+    // 安全：操盘手只能操作自己负责的客户的截图
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId: screenshot.clientId }
+    });
+    if (!session) return res.status(403).json({ error: '无权限操作此截图' });
+
+    const updated = await prisma.chatScreenshot.update({
       where: { id },
       data: { notes }
     });
 
-    res.json({ success: true, screenshot });
+    res.json({ success: true, screenshot: updated });
   } catch (error) {
     console.error('[ChatScreenshot] 更新备注失败:', error);
     res.status(500).json({ error: '更新失败' });
@@ -238,6 +270,12 @@ router.post('/:id/ai-notes', authMiddleware, async (req, res) => {
     if (!screenshot) {
       return res.status(404).json({ error: '截图不存在' });
     }
+
+    // 安全：操盘手只能操作自己负责的客户的截图
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId: screenshot.clientId }
+    });
+    if (!session) return res.status(403).json({ error: '无权限操作此截图' });
 
     // 调用 AI 分析截图图片
     const baseUrl = BASE_URL;
@@ -285,6 +323,12 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     if (!screenshot) {
       return res.status(404).json({ error: '截图不存在' });
     }
+
+    // 安全：操盘手只能删除自己负责的客户的截图
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId: screenshot.clientId }
+    });
+    if (!session) return res.status(403).json({ error: '无权限删除此截图' });
 
     // 删除文件
     const filePath = path.join(__dirname, '../..', screenshot.imageUrl);

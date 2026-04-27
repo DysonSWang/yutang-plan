@@ -3,8 +3,7 @@
  * 支持语义检索和自动提取
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../prisma');
 
 const { getAIConfig } = require('../config');
 

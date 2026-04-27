@@ -7,8 +7,7 @@
  * - 提供 confirmProfileUpdate() 确认后应用到客户档案
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../prisma');
 const { analyzeClientChat, extractClientPendingFields } = require('./profileEngine');
 
 /**

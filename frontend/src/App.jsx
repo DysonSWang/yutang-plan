@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ChakraProvider, Spinner, Center } from '@chakra-ui/react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -14,6 +14,7 @@ const ClientChat = lazy(() => import('./pages/client/Chat'));
 const AICoach = lazy(() => import('./pages/client/AICoach'));
 const MyPond = lazy(() => import('./pages/client/MyPond'));
 const ClientDates = lazy(() => import('./pages/client/ClientDates'));
+const Onboarding = lazy(() => import('./pages/client/Onboarding'));
 const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
 const AdminClients = lazy(() => import('./pages/admin/Clients'));
 const AdminGirls = lazy(() => import('./pages/admin/Girls'));
@@ -39,6 +40,36 @@ function ProtectedRoute({ children, requireOperator = false }) {
   return children;
 }
 
+// 入职引导路由：仅对 serviceStage === '待入职' 的客户显示
+function OnboardingRoute() {
+  const { user, loading } = useAuth();
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [checked, setChecked] = useState(false);
+
+  useEffect(() => {
+    if (loading || !user || user.role !== 'client') {
+      setChecked(true);
+      return;
+    }
+    import('./utils/api').then(({ clients }) => {
+      clients.me().then(res => {
+        if (res.client?.serviceStage === '待入职') {
+          setNeedsOnboarding(true);
+        }
+        setChecked(true);
+      }).catch(() => {
+        setChecked(true);
+      });
+    });
+  }, [user, loading]);
+
+  if (loading || !checked) return <PageLoader />;
+  if (!user) return <Navigate to="/login" />;
+  if (user.role !== 'client') return <Navigate to="/admin" />;
+  if (!needsOnboarding) return <Navigate to="/" />;
+  return <Onboarding />;
+}
+
 function AppRoutes() {
   const { user, loading } = useAuth();
 
@@ -48,6 +79,7 @@ function AppRoutes() {
     <Suspense fallback={<PageLoader />}>
     <Routes>
       <Route path="/login" element={user ? <Navigate to={user.role === 'client' ? '/' : '/admin'} /> : <Login />} />
+      <Route path="/onboarding" element={<OnboardingRoute />} />
       <Route path="/" element={<ProtectedRoute><ClientLayout /></ProtectedRoute>}>
         <Route index element={<ClientHome />} />
         <Route path="profile" element={<ClientProfile />} />

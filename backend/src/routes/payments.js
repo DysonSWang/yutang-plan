@@ -36,6 +36,13 @@ router.get('/', authMiddleware, async (req, res) => {
     if (req.user.role === 'client') {
       where.userId = req.user.id;
     } else if (clientId) {
+      // 安全：操盘手只能查询自己负责的客户
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId }
+      });
+      if (!session) {
+        return res.status(403).json({ error: '无权限访问此客户的数据' });
+      }
       where.userId = clientId;
     }
 
@@ -62,6 +69,14 @@ router.post('/', authMiddleware, async (req, res) => {
 
     if (!clientId || stage === undefined || !amount) {
       return res.status(400).json({ error: '参数不完整' });
+    }
+
+    // 安全：操盘手只能为自己的客户创建付款记录
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId }
+    });
+    if (!session) {
+      return res.status(403).json({ error: '无权限为该客户创建付款记录' });
     }
 
     const payment = await prisma.payment.create({

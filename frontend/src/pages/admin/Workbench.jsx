@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Flex, Heading, Text, Card, CardBody, CardHeader, Button, Select, Textarea, SimpleGrid, Badge, VStack, HStack, Divider, Spinner, useToast, Tabs, TabList, TabPanels, Tab, TabPanel, Icon, Input, Checkbox, Collapse, Alert, AlertIcon, Image, FormControl, FormLabel, Text as CText } from '@chakra-ui/react';
 import { clients, girls, chatLogs, chat, chatPartner, aiCoach, events as eventsApi } from '../../utils/api';
 import { useSocket } from '../../contexts/SocketContext';
-import { FiSend, FiMessageSquare, FiTarget, FiZap, FiAlertCircle, FiCheck, FiCopy, FiUser } from 'react-icons/fi';
+import { FiSend, FiMessageSquare, FiTarget, FiZap, FiAlertCircle, FiCheck, FiCopy, FiUser, FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import { HeartIcon } from '../../components/Icons';
 import SelectionToCalendar from '../../components/SelectionToCalendar';
 
@@ -89,12 +89,12 @@ export default function AdminWorkbench() {
   const [activeCoachLoading, setActiveCoachLoading] = useState(false);
   const [activeCoachCached, setActiveCoachCached] = useState(false);   // 缓存命中标记
   const [activeCoachChangeReason, setActiveCoachChangeReason] = useState(null); // 变化原因标签
+  const [coachCollapsed, setCoachCollapsed] = useState(false);
 
   // AI教练行动建议
   const [coachRecommendations, setCoachRecommendations] = useState([]); // [{ id, action, girlId, girlName, added }]
-  const [addingRecommendation, setAddingRecommendation] = useState(null); // 正在添加的 recommendation id
+  const [addingRecommendation, setAddingRecommendation] = useState(null); // 正在添加的 recommendation
   const activeCoachRef = useRef(null);
-  const activeCoachAbortRef = useRef(null);
 
   // 主动教练 hash 缓存（替代 5 分钟 TTL）
   // { [key]: { content, girlDataHash, userDataHash, timestamp } }
@@ -2484,9 +2484,7 @@ export default function AdminWorkbench() {
                 borderRadius="md"
                 borderLeft="3px solid"
                 borderColor="purple.400"
-                minH="100px"
-                maxH="200px"
-                overflowY="auto"
+                minH="80px"
               >
                 {activeCoachLoading && !activeCoachText ? (
                   <HStack spacing={2} mt={1}>
@@ -2494,12 +2492,31 @@ export default function AdminWorkbench() {
                     <Text color="purple.400" fontSize="xs">AI 教练分析中...</Text>
                   </HStack>
                 ) : activeCoachText ? (
-                  <Box
-                    ref={activeCoachRef}
-                    color="gray.300"
-                    fontSize="sm"
-                    style={{ whiteSpace: 'pre-wrap' }}
-                  />
+                  <>
+                    <HStack justify="space-between" mb={2}>
+                      <Text color="purple.300" fontSize="xs" fontWeight="bold">建议内容</Text>
+                      <Button
+                        size="xs"
+                        variant="ghost"
+                        color="gray.400"
+                        onClick={() => setCoachCollapsed(v => !v)}
+                        rightIcon={coachCollapsed ? <FiChevronDown /> : <FiChevronUp />}
+                        fontSize="xs"
+                      >
+                        {coachCollapsed ? '展开' : '收起'}
+                      </Button>
+                    </HStack>
+                    <Box
+                      color="gray.200"
+                      fontSize="sm"
+                      lineHeight="1.7"
+                      overflowY={coachCollapsed ? 'hidden' : 'auto'}
+                      maxH={coachCollapsed ? '120px' : 'none'}
+                      style={{ whiteSpace: 'pre-wrap' }}
+                    >
+                      <span ref={activeCoachRef} />
+                    </Box>
+                  </>
                 ) : (
                   <Text color="gray.500" fontSize="xs">选中女生或保持空白，AI教练自动给出建议</Text>
                 )}

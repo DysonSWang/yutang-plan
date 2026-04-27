@@ -3,8 +3,7 @@
  * 定义所有可用的工具及其处理函数
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../../prisma');
 
 const tools = {};
 
@@ -88,6 +87,81 @@ const toolDefinitions = [
           limit: { type: 'number', description: '返回数量（默认5）' }
         },
         required: ['clientId', 'query']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'evaluate_reply',
+      description: '评估用户已有回复的质量，给出改进建议',
+      parameters: {
+        type: 'object',
+        properties: {
+          girlId: { type: 'string', description: '女生ID' },
+          originalReply: { type: 'string', description: '原始回复内容' },
+          goal: { type: 'string', description: '优化目标（如：增加暧昧感/更自然/更真诚）' }
+        },
+        required: ['girlId', 'originalReply']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'recommend_coach',
+      description: '基于当前问题类型和客户画像推荐最合适的教练',
+      parameters: {
+        type: 'object',
+        properties: {
+          clientId: { type: 'string', description: '客户ID' },
+          question: { type: 'string', description: '当前问题描述' },
+          girlId: { type: 'string', description: '女生ID（可选）' }
+        },
+        required: ['clientId', 'question']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'daily_review',
+      description: '生成客户当天的学习进度和行动回顾',
+      parameters: {
+        type: 'object',
+        properties: {
+          clientId: { type: 'string', description: '客户ID' }
+        },
+        required: ['clientId']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'synthesize_signals',
+      description: '综合女生所有信号，生成战略分析和行动建议',
+      parameters: {
+        type: 'object',
+        properties: {
+          girlId: { type: 'string', description: '女生ID' }
+        },
+        required: ['girlId']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'summarize_conversation',
+      description: '总结对话的关键要点和待行动项',
+      parameters: {
+        type: 'object',
+        properties: {
+          memoryId: { type: 'string', description: '会话记忆ID' },
+          clientId: { type: 'string', description: '客户ID' }
+        },
+        required: ['memoryId', 'clientId']
       }
     }
   }
@@ -254,6 +328,218 @@ async function searchHistory({ clientId, query, limit = 5 }) {
   }
 }
 tools.search_history = searchHistory;
+
+// evaluate_reply
+async function evaluateReply({ girlId, originalReply, goal }) {
+  try {
+    const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+    if (!girl) return { error: '女生不存在' };
+
+    let personality = {};
+    try { personality = JSON.parse(girl.personality || '{}'); } catch (e) {}
+
+    let goalHint = goal ? `【优化目标】${goal}` : '';
+
+    // 直接返回评估任务给 AI（简化版，不额外调用 AI）
+    return {
+      originalReply,
+      goalHint,
+      girlStage: girl.stage,
+      communicationStyle: personality.communicationStyle || '未知',
+      evaluationCriteria: {
+        naturalness: '语气是否像正常聊天，不生硬',
+        warmth: '是否有情感温度，不过于冷淡',
+        alignment: '是否符合女生的沟通风格'
+      }
+    };
+  } catch (error) {
+    console.error('[Tools] evaluate_reply error:', error);
+    return { error: '评估回复失败' };
+  }
+}
+tools.evaluate_reply = evaluateReply;
+
+// recommend_coach
+async function recommendCoach({ clientId, question, girlId }) {
+  try {
+    // 加载客户画像和女生画像用于决策
+    const client = await prisma.user.findUnique({
+      where: { id: clientId },
+      select: { clientType: true, antiFrustrationLevel: true, learningAbility: true }
+    });
+
+    let stage = '未知';
+    if (girlId) {
+      const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+      if (girl) stage = girl.stage;
+    }
+
+    // 基于客户类型和问题类型推荐
+    let recommendation = {
+      recommendedType: '通用',
+      reason: '基于你的情况推荐',
+      tips: []
+    };
+
+    if (client?.clientType === '执行型') {
+      recommendation.tips.push('给你简洁明确的行动指引，不绕弯子');
+    } else if (client?.clientType === '质疑型') {
+      recommendation.tips.push('会解释为什么这样建议，给出逻辑依据');
+    } else if (client?.clientType === '自主型') {
+      recommendation.tips.push('给框架和方向，你自己决定');
+    }
+
+    if ((client?.antiFrustrationLevel || 5) <= 3) {
+      recommendation.tips.push('优先心态支持，不给激进建议');
+    }
+
+    if (question.includes('聊天') || question.includes('卡壳')) {
+      recommendation.recommendedType = '聊天卡壳';
+    } else if (question.includes('拉伸') || question.includes('暧昧')) {
+      recommendation.recommendedType = '关系拉伸';
+    } else if (question.includes('心态') || question.includes('情绪')) {
+      recommendation.recommendedType = '心态问题';
+    }
+
+    return recommendation;
+  } catch (error) {
+    console.error('[Tools] recommend_coach error:', error);
+    return { error: '推荐失败' };
+  }
+}
+tools.recommend_coach = recommendCoach;
+
+// daily_review
+async function dailyReview({ clientId }) {
+  try {
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    // 今天的 learnings
+    const todayLearnings = await prisma.clientLearning.findMany({
+      where: { clientId, createdAt: { gte: startOfDay } },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // 今天的信号
+    const client = await prisma.user.findUnique({
+      where: { id: clientId },
+      select: { signals: true }
+    });
+
+    let signals = [];
+    try { signals = JSON.parse(client?.signals || '[]'); } catch (e) {}
+    const recentSignals = signals.filter(s => {
+      if (!s.date) return false;
+      const d = new Date(s.date);
+      return d >= startOfDay;
+    });
+
+    // 今天的新 learnings
+    return {
+      date: today.toLocaleDateString('zh-CN'),
+      learningsCount: todayLearnings.length,
+      learnings: todayLearnings.slice(0, 3).map(l => ({
+        type: l.type,
+        scene: l.scene,
+        content: l.content
+      })),
+      newSignalsCount: recentSignals.length,
+      newSignals: recentSignals.slice(0, 3),
+      summary: todayLearnings.length === 0 && recentSignals.length === 0
+        ? '今天暂无新的学习和信号记录'
+        : `今天有 ${todayLearnings.length} 条新经验，${recentSignals.length} 条新信号`
+    };
+  } catch (error) {
+    console.error('[Tools] daily_review error:', error);
+    return { error: '生成每日回顾失败' };
+  }
+}
+tools.daily_review = dailyReview;
+
+// synthesize_signals
+async function synthesizeSignals({ girlId }) {
+  try {
+    const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+    if (!girl) return { error: '女生不存在' };
+
+    let signals = [];
+    let pendingActions = [];
+    let observations = [];
+
+    try { signals = JSON.parse(girl.signals || '[]'); } catch (e) {}
+    try { pendingActions = JSON.parse(girl.pendingActions || '[]'); } catch (e) {}
+    try { observations = JSON.parse(girl.observations || '[]'); } catch (e) {}
+
+    const positiveSignals = signals.filter(s => s.type === 'positive');
+    const negativeSignals = signals.filter(s => s.type === 'negative');
+
+    // 趋势分析
+    let trend = 'neutral';
+    if (positiveSignals.length > negativeSignals.length * 2) trend = 'positive';
+    if (negativeSignals.length > positiveSignals.length * 2) trend = 'negative';
+
+    return {
+      girlName: girl.name,
+      stage: girl.stage,
+      tensionScore: girl.tensionScore,
+      trend,
+      signalSummary: {
+        positive: positiveSignals.length,
+        negative: negativeSignals.length,
+        neutral: signals.length - positiveSignals.length - negativeSignals.length
+      },
+      topSignals: signals.slice(-5),
+      pendingActions,
+      observations,
+      strategicNote: trend === 'positive'
+        ? '近期正面信号较多，可以积极推进'
+        : trend === 'negative'
+        ? '近期有负面信号，需要谨慎修复关系氛围'
+        : '信号混杂，保持稳定节奏观察'
+    };
+  } catch (error) {
+    console.error('[Tools] synthesize_signals error:', error);
+    return { error: '信号综合分析失败' };
+  }
+}
+tools.synthesize_signals = synthesizeSignals;
+
+// summarize_conversation
+async function summarizeConversation({ memoryId, clientId }) {
+  try {
+    const memory = await prisma.conversationMemory.findUnique({ where: { id: memoryId } });
+    if (!memory) return { error: '会话不存在' };
+
+    let messages = [];
+    try { messages = JSON.parse(memory.messages || '[]'); } catch (e) {}
+
+    if (messages.length === 0) {
+      return { summary: '会话暂无内容', actionItems: [], keyInsights: [] };
+    }
+
+    const recent = messages.slice(-10);
+    const userMessages = recent.filter(m => m.role === 'user');
+    const assistantMessages = recent.filter(m => m.role === 'assistant');
+
+    // 简单的启发式总结
+    const summary = `本次会话共 ${recent.length} 条消息，用户 ${userMessages.length} 条，教练 ${assistantMessages.length} 条`;
+
+    return {
+      summary,
+      messageCount: recent.length,
+      actionItems: memory.conversationSummary ? [memory.conversationSummary] : [],
+      keyInsights: memory.signals ? (() => {
+        try { return JSON.parse(memory.signals); } catch (e) { return []; }
+      })() : [],
+      compactionCount: memory.compactionCount
+    };
+  } catch (error) {
+    console.error('[Tools] summarize_conversation error:', error);
+    return { error: '对话总结失败' };
+  }
+}
+tools.summarize_conversation = summarizeConversation;
 
 // ============ Tool Executor ============
 

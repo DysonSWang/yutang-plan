@@ -17,18 +17,24 @@ const crypto = require('crypto');
 const { buildAICoachContext } = require('../services/contextBuilder');
 const { buildMasterPrompt, getSkillsForQuestion, getMultiDimensionalSkillsWithMeta } = require('../coaches');
 const { chatWithTools, toolDefinitions } = require('../services/coach-engine');
-const { getOrCreateSession, addMessage, getConversationHistory, listSessions, getClientSessions, getSystemStats, getSessionDetail, addFeedback, getFeedbackStats } = require('../services/memory');
-const { streamGuardrails, runGuardrails } = require('../services/guardrails');
+const { getOrCreateSession, addMessage, getConversationHistory, listSessions, getClientSessions, getSystemStats, getSessionDetail, addFeedback, getFeedbackStats, endSession } = require('../services/memory');
+const { streamGuardrails, runGuardrails, stripMarkdown, estimateTokens: guardEstimateTokens, createChunkDeduplicator } = require('../services/guardrails');
+const { recordFeedback, getClientCoachPreferences, getProfileSummary } = require('../services/clientCoachProfile');
+const { extractLearningsFromConversation } = require('../services/learning');
+const { buildDynamicPersona, buildPersonaSection, buildFullPersona } = require('../services/coachPersona');
+const { addStageContext, appendStageWarning, STAGE_LABELS } = require('../services/stageGuard');
 
 const { JWT_SECRET, getAIConfig, getVLModelConfig } = require('../config');
 const prisma = require('../prisma');
 const { getCache, setCache, getOverviewCache, setOverviewCache } = require('../services/girlSummaryCache');
 
 // ---- Token Budget Config ----
-const ESTIMATION_FACTOR = 4;   // chars / factor ~= tokens
 const AI_RESPONSE_RESERVE = 600; // tokens reserved for AI response
 const SYSTEM_PROMPT_BASE = 800;  // rough overhead for coach persona + formatting
 const MAX_PROMPT_TOKENS = 28000; // leave headroom below model context limit
+// streamRetry: 指数退避 (ms)
+const RETRY_DELAYS = [100, 300, 900];
+const MAX_RETRIES = 3;
 
 // ---- Internal Meta Sanitization ----
 // 过滤敏感路由信息，仅保留调试用的非敏感字段
@@ -47,25 +53,168 @@ function sanitizeRoutingMeta(meta) {
 }
 
 /**
- * Estimate tokens for a string (rough: chars / factor)
- */
-function estimateTokens(text) {
-  if (!text) return 0;
-  return Math.ceil(text.length / ESTIMATION_FACTOR);
-}
-
-/**
  * Calculate the remaining budget (in chars) for context injection.
  * Static parts consume: coach system prompt + user situation + history + overhead.
  */
 function calcContextBudget(coachSystemPrompt, situation, historyText) {
-  const staticTokens = estimateTokens(coachSystemPrompt)
-    + estimateTokens(situation)
-    + estimateTokens(historyText)
+  // 使用中文自适应的 token 估算（中文 1.5 chars/token，英文 4 chars/token）
+  const staticTokens = guardEstimateTokens(coachSystemPrompt)
+    + guardEstimateTokens(situation)
+    + guardEstimateTokens(historyText)
     + SYSTEM_PROMPT_BASE;
   const available = MAX_PROMPT_TOKENS - staticTokens - AI_RESPONSE_RESERVE;
-  // Return remaining budget in chars (factor = 4)
-  return Math.max(0, available * ESTIMATION_FACTOR);
+  // Return remaining budget in chars
+  return Math.max(0, available * 4);
+}
+
+/**
+ * 通用流式 AI 调用（带指数退避重试）
+ * @param {object} aiConfig - { url, key, model }
+ * @param {object} params - { messages, temperature, max_tokens, stream }
+ * @param {object} opts - { onChunk, onMeta, onDone, onError, deduplicator }
+ * @returns {Promise<void>}
+ */
+async function callAIStream(aiConfig, params, opts = {}) {
+  const { onChunk, onMeta, onDone, onError, deduplicator } = opts;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      const delay = RETRY_DELAYS[attempt - 1] || 900;
+      console.log(`[AICoach] 重试 ${attempt}/${MAX_RETRIES}，等待 ${delay}ms`);
+      await new Promise(r => setTimeout(r, delay));
+    }
+
+    try {
+      const response = await fetch(aiConfig.url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${aiConfig.key}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ model: aiConfig.model, ...params })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[AICoach] AI provider 错误 (attempt ${attempt + 1}):`, response.status, errorText);
+        if (attempt === MAX_RETRIES) { onError?.(`AI服务请求失败 (${response.status})`); return; }
+        continue;
+      }
+
+      onMeta?.();
+      await processStreamResponse(response, { deduplicator, onChunk, onDone, onError });
+      return;
+    } catch (err) {
+      console.error(`[AICoach] 流式调用异常 (attempt ${attempt + 1}):`, err.message);
+      if (attempt === MAX_RETRIES) { onError?.('网络异常，请稍后重试'); return; }
+    }
+  }
+
+  onError?.('服务暂时不可用');
+}
+
+/**
+ * 通用流式读取循环（复用：situation / moment / overview / client-pool / girl-summary）
+ * 包含：Guardrails 过滤 + Markdown strip + Chunk 去重
+ * @param {Response} response - fetch Response 对象
+ * @param {object} opts - { deduplicator, onChunk, onDone, onError }
+ */
+async function processStreamResponse(response, opts = {}) {
+  const { deduplicator, onChunk, onDone, onError } = opts;
+
+  try {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          if (data === '[DONE]') { onDone?.(); return; }
+          try {
+            const parsed = JSON.parse(data);
+            let content = parsed.choices?.[0]?.delta?.content || '';
+            if (!content) continue;
+
+            // Guardrails: 过滤大师名字
+            const guardResult = streamGuardrails(content);
+            if (!guardResult.safe) {
+              console.warn(`[Guardrails] ${guardResult.reason}，已过滤`);
+              content = guardResult.filtered;
+            }
+            if (!content) continue;
+
+            // Markdown 彻底清理（服务端 strip，不依赖 prompt 约束）
+            content = stripMarkdown(content);
+            if (!content) continue;
+
+            // Chunk 去重
+            if (deduplicator?.check(content)) continue;
+
+            onChunk?.(content);
+          } catch (e) { /* ignore parse errors */ }
+        }
+      }
+    }
+
+    onDone?.();
+  } catch (err) {
+    onError?.('流式读取异常');
+  }
+}
+
+/**
+ * 带指数退避重试的 fetch 流式调用（简化版，供 moment/overview/client-pool/girl-summary 使用）
+ * @param {string} url
+ * @param {string} key
+ * @param {object} body - 请求体（不含 model，model 在这里单独注入）
+ * @param {object} opts - { deduplicator, onChunk, onDone, onError }
+ */
+async function callAIFetchWithRetry(url, key, body, opts = {}) {
+  const { onChunk, onDone, onError, deduplicator } = opts;
+  const model = body.model;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      const delay = RETRY_DELAYS[attempt - 1] || 900;
+      console.log(`[AICoach] 重试 ${attempt}/${MAX_RETRIES}，等待 ${delay}ms`);
+      await new Promise(r => setTimeout(r, delay));
+    }
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${key}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ model, ...body })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[AICoach] AI provider 错误 (attempt ${attempt + 1}):`, response.status, errorText);
+        if (attempt === MAX_RETRIES) { onError?.(`AI服务请求失败 (${response.status})`); return; }
+        continue;
+      }
+
+      await processStreamResponse(response, { deduplicator, onChunk, onDone, onError });
+      return;
+    } catch (err) {
+      console.error(`[AICoach] 流式调用异常 (attempt ${attempt + 1}):`, err.message);
+      if (attempt === MAX_RETRIES) { onError?.('网络异常，请稍后重试'); return; }
+    }
+  }
+
+  onError?.('服务暂时不可用');
 }
 
 // Auth middleware
@@ -111,10 +260,36 @@ router.post('/situation', authMiddleware, async (req, res) => {
       if (!girl) {
         return res.status(404).json({ error: '女生不存在' });
       }
+      // 安全：操盘手只能访问其负责客户的女生
+      if (req.user.role === 'operator') {
+        const session = await prisma.chatSession.findFirst({
+          where: { operatorId: req.user.id, clientId: girl.clientId }
+        });
+        if (!session) {
+          return res.status(403).json({ error: '无权限访问此女生数据' });
+        }
+      }
     }
 
     // 统一教练 session key
     const unifiedCoachId = 'unified';
+
+    // 获取客户画像（用于路由权重和语气调整）
+    const clientProfile = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: {
+        emotionalMaturity: true,
+        emotionalMaturityLevel: true,
+        antiFrustrationLevel: true,
+        pacePreference: true,
+        clientType: true,
+        coachCooperation: true,
+        coachCooperationLevel: true,
+        emotionalStable: true,
+        eqLevel: true,
+        learningAbility: true
+      }
+    });
 
     // 使用 contextBuilder 获取上下文（带预算感知）
     const { memory: sessionMemory } = await getOrCreateSession(req.user.id, unifiedCoachId, girlId);
@@ -138,21 +313,38 @@ router.post('/situation', authMiddleware, async (req, res) => {
     const context = await buildAICoachContext(req.user.id, girlId, situation, {
       maxContextChars: contextBudget,
       turnCount,
-      compactionCount
+      compactionCount,
+      clientProfile
     });
 
-    // 获取动态路由的多位大师视角（带调试meta）
+    // 构建女生完整画像（用于路由权重和 prompt 注入）
+    const girlProfile = context.girlInfo ? {
+      tensionScore: context.girlInfo.tensionScore || 5.0,
+      intimacyLevel: context.girlInfo.intimacyLevel || 1,
+      stage: context.girlInfo.stage || '未知',
+      personality: context.girlInfo.personality || {},
+      recentSignals: context.recentSignals || []
+    } : null;
+
+    // 获取动态路由的多位大师视角（带调试meta，传入客户画像和女生画像用于权重调整）
     const { skills, meta: routingMeta } = getMultiDimensionalSkillsWithMeta(situation, {
-      girlId,
-      girlStage: context.girlInfo?.stage
+      clientProfile,
+      girlProfile
     });
 
-    // 使用 promptBuilder 构建统一教练 prompt（question已正确插入）
-    const systemPrompt = buildMasterPrompt(situation, context, {
+    // 使用 promptBuilder 构建统一教练 prompt（question已正确插入，传入客户画像和女生画像用于语气调整）
+    // 传入 clientId 以加载个性化教练权重（反馈闭环驱动）
+    const basePrompt = await buildMasterPrompt(situation, context, {
       girlInfo: context.girlInfo,
       conversationHistory: history,
-      turnCount
+      turnCount,
+      clientProfile,
+      girlProfile,
+      clientId: req.user.id
     });
+    // M007 S06: 追加人格适配区块
+    const personaSection = await buildFullPersona({ clientProfile, clientId: req.user.id, girlId });
+    const systemPrompt = basePrompt + buildPersonaSection(personaSection);
 
     const aiConfig = getAIConfig();
 
@@ -161,7 +353,6 @@ router.post('/situation', authMiddleware, async (req, res) => {
 
     // 流式模式
     if (stream) {
-      // 设置 SSE headers - 禁用所有缓冲
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
@@ -169,98 +360,85 @@ router.post('/situation', authMiddleware, async (req, res) => {
       res.setHeader('Content-Encoding', 'identity');
       res.flushHeaders();
 
-      try {
-        console.log('[AICoach] 开始调用AI provider，stream:', stream);
-        const response = await fetch(aiConfig.url, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${aiConfig.key}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            model: aiConfig.model,
-            messages: [{ role: 'user', content: systemPrompt }],
-            temperature: 0.7,
-            max_tokens: 500,
-            stream: true
-          })
-        });
-        console.log('[AICoach] AI provider响应状态:', response.status);
+      const deduplicator = createChunkDeduplicator();
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('[AICoach] AI provider错误:', response.status, errorText);
-          res.write(`data: ${JSON.stringify({ error: 'AI服务请求失败' })}\n\n`);
-          res.end();
-          return;
-        }
-
-        // 流式读取AI响应并发送给前端
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        let chunkCount = 0;
-        let fullResponse = ''; // 累积完整响应用于保存到记忆
-
-        // 先发送路由meta信息（前端可展示调试信息，过滤了敏感字段）
-        res.write(`data: ${JSON.stringify({ meta: sanitizeRoutingMeta(routingMeta) })}\n\n`);
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          chunkCount++;
-          const decoded = decoder.decode(value, { stream: true });
-          buffer += decoded;
-
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6);
-              if (data === '[DONE]') {
-                console.log(`[AICoach] 流式完成，共${chunkCount}个chunk`);
-                res.write('data: [DONE]\n\n');
-              } else {
-                try {
-                  const parsed = JSON.parse(data);
-                  let content = parsed.choices?.[0]?.delta?.content || '';
-                  if (content) {
-                    // Guardrails: 过滤大师名字和加粗标记
-                    const guardResult = streamGuardrails(content);
-                    if (!guardResult.safe) {
-                      console.warn(`[Guardrails] ${guardResult.reason}，已过滤`);
-                      content = guardResult.filtered;
-                    }
-                    if (content) {
-                      fullResponse += content; // 累积完整响应
-                      res.write(`data: ${JSON.stringify({ content })}\n\n`);
-                    }
-                  }
-                } catch (e) {
-                  // 忽略解析错误
-                }
-              }
-            }
+      // 女生档案新鲜度检查（超过 48h 未更新则提示）
+      let staleAlert = null;
+      if (girlId) {
+        const girl = await prisma.girl.findUnique({ where: { id: girlId }, select: { name: true, updatedAt: true } });
+        if (girl?.updatedAt) {
+          const hoursSince = Math.floor((Date.now() - girl.updatedAt.getTime()) / (1000 * 60 * 60));
+          if (hoursSince >= 48) {
+            staleAlert = { hoursSince, message: `和${girl.name || '该女生'}的资料已 ${hoursSince}h 未更新，建议先更新一下进展` };
           }
         }
-
-        console.log(`[AICoach] 流式完成，路由类型: ${routingMeta.routedType}, Coaches: ${routingMeta.coachIds?.join(',')}, 匹配得分: ${routingMeta.bestScore}, 响应长度: ${fullResponse.length}`);
-
-        // 保存AI响应到记忆
-        if (fullResponse) {
-          await addMessage(sessionMemory.id, 'assistant', fullResponse);
-          console.log(`[AICoach] 保存AI响应到记忆`);
-        }
-
-        res.write('data: [DONE]\n\n');
-        res.end();
-      } catch (error) {
-        console.error('[AICoach] 流式咨询失败:', error);
-        res.write(`data: ${JSON.stringify({ error: '分析失败' })}\n\n`);
-        res.end();
       }
+
+      await callAIStream(
+        aiConfig,
+        {
+          messages: [{ role: 'user', content: systemPrompt }],
+          temperature: 0.7,
+          max_tokens: 500,
+          stream: true
+        },
+        {
+          deduplicator,
+          onMeta: () => {
+            // 先发送路由 meta + 新鲜度信息
+            const meta = sanitizeRoutingMeta(routingMeta);
+            if (staleAlert) meta.staleAlert = staleAlert;
+            res.write(`data: ${JSON.stringify({ meta })}\n\n`);
+          },
+          onChunk: (content) => {
+            res.write(`data: ${JSON.stringify({ content })}\n\n`);
+          },
+          onDone: () => {
+            const fullResponse = deduplicator.getAccumulated();
+            console.log(`[AICoach] 流式完成，路由类型: ${routingMeta.routedType}, 匹配得分: ${routingMeta.bestScore}, 响应长度: ${fullResponse.length}`);
+
+            // 保存 AI 响应到记忆
+            if (fullResponse) {
+              addMessage(sessionMemory.id, 'assistant', fullResponse)
+                .then(() => console.log(`[AICoach] 保存AI响应到记忆`))
+                .catch(err => console.error('[AICoach] 保存记忆失败:', err));
+
+              // 自动提取 learnings（异步，不阻塞响应）
+              extractLearningsFromConversation(req.user.id, fullResponse, girlId)
+                .then(saved => {
+                  if (saved.length > 0) console.log(`[AICoach] 自动提取 ${saved.length} 条 learnings`);
+                })
+                .catch(err => console.error('[AICoach] 自动提取 learnings 失败:', err));
+            }
+
+            // ---- 女生档案异步更新（situation 端点特有）----
+            if (girlId && fullResponse) {
+              // 1. 立即更新 lastContact（无风险）
+              prisma.girl.update({
+                where: { id: girlId },
+                data: { lastContact: new Date() }
+              }).catch(err => console.error('[GirlProfile] lastContact 更新失败:', err));
+
+              // 2. AI 提取档案更新（异步，有重试）
+              extractGirlProfileFromConversation(req.user.id, girlId, fullResponse, situation)
+                .then(extracted => {
+                  if (extracted && Object.keys(extracted).length > 0) {
+                    return applyGirlProfileUpdate(girlId, extracted);
+                  }
+                })
+                .catch(err => console.error('[GirlProfile] 提取失败:', err));
+            }
+
+            res.write('data: [DONE]\n\n');
+            res.end();
+          },
+          onError: (msg) => {
+            console.error(`[AICoach] 流式咨询失败: ${msg}`);
+            res.write(`data: ${JSON.stringify({ error: msg })}\n\n`);
+            res.end();
+          }
+        }
+      );
     } else {
       // 非流式模式 - 支持工具调用
       const messages = [
@@ -295,6 +473,64 @@ router.post('/situation', authMiddleware, async (req, res) => {
 });
 
 /**
+ * 新建对话 - 结束当前会话，开始新的上下文
+ * POST /api/ai-coach/new-session
+ *
+ * 行为：
+ * 1. 查找当前活跃会话（clientId + unified coach + 可选 girlId）
+ * 2. 生成摘要并结束会话
+ * 3. 返回成功；下次 /situation 会自动创建新会话
+ */
+router.post('/new-session', authMiddleware, async (req, res) => {
+  try {
+    if (!['operator', 'admin', 'client'].includes(req.user.role)) {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const { girlId } = req.body;
+    const unifiedCoachId = 'unified';
+
+    // 安全：验证女生归属权
+    if (girlId) {
+      const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+      if (!girl) {
+        return res.status(404).json({ error: '女生不存在' });
+      }
+      if (req.user.role === 'operator') {
+        const session = await prisma.chatSession.findFirst({
+          where: { operatorId: req.user.id, clientId: girl.clientId }
+        });
+        if (!session) {
+          return res.status(403).json({ error: '无权限访问此女生数据' });
+        }
+      }
+    }
+
+    // 查找当前活跃会话
+    const currentSession = await prisma.conversationMemory.findFirst({
+      where: {
+        clientId: req.user.id,
+        coachId: unifiedCoachId,
+        girlId: girlId || null,
+        summary: null // 必须是未压缩的活跃会话
+      },
+      orderBy: { updatedAt: 'desc' }
+    });
+
+    if (currentSession) {
+      // 生成摘要并结束会话
+      await endSession(currentSession.id);
+      console.log(`[AICoach] 结束会话 ${currentSession.id}，开始新的对话上下文`);
+    }
+
+    res.json({ success: true, message: '已开始新对话' });
+  } catch (error) {
+    console.error('[AICoach] 新建对话失败:', error);
+    res.status(500).json({ error: '新建对话失败' });
+  }
+});
+
+/**
  * 聊天分析 - 分析聊天内容，识别意图和情绪
  * POST /api/ai-coach/analyze-chat
  */
@@ -311,11 +547,33 @@ router.post('/analyze-chat', authMiddleware, async (req, res) => {
     }
 
     // 安全：验证女生归属权
+    let clientProfile = null;
     if (girlId) {
       const girl = await prisma.girl.findUnique({ where: { id: girlId } });
       if (!girl) {
         return res.status(404).json({ error: '女生不存在' });
       }
+      if (req.user.role === 'operator') {
+        const session = await prisma.chatSession.findFirst({
+          where: { operatorId: req.user.id, clientId: girl.clientId }
+        });
+        if (!session) {
+          return res.status(403).json({ error: '无权限分析此女生聊天' });
+        }
+      }
+      // M007 S06: 加载客户人格画像
+      const client = await prisma.user.findUnique({
+        where: { id: girl.clientId },
+        select: {
+          clientType: true, learningAbility: true, antiFrustrationLevel: true,
+          pacePreference: true, coachCooperationLevel: true, emotionalStable: true,
+          attachmentStyle: true, loveStyle: true, loveLanguage1: true,
+          loveLanguage2: true, loveLanguage3: true, loveLanguage4: true,
+          loveLanguage5: true, clientBestApproach: true, clientRiskFactors: true,
+          clientRecommendedTopics: true, clientStrategicNotes: true,
+        }
+      });
+      if (client) clientProfile = client;
     }
 
     const historyText = chatHistory.map(msg =>
@@ -333,10 +591,13 @@ router.post('/analyze-chat', authMiddleware, async (req, res) => {
       // 使用 contextBuilder 获取完整上下文
       const context = await buildAICoachContext(req.user.id, girlId);
       if (context.girlInfo) {
+        const relStage = context.girlInfo.relationshipStage;
+        const relStageLabel = relStage ? STAGE_LABELS[relStage] || relStage : '未设置';
         girlContextInfo = `
 【女生完整档案】
 昵称：${context.girlInfo.name}
-当前阶段：${context.girlInfo.stage || '未知'}
+当前阶段（旧）：${context.girlInfo.stage || '未知'}
+关系阶段（新${relStage ? '★' : '☆'}）：${relStageLabel}
 关系热度：${context.girlInfo.tensionScore || 5}/10
 亲密度：${'❤️'.repeat(context.girlInfo.intimacyLevel || 1)}
 
@@ -369,6 +630,11 @@ ${context.observations.length > 0
     }
 
     // 统一教练：综合多位大师视角
+    // M007 S01: 获取关系阶段用于上下文
+    const relStage = context?.girlInfo?.relationshipStage;
+    const relStageLabel = relStage ? STAGE_LABELS[relStage] || relStage : null;
+    const stageContext = addStageContext(relStage);
+
     const systemPrompt = `你是鱼塘AI情感教练，分析聊天记录，识别对话双方的意图、情绪和关系状态。
 
 【分析框架】
@@ -383,13 +649,15 @@ ${skills.map(s => {
 ${historyText}
 
 ${girlContextInfo}
+${stageContext}
+${clientProfile ? buildPersonaSection(await buildDynamicPersona({ clientProfile, clientId: null })) : ''}
 
 请按以下10个维度输出 JSON 分析结果，直接写字段名和值：
 1. userIntention：用户意图
 2. userEmotion：用户情绪
 3. girlIntention：女生意图
 4. girlEmotion：女生情绪
-5. relationshipStage：关系阶段
+5. relationshipStage：关系阶段（参考系统提示中的当前关系阶段:${relStageLabel || '未设置'}）
 6. keySignals：关键信号列表（2-3个）
 7. girlSignals：女生积极信号列表（1-2个）
 8. interactionQuality：互动质量评价
@@ -437,9 +705,16 @@ ${girlContextInfo}
       analysis = { raw: content };
     }
 
+    // M007 S01: 在分析结果中附加关系阶段元数据
     res.json({
       success: true,
-      analysis
+      analysis,
+      relationshipStage: relStage,
+      relationshipStageLabel: relStageLabel,
+      stageWarnings: relStage ? appendStageWarning(
+        (analysis.suggestions || []).join(' '),
+        relStage
+      ).match(/\[⚠️.*?\]/g) || [] : []
     });
   } catch (error) {
     console.error('[AICoach] 聊天分析失败:', error);
@@ -464,16 +739,43 @@ router.post('/reply-suggestions', authMiddleware, async (req, res) => {
     }
 
     // 安全：验证女生归属权
+    let clientProfile = null;
     if (girlId) {
       const girl = await prisma.girl.findUnique({ where: { id: girlId } });
       if (!girl) {
         return res.status(404).json({ error: '女生不存在' });
       }
+      if (req.user.role === 'operator') {
+        const session = await prisma.chatSession.findFirst({
+          where: { operatorId: req.user.id, clientId: girl.clientId }
+        });
+        if (!session) {
+          return res.status(403).json({ error: '无权限为该客户女生生成建议' });
+        }
+      }
+      // M007 S06: 加载客户人格画像
+      const client = await prisma.user.findUnique({
+        where: { id: girl.clientId },
+        select: {
+          clientType: true, learningAbility: true, antiFrustrationLevel: true,
+          pacePreference: true, coachCooperationLevel: true, emotionalStable: true,
+          attachmentStyle: true, loveStyle: true, loveLanguage1: true,
+          loveLanguage2: true, loveLanguage3: true, loveLanguage4: true,
+          loveLanguage5: true, clientBestApproach: true, clientRiskFactors: true,
+          clientRecommendedTopics: true, clientStrategicNotes: true,
+        }
+      });
+      if (client) clientProfile = client;
     }
 
     // 使用 contextBuilder 获取完整上下文
     const fullContext = await buildAICoachContext(req.user.id, girlId);
     const p = fullContext.girlInfo ? (fullContext.girlInfo.personality || {}) : {};
+
+    // M007 S01: 获取关系阶段
+    const relStage = fullContext.girlInfo?.relationshipStage;
+    const relStageLabel = relStage ? STAGE_LABELS[relStage] || relStage : null;
+    const stageContext = addStageContext(relStage);
 
     // 获取动态路由的多位大师视角（带调试meta）
     const { skills, meta: routingMeta } = getMultiDimensionalSkillsWithMeta(lastMessage, { girlId, girlStage: fullContext.girlInfo?.stage });
@@ -484,7 +786,8 @@ router.post('/reply-suggestions', authMiddleware, async (req, res) => {
       girlContextInfo = `
 【女生完整档案】
 昵称：${fullContext.girlInfo.name}
-当前阶段：${fullContext.girlInfo.stage || '未知'}
+当前阶段（旧）：${fullContext.girlInfo.stage || '未知'}
+关系阶段（新${relStage ? '★' : '☆'}）：${relStageLabel || '未设置'}
 关系热度：${fullContext.girlInfo.tensionScore || 5}/10
 亲密度：${'❤️'.repeat(fullContext.girlInfo.intimacyLevel || 1)}
 
@@ -514,6 +817,8 @@ ${fullContext.pendingActions.length > 0
     const systemPrompt = `你是鱼塘AI情感教练，根据以下信息生成回复选项。
 
 ${girlContextInfo}
+${stageContext}
+${clientProfile ? buildPersonaSection(await buildDynamicPersona({ clientProfile, clientId: null })) : ''}
 【对方最后一条消息】
 ${lastMessage}
 
@@ -522,10 +827,10 @@ ${context ? `【对话背景】\n${context}` : ''}
 请生成3个不同风格的回复，每个回复要求：15-30字、口语化、符合女生性格：
 
 1. 稳妥型：安全、礼貌的回复，维持舒适感，不冒进
-2. 进攻型：稍微大胆、有攻势的回复，推进关系，制造暧昧
+2. 进攻型：稍微大胆、有攻势的回复，推进关系，制造暧昧（注意：仅在暧昧期和推进期适用）
 3. 调侃型：轻松、幽默的回复，活跃气氛，试探对方反应
 
-回复风格适配阶段（${fullContext?.girlInfo?.stage || '聊天'}），女生沟通风格（${p?.communicationStyle || '未知'}）。
+回复风格适配阶段（关系阶段:${relStageLabel || '未设置'}），女生沟通风格（${p?.communicationStyle || '未知'}）。
 
 请按以下 JSON 格式返回：
 {
@@ -565,7 +870,13 @@ ${context ? `【对话背景】\n${context}` : ''}
 
     res.json({
       success: true,
-      suggestions
+      suggestions,
+      relationshipStage: relStage,
+      relationshipStageLabel: relStageLabel,
+      stageWarnings: relStage ? appendStageWarning(
+        (suggestions.options || []).map(o => o.reply).join(' '),
+        relStage
+      ).match(/\[⚠️.*?\]/g) || [] : []
     });
   } catch (error) {
     console.error('[AICoach] 回复建议失败:', error);
@@ -590,11 +901,33 @@ router.post('/optimize-reply', authMiddleware, async (req, res) => {
     }
 
     // 安全：验证女生归属权
+    let clientProfile = null;
     if (girlId) {
       const girl = await prisma.girl.findUnique({ where: { id: girlId } });
       if (!girl) {
         return res.status(404).json({ error: '女生不存在' });
       }
+      if (req.user.role === 'operator') {
+        const session = await prisma.chatSession.findFirst({
+          where: { operatorId: req.user.id, clientId: girl.clientId }
+        });
+        if (!session) {
+          return res.status(403).json({ error: '无权限优化该女生的回复' });
+        }
+      }
+      // M007 S06: 加载客户人格画像
+      const client = await prisma.user.findUnique({
+        where: { id: girl.clientId },
+        select: {
+          clientType: true, learningAbility: true, antiFrustrationLevel: true,
+          pacePreference: true, coachCooperationLevel: true, emotionalStable: true,
+          attachmentStyle: true, loveStyle: true, loveLanguage1: true,
+          loveLanguage2: true, loveLanguage3: true, loveLanguage4: true,
+          loveLanguage5: true, clientBestApproach: true, clientRiskFactors: true,
+          clientRecommendedTopics: true, clientStrategicNotes: true,
+        }
+      });
+      if (client) clientProfile = client;
     }
 
     // 如果有 girlId，使用 contextBuilder 获取完整上下文
@@ -630,16 +963,24 @@ router.post('/optimize-reply', authMiddleware, async (req, res) => {
 `;
     }
 
+    // M007 S01: 获取关系阶段
+    const relStage = fullContext?.girlInfo?.relationshipStage;
+    const relStageLabel = relStage ? STAGE_LABELS[relStage] || relStage : null;
+    const stageContext = addStageContext(relStage);
+
     // 统一教练：综合多位大师视角
     const systemPrompt = `你是鱼塘AI情感教练，把平淡或生硬的回复优化成有温度、有情商、有吸引力的聊天内容。
 
 【女生档案】
 昵称：${fullContext?.girlInfo?.name || '未知'}
-阶段：${fullContext?.girlInfo?.stage || '未知'}
+阶段（旧）：${fullContext?.girlInfo?.stage || '未知'}
+关系阶段（新${relStage ? '★' : '☆'}）：${relStageLabel || '未设置'}
 性格：${personality?.communicationStyle || '未知'}
 情绪触发点：${(personality?.emotionalTriggers || []).join('、') || '暂无'}
 聊天禁忌：${(personality?.thingsToAvoid || []).join('、') || '暂无'}
 喜欢话题：${(personality?.talkingTopics || []).join('、') || '未知'}
+${stageContext}
+${clientProfile ? buildPersonaSection(await buildDynamicPersona({ clientProfile, clientId: null })) : ''}
 
 【原始回复】
 "${originalReply}"
@@ -700,7 +1041,13 @@ ${goalHint}
     res.json({
       success: true,
       original: optimized.original,
-      optimizations: optimized.optimizations
+      optimizations: optimized.optimizations,
+      relationshipStage: relStage,
+      relationshipStageLabel: relStageLabel,
+      stageWarnings: relStage ? appendStageWarning(
+        optimized.optimizations.map(o => o.text).join(' '),
+        relStage
+      ).match(/\[⚠️.*?\]/g) || [] : []
     });
   } catch (error) {
     console.error('[AICoach] 话术优化失败:', error);
@@ -750,6 +1097,23 @@ router.get('/monitoring/sessions', authMiddleware, async (req, res) => {
       pageSize
     } = req.query;
 
+    // 安全：操盘手只能查询自己负责的客户/女生的会话
+    if (req.user.role === 'operator') {
+      if (clientId) {
+        const session = await prisma.chatSession.findFirst({
+          where: { operatorId: req.user.id, clientId }
+        });
+        if (!session) return res.status(403).json({ error: '无权限访问此客户数据' });
+      } else if (girlId) {
+        const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+        if (!girl) return res.status(404).json({ error: '女生不存在' });
+        const session = await prisma.chatSession.findFirst({
+          where: { operatorId: req.user.id, clientId: girl.clientId }
+        });
+        if (!session) return res.status(403).json({ error: '无权限访问此女生数据' });
+      }
+    }
+
     const result = await listSessions({
       clientId,
       girlId,
@@ -778,6 +1142,15 @@ router.get('/monitoring/client/:clientId', authMiddleware, async (req, res) => {
     }
 
     const { clientId } = req.params;
+
+    // 安全：操盘手只能访问自己负责的客户的数据
+    if (req.user.role === 'operator') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId }
+      });
+      if (!session) return res.status(403).json({ error: '无权限访问此客户的数据' });
+    }
+
     const data = await getClientSessions(clientId);
     res.json({ success: true, data });
   } catch (error) {
@@ -801,6 +1174,17 @@ router.get('/monitoring/session/:memoryId', authMiddleware, async (req, res) => 
 
     if (!detail) {
       return res.status(404).json({ error: '会话不存在' });
+    }
+
+    // 安全：操盘手只能访问自己负责的客户的会话
+    if (req.user.role === 'operator') {
+      // 从 MemorySession 找到关联的 clientId
+      const memorySession = await prisma.memorySession.findUnique({ where: { id: memoryId } });
+      if (!memorySession) return res.status(404).json({ error: '会话不存在' });
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: memorySession.clientId }
+      });
+      if (!session) return res.status(403).json({ error: '无权限访问此会话' });
     }
 
     res.json({ success: true, data: detail });
@@ -829,11 +1213,35 @@ router.post('/moment', authMiddleware, async (req, res) => {
     }
 
     // 安全：验证女生归属权
+    let clientProfile = null;
+    let actualClientId = null;
     if (girlId) {
       const girl = await prisma.girl.findUnique({ where: { id: girlId } });
       if (!girl) {
         return res.status(404).json({ error: '女生不存在' });
       }
+      if (req.user.role === 'operator') {
+        const session = await prisma.chatSession.findFirst({
+          where: { operatorId: req.user.id, clientId: girl.clientId }
+        });
+        if (!session) {
+          return res.status(403).json({ error: '无权限分析此女生朋友圈' });
+        }
+      }
+      actualClientId = girl.clientId;
+      // M007 S06: 加载客户人格画像
+      const client = await prisma.user.findUnique({
+        where: { id: girl.clientId },
+        select: {
+          clientType: true, learningAbility: true, antiFrustrationLevel: true,
+          pacePreference: true, coachCooperationLevel: true, emotionalStable: true,
+          attachmentStyle: true, loveStyle: true, loveLanguage1: true,
+          loveLanguage2: true, loveLanguage3: true, loveLanguage4: true,
+          loveLanguage5: true, clientBestApproach: true, clientRiskFactors: true,
+          clientRecommendedTopics: true, clientStrategicNotes: true,
+        }
+      });
+      if (client) clientProfile = client;
     }
 
     // 构建女生上下文
@@ -853,6 +1261,11 @@ router.post('/moment', authMiddleware, async (req, res) => {
     }
 
     const stage = girlInfo?.stage || '聊天';
+    // M007 S01: 获取关系阶段
+    const relStage = girlInfo?.relationshipStage;
+    const relStageLabel = relStage ? STAGE_LABELS[relStage] || relStage : null;
+    const stageContext = addStageContext(relStage);
+
     const signalsText = recentSignals.length > 0
       ? recentSignals.map(s => {
           const icon = s.type === 'positive' ? '[+]' : s.type === 'negative' ? '[-]' : '[*]';
@@ -878,7 +1291,8 @@ router.post('/moment', authMiddleware, async (req, res) => {
 
 【女生档案】
 昵称：${girlInfo?.name || '未知'}
-阶段：${stage}
+阶段（旧）：${stage}
+关系阶段（新${relStage ? '★' : '☆'}）：${relStageLabel || '未设置'}
 热度：${girlInfo?.tensionScore || 5}/10
 亲密度：${'❤️'.repeat(girlInfo?.intimacyLevel || 1)}
 
@@ -909,6 +1323,9 @@ ${contentDesc}
 第三段：适合评论还是私聊切入，为什么
 第四段：给2-3条具体的评论建议或私聊切入话术（15-30字，自然有共鸣感，不跪舔也不高冷）
 第五段：如果信息不够，直接说还缺什么，追问1个关键问题
+
+${stageContext}
+${clientProfile ? buildPersonaSection(await buildDynamicPersona({ clientProfile, clientId: null })) : ''}
 `;
 
     const aiConfig = getAIConfig();
@@ -922,121 +1339,72 @@ ${contentDesc}
       res.setHeader('Content-Encoding', 'identity');
       res.flushHeaders();
 
-      try {
-        let body;
-        if (momentImage) {
-          // 视觉模型流式
-          const vlConfig = getVLModelConfig();
-          if (!vlConfig) {
-            res.write(`data: ${JSON.stringify({ error: '当前配置不支持图片分析' })}\n\n`);
+      const modelConfig = momentImage ? (getVLModelConfig() || aiConfig) : aiConfig;
+      const deduplicator = createChunkDeduplicator();
+
+      // 构建请求体
+      let fetchOptions;
+      if (momentImage) {
+        const vlConfig = getVLModelConfig();
+        if (!vlConfig) {
+          res.write(`data: ${JSON.stringify({ error: '当前配置不支持图片分析' })}\n\n`);
+          res.end();
+          return;
+        }
+
+        let imageUrl = momentImage;
+        if (momentImage.startsWith('data:')) {
+          imageUrl = momentImage;
+        } else if (momentImage.startsWith('/uploads/')) {
+          const uploadDir = path.join(__dirname, '..', '..', 'uploads');
+          const filePath = path.join(uploadDir, momentImage.replace('/uploads/', ''));
+          try {
+            const buffer = fs.readFileSync(filePath);
+            const ext = path.extname(filePath).toLowerCase().replace('.', '') || 'jpg';
+            const mime = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
+            imageUrl = `data:${mime};base64,${buffer.toString('base64')}`;
+          } catch (e) {
+            res.write(`data: ${JSON.stringify({ error: '图片读取失败' })}\n\n`);
             res.end();
             return;
           }
+        }
 
-          // 解析图片（base64或本地路径）
-          let imageUrl = momentImage;
-          if (momentImage.startsWith('data:')) {
-            imageUrl = momentImage;
-          } else if (momentImage.startsWith('/uploads/')) {
-            const uploadDir = path.join(__dirname, '..', '..', 'uploads');
-            const filePath = path.join(uploadDir, momentImage.replace('/uploads/', ''));
-            try {
-              const buffer = fs.readFileSync(filePath);
-              const ext = path.extname(filePath).toLowerCase().replace('.', '') || 'jpg';
-              const mime = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
-              imageUrl = `data:${mime};base64,${buffer.toString('base64')}`;
-            } catch (e) {
-              res.write(`data: ${JSON.stringify({ error: '图片读取失败' })}\n\n`);
-              res.end();
-              return;
-            }
-          }
-
-          body = JSON.stringify({
+        fetchOptions = {
+          url: vlConfig.url,
+          key: vlConfig.key,
+          body: {
             model: vlConfig.model,
-            messages: [
-              { role: 'user', content: [
-                { type: 'text', text: systemPrompt },
-                { type: 'image_url', image_url: { url: imageUrl } }
-              ]},
-            ],
+            messages: [{ role: 'user', content: [
+              { type: 'text', text: systemPrompt },
+              { type: 'image_url', image_url: { url: imageUrl } }
+            ]}],
             temperature: 0.7,
             max_tokens: 600,
             stream: true
-          });
-        } else {
-          body = JSON.stringify({
+          }
+        };
+      } else {
+        fetchOptions = {
+          url: aiConfig.url,
+          key: aiConfig.key,
+          body: {
             model: aiConfig.model,
             messages: [{ role: 'user', content: systemPrompt }],
             temperature: 0.7,
             max_tokens: 600,
             stream: true
-          });
-        }
-
-        const modelConfig = momentImage ? (getVLModelConfig() || aiConfig) : aiConfig;
-        const response = await fetch(modelConfig.url, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${modelConfig.key}`,
-            'Content-Type': 'application/json'
-          },
-          body
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('[AICoach] 朋友圈分析失败:', response.status, errorText);
-          res.write(`data: ${JSON.stringify({ error: '分析失败' })}\n\n`);
-          res.end();
-          return;
-        }
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6);
-              if (data === '[DONE]') {
-                res.write('data: [DONE]\n\n');
-              } else {
-                try {
-                  const parsed = JSON.parse(data);
-                  const content = parsed.choices?.[0]?.delta?.content || '';
-                  if (content) {
-                    // Guardrails: 过滤大师名字和加粗标记
-                    const guardResult = streamGuardrails(content);
-                    if (!guardResult.safe) {
-                      console.warn(`[Guardrails] 朋友圈分析: ${guardResult.reason}，已过滤`);
-                    }
-                    const safeContent = guardResult.safe ? content : guardResult.filtered;
-                    if (safeContent) {
-                      res.write(`data: ${JSON.stringify({ content: safeContent })}\n\n`);
-                    }
-                  }
-                } catch (e) { /* ignore */ }
-              }
-            }
           }
-        }
-
-        res.write('data: [DONE]\n\n');
-        res.end();
-      } catch (error) {
-        console.error('[AICoach] 朋友圈分析失败:', error);
-        res.write(`data: ${JSON.stringify({ error: '分析失败' })}\n\n`);
-        res.end();
+        };
       }
+
+      // 发起 fetch（带重试）
+      await callAIFetchWithRetry(fetchOptions.url, fetchOptions.key, fetchOptions.body, {
+        deduplicator,
+        onChunk: (content) => res.write(`data: ${JSON.stringify({ content })}\n\n`),
+        onDone: () => { res.write('data: [DONE]\n\n'); res.end(); },
+        onError: (msg) => { console.error(`[AICoach] 朋友圈分析失败: ${msg}`); res.write(`data: ${JSON.stringify({ error: msg })}\n\n`); res.end(); }
+      });
     } else {
       // 非流式模式
       try {
@@ -1090,7 +1458,15 @@ ${contentDesc}
         const data = await response.json();
         const content = data.choices?.[0]?.message?.content || '';
 
-        res.json({ success: true, analysis: content });
+        // M007 S01: 附加阶段警告
+        const contentWithWarnings = appendStageWarning(content, relStage);
+
+        res.json({
+          success: true,
+          analysis: contentWithWarnings,
+          relationshipStage: relStage,
+          relationshipStageLabel: relStageLabel
+        });
       } catch (error) {
         console.error('[AICoach] 朋友圈分析失败:', error);
         res.status(500).json({ error: '分析失败' });
@@ -1116,35 +1492,96 @@ router.post('/feedback', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: '无权限' });
     }
 
-    const { memoryId, type, reason, routedType, coachesUsed } = req.body;
+    const { memoryId, type, reason, routedType, coachesUsed, coachId, questionType } = req.body;
 
-    if (!memoryId || !type) {
-      return res.status(400).json({ error: 'memoryId 和 type 是必需的' });
+    if (!type) {
+      return res.status(400).json({ error: 'type 是必需的' });
+    }
+
+    // memoryId 为可选；不传时从该客户的最近会话中查找
+    let targetMemoryId = memoryId;
+    if (!targetMemoryId) {
+      const latestMemory = await prisma.conversationMemory.findFirst({
+        where: { clientId: req.user.id },
+        orderBy: { updatedAt: 'desc' }
+      });
+      targetMemoryId = latestMemory?.id || 'unknown';
     }
 
     if (!['helpful', 'not_helpful'].includes(type)) {
       return res.status(400).json({ error: 'type 必须是 helpful 或 not_helpful' });
     }
 
-    // 验证 memory 归属权
-    const memory = await prisma.conversationMemory.findUnique({
-      where: { id: memoryId }
-    });
-
-    if (!memory) {
-      return res.status(404).json({ error: '会话不存在' });
+    // 验证 memory 归属权（仅当传入 memoryId 时验证）
+    let memory = null;
+    if (memoryId) {
+      memory = await prisma.conversationMemory.findUnique({ where: { id: memoryId } });
+      if (!memory) {
+        return res.status(404).json({ error: '会话不存在' });
+      }
+      if (memory.clientId !== req.user.id && req.user.role === 'client') {
+        return res.status(403).json({ error: '无权评价此会话' });
+      }
     }
 
-    if (memory.clientId !== req.user.id && req.user.role === 'client') {
-      return res.status(403).json({ error: '无权评价此会话' });
-    }
+    await addFeedback(targetMemoryId, type, { reason, routedType, coachesUsed });
 
-    await addFeedback(memoryId, type, { reason, routedType, coachesUsed });
+    // 闭环：更新客户教练画像权重
+    // 支持单个 coachId 或 coachesUsed 数组
+    const clientId = memory?.clientId || req.user.id;
+    const targetQuestionType = questionType || routedType || '通用';
+    const targetCoaches = coachId
+      ? [coachId]
+      : (coachesUsed ? (typeof coachesUsed === 'string' ? JSON.parse(coachesUsed) : coachesUsed) : []);
+
+    if (targetCoaches.length > 0) {
+      // 异步更新画像，不阻塞响应
+      Promise.all(
+        targetCoaches.map(c => recordFeedback({
+          clientId,
+          coachId: c,
+          questionType: targetQuestionType,
+          feedbackType: type
+        }))
+      ).catch(err => console.error('[Feedback] 画像更新失败:', err));
+    }
 
     res.json({ success: true });
   } catch (error) {
     console.error('[AICoach] 反馈记录失败:', error);
     res.status(500).json({ error: '记录反馈失败' });
+  }
+});
+
+/**
+ * 获取客户教练偏好（个性化权重摘要）
+ * GET /api/ai-coach/coach-profile
+ */
+router.get('/coach-profile', authMiddleware, async (req, res) => {
+  try {
+    if (!['operator', 'admin', 'client'].includes(req.user.role)) {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const summary = await getProfileSummary(req.user.id);
+    const preferences = await getClientCoachPreferences(req.user.id);
+    const persona = await buildDynamicPersona({ clientProfile: null, clientId: req.user.id });
+
+    res.json({
+      success: true,
+      data: {
+        summary,
+        preferences,
+        persona: {
+          summary: persona.summary,
+          learningStyle: persona.learningStyle,
+          clientTypeBehavior: persona.clientTypeBehavior
+        }
+      }
+    });
+  } catch (error) {
+    console.error('[AICoach] 获取教练偏好失败:', error);
+    res.status(500).json({ error: '获取教练偏好失败' });
   }
 });
 
@@ -1188,9 +1625,15 @@ router.get('/overview', authMiddleware, async (req, res) => {
     const operatorId = req.user.id;
     const { cachedUserHash, mode } = req.query;
 
+    // 安全：获取当前操盘手负责的客户列表
+    const sessions = await prisma.chatSession.findMany({
+      where: { operatorId },
+      select: { clientId: true }
+    });
+    const clientIds = sessions.map(s => s.clientId);
+
     // 计算当前 userDataHash（从当前操盘手的客户池整体状态）
-    const allClients = await prisma.user.findMany({ where: { role: 'client' } });
-    const clientIds = allClients.map(c => c.id);
+    const allClients = await prisma.user.findMany({ where: { role: 'client', id: { in: clientIds } } });
 
     const allGirls = await prisma.girl.findMany({
       where: { clientId: { in: clientIds } },
@@ -1199,17 +1642,28 @@ router.get('/overview', authMiddleware, async (req, res) => {
     });
 
     if (allGirls.length === 0) {
+      // 检查是否有客户池但女生为空（还没捞鱼）
+      const hasClients = allClients.length > 0;
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
       res.setHeader('X-Accel-Buffering', 'no');
       res.flushHeaders();
-      res.write(`data: ${JSON.stringify({ cached: false, userDataHash: '', changeReason: null, staleAlerts: [] })}\n\n`);
-      res.write(`data: ${JSON.stringify({ content: '鱼塘还是空的，先去捞鱼吧～' })}\n\n`);
+      res.write(`data: ${JSON.stringify({ cached: false, userDataHash: '', changeReason: null, staleAlerts: [], isEmpty: true })}\n\n`);
+      if (hasClients) {
+        res.write(`data: ${JSON.stringify({ content: `你有 ${allClients.length} 个客户，但鱼塘是空的。去「女生资源」里添加第一个女生吧～` })}\n\n`);
+      } else {
+        res.write(`data: ${JSON.stringify({ content: '还没有客户，先去「客户管理」添加第一个客户吧～' })}\n\n`);
+      }
       res.write('data: [DONE]\n\n');
       res.end();
       return;
     }
+
+    // 有客户池但选中客户时女生为空（客户已选但该客户下没有女生）
+    // 注意：overview 端点不看 selectedClient，只展示全局
+    // 前端在有 selectedClient 但无女生时，应该在另一处显示
+    // 这里只处理有女生的情况
 
     // 概览 hash 基于：总鱼数 + 各客户池整体热度分布
     const hotCount = allGirls.filter(g => (g.tensionScore || 5) >= 7).length;
@@ -1299,13 +1753,14 @@ router.get('/overview', authMiddleware, async (req, res) => {
 【女生资源清单】
 ${girlsSummary}
 
-请主动分析：
+失联提醒：${staleAlerts.length > 0 ? staleAlerts.map(a => a).join(' | ') : '暂无'}
+
+请主动分析（用聊天语气，像朋友一样给建议）：
 1. 当前整体情况怎么样，哪些女生值得关注重点关注
 2. 最需要推进的是哪1-2个，为什么
 3. 操盘手今天应该重点做什么
 4. 有没有需要学习/注意的情感知识点（结合当前实际案例讲）${promptSuffix}
-
-用聊天语气说，像朋友一样给建议。`;
+5. 有没有特别需要关注的风险或异常情况（如失联超过3天、热度突然下降等）`;
 
     const aiConfig = getAIConfig();
 
@@ -1323,62 +1778,21 @@ ${girlsSummary}
     })}\n\n`);
 
     try {
-      const response = await fetch(aiConfig.url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${aiConfig.key}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: aiConfig.model,
-          messages: [{ role: 'user', content: systemPrompt }],
-          temperature: 0.7,
-          max_tokens: mode === 'daily' ? 1000 : 800,
-          stream: true
-        })
-      });
-
-      if (!response.ok) {
-        res.write(`data: ${JSON.stringify({ error: 'AI服务请求失败' })}\n\n`);
-        res.end();
-        return;
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
+      const deduplicator = createChunkDeduplicator();
       let fullContent = '';
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data === '[DONE]') {
-              res.write('data: [DONE]\n\n');
-            } else {
-              try {
-                const parsed = JSON.parse(data);
-                const content = parsed.choices?.[0]?.delta?.content || '';
-                if (content) {
-                  const guardResult = streamGuardrails(content);
-                  const safeContent = guardResult.safe ? content : guardResult.filtered;
-                  if (safeContent) {
-                    fullContent += safeContent;
-                    res.write(`data: ${JSON.stringify({ content: safeContent })}\n\n`);
-                  }
-                }
-              } catch (e) { /* ignore */ }
-            }
-          }
-        }
-      }
+      await callAIFetchWithRetry(aiConfig.url, aiConfig.key, {
+        model: aiConfig.model,
+        messages: [{ role: 'user', content: systemPrompt }],
+        temperature: 0.7,
+        max_tokens: mode === 'daily' ? 1000 : 800,
+        stream: true
+      }, {
+        deduplicator,
+        onChunk: (content) => { fullContent += content; res.write(`data: ${JSON.stringify({ content })}\n\n`); },
+        onDone: () => { res.write('data: [DONE]\n\n'); res.end(); },
+        onError: (msg) => { console.error(`[AICoach] 全局概览失败: ${msg}`); res.write(`data: ${JSON.stringify({ error: msg })}\n\n`); res.end(); }
+      });
 
       // 写缓存
       if (fullContent) {
@@ -1388,9 +1802,6 @@ ${girlsSummary}
           prevSnapshot: { hotCount, warmCount, coldCount, totalGirls: allGirls.length }
         }).catch(err => console.error('[overview] cache write failed:', err));
       }
-
-      res.write('data: [DONE]\n\n');
-      res.end();
     } catch (error) {
       console.error('[AICoach] 全局概览失败:', error);
       res.write(`data: ${JSON.stringify({ error: '分析失败' })}\n\n`);
@@ -1401,6 +1812,221 @@ ${girlsSummary}
     res.status(500).json({ error: '获取概览失败' });
   }
 });
+
+/**
+ * 主动教练 - 客户池分析（选择了客户但没选女生时）
+ * GET /api/ai-coach/client-pool/:clientId
+ *
+ * 展示该操盘手下指定客户的女生池整体情况
+ */
+router.get('/client-pool/:clientId', authMiddleware, async (req, res) => {
+  try {
+    if (!['operator', 'admin'].includes(req.user.role)) {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const { clientId } = req.params;
+    const { cachedClientHash, mode } = req.query;
+
+    // 安全：操盘手只能访问自己负责的客户的数据
+    if (req.user.role === 'operator') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId }
+      });
+      if (!session) {
+        return res.status(403).json({ error: '无权限访问此客户的数据' });
+      }
+    }
+
+    // 获取该客户下的所有女生
+    const clientGirls = await prisma.girl.findMany({
+      where: { clientId },
+      include: { client: { select: { id: true, nickname: true, username: true, age: true } } },
+      orderBy: { tensionScore: 'desc' }
+    });
+
+    if (clientGirls.length === 0) {
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no');
+      res.flushHeaders();
+      res.write(`data: ${JSON.stringify({ cached: false, clientDataHash: '', changeReason: null, staleAlerts: [] })}\n\n`);
+      res.write(`data: ${JSON.stringify({ content: `这个客户还没有女生。去「女生资源」添加吧～` })}\n\n`);
+      res.write('data: [DONE]\n\n');
+      res.end();
+      return;
+    }
+
+    // 计算 clientDataHash（基于该客户池的热度分布）
+    const hotCount = clientGirls.filter(g => (g.tensionScore || 5) >= 7).length;
+    const warmCount = clientGirls.filter(g => (g.tensionScore || 5) >= 5 && (g.tensionScore || 5) < 7).length;
+    const coldCount = clientGirls.filter(g => (g.tensionScore || 5) < 5).length;
+    const clientRaw = [clientGirls.length, hotCount, warmCount, coldCount].join('|');
+    const currentClientHash = crypto.createHash('md5').update(clientRaw).digest('hex');
+
+    // 缓存命中检查
+    if (cachedClientHash && cachedClientHash === currentClientHash) {
+      console.log(`[client-pool] cache hit for clientId=${clientId}`);
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no');
+      res.flushHeaders();
+
+      const staleAlerts = clientGirls.map(g => computeStaleAlert(g)).filter(Boolean);
+
+      res.write(`data: ${JSON.stringify({
+        cached: true, clientDataHash: currentClientHash,
+        changeReason: null, staleAlerts
+      })}\n\n`);
+
+      const cached = await getClientPoolCache(req.user.id, clientId);
+      if (cached) {
+        const content = cached.content;
+        const chunkSize = 100;
+        for (let i = 0; i < content.length; i += chunkSize) {
+          res.write(`data: ${JSON.stringify({ content: content.slice(i, i + chunkSize) })}\n\n`);
+          await new Promise(r => setTimeout(r, 10));
+        }
+      }
+      res.write('data: [DONE]\n\n');
+      res.end();
+      return;
+    }
+
+    console.log(`[client-pool] cache miss for clientId=${clientId}`);
+
+    // 构建该客户池的摘要
+    const clientInfo = clientGirls[0]?.client;
+    const poolSummary = clientGirls.map(g => {
+      let personality = {};
+      if (g.personality) {
+        try { personality = typeof g.personality === 'string' ? JSON.parse(g.personality) : g.personality; } catch (e) {}
+      }
+      return `【${g.name}】
+  阶段：${g.stage}
+  热度：${g.tensionScore || 5}/10
+  亲密度：${g.intimacyLevel || 1}
+  回复规律：${g.responsePattern || '未知'}
+  备注：${g.notes?.slice(0, 30) || ''}`;
+    }).join('\n\n');
+
+    const hotGirls = clientGirls.filter(g => (g.tensionScore || 5) >= 7);
+    const warmGirls = clientGirls.filter(g => (g.tensionScore || 5) >= 5 && (g.tensionScore || 5) < 7);
+    const coldGirls = clientGirls.filter(g => (g.tensionScore || 5) < 5);
+    const staleAlerts = clientGirls.map(g => computeStaleAlert(g)).filter(Boolean);
+
+    const systemPrompt = `你是鱼塘AI情感教练，帮操盘手分析当前选中客户的女生池情况，给出针对这个客户的整体建议。
+
+要求：
+- 简洁口语化，像朋友聊天
+- 直接给结论和建议，不要绕弯子
+- 不要用任何加粗、斜体等格式
+- 不要出现任何大师名字、称号、角色名
+- 不要说置信度、框架、原则等专业术语
+- 不要出现**符号
+
+【客户信息】
+客户：${clientInfo?.nickname || clientInfo?.username || '未知'}
+女生数量：${clientGirls.length} 个
+
+【女生池热度分布】
+🔥 热度高（7+）：${hotGirls.length} 个
+🌡️ 热度中（5-6）：${warmGirls.length} 个
+❄️ 热度低（<5）：${coldGirls.length} 个
+
+【女生资源清单】
+${poolSummary}
+
+失联提醒：${staleAlerts.length > 0 ? staleAlerts.map(a => a).join(' | ') : '暂无'}
+
+请分析（用聊天语气，像朋友一样给建议）：
+1. 这个客户的整体情况如何？女生池质量怎么样？
+2. 最值得重点关注的是哪1-2个女生？为什么？
+3. 近期有没有值得注意的信号或风险？
+4. 今天应该重点推进什么？
+
+要言之有物，针对这个具体客户的实际情况分析，不要泛泛而谈。`;
+
+    const aiConfig = getAIConfig();
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.setHeader('Content-Encoding', 'identity');
+    res.flushHeaders();
+
+    res.write(`data: ${JSON.stringify({
+      cached: false, clientDataHash: currentClientHash,
+      changeReason: '数据更新', staleAlerts
+    })}\n\n`);
+
+    try {
+      const deduplicator = createChunkDeduplicator();
+      let fullContent = '';
+
+      await callAIFetchWithRetry(aiConfig.url, aiConfig.key, {
+        model: aiConfig.model,
+        messages: [{ role: 'user', content: systemPrompt }],
+        temperature: 0.7,
+        max_tokens: 800,
+        stream: true
+      }, {
+        deduplicator,
+        onChunk: (content) => { fullContent += content; res.write(`data: ${JSON.stringify({ content })}\n\n`); },
+        onDone: () => { res.write('data: [DONE]\n\n'); res.end(); },
+        onError: (msg) => { console.error(`[AICoach] 客户池分析失败: ${msg}`); res.write(`data: ${JSON.stringify({ error: msg })}\n\n`); res.end(); }
+      });
+
+      if (fullContent) {
+        setClientPoolCache(req.user.id, clientId, {
+          content: fullContent,
+          clientDataHash: currentClientHash
+        }).catch(err => console.error('[client-pool] cache write failed:', err));
+      }
+    } catch (error) {
+      console.error('[AICoach] 客户池分析失败:', error);
+      res.write(`data: ${JSON.stringify({ error: '分析失败' })}\n\n`);
+      res.end();
+    }
+  } catch (error) {
+    console.error('[AICoach] 客户池分析失败:', error);
+    res.status(500).json({ error: '获取客户池分析失败' });
+  }
+});
+
+// 需要新增的缓存函数
+async function getClientPoolCache(operatorId, clientId) {
+  try {
+    const cache = await prisma.girlSummaryCache.findFirst({
+      where: { operatorId, girlId: `client-pool:${clientId}` }
+    });
+    return cache;
+  } catch { return null; }
+}
+
+async function setClientPoolCache(operatorId, clientId, data) {
+  try {
+    await prisma.girlSummaryCache.upsert({
+      where: { id: `${operatorId}:client-pool:${clientId}` },
+      create: {
+        id: `${operatorId}:client-pool:${clientId}`,
+        operatorId,
+        girlId: `client-pool:${clientId}`,
+        content: data.content,
+        girlDataHash: data.clientDataHash,
+        userDataHash: '',
+        prevSnapshot: null
+      },
+      update: {
+        content: data.content,
+        girlDataHash: data.clientDataHash
+      }
+    });
+  } catch (e) { console.error('[client-pool] cache write error:', e); }
+}
 
 /**
  * 主动教练 - 女生专项（选中女生时）
@@ -1424,7 +2050,6 @@ router.get('/girl-summary/:girlId', authMiddleware, async (req, res) => {
 
     const { girlId } = req.params;
     const { cachedGirlHash, cachedUserHash } = req.query;
-    const clientId = req.user.id;
 
     // 安全验证
     const girl = await prisma.girl.findUnique({
@@ -1439,6 +2064,20 @@ router.get('/girl-summary/:girlId', authMiddleware, async (req, res) => {
     if (!girl) {
       return res.status(404).json({ error: '女生不存在' });
     }
+
+    // 安全：操盘手只能访问自己负责的客户的女生
+    if (req.user.role === 'operator') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: girl.clientId }
+      });
+      if (!session) {
+        return res.status(403).json({ error: '无权限访问此女生数据' });
+      }
+    } else if (req.user.role === 'client' && girl.clientId !== req.user.id) {
+      return res.status(403).json({ error: '无权限访问此女生数据' });
+    }
+
+    const clientId = girl.clientId;
 
     // 读取用户数据（用于 userDataHash）
     const user = await prisma.user.findUnique({
@@ -1545,7 +2184,18 @@ router.get('/girl-summary/:girlId', authMiddleware, async (req, res) => {
     // 失联提醒（不参与 hash）
     const staleAlert = computeStaleAlert(girl);
 
-    const systemPrompt = `你是鱼塘AI情感教练，帮操盘手分析当前选中的女生，主动给出行动建议。
+    // 解析 relationshipAttitude, bestApproach 等战略字段
+    const strategyFields = {
+      relationshipAttitude: girl.relationshipAttitude || '',
+      bestApproach: girl.bestApproach || '',
+      recommendedTopics: girl.recommendedTopics || '',
+      upgradeConditions: girl.upgradeConditions || '',
+      riskFactors: girl.riskFactors || '',
+      strategicNotes: girl.strategicNotes || '',
+      responsePattern: girl.responsePattern || '',
+    };
+
+    const systemPrompt = `你是鱼塘AI情感教练，帮操盘手分析当前选中的女生，给出针对这个女生的具体、可操作的行动建议。
 
 要求：
 - 简洁口语化，像朋友聊天
@@ -1554,14 +2204,16 @@ router.get('/girl-summary/:girlId', authMiddleware, async (req, res) => {
 - 不要出现任何大师名字、称号、角色名
 - 不要说置信度、框架、原则等专业术语
 - 不要出现**符号
+- 针对【${girl.name}】给出具体建议，不是泛泛而谈
 
 ${changeReason !== '数据更新' ? `【数据变化原因】\n${changeReason}\n\n` : ''}
 【女生档案】
 昵称：${girl.name}
-客户：${girl.client?.nickname || girl.client?.username || '未知'}
 阶段：${girl.stage}
 热度：${girl.tensionScore || 5}/10
 亲密度：${girl.intimacyLevel || 1}
+回复规律：${girl.responsePattern || '未知'}
+回复速度：${girl.responsePattern === '秒回' ? '秒回型，需要保持节奏' : girl.responsePattern === '慢' ? '慢热型，需要耐心，不能逼太紧' : '正常型，保持稳定节奏'}
 
 【性格画像】
 MBTI：${personality.mbti || '未知'}
@@ -1569,6 +2221,14 @@ MBTI：${personality.mbti || '未知'}
 情绪触发点：${(personality.emotionalTriggers || []).join('、') || '暂无'}
 聊天禁忌：${(personality.thingsToAvoid || []).join('、') || '暂无'}
 擅长话题：${(personality.talkingTopics || []).join('、') || '未知'}
+${girl.interests ? `兴趣爱好：${girl.interests}` : ''}
+
+【战略分析】
+策略类型：${strategyFields.bestApproach || '未知'}
+推荐话题：${strategyFields.recommendedTopics || '暂无'}
+升级条件：${strategyFields.upgradeConditions || '暂无'}
+风险因素：${strategyFields.riskFactors || '暂无'}
+战略备注：${strategyFields.strategicNotes || '暂无'}
 
 【近期关键信号】
 ${signalsText}
@@ -1576,16 +2236,18 @@ ${signalsText}
 【最近聊天】
 ${recentChats}
 
-【备注】
+【女生备注】
 ${girl.notes || '暂无'}
 
-请主动分析：
-1. ${girl.name}现在处于什么状态，关系进展到哪一步了
-2. 最近有什么值得注意的信号（正向/负向）
-3. 现在最应该做什么，优先级是什么
-4. 如果要聊天的话，切入点是什么
+请针对【${girl.name}】给出具体分析和建议：
 
-用聊天语气说，像朋友一样给建议。`;
+1. 【${girl.name}】现在处于什么状态？关系进展到哪一步了？和别的女生有什么不同？
+2. 最近有什么值得注意的信号？有没有风险需要提前规避？
+3. 现在最应该做什么？优先级是什么？
+4. 如果要聊天的话，切入点是什么？具体说什么？（给出1-2句具体的话）
+5. 这个女生和客户的匹配度如何？
+
+用聊天语气说，像朋友一样给建议。要言之有物，不能泛泛而谈。`;
 
     const aiConfig = getAIConfig();
 
@@ -1606,62 +2268,21 @@ ${girl.notes || '暂无'}
     })}\n\n`);
 
     try {
-      const response = await fetch(aiConfig.url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${aiConfig.key}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: aiConfig.model,
-          messages: [{ role: 'user', content: systemPrompt }],
-          temperature: 0.7,
-          max_tokens: 600,
-          stream: true
-        })
+      const deduplicator = createChunkDeduplicator();
+      let fullContent = '';
+
+      await callAIFetchWithRetry(aiConfig.url, aiConfig.key, {
+        model: aiConfig.model,
+        messages: [{ role: 'user', content: systemPrompt }],
+        temperature: 0.7,
+        max_tokens: 600,
+        stream: true
+      }, {
+        deduplicator,
+        onChunk: (content) => { fullContent += content; res.write(`data: ${JSON.stringify({ content })}\n\n`); },
+        onDone: () => { res.write('data: [DONE]\n\n'); res.end(); },
+        onError: (msg) => { console.error(`[AICoach] 女生专项分析失败: ${msg}`); res.write(`data: ${JSON.stringify({ error: msg })}\n\n`); res.end(); }
       });
-
-      if (!response.ok) {
-        res.write(`data: ${JSON.stringify({ error: 'AI服务请求失败' })}\n\n`);
-        res.end();
-        return;
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-      let fullContent = ''; // 累积用于写缓存
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data === '[DONE]') {
-              res.write('data: [DONE]\n\n');
-            } else {
-              try {
-                const parsed = JSON.parse(data);
-                const content = parsed.choices?.[0]?.delta?.content || '';
-                if (content) {
-                  const guardResult = streamGuardrails(content);
-                  const safeContent = guardResult.safe ? content : guardResult.filtered;
-                  if (safeContent) {
-                    fullContent += safeContent;
-                    res.write(`data: ${JSON.stringify({ content: safeContent })}\n\n`);
-                  }
-                }
-              } catch (e) { /* ignore */ }
-            }
-          }
-        }
-      }
 
       // 写缓存（异步，不阻塞响应）
       if (fullContent) {
@@ -1678,9 +2299,6 @@ ${girl.notes || '暂无'}
           prevSnapshot
         }).catch(err => console.error('[girl-summary] cache write failed:', err));
       }
-
-      res.write('data: [DONE]\n\n');
-      res.end();
     } catch (error) {
       console.error('[AICoach] 女生专项分析失败:', error);
       res.write(`data: ${JSON.stringify({ error: '分析失败' })}\n\n`);
@@ -1805,6 +2423,174 @@ function parseJson(value) {
     try { return JSON.parse(value); } catch { return []; }
   }
   return [];
+}
+
+// ---- 异步女生档案提取（situation 端点完成后触发）----
+
+/**
+ * 提取女生档案更新（带指数退避重试）
+ * @param {string} clientId
+ * @param {string} girlId
+ * @param {string} conversationText - AI 完整响应文本
+ * @param {string} situation - 用户原始问题（用于判断话题方向）
+ * @returns {Promise<object|null>}
+ */
+async function extractGirlProfileFromConversation(clientId, girlId, conversationText, situation) {
+  const prompt = `你是鱼塘AI教练，从以下对话分析中提取女生档案的更新信息。
+
+【原始问题】
+${situation}
+
+【AI分析回复】
+${conversationText}
+
+请分析这段对话，提取女生档案中需要更新的字段。只输出 JSON 对象，可以包含以下字段（只填有把握的，没有就不填）：
+
+{
+  "stage": "关系阶段（陌生/搭讪/聊天/暧昧/约会/长期）",
+  "tensionScore": 热度值（1-10，浮点数）,
+  "intimacyLevel": 亲密度（1-5，整数）,
+  "newSignals": ["发现的积极或消极信号（字符串，30字以内）"],
+  "pendingActions": ["待推进的事项（字符串，30字以内）"]
+}
+
+只输出 JSON，不要其他内容。如果没有值得更新的信息，输出空对象 {}。`;
+
+  for (let attempt = 0; attempt <= 2; attempt++) {
+    if (attempt > 0) {
+      const delay = [200, 800][attempt - 1];
+      console.log(`[GirlProfile] 重试 ${attempt}/2，等待 ${delay}ms`);
+      await new Promise(r => setTimeout(r, delay));
+    }
+
+    try {
+      const aiConfig = getAIConfig();
+      const response = await fetch(aiConfig.url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${aiConfig.key}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: aiConfig.model,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.3,
+          max_tokens: 300
+        })
+      });
+
+      if (!response.ok) {
+        console.warn(`[GirlProfile] AI 调用失败 (${response.status})`);
+        continue;
+      }
+
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content || '';
+
+      // 尝试解析 JSON
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        console.warn('[GirlProfile] 无法从响应中提取 JSON');
+        continue;
+      }
+
+      const extracted = JSON.parse(jsonMatch[0]);
+      return extracted;
+    } catch (err) {
+      console.warn(`[GirlProfile] 解析失败 (attempt ${attempt + 1}):`, err.message);
+    }
+  }
+
+  console.error(`[GirlProfile] 全部重试失败，放弃提取`);
+  return null;
+}
+
+/**
+ * 应用女生档案更新（带幂等保护）
+ */
+async function applyGirlProfileUpdate(girlId, extracted) {
+  if (!extracted || Object.keys(extracted).length === 0) return;
+
+  const updates = {};
+
+  if (extracted.stage && ['陌生', '搭讪', '聊天', '暧昧', '约会', '长期'].includes(extracted.stage)) {
+    updates.stage = extracted.stage;
+  }
+  if (typeof extracted.tensionScore === 'number' && extracted.tensionScore >= 1 && extracted.tensionScore <= 10) {
+    updates.tensionScore = extracted.tensionScore;
+  }
+  if (typeof extracted.intimacyLevel === 'number' && extracted.intimacyLevel >= 1 && extracted.intimacyLevel <= 5) {
+    updates.intimacyLevel = extracted.intimacyLevel;
+  }
+
+  // 更新 signals（追加，不覆盖）
+  if (extracted.newSignals?.length > 0) {
+    const existingSignals = await prisma.girl.findUnique({ where: { id: girlId }, select: { signals: true } });
+    const currentSignals = parseJson(existingSignals?.signals) || [];
+    const now = new Date().toLocaleDateString('zh-CN');
+    const newSignals = extracted.newSignals.map(s => ({ type: 'neutral', event: s, date: now }));
+    // 避免重复追加
+    const existingEvents = new Set(currentSignals.map(s => s.event));
+    const uniqueNew = newSignals.filter(s => !existingEvents.has(s.event));
+    if (uniqueNew.length > 0) {
+      updates.signals = JSON.stringify([...currentSignals, ...uniqueNew]);
+    }
+  }
+
+  // 更新 pendingActions（替换）
+  if (extracted.pendingActions?.length > 0) {
+    const existing = await prisma.girl.findUnique({ where: { id: girlId }, select: { pendingActions: true } });
+    const currentActions = parseJson(existing?.pendingActions) || [];
+    const newActions = extracted.pendingActions.filter(a => !currentActions.includes(a));
+    if (newActions.length > 0) {
+      updates.pendingActions = JSON.stringify([...currentActions, ...newActions]);
+    }
+  }
+
+  // 更新字段时同步写入时间戳
+  if (updates.tensionScore !== undefined) {
+    updates.tensionScoreUpdatedAt = new Date();
+  }
+  if (updates.intimacyLevel !== undefined) {
+    updates.intimacyLevelUpdatedAt = new Date();
+  }
+
+  if (Object.keys(updates).length > 0) {
+    updates.updatedAt = new Date(); // 触发 updatedAt 变化
+    await prisma.girl.update({ where: { id: girlId }, data: updates });
+    console.log(`[GirlProfile] 更新女生档案:`, Object.keys(updates).join(', '));
+  }
+}
+
+/**
+ * 获取女生档案字段的新鲜度信息（用于 system prompt 注入）
+ * @param {object} girlInfo - 女生档案对象
+ * @returns {object} - { tensionAgeHours, intimacyAgeHours, hasStaleField, warnings[] }
+ */
+function getProfileFreshnessInfo(girlInfo) {
+  const warnings = [];
+  const now = Date.now();
+
+  let tensionAgeHours = null;
+  let intimacyAgeHours = null;
+
+  if (girlInfo?.tensionScoreUpdatedAt) {
+    tensionAgeHours = Math.round((now - new Date(girlInfo.tensionScoreUpdatedAt).getTime()) / (1000 * 60 * 60));
+    if (tensionAgeHours >= 24) {
+      warnings.push(`[注意]热度评分基于 ${tensionAgeHours}h 前的信息，可能已过时`);
+    }
+  }
+
+  if (girlInfo?.intimacyLevelUpdatedAt) {
+    intimacyAgeHours = Math.round((now - new Date(girlInfo.intimacyLevelUpdatedAt).getTime()) / (1000 * 60 * 60));
+    if (intimacyAgeHours >= 24) {
+      warnings.push(`[注意]亲密度评估基于 ${intimacyAgeHours}h 前的信息，可能已过时`);
+    }
+  }
+
+  const hasStaleField = warnings.length > 0;
+
+  return { tensionAgeHours, intimacyAgeHours, hasStaleField, warnings };
 }
 
 module.exports = router;

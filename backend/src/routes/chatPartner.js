@@ -675,6 +675,16 @@ router.get('/pending-updates/:girlId', authMiddleware, async (req, res) => {
 
     const { girlId } = req.params;
 
+    // 安全：操盘手只能访问自己负责的客户的女生
+    if (req.user.role === 'operator') {
+      const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+      if (!girl) return res.status(404).json({ error: '女生不存在' });
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: girl.clientId }
+      });
+      if (!session) return res.status(403).json({ error: '无权限访问此女生数据' });
+    }
+
     // 从数据库查询待审核记录（包括 chat_feedback 和 chat_analyze 等来源）
     const pending = await prisma.pendingProfileUpdate.findMany({
       where: { targetType: 'girl', targetId: girlId, status: 'pending' },
@@ -755,6 +765,22 @@ router.post('/approve-updates', authMiddleware, async (req, res) => {
         continue;
       }
 
+      // 安全：操盘手只能操作自己负责的客户的更新
+      if (req.user.role === 'operator') {
+        let targetClientId = null;
+        if (pending.targetType === 'girl') {
+          const girl = await prisma.girl.findUnique({ where: { id: pending.targetId } });
+          if (!girl) { results.push({ updateId, success: false, reason: '女生不存在' }); continue; }
+          targetClientId = girl.clientId;
+        } else {
+          targetClientId = pending.targetId;
+        }
+        const session = await prisma.chatSession.findFirst({
+          where: { operatorId: req.user.id, clientId: targetClientId }
+        });
+        if (!session) { results.push({ updateId, success: false, reason: '无权限操作此更新' }); continue; }
+      }
+
       // 更新数据库状态
       await prisma.pendingProfileUpdate.update({
         where: { id: updateId },
@@ -819,6 +845,22 @@ router.post('/apply-update/:updateId', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: '未找到待审核更新' });
     }
 
+    // 安全：操盘手只能操作自己负责的客户的更新
+    if (req.user.role === 'operator') {
+      let targetClientId = null;
+      if (pending.targetType === 'girl') {
+        const girl = await prisma.girl.findUnique({ where: { id: pending.targetId } });
+        if (!girl) return res.status(404).json({ error: '女生不存在' });
+        targetClientId = girl.clientId;
+      } else {
+        targetClientId = pending.targetId;
+      }
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: targetClientId }
+      });
+      if (!session) return res.status(403).json({ error: '无权限操作此更新' });
+    }
+
     // 更新数据库状态
     await prisma.pendingProfileUpdate.update({
       where: { id: updateId },
@@ -865,6 +907,16 @@ router.get('/history/:girlId', authMiddleware, async (req, res) => {
 
     const { girlId } = req.params;
     const { limit = 50 } = req.query;
+
+    // 安全：操盘手只能访问自己负责的客户的女生
+    if (req.user.role === 'operator') {
+      const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+      if (!girl) return res.status(404).json({ error: '女生不存在' });
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: girl.clientId }
+      });
+      if (!session) return res.status(403).json({ error: '无权限访问此女生历史记录' });
+    }
 
     const logs = await prisma.chatLog.findMany({
       where: { girlId },
@@ -1184,6 +1236,14 @@ router.post('/client-optimize', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: '消息内容是必需的' });
     }
 
+    // 安全：操盘手只能优化自己负责的客户的消息
+    if (req.user.role === 'operator') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId }
+      });
+      if (!session) return res.status(403).json({ error: '无权限优化该客户的消息' });
+    }
+
     const context = await buildAICoachContext(req.user.id, null);
     const { client } = context;
 
@@ -1337,6 +1397,17 @@ router.get('/girl-profile/pending/:girlId', authMiddleware, async (req, res) => 
     }
 
     const { girlId } = req.params;
+
+    // 安全：操盘手只能访问自己负责的客户的女生
+    if (req.user.role === 'operator') {
+      const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+      if (!girl) return res.status(404).json({ error: '女生不存在' });
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: girl.clientId }
+      });
+      if (!session) return res.status(403).json({ error: '无权限访问此女生数据' });
+    }
+
     const { getPendingUpdates } = require('../services/girlProfileExtractor');
     const updates = await getPendingUpdates(girlId);
 
@@ -1360,6 +1431,16 @@ router.post('/girl-profile/confirm', authMiddleware, async (req, res) => {
     const { girlId, pendingId, selectedFields } = req.body;
     if (!girlId || !pendingId) {
       return res.status(400).json({ error: '参数不完整' });
+    }
+
+    // 安全：操盘手只能操作自己负责的客户的女生
+    if (req.user.role === 'operator') {
+      const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+      if (!girl) return res.status(404).json({ error: '女生不存在' });
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: girl.clientId }
+      });
+      if (!session) return res.status(403).json({ error: '无权限操作此女生数据' });
     }
 
     const { confirmProfileUpdate } = require('../services/girlProfileExtractor');
@@ -1391,6 +1472,16 @@ router.post('/girl-profile/reject', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: '参数不完整' });
     }
 
+    // 安全：操盘手只能操作自己负责的客户的女生
+    if (req.user.role === 'operator') {
+      const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+      if (!girl) return res.status(404).json({ error: '女生不存在' });
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: girl.clientId }
+      });
+      if (!session) return res.status(403).json({ error: '无权限操作此女生数据' });
+    }
+
     const { rejectProfileUpdate } = require('../services/girlProfileExtractor');
     const result = await rejectProfileUpdate(girlId, pendingId);
 
@@ -1420,6 +1511,15 @@ router.get('/client-profile/pending/:clientId', authMiddleware, async (req, res)
     }
 
     const { clientId } = req.params;
+
+    // 安全：操盘手只能访问自己负责的客户的数据
+    if (req.user.role === 'operator') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId }
+      });
+      if (!session) return res.status(403).json({ error: '无权限访问此客户数据' });
+    }
+
     const { getPendingUpdates } = require('../services/clientProfileExtractor');
     const updates = await getPendingUpdates(clientId);
 
@@ -1443,6 +1543,14 @@ router.post('/client-profile/confirm', authMiddleware, async (req, res) => {
     const { clientId, pendingId, selectedFields } = req.body;
     if (!clientId || !pendingId) {
       return res.status(400).json({ error: '参数不完整' });
+    }
+
+    // 安全：操盘手只能操作自己负责的客户的数据
+    if (req.user.role === 'operator') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId }
+      });
+      if (!session) return res.status(403).json({ error: '无权限操作此客户数据' });
     }
 
     const { confirmProfileUpdate } = require('../services/clientProfileExtractor');
@@ -1472,6 +1580,14 @@ router.post('/client-profile/reject', authMiddleware, async (req, res) => {
     const { clientId, pendingId } = req.body;
     if (!clientId || !pendingId) {
       return res.status(400).json({ error: '参数不完整' });
+    }
+
+    // 安全：操盘手只能操作自己负责的客户的数据
+    if (req.user.role === 'operator') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId }
+      });
+      if (!session) return res.status(403).json({ error: '无权限操作此客户数据' });
     }
 
     const { rejectProfileUpdate } = require('../services/clientProfileExtractor');
@@ -1508,6 +1624,16 @@ router.post('/analyze-moment', authMiddleware, async (req, res) => {
 
     if (!momentText && !momentImage) {
       return res.status(400).json({ error: '朋友圈文字或图片至少需要提供一个' });
+    }
+
+    // 安全：操盘手只能分析自己负责的客户的女生朋友圈
+    if (girlId && req.user.role === 'operator') {
+      const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+      if (!girl) return res.status(404).json({ error: '女生不存在' });
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: girl.clientId }
+      });
+      if (!session) return res.status(403).json({ error: '无权限分析此女生朋友圈' });
     }
 
     // 构建上下文
@@ -1773,6 +1899,14 @@ router.post('/moment-feedback', authMiddleware, async (req, res) => {
     const girl = await prisma.girl.findUnique({ where: { id: girlId } });
     if (!girl) {
       return res.status(404).json({ error: '女生不存在' });
+    }
+
+    // 安全：操盘手只能操作自己负责的客户的女生
+    if (req.user.role === 'operator') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: girl.clientId }
+      });
+      if (!session) return res.status(403).json({ error: '无权限操作此女生数据' });
     }
 
     // 保存到 ChatLog

@@ -69,6 +69,14 @@ router.post('/', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: '参数不完整' });
     }
 
+    // 安全：操盘手只能给其负责的客户发送通知
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId: userId }
+    });
+    if (!session) {
+      return res.status(403).json({ error: '无权限向此用户发送通知' });
+    }
+
     const notification = await prisma.notification.create({
       data: {
         userId,
@@ -94,6 +102,13 @@ router.post('/', authMiddleware, async (req, res) => {
 // 标记已读
 router.post('/:id/read', authMiddleware, async (req, res) => {
   try {
+    // 安全：验证通知属于当前用户（防止操作他人通知）
+    const existing = await prisma.notification.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: '通知不存在' });
+    if (existing.userId !== req.user.id) {
+      return res.status(403).json({ error: '无权操作此通知' });
+    }
+
     const notification = await prisma.notification.update({
       where: { id: req.params.id },
       data: { isRead: true }

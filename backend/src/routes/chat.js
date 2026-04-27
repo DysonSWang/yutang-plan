@@ -63,7 +63,7 @@ module.exports = function(io) {
               serviceStage: true
             }
           });
-          return { ...session, client };
+          return { ...session, clientId: session.clientId, client };
         })
       );
 

@@ -38,6 +38,13 @@ router.get('/', authMiddleware, async (req, res) => {
     if (req.user.role === 'client') {
       where.userId = req.user.id;
     } else if (clientId) {
+      // 安全：操盘手只能查询自己负责的客户
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId }
+      });
+      if (!session) {
+        return res.status(403).json({ error: '无权限访问此客户的数据' });
+      }
       where.userId = clientId;
     }
 
@@ -64,6 +71,14 @@ router.post('/', authMiddleware, async (req, res) => {
 
     if (!clientId || stage === undefined || !stageName) {
       return res.status(400).json({ error: '参数不完整' });
+    }
+
+    // 安全：操盘手只能为自己的客户创建进度
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId }
+    });
+    if (!session) {
+      return res.status(403).json({ error: '无权限为该客户创建服务进度' });
     }
 
     // 查找是否已存在该阶段
@@ -132,6 +147,16 @@ router.post('/', authMiddleware, async (req, res) => {
 router.get('/report/:clientId', authMiddleware, async (req, res) => {
   try {
     const { clientId } = req.params;
+
+    // 安全：操盘手只能查询自己负责的客户
+    if (req.user.role !== 'client' && req.user.role !== 'admin') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId }
+      });
+      if (!session) {
+        return res.status(403).json({ error: '无权限访问此客户的数据' });
+      }
+    }
 
     // 获取进度记录
     const progress = await prisma.serviceProgress.findMany({

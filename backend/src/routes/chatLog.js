@@ -37,10 +37,16 @@ router.get('/girl/:girlId', authMiddleware, async (req, res) => {
     const { girlId } = req.params;
     const { limit = 50 } = req.query;
 
-    // 安全：验证女生存在
+    // 安全：验证女生存在且属于操盘手负责的客户
     const girl = await prisma.girl.findUnique({ where: { id: girlId } });
     if (!girl) {
       return res.status(404).json({ error: '女生不存在' });
+    }
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId: girl.clientId }
+    });
+    if (!session) {
+      return res.status(403).json({ error: '无权限访问此女生数据' });
     }
 
     const logs = await prisma.chatLog.findMany({
@@ -66,10 +72,16 @@ router.patch('/:id/visibility', authMiddleware, async (req, res) => {
     const { id } = req.params;
     const { isVisibleToClient } = req.body;
 
-    // 安全：验证记录存在
+    // 安全：验证记录存在且属于操盘手负责的客户
     const existing = await prisma.chatLog.findUnique({ where: { id } });
     if (!existing) {
       return res.status(404).json({ error: '记录不存在' });
+    }
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId: existing.clientId }
+    });
+    if (!session) {
+      return res.status(403).json({ error: '无权限操作此记录' });
     }
 
     const log = await prisma.chatLog.update({

@@ -200,6 +200,13 @@ router.get('/', authMiddleware, async (req, res) => {
     if (req.user.role === 'client') {
       where.userId = req.user.id;
     } else if (clientId) {
+      // 安全：操盘手只能查询自己负责的客户
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId }
+      });
+      if (!session) {
+        return res.status(403).json({ error: '无权限访问此客户的数据' });
+      }
       where.userId = clientId;
     }
     if (girlId) where.girlId = girlId;
@@ -242,6 +249,14 @@ router.post('/', authMiddleware, async (req, res) => {
 
     if (!clientId || !girlId || !dateTime) {
       return res.status(400).json({ error: '参数不完整（需 clientId、girlId、dateTime）' });
+    }
+
+    // 安全：操盘手只能为自己的客户创建约会
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId }
+    });
+    if (!session) {
+      return res.status(403).json({ error: '无权限为该客户创建约会' });
     }
 
     const date = await prisma.date.create({
@@ -401,6 +416,20 @@ router.get('/:id', authMiddleware, async (req, res) => {
 
     if (!date) return res.status(404).json({ error: '约会不存在' });
 
+    // 安全：客户只能查看自己的约会
+    if (req.user.role === 'client' && date.userId !== req.user.id) {
+      return res.status(403).json({ error: '无权访问' });
+    }
+    // 安全：操盘手只能访问自己负责的客户的约会
+    if (req.user.role === 'operator') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: date.userId }
+      });
+      if (!session) {
+        return res.status(403).json({ error: '无权访问此约会' });
+      }
+    }
+
     res.json({ success: true, date });
   } catch (error) {
     console.error('[Dates] 获取约会详情失败:', error);
@@ -413,6 +442,16 @@ router.put('/:id', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'operator' && req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
+    }
+
+    const existing = await prisma.date.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: '约会不存在' });
+    // 安全：操盘手只能操作自己负责的客户的约会
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId: existing.userId }
+    });
+    if (!session) {
+      return res.status(403).json({ error: '无权操作此约会' });
     }
 
     const {
@@ -469,6 +508,15 @@ router.put('/:id/checklist', authMiddleware, async (req, res) => {
     if (req.user.role !== 'operator' && req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
+    const existing = await prisma.date.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: '约会不存在' });
+    // 安全：操盘手只能操作自己负责的客户的约会
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId: existing.userId }
+    });
+    if (!session) {
+      return res.status(403).json({ error: '无权操作此约会' });
+    }
     const { checklist } = req.body;
     const updateData = {};
     if (checklist !== undefined) {
@@ -501,6 +549,14 @@ router.post('/:id/generate-plan', authMiddleware, async (req, res) => {
     });
 
     if (!date) return res.status(404).json({ error: '约会不存在' });
+
+    // 安全：操盘手只能操作自己负责的客户的约会
+    if (req.user.role === 'operator') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: date.userId }
+      });
+      if (!session) return res.status(403).json({ error: '无权操作此约会' });
+    }
 
     // 更新状态为生成中
     await prisma.date.update({
@@ -570,6 +626,12 @@ router.post('/:id/evaluate', authMiddleware, async (req, res) => {
     });
 
     if (!date) return res.status(404).json({ error: '约会不存在' });
+    if (req.user.role === 'operator') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: date.userId }
+      });
+      if (!session) return res.status(403).json({ error: '无权操作此约会' });
+    }
 
     const {
       rating, positiveSignals, negativeSignals, postNotes,
@@ -683,6 +745,12 @@ router.post('/:id/discuss', authMiddleware, async (req, res) => {
       include: { user: true, girl: true }
     });
     if (!date) return res.status(404).json({ error: '约会不存在' });
+    if (req.user.role === 'operator') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: date.userId }
+      });
+      if (!session) return res.status(403).json({ error: '无权操作此约会' });
+    }
     if (!date.aiPlan) return res.status(400).json({ error: '请先生成约会方案' });
 
     const currentPlan = JSON.parse(date.aiPlan);
@@ -771,6 +839,12 @@ router.post('/:id/push-to-client', authMiddleware, async (req, res) => {
 
     const date = await prisma.date.findUnique({ where: { id: req.params.id } });
     if (!date) return res.status(404).json({ error: '约会不存在' });
+    if (req.user.role === 'operator') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: date.userId }
+      });
+      if (!session) return res.status(403).json({ error: '无权操作此约会' });
+    }
     if (!date.aiPlan) return res.status(400).json({ error: '请先生成约会方案' });
 
     await prisma.date.update({
@@ -865,6 +939,16 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: '无权限' });
     }
 
+    const existing = await prisma.date.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: '约会不存在' });
+    // 安全：操盘手只能操作自己负责的客户的约会
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId: existing.userId }
+    });
+    if (!session) {
+      return res.status(403).json({ error: '无权删除此约会' });
+    }
+
     await prisma.date.delete({
       where: { id: req.params.id }
     });
@@ -888,6 +972,12 @@ router.post('/:id/generate-interview', authMiddleware, async (req, res) => {
       include: { user: true, girl: true }
     });
     if (!date) return res.status(404).json({ error: '约会不存在' });
+    if (req.user.role === 'operator') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: date.userId }
+      });
+      if (!session) return res.status(403).json({ error: '无权操作此约会' });
+    }
     if (date.status !== 'completed') return res.status(400).json({ error: '请先完成约会后评价' });
 
     // 检查是否已有访谈问题
@@ -1002,6 +1092,12 @@ router.post('/:id/push-interview', authMiddleware, async (req, res) => {
 
     const date = await prisma.date.findUnique({ where: { id: req.params.id } });
     if (!date) return res.status(404).json({ error: '约会不存在' });
+    if (req.user.role === 'operator') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: date.userId }
+      });
+      if (!session) return res.status(403).json({ error: '无权操作此约会' });
+    }
 
     const interview = date.postDateInterview ? JSON.parse(date.postDateInterview) : {};
     if (!interview.generatedQuestions || interview.generatedQuestions.length === 0) {
@@ -1099,6 +1195,12 @@ router.post('/:id/generate-review-report', authMiddleware, async (req, res) => {
       include: { user: true, girl: true }
     });
     if (!date) return res.status(404).json({ error: '约会不存在' });
+    if (req.user.role === 'operator') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: date.userId }
+      });
+      if (!session) return res.status(403).json({ error: '无权操作此约会' });
+    }
 
     const interview = date.postDateInterview ? JSON.parse(date.postDateInterview) : {};
     if (!interview.clientAnswers || interview.questionStatus !== 'answered') {

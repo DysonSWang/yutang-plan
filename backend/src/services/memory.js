@@ -9,8 +9,7 @@
  * 5. Signal pruning（30天滚动窗口）
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../prisma');
 const compaction = require('./compaction');
 
 // ---- 内部配置 ----
@@ -41,6 +40,9 @@ function serializeMessages(messages) {
  * 获取会话（允许null girlId）
  */
 async function getOrCreateMemory(clientId, coachId, girlId = null) {
+  // 必须加 take:1 —— orderBy + findFirst 在多条记录匹配时会返回排序后的第一条，
+  // 而在并发创建时可能返回刚插入的那条之前就存在的记录，导致跨 girlId 串会话。
+  // exact match (clientId + coachId + girlId) 确保每个组合唯一。
   let memory = await prisma.conversationMemory.findFirst({
     where: {
       clientId,
@@ -48,7 +50,8 @@ async function getOrCreateMemory(clientId, coachId, girlId = null) {
       girlId: girlId || null,
       summary: null  // 没有摘要的才是活跃会话
     },
-    orderBy: { updatedAt: 'desc' }
+    orderBy: { updatedAt: 'desc' },
+    take: 1
   });
 
   if (!memory) {
@@ -396,24 +399,6 @@ async function forceCompaction(memoryId) {
 
   if (!memory) return null;
   return runCompaction(memory);
-}
-
-/**
- * 清理会话（删除超过N天的压缩会话）
- */
-async function cleanupOldSessions(daysOld = 30) {
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - daysOld);
-
-  const result = await prisma.conversationMemory.deleteMany({
-    where: {
-      updatedAt: { lt: cutoff },
-      summary: { not: null } // 只清理已压缩（非活跃）的会话
-    }
-  });
-
-  console.log(`[Memory] Cleaned up ${result.count} old compressed sessions`);
-  return result.count;
 }
 
 /**
@@ -788,7 +773,7 @@ module.exports = {
   getOrCreateSession,
   endSession,
   forceCompaction,
-  cleanupOldSessions,
+
   // 反馈 API
   addFeedback,
   getFeedbackStats,

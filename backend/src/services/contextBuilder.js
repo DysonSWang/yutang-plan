@@ -3,8 +3,37 @@
  * 参考 Claude compact.rs 机制，支持信息分层和按需召回
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../prisma');
+
+// ---- 新鲜度保护 ----
+
+const STALENESS_THRESHOLD_HOURS = 24;
+
+/**
+ * 获取女生档案字段的新鲜度信息（用于 system prompt 注入）
+ * @param {object} girlInfo - 女生档案对象
+ * @returns {object} - { hasStaleField, warnings[] }
+ */
+function getProfileFreshnessInfo(girlInfo) {
+  const warnings = [];
+  const now = Date.now();
+
+  if (girlInfo?.tensionScoreUpdatedAt) {
+    const tensionAgeHours = Math.round((now - new Date(girlInfo.tensionScoreUpdatedAt).getTime()) / (1000 * 60 * 60));
+    if (tensionAgeHours >= STALENESS_THRESHOLD_HOURS) {
+      warnings.push(`[档案新鲜度警告] 热度评分基于 ${tensionAgeHours}h 前的信息，建议结合最新互动判断是否仍适用`);
+    }
+  }
+
+  if (girlInfo?.intimacyLevelUpdatedAt) {
+    const intimacyAgeHours = Math.round((now - new Date(girlInfo.intimacyLevelUpdatedAt).getTime()) / (1000 * 60 * 60));
+    if (intimacyAgeHours >= STALENESS_THRESHOLD_HOURS) {
+      warnings.push(`[档案新鲜度警告] 亲密度评估基于 ${intimacyAgeHours}h 前的信息，建议结合最新互动判断是否仍适用`);
+    }
+  }
+
+  return { hasStaleField: warnings.length > 0, warnings };
+}
 
 // ---- Relevance Filtering ----
 
@@ -84,7 +113,7 @@ function buildContextSection(label, content, maxChars) {
  * @param {number} opts.compactionCount - 已压缩次数（深度感知）
  */
 async function buildAICoachContext(clientId, girlId, userMessage, opts = {}) {
-  const { maxContextChars = 2000, turnCount = 0, compactionCount = 0 } = opts;
+  const { maxContextChars = 2000, turnCount = 0, compactionCount = 0, clientProfile = null } = opts;
   const keywords = extractKeywords(userMessage);
   // 1. 获取客户信息
   const client = await prisma.user.findUnique({
@@ -132,7 +161,9 @@ async function buildAICoachContext(clientId, girlId, userMessage, opts = {}) {
         stage: girl.stage,
         sourcePlatform: girl.sourcePlatform,
         intimacyLevel: girl.intimacyLevel,
+        intimacyLevelUpdatedAt: girl.intimacyLevelUpdatedAt,
         tensionScore: girl.tensionScore || 5.0,
+        tensionScoreUpdatedAt: girl.tensionScoreUpdatedAt,
         age: girl.age,
         occupation: girl.occupation,
         personality: (() => {
@@ -141,7 +172,11 @@ async function buildAICoachContext(clientId, girlId, userMessage, opts = {}) {
           catch { return { raw: girl.personality }; }
         })(),
         notes: girl.notes,
-        updatedAt: girl.updatedAt
+        updatedAt: girl.updatedAt,
+        lastContact: girl.lastContact,
+        // M007 S01 新增：关系阶段
+        relationshipStage: girl.relationshipStage,
+        relationshipStageUpdatedAt: girl.relationshipStageUpdatedAt
       };
 
       // 解析 signals（保留最近30天的）
@@ -200,6 +235,12 @@ async function buildAICoachContext(clientId, girlId, userMessage, opts = {}) {
     const profile = `${girlInfo.name} | ${girlInfo.stage || '未知'} | 热度${girlInfo.tensionScore || 5}/10 | 亲密度${girlInfo.intimacyLevel || 1}`;
     sections.push({ label: '女生档案', content: profile, priority: 0 });
     sections.push({ label: '性格', content: `沟通风格:${girlInfo.personality?.communicationStyle || '未知'} MBTI:${girlInfo.personality?.mbti || '未知'}`, priority: 1 });
+
+    // 新鲜度警告（优先级-1，确保始终在最前）
+    const { hasStaleField, warnings } = getProfileFreshnessInfo(girlInfo);
+    if (hasStaleField) {
+      sections.push({ label: '档案新鲜度警告', content: warnings.join('\n'), priority: -1 });
+    }
   }
 
   // 近期信号（相关性过滤后）
@@ -244,6 +285,7 @@ async function buildAICoachContext(clientId, girlId, userMessage, opts = {}) {
 
   return {
     client,
+    clientProfile, // 客户画像，用于路由权重和语气调整
     girlInfo,
     recentSignals: filteredSignals,
     pendingActions,
@@ -285,7 +327,11 @@ function buildGirlProfileSummary(girlInfo, recentSignals) {
       }).join('\n')
     : '暂无近期信号';
 
-  return `## ${girlInfo.name} | ${girlInfo.stage || '未知阶段'} | ${girlInfo.updatedAt ? new Date(girlInfo.updatedAt).toLocaleDateString() : '未知'}
+  // M007 S01 新增：关系阶段标签
+  const STAGE_LABELS = { EXPLORATION: '探索期', FLIRTING: '暧昧期', ADVANCEMENT: '推进期', CONFIRMATION: '确认期', STABLE: '稳定期' };
+  const relationshipStageLabel = girlInfo.relationshipStage ? STAGE_LABELS[girlInfo.relationshipStage] || girlInfo.relationshipStage : '未设置';
+
+  return `## ${girlInfo.name} | 旧阶段:${girlInfo.stage || '未知'} | 新关系阶段:${relationshipStageLabel} | ${girlInfo.updatedAt ? new Date(girlInfo.updatedAt).toLocaleDateString() : '未知'}
 
 ### 关系热度
 ${girlInfo.tensionScore}/10 ${getTensionEmoji(girlInfo.tensionScore)}
@@ -347,5 +393,6 @@ module.exports = {
   buildAICoachContext,
   getContextSummary,
   buildGirlProfileSummary,
-  buildClientProfileSummary
+  buildClientProfileSummary,
+  getProfileFreshnessInfo
 };

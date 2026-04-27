@@ -8,8 +8,8 @@ const cors = require('cors');
 const http = require('http');
 const path = require('path');
 const { Server } = require('socket.io');
-const { PrismaClient } = require('@prisma/client');
 const { PORT } = require('./config');
+const prisma = require('./prisma');
 
 const authRoutes = require('./routes/auth');
 const chatRoutes = require('./routes/chat');
@@ -25,10 +25,12 @@ const chatPartnerRoutes = require('./routes/chatPartner');
 const chatScreenshotRoutes = require('./routes/chatScreenshot');
 const dashboardRoutes = require('./routes/dashboard');
 const eventsRoutes = require('./routes/events');
+const alertsRoutes = require('./routes/alerts');
+const weeklyReviewRoutes = require('./routes/weeklyReview');
+const reversalRoutes = require('./routes/reversal');
 const uploadRoutes = require('./routes/upload');
 const videoCompressRoutes = require('./routes/video-compress');
 
-const prisma = new PrismaClient();
 const app = express();
 const server = http.createServer(app);
 
@@ -39,6 +41,9 @@ const io = new Server(server, {
     methods: ['GET', 'POST']
   }
 });
+
+// 让路由可通过 req.app.get('io') 访问
+app.set('io', io);
 
 // Middleware
 app.use(cors());
@@ -59,6 +64,9 @@ app.use('/api/chat-partner', chatPartnerRoutes);
 app.use('/api/chat-screenshots', chatScreenshotRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/events', eventsRoutes);
+app.use('/api/alerts', alertsRoutes(io));
+app.use('/api/clients', weeklyReviewRoutes);
+app.use('/api/girls', reversalRoutes(io));
 
 // 静态文件服务 - 截图图片
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
@@ -120,3 +128,44 @@ server.listen(PORT, () => {
 });
 
 module.exports = { app, server, io, prisma };
+
+// ============================================================
+// P0 预警定时触发（每 6 小时自动检测所有客户女生的预警）
+// ============================================================
+async function runAlertCheck() {
+  try {
+    const { evaluateAllGirls, saveAlerts, getActiveAlerts } = require('./services/alertEngine');
+    const operators = await prisma.user.findMany({ where: { role: 'operator' } });
+    let newAlertCount = 0;
+
+    for (const op of operators) {
+      const newAlerts = await evaluateAllGirls(op.id);
+      if (newAlerts.length > 0) {
+        await saveAlerts(newAlerts);
+        newAlertCount += newAlerts.length;
+
+        // 通过 Socket.io 推送实时通知
+        const activeAlerts = await getActiveAlerts(op.id);
+        io.to(`operator:${op.id}`).emit('alerts:update', {
+          count: activeAlerts.filter(a => a.status === 'active').length,
+          alerts: activeAlerts.slice(0, 5),
+          newCount: newAlerts.length
+        });
+      }
+    }
+
+    if (newAlertCount > 0) {
+      console.log(`[AlertScheduler] 生成 ${newAlertCount} 条新预警`);
+    }
+  } catch (err) {
+    console.error('[AlertScheduler] 预警检测失败:', err.message);
+  }
+}
+
+// 服务启动时立即跑一次（收集初始预警）
+runAlertCheck();
+
+// 每 6 小时跑一次
+const SIX_HOURS = 6 * 60 * 60 * 1000;
+setInterval(runAlertCheck, SIX_HOURS);
+console.log('[AlertScheduler] 预警定时器已启动（每 6 小时）');

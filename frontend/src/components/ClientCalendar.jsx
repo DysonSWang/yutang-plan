@@ -46,7 +46,7 @@ function fromLocalDatetimeString(str) {
   return new Date(str);
 }
 
-export default function ClientCalendar({ clientId, clientNickname, girlList }) {
+export default function ClientCalendar({ clientId, clientNickname, girlList, refreshKey }) {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -76,7 +76,7 @@ export default function ClientCalendar({ clientId, clientNickname, girlList }) {
     }
   }, [clientId]);
 
-  useEffect(() => { loadEvents(); }, [loadEvents]);
+  useEffect(() => { loadEvents(); }, [loadEvents, refreshKey]);
 
   const mapEventToCalendar = (ev) => {
     let bgColor, borderColor;

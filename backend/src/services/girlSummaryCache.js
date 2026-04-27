@@ -85,18 +85,8 @@ async function setOverviewCache(operatorId, { content, userDataHash, prevSnapsho
   });
 }
 
-/**
- * 清理 N 天前的缓存记录
- */
-async function pruneOldCache(daysOld = 7) {
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - daysOld);
-  const cutoffKey = cutoff.toISOString().slice(0, 10).replace(/-/g, '');
-  await prisma.girlSummaryCache.deleteMany({ where: { dailyKey: { lt: cutoffKey } } });
-}
-
 module.exports = {
   getCache, setCache,
   getOverviewCache, setOverviewCache,
-  pruneOldCache, buildDailyCacheKey, buildOverviewCacheKey
+  buildDailyCacheKey, buildOverviewCacheKey
 };
