@@ -1,4 +1,4 @@
-import { Box, Flex, VStack, Icon, Text, Badge, Popover, PopoverTrigger, PopoverContent, PopoverBody, PopoverHeader, Button, HStack } from '@chakra-ui/react';
+import { Box, Flex, VStack, Icon, Text, Badge, Popover, PopoverTrigger, PopoverContent, PopoverBody, PopoverHeader, Button, HStack, useToast } from '@chakra-ui/react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -18,6 +18,8 @@ const navItems = [
 // 桌面端侧边导航
 function DesktopSidebar() {
   const { user } = useAuth();
+  const toast = useToast();
+  const { on } = useSocket();
   const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState([]);
@@ -36,9 +38,22 @@ function DesktopSidebar() {
   };
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadUnreadCount();
   }, []);
+
+  useEffect(() => {
+    const handler = (log) => {
+      toast({
+        title: '操盘手发来代聊记录',
+        description: log.content?.slice(0, 30) + (log.content?.length > 30 ? '...' : ''),
+        status: 'info',
+        duration: 5000,
+        isClosable: true,
+        position: 'top',
+      });
+    };
+    on('chat-log:new', handler);
+  }, [on, toast]);
 
   const markAllAsRead = async () => {
     try {
@@ -51,8 +66,11 @@ function DesktopSidebar() {
 
   return (
     <Box
-      w="200px"
-      bg="gray.800"
+      w="220px"
+      bg="rgba(255,255,255,0.025)"
+      backdropFilter="blur(20px)"
+      borderRight="1px solid"
+      borderColor="rgba(255,255,255,0.07)"
       p={4}
       position="fixed"
       h="100vh"
@@ -63,8 +81,8 @@ function DesktopSidebar() {
       <VStack spacing={2} align="stretch">
         <Flex justify="space-between" align="center" mb={4}>
           <Flex align="center" gap={2}>
-            <Icon as={FishIcon} color="teal.400" />
-            <Text fontSize="lg" fontWeight="bold" color="teal.400">鱼塘计划</Text>
+            <Icon as={FishIcon} color="brand.500" />
+            <Text fontSize="lg" fontWeight="bold" color="brand.500" fontFamily="heading">鱼塘</Text>
           </Flex>
           <Popover isOpen={showNotifications} onClose={() => setShowNotifications(false)}>
             <PopoverTrigger>
@@ -73,7 +91,7 @@ function DesktopSidebar() {
                 cursor="pointer"
                 onClick={() => setShowNotifications(!showNotifications)}
               >
-                <Icon as={BellIcon} color="gray.400" />
+                <Icon as={BellIcon} color="abyss.400" />
                 {unreadCount > 0 && (
                   <Badge
                     position="absolute"
@@ -88,25 +106,25 @@ function DesktopSidebar() {
                 )}
               </Box>
             </PopoverTrigger>
-            <PopoverContent bg="gray.800" borderColor="gray.700" w="300px">
-              <PopoverHeader borderColor="gray.700" display="flex" justifyContent="space-between" alignItems="center">
+            <PopoverContent bg="abyss.900" border="1px solid rgba(255,255,255,0.08)" w="300px">
+              <PopoverHeader borderColor="rgba(255,255,255,0.06)" display="flex" justifyContent="space-between" alignItems="center">
                 <Text color="white" fontWeight="bold">通知</Text>
                 {unreadCount > 0 && (
-                  <Button size="xs" variant="ghost" colorScheme="teal" onClick={markAllAsRead}>
+                  <Button size="xs" variant="ghost" color="brand.500" onClick={markAllAsRead}>
                     全部已读
                   </Button>
                 )}
               </PopoverHeader>
               <PopoverBody maxH="300px" overflowY="auto">
                 {notifications.length === 0 ? (
-                  <Text color="gray.500" textAlign="center">暂无通知</Text>
+                  <Text color="abyss.500" textAlign="center">暂无通知</Text>
                 ) : (
                   <VStack spacing={2} align="stretch">
                     {notifications.slice(0, 10).map(n => (
-                      <Box key={n.id} p={2} bg="gray.700" borderRadius="md">
+                      <Box key={n.id} p={3} bg="rgba(255,255,255,0.04)" borderRadius="md" border="1px solid rgba(255,255,255,0.06)">
                         <Text color="white" fontSize="sm" fontWeight="bold">{n.title}</Text>
-                        <Text color="gray.400" fontSize="xs">{n.content}</Text>
-                        <Text color="gray.500" fontSize="xs" mt={1}>
+                        <Text color="abyss.300" fontSize="xs" mt={1}>{n.content}</Text>
+                        <Text color="abyss.500" fontSize="xs" mt={1}>
                           {new Date(n.createdAt).toLocaleString()}
                         </Text>
                       </Box>
@@ -122,9 +140,9 @@ function DesktopSidebar() {
             <Flex
               p={3}
               borderRadius="md"
-              bg={location.pathname === item.path ? 'teal.600' : 'transparent'}
-              color={location.pathname === item.path ? 'white' : 'gray.300'}
-              _hover={{ bg: 'teal.700' }}
+              bg={location.pathname === item.path ? 'rgba(0, 212, 170, 0.15)' : 'transparent'}
+              color={location.pathname === item.path ? 'brand.400' : 'abyss.300'}
+              _hover={{ bg: 'rgba(255,255,255,0.06)', color: 'white' }}
               align="center"
               gap={3}
               cursor="pointer"
@@ -136,9 +154,9 @@ function DesktopSidebar() {
           </NavLink>
         ))}
       </VStack>
-      <Box mt="auto" pt={4} borderTop="1px" borderColor="gray.700">
-        <Text fontSize="sm" color="gray.400" mb={2}>{user?.nickname}</Text>
-        <Text fontSize="xs" color="gray.500">{user?.role === 'client' ? '客户' : '其他'}</Text>
+      <Box mt="auto" pt={4} borderTop="1px solid rgba(255,255,255,0.06)">
+        <Text fontSize="sm" color="abyss.300" mb={1}>{user?.nickname}</Text>
+        <Text fontSize="xs" color="abyss.500">{user?.role === 'client' ? '客户' : '其他'}</Text>
       </Box>
     </Box>
   );
@@ -175,9 +193,9 @@ function MobileBottomNav() {
       bottom={0}
       left={0}
       right={0}
-      bg="gray.800"
-      borderTop="1px"
-      borderColor="gray.700"
+      bg="rgba(10,15,26,0.95)"
+      backdropFilter="blur(20px)"
+      borderTop="1px solid rgba(255,255,255,0.07)"
       zIndex={50}
       pb="env(safe-area-inset-bottom)"
     >
@@ -192,9 +210,9 @@ function MobileBottomNav() {
                 py={2}
                 px={3}
                 cursor="pointer"
-                color={isActive ? 'teal.400' : 'gray.400'}
+                color={isActive ? 'brand.500' : 'abyss.400'}
                 transition="all 0.15s ease"
-                _hover={{ color: 'teal.300' }}
+                _hover={{ color: 'brand.400' }}
                 minW="60px"
                 position="relative"
               >
@@ -228,7 +246,7 @@ function MobileBottomNav() {
 
 export default function ClientLayout() {
   return (
-    <Box minH="100vh" bg="gray.900">
+    <Box minH="100vh" bg="abyss.950">
       {/* 桌面端侧边导航 */}
       <DesktopSidebar />
 

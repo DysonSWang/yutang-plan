@@ -59,42 +59,72 @@ export default function ClientHome() {
 
   return (
     <Box>
-      <Heading color="white" mb={6}>欢迎回来</Heading>
+      <Heading color="white" mb={8} fontFamily="heading" fontWeight="700" fontSize="2xl" className="stagger-1">
+        欢迎回来
+      </Heading>
 
       {/* 进度看板 */}
-      <ServiceProgressBoard
-        currentStage={stats.currentStage}
-        stats={{
-          girlCount: stats.girlCount,
-          intimacyCount: stats.intimacyCount,
-          longTermCount: stats.longTermCount,
-          dateCount: stats.dateCount
-        }}
-      />
+      <Box className="stagger-2">
+        <ServiceProgressBoard
+          currentStage={stats.currentStage}
+          stats={{
+            girlCount: stats.girlCount,
+            intimacyCount: stats.intimacyCount,
+            longTermCount: stats.longTermCount,
+            dateCount: stats.dateCount
+          }}
+        />
+      </Box>
 
       {/* 快捷入口 */}
-      <Box mt={8}>
-        <Heading size="md" color="white" mb={4}>快捷入口</Heading>
+      <Box mt={10}>
+        <Heading size="md" color="white" mb={5} fontFamily="heading" fontWeight="600" fontSize="lg" className="stagger-3">
+          快捷入口
+        </Heading>
         <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4}>
-          <Card bg="gray.800" cursor="pointer" _hover={{ bg: 'gray.700', transform: 'translateY(-2px)' }} transition="all 0.2s">
+          <Card
+            className="stagger-4 hover-lift"
+            bg="rgba(255,255,255,0.03)"
+            border="1px solid rgba(255,255,255,0.08)"
+            backdropFilter="blur(12px)"
+            cursor="pointer"
+            _hover={{ bg: 'rgba(0, 212, 170, 0.06)', borderColor: 'rgba(0, 212, 170, 0.2)', transform: 'translateY(-3px)' }}
+            transition="all 0.25s ease"
+          >
             <CardBody>
-              <Icon as={ChatIcon} w={8} h={8} color="teal.400" />
-              <Text color="white" mt={2}>联系专属顾问</Text>
-              <Text color="gray.500" fontSize="sm">人工沟通，更私密</Text>
+              <Icon as={ChatIcon} w={8} h={8} color="brand.500" mb={3} />
+              <Text color="white" mt={2} fontWeight="500">联系专属顾问</Text>
+              <Text color="abyss.500" fontSize="sm">人工沟通，更私密</Text>
             </CardBody>
           </Card>
-          <Card bg="gray.800" cursor="pointer" _hover={{ bg: 'gray.700', transform: 'translateY(-2px)' }} transition="all 0.2s">
+          <Card
+            className="stagger-5 hover-lift"
+            bg="rgba(255,255,255,0.03)"
+            border="1px solid rgba(255,255,255,0.08)"
+            backdropFilter="blur(12px)"
+            cursor="pointer"
+            _hover={{ bg: 'rgba(0, 212, 170, 0.06)', borderColor: 'rgba(0, 212, 170, 0.2)', transform: 'translateY(-3px)' }}
+            transition="all 0.25s ease"
+          >
             <CardBody>
-              <Icon as={SparklesIcon} w={8} h={8} color="teal.400" />
-              <Text color="white" mt={2}>AI教练咨询</Text>
-              <Text color="gray.500" fontSize="sm">24小时在线</Text>
+              <Icon as={SparklesIcon} w={8} h={8} color="brand.500" mb={3} />
+              <Text color="white" mt={2} fontWeight="500">AI教练咨询</Text>
+              <Text color="abyss.500" fontSize="sm">24小时在线</Text>
             </CardBody>
           </Card>
-          <Card bg="gray.800" cursor="pointer" _hover={{ bg: 'gray.700', transform: 'translateY(-2px)' }} transition="all 0.2s">
+          <Card
+            className="stagger-6 hover-lift"
+            bg="rgba(255,255,255,0.03)"
+            border="1px solid rgba(255,255,255,0.08)"
+            backdropFilter="blur(12px)"
+            cursor="pointer"
+            _hover={{ bg: 'rgba(0, 212, 170, 0.06)', borderColor: 'rgba(0, 212, 170, 0.2)', transform: 'translateY(-3px)' }}
+            transition="all 0.25s ease"
+          >
             <CardBody>
-              <Icon as={FishIcon} w={8} h={8} color="teal.400" />
-              <Text color="white" mt={2}>查看我的鱼塘</Text>
-              <Text color="gray.500" fontSize="sm">管理女生资源</Text>
+              <Icon as={FishIcon} w={8} h={8} color="brand.500" mb={3} />
+              <Text color="white" mt={2} fontWeight="500">查看我的鱼塘</Text>
+              <Text color="abyss.500" fontSize="sm">管理女生资源</Text>
             </CardBody>
           </Card>
         </SimpleGrid>

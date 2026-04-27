@@ -162,8 +162,11 @@ router.post('/', authMiddleware, async (req, res) => {
       }
     });
 
-    // TODO: 通过 Socket.io 通知客户
-    // io.to(`client:${clientId}`).emit('chat-log:new', log);
+    // 通过 Socket.io 通知客户有新代聊记录
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`client:${clientId}`).emit('chat-log:new', log);
+    }
 
     res.json({ success: true, log });
   } catch (error) {
