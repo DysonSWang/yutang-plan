@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Box, VStack, HStack, Input, Button, Text, Flex, IconButton, Image } from '@chakra-ui/react';
+import { Box, VStack, HStack, Input, Button, Text, Flex, IconButton, Image, Menu, MenuButton, MenuList, MenuItem, Badge } from '@chakra-ui/react';
 import { chat, upload } from '../../utils/api';
 import { useSocket } from '../../contexts/SocketContext';
 import FlashImageViewer from '../../components/FlashImageViewer';
@@ -15,6 +15,9 @@ export default function ClientChat() {
   const [previewFile, setPreviewFile] = useState(null);
   const [recording, setRecording] = useState(false);
   const [recordTime, setRecordTime] = useState(0);
+  const [burnMode, setBurnMode] = useState(false);
+  const [burnSeconds, setBurnSeconds] = useState(5);
+  const [flashMode, setFlashMode] = useState(false);
   const messagesEndRef = useRef();
   const fileInputRef = useRef();
   const mediaRecorderRef = useRef();
@@ -167,7 +170,7 @@ export default function ClientChat() {
     if (!currentSession || sending) return;
     setSending(true);
     try {
-      const res = await chat.send(currentSession.id, null, type, url, duration, isBurnAfterRead, null, isFlashImage);
+      const res = await chat.send(currentSession.id, null, type, url, duration, isBurnAfterRead, isBurnAfterRead ? burnSeconds : null, isFlashImage);
       if (res.success) {
         setMessages(prev => [...prev, res.message]);
         setSessions(prev => prev.map(s => {
@@ -198,11 +201,16 @@ export default function ClientChat() {
     if (!previewFile) return;
     setUploading(true);
     try {
+      const isBurn = burnMode;
+      const isFlash = flashMode;
       const res = previewFile.type === 'video'
-        ? await upload.video(previewFile.file)
-        : await upload.image(previewFile.file);
+        ? await upload.video(previewFile.file, isBurn, isFlash)
+        : await upload.image(previewFile.file, isBurn, isFlash);
       if (res.url) {
-        await sendMediaMessage(res.url, previewFile.type, null, false, false);
+        await sendMediaMessage(res.url, previewFile.type, null, isBurn, isFlash);
+        // 发送后重置模式
+        setBurnMode(false);
+        setFlashMode(false);
       } else {
         console.error('上传失败', res);
       }
@@ -522,6 +530,42 @@ export default function ClientChat() {
               onClick={recording ? stopRecording : startRecording}
               aria-label="录制语音"
               isDisabled={sending || !!previewFile}
+            />
+            {/* 阅后即焚按钮 */}
+            <Menu placement="top">
+              <MenuButton
+                as={IconButton}
+                icon={<Text>🔥{burnMode ? `${burnSeconds}s` : ''}</Text>}
+                variant="ghost"
+                color={burnMode ? 'orange.400' : 'gray.500'}
+                aria-label="阅后即焚模式"
+                isDisabled={sending || !!previewFile || flashMode}
+                title={burnMode ? `阅后即焚：${burnSeconds}s后自动销毁` : '阅后即焚：关'}
+              />
+              <MenuList bg="gray.700" borderColor="gray.600">
+                <MenuItem bg="gray.700" _hover={{ bg: 'gray.600' }} onClick={() => { setBurnMode(false); setBurnSeconds(5); }}>
+                  <HStack><Text color="gray.400">关闭</Text></HStack>
+                </MenuItem>
+                {[3, 5, 10, 15, 30, 60].map(s => (
+                  <MenuItem key={s} bg="gray.700" _hover={{ bg: 'gray.600' }} onClick={() => { setBurnMode(true); setBurnSeconds(s); }}>
+                    <HStack>
+                      <Text color="orange.300">🔥</Text>
+                      <Text color="white">{s}秒</Text>
+                      {s === 5 && <Badge colorScheme="orange" size="sm">默认</Badge>}
+                    </HStack>
+                  </MenuItem>
+                ))}
+              </MenuList>
+            </Menu>
+            {/* 闪图按钮 */}
+            <IconButton
+              icon={<Text>⚡{flashMode ? '闪图' : ''}</Text>}
+              variant="ghost"
+              color={flashMode ? 'yellow.400' : 'gray.500'}
+              onClick={() => { setFlashMode(f => !f); if (!flashMode) setBurnMode(false); }}
+              aria-label="闪图模式"
+              isDisabled={sending || !!previewFile || burnMode}
+              title={flashMode ? '闪图：查看后5秒自动销毁' : '闪图：关'}
             />
             <Input
               value={input}

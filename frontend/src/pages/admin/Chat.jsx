@@ -193,9 +193,11 @@ export default function AdminChat() {
     if (!previewFile) return;
     setUploading(true);
     try {
+      const isBurn = burnMode;
+      const isFlash = flashMode;
       const res = previewFile.type === 'video'
-        ? await upload.video(previewFile.file)
-        : await upload.image(previewFile.file);
+        ? await upload.video(previewFile.file, isBurn, isFlash)
+        : await upload.image(previewFile.file, isBurn, isFlash);
       if (res.url) {
         await sendMediaMessage(res.url, previewFile.type, null);
       } else {

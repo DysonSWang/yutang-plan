@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Box, Button, FormControl, FormLabel, Input, VStack, Text, Card, CardBody, Heading, HStack, IconButton, Popover, PopoverTrigger, PopoverContent, PopoverBody, PopoverHeader, Switch, Flex, useToast, Link } from '@chakra-ui/react';
+import { useState, useEffect, useRef } from 'react';
+import { Box, Button, FormControl, FormLabel, Input, VStack, Text, Heading, HStack, IconButton, Popover, PopoverTrigger, PopoverContent, PopoverBody, PopoverHeader, Switch, Flex, useToast, Link } from '@chakra-ui/react';
 import { useAuth } from '../contexts/AuthContext';
 import { auth } from '../utils/api';
 
@@ -9,14 +9,10 @@ export default function Login() {
   const [nickname, setNickname] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState('login'); // 'login' | 'register'
+  const [mode, setMode] = useState('login');
   const [showLogin, setShowLogin] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [registerError, setRegisterError] = useState('');
-  const [notes, setNotes] = useState([
-    { id: 1, text: '欢迎使用记事本' }
-  ]);
-  const [newNote, setNewNote] = useState('');
   const [disguiseMode, setDisguiseMode] = useState(false);
   const { login } = useAuth();
   const toast = useToast();
@@ -64,7 +60,6 @@ export default function Login() {
         inviteCode: inviteCode || undefined
       });
       if (res.success) {
-        // 注册成功后自动登录
         localStorage.setItem('zhuiai_token', res.token);
         window.location.reload();
       } else {
@@ -78,75 +73,176 @@ export default function Login() {
     }
   };
 
-  const addNote = () => {
-    if (newNote.trim()) {
-      setNotes([...notes, { id: Date.now(), text: newNote }]);
-      setNewNote('');
-    }
-  };
-
-  const deleteNote = (id) => {
-    setNotes(notes.filter(n => n.id !== id));
-  };
-
   const effectiveShowLogin = disguiseMode ? showLogin : true;
 
   return (
     <Box
       minH="100vh"
       bg="abyss.950"
-      p={{ base: 2, sm: 4 }}
+      position="relative"
+      overflow="hidden"
       display="flex"
       alignItems="center"
       justifyContent="center"
+      px={{ base: 4, sm: 6 }}
+      py={{ base: 8, sm: 12 }}
     >
-      <Card
-        maxW="480px"
+      {/* 背景光晕装饰 */}
+      <Box
+        position="absolute"
+        top="-200px"
+        right="-150px"
+        width="400px"
+        height="400px"
+        borderRadius="full"
+        bg="radial-gradient(circle, rgba(0,212,170,0.15) 0%, transparent 70%)"
+        filter="blur(100px)"
+        animation="float1 8s ease-in-out infinite"
+        pointerEvents="none"
+      />
+      <Box
+        position="absolute"
+        bottom="-100px"
+        left="-100px"
+        width="300px"
+        height="300px"
+        borderRadius="full"
+        bg="radial-gradient(circle, rgba(14,165,233,0.1) 0%, transparent 70%)"
+        filter="blur(80px)"
+        animation="float2 10s ease-in-out infinite reverse"
+        pointerEvents="none"
+      />
+
+      {/* 关键帧动画 */}
+      <style>
+        {`
+          @keyframes float1 {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(20px, -20px); }
+          }
+          @keyframes float2 {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(-20px, 20px); }
+          }
+          @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          .animate-in {
+            animation: fadeInUp 0.6s ease-out forwards;
+          }
+          .stagger-1 { animation: fadeInUp 0.6s ease-out 0.1s both; }
+          .stagger-2 { animation: fadeInUp 0.6s ease-out 0.2s both; }
+          .stagger-3 { animation: fadeInUp 0.6s ease-out 0.3s both; }
+        `}
+      </style>
+
+      <Box
         w="100%"
-        mx="auto"
-        bg="rgba(255,255,255,0.03)"
-        border="1px solid rgba(255,255,255,0.08)"
-        backdropFilter="blur(20px)"
-        boxShadow="0 8px 48px rgba(0,0,0,0.5)"
-        className="animate-in"
-        _before={{
-          content: '""',
-          position: 'absolute',
-          top: '-1px',
-          left: '-1px',
-          right: '-1px',
-          bottom: '-1px',
-          borderRadius: 'lg',
-          background: 'linear-gradient(135deg, rgba(0,212,170,0.1), transparent 50%, rgba(14,165,233,0.08))',
-          pointerEvents: 'none',
-        }}
+        maxW="420px"
+        position="relative"
+        zIndex={1}
       >
-        <CardBody p={{ base: 6, sm: 8 }}>
-          <HStack justify="space-between" mb={6}>
+        {/* Logo 区域 */}
+        <VStack spacing={3} mb={10} className="stagger-1" opacity={0}>
+          <Box
+            w="64px"
+            h="64px"
+            borderRadius="20px"
+            bgGradient="linear(135deg, brand.500, brand.400)"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            boxShadow="0 8px 32px rgba(0, 212, 170, 0.3)"
+          >
+            <Text fontSize="2xl">💕</Text>
+          </Box>
+          <Heading
+            size="lg"
+            fontFamily="heading"
+            fontWeight="600"
+            letterSpacing="0.1em"
+            color="white"
+          >
+            追爱AI
+          </Heading>
+          <Text
+            fontSize="xs"
+            color="abyss.500"
+            letterSpacing="0.3em"
+          >
+            ZHUIAI
+          </Text>
+        </VStack>
+
+        {/* 玻璃卡片 */}
+        <Box
+          className="animate-in"
+          bg="rgba(255,255,255,0.03)"
+          backdropFilter="blur(20px)"
+          WebkitBackdropFilter="blur(20px)"
+          border="1px solid rgba(255,255,255,0.08)"
+          borderRadius="24px"
+          p={{ base: 6, sm: 8 }}
+          boxShadow="0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)"
+          position="relative"
+          opacity={0}
+        >
+          {/* 右上角装饰 */}
+          <Box
+            position="absolute"
+            top="-1px"
+            right="-1px"
+            w="60px"
+            h="60px"
+            borderTop="1px solid"
+            borderRight="1px solid"
+            borderColor="brand.500"
+            borderTopRightRadius="24px"
+            opacity={0.4}
+            pointerEvents="none"
+          />
+          {/* 左下角装饰 */}
+          <Box
+            position="absolute"
+            bottom="-1px"
+            left="-1px"
+            w="60px"
+            h="60px"
+            borderBottom="1px solid"
+            borderLeft="1px solid"
+            borderColor="ocean.500"
+            borderBottomLeftRadius="24px"
+            opacity={0.3}
+            pointerEvents="none"
+          />
+
+          {/* 顶部栏 */}
+          <Flex justify="space-between" align="center" mb={6}>
             <Heading
-              size="md"
+              size="sm"
               color="white"
               fontFamily="heading"
-              fontWeight="700"
-              className="stagger-1"
+              fontWeight="600"
+              letterSpacing="0.05em"
             >
               {effectiveShowLogin ? (mode === 'login' ? '登录' : '注册') : '记事本'}
             </Heading>
             <Popover placement="bottom-end">
               <PopoverTrigger>
                 <IconButton
-                  icon={<Text fontSize="lg">⚙</Text>}
                   size="sm"
                   variant="ghost"
                   color="abyss.500"
                   aria-label="设置"
                   _hover={{ color: 'abyss.300', bg: 'rgba(255,255,255,0.06)' }}
+                  icon={<Text fontSize="sm">⚙</Text>}
                 />
               </PopoverTrigger>
               <PopoverContent
                 bg="abyss.900"
                 border="1px solid rgba(255,255,255,0.08)"
-                w="220px"
+                w="200px"
                 boxShadow="0 8px 32px rgba(0,0,0,0.4)"
               >
                 <PopoverHeader borderColor="rgba(255,255,255,0.06)">
@@ -156,7 +252,7 @@ export default function Login() {
                   <Flex align="center" justify="space-between">
                     <Box>
                       <Text color="white" fontSize="sm">伪装模式</Text>
-                      <Text color="abyss.500" fontSize="xs">开启后登录页显示为记事本</Text>
+                      <Text color="abyss.500" fontSize="xs">开启后显示为记事本</Text>
                     </Box>
                     <Switch
                       isChecked={disguiseMode}
@@ -167,41 +263,85 @@ export default function Login() {
                 </PopoverBody>
               </PopoverContent>
             </Popover>
-          </HStack>
+          </Flex>
 
-          {effectiveShowLogin ? (
-            mode === 'login' ? (
-            <form onSubmit={handleLogin} className="stagger-2">
+          {/* Tab 切换 */}
+          {effectiveShowLogin && (
+            <HStack
+              spacing={1}
+              bg="rgba(255,255,255,0.03)"
+              borderRadius="12px"
+              p="4px"
+              mb={6}
+              className="stagger-2"
+              opacity={0}
+            >
+              <Button
+                flex={1}
+                size="sm"
+                variant={mode === 'login' ? 'solid' : 'ghost'}
+                bg={mode === 'login' ? 'rgba(255,255,255,0.08)' : 'transparent'}
+                color={mode === 'login' ? 'white' : 'abyss.500'}
+                borderRadius="8px"
+                fontWeight="400"
+                fontSize="sm"
+                onClick={() => setMode('login')}
+                _hover={{ bg: mode === 'login' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.04)' }}
+              >
+                登录
+              </Button>
+              <Button
+                flex={1}
+                size="sm"
+                variant={mode === 'register' ? 'solid' : 'ghost'}
+                bg={mode === 'register' ? 'rgba(255,255,255,0.08)' : 'transparent'}
+                color={mode === 'register' ? 'white' : 'abyss.500'}
+                borderRadius="8px"
+                fontWeight="400"
+                fontSize="sm"
+                onClick={() => setMode('register')}
+                _hover={{ bg: mode === 'register' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.04)' }}
+              >
+                注册
+              </Button>
+            </HStack>
+          )}
+
+          {/* 登录表单 */}
+          {effectiveShowLogin && mode === 'login' && (
+            <form onSubmit={handleLogin} className="stagger-2" style={{ opacity: 0 }}>
               <VStack spacing={4}>
                 <FormControl>
-                  <FormLabel color="abyss.400" fontSize="sm">用户名</FormLabel>
+                  <FormLabel color="abyss.500" fontSize="xs" letterSpacing="0.1em">用户名</FormLabel>
                   <Input
                     value={username}
                     onChange={e => { setUsername(e.target.value); setLoginError(''); }}
                     placeholder="请输入用户名"
+                    size="md"
                     bg="rgba(255,255,255,0.04)"
                     color="white"
                     border="1px solid rgba(255,255,255,0.08)"
-                    _hover={{ bg: 'rgba(255,255,255,0.07)', borderColor: 'rgba(255,255,255,0.15)' }}
-                    _focus={{ bg: 'rgba(255,255,255,0.07)', borderColor: 'brand.500', boxShadow: '0 0 0 1px var(--chakra-colors-brand-500)' }}
-                    size="md"
-                    _placeholder={{ color: 'abyss.500' }}
+                    borderRadius="12px"
+                    _hover={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)' }}
+                    _focus={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'brand.500', boxShadow: '0 0 0 3px rgba(0,212,170,0.15)' }}
+                    _placeholder={{ color: 'abyss.600' }}
                   />
                 </FormControl>
                 <FormControl>
-                  <FormLabel color="abyss.400" fontSize="sm">密码</FormLabel>
+                  <FormLabel color="abyss.500" fontSize="xs" letterSpacing="0.1em">密码</FormLabel>
                   <Input
                     type="password"
                     value={password}
                     onChange={e => { setPassword(e.target.value); setLoginError(''); }}
                     placeholder="请输入密码"
+                    size="md"
                     bg="rgba(255,255,255,0.04)"
                     color="white"
                     border="1px solid rgba(255,255,255,0.08)"
-                    _hover={{ bg: 'rgba(255,255,255,0.07)', borderColor: 'rgba(255,255,255,0.15)' }}
-                    _focus={{ bg: 'rgba(255,255,255,0.07)', borderColor: 'brand.500', boxShadow: '0 0 0 1px var(--chakra-colors-brand-500)' }}
-                    size="md"
-                    _placeholder={{ color: 'abyss.500' }}
+                    borderRadius="12px"
+                    _hover={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)' }}
+                    _focus={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'brand.500', boxShadow: '0 0 0 3px rgba(0,212,170,0.15)' }}
+                    _placeholder={{ color: 'abyss.600' }}
                   />
                 </FormControl>
                 {loginError && (
@@ -210,22 +350,23 @@ export default function Login() {
                     p={3}
                     bg="rgba(248,113,113,0.1)"
                     border="1px solid rgba(248,113,113,0.3)"
-                    borderRadius="md"
+                    borderRadius="12px"
                   >
                     <Text color="red.400" fontSize="sm">{loginError}</Text>
                   </Box>
                 )}
                 <Button
                   type="submit"
-                  bg="brand.500"
-                  color="abyss.950"
-                  fontWeight="bold"
-                  size="md"
                   w="100%"
+                  size="md"
+                  bgGradient="linear(135deg, brand.500, brand.400)"
+                  color="abyss.950"
+                  fontWeight="500"
+                  borderRadius="12px"
                   isLoading={loading}
-                  _hover={{ bg: 'brand.400', boxShadow: '0 0 25px rgba(0, 212, 170, 0.4)' }}
-                  _active={{ bg: 'brand.600' }}
-                  transition="all 0.2s ease"
+                  _hover={{ transform: 'translateY(-2px)', boxShadow: '0 8px 24px rgba(0,212,170,0.35)' }}
+                  _active={{ transform: 'translateY(0)' }}
+                  transition="all 0.3s ease"
                 >
                   登录
                 </Button>
@@ -239,61 +380,80 @@ export default function Login() {
                     记事本
                   </Button>
                 )}
-                <Text color="abyss.500" fontSize="xs" textAlign="center">
+                <Text color="abyss.600" fontSize="xs" textAlign="center">
                   如需账号请联系管理员创建
                 </Text>
               </VStack>
             </form>
-            ) : (
-            <form onSubmit={handleRegister} className="stagger-2">
+          )}
+
+          {/* 注册表单 */}
+          {effectiveShowLogin && mode === 'register' && (
+            <form onSubmit={handleRegister} className="stagger-2" style={{ opacity: 0 }}>
               <VStack spacing={4}>
                 <FormControl>
-                  <FormLabel color="abyss.400" fontSize="sm">用户名</FormLabel>
+                  <FormLabel color="abyss.500" fontSize="xs" letterSpacing="0.1em">用户名</FormLabel>
                   <Input
                     value={username}
                     onChange={e => { setUsername(e.target.value); setRegisterError(''); }}
                     placeholder="设置用户名"
+                    size="md"
                     bg="rgba(255,255,255,0.04)"
                     color="white"
                     border="1px solid rgba(255,255,255,0.08)"
-                    _placeholder={{ color: 'abyss.500' }}
+                    borderRadius="12px"
+                    _hover={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)' }}
+                    _focus={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'brand.500', boxShadow: '0 0 0 3px rgba(0,212,170,0.15)' }}
+                    _placeholder={{ color: 'abyss.600' }}
                   />
                 </FormControl>
                 <FormControl>
-                  <FormLabel color="abyss.400" fontSize="sm">昵称</FormLabel>
+                  <FormLabel color="abyss.500" fontSize="xs" letterSpacing="0.1em">昵称</FormLabel>
                   <Input
                     value={nickname}
                     onChange={e => setNickname(e.target.value)}
                     placeholder="设置昵称（选填）"
+                    size="md"
                     bg="rgba(255,255,255,0.04)"
                     color="white"
                     border="1px solid rgba(255,255,255,0.08)"
-                    _placeholder={{ color: 'abyss.500' }}
+                    borderRadius="12px"
+                    _hover={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)' }}
+                    _focus={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'brand.500', boxShadow: '0 0 0 3px rgba(0,212,170,0.15)' }}
+                    _placeholder={{ color: 'abyss.600' }}
                   />
                 </FormControl>
                 <FormControl>
-                  <FormLabel color="abyss.400" fontSize="sm">密码</FormLabel>
+                  <FormLabel color="abyss.500" fontSize="xs" letterSpacing="0.1em">密码</FormLabel>
                   <Input
                     type="password"
                     value={password}
                     onChange={e => { setPassword(e.target.value); setRegisterError(''); }}
                     placeholder="设置密码（至少8位）"
+                    size="md"
                     bg="rgba(255,255,255,0.04)"
                     color="white"
                     border="1px solid rgba(255,255,255,0.08)"
-                    _placeholder={{ color: 'abyss.500' }}
+                    borderRadius="12px"
+                    _hover={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)' }}
+                    _focus={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'brand.500', boxShadow: '0 0 0 3px rgba(0,212,170,0.15)' }}
+                    _placeholder={{ color: 'abyss.600' }}
                   />
                 </FormControl>
                 <FormControl>
-                  <FormLabel color="abyss.400" fontSize="sm">邀请码</FormLabel>
+                  <FormLabel color="abyss.500" fontSize="xs" letterSpacing="0.1em">邀请码</FormLabel>
                   <Input
                     value={inviteCode}
                     onChange={e => setInviteCode(e.target.value)}
                     placeholder="填写邀请码获得奖励（选填）"
+                    size="md"
                     bg="rgba(255,255,255,0.04)"
                     color="white"
                     border="1px solid rgba(255,255,255,0.08)"
-                    _placeholder={{ color: 'abyss.500' }}
+                    borderRadius="12px"
+                    _hover={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)' }}
+                    _focus={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'brand.500', boxShadow: '0 0 0 3px rgba(0,212,170,0.15)' }}
+                    _placeholder={{ color: 'abyss.600' }}
                   />
                 </FormControl>
                 {registerError && (
@@ -302,92 +462,45 @@ export default function Login() {
                     p={3}
                     bg="rgba(248,113,113,0.1)"
                     border="1px solid rgba(248,113,113,0.3)"
-                    borderRadius="md"
+                    borderRadius="12px"
                   >
                     <Text color="red.400" fontSize="sm">{registerError}</Text>
                   </Box>
                 )}
                 <Button
                   type="submit"
-                  bg="brand.500"
-                  color="abyss.950"
-                  fontWeight="bold"
-                  size="md"
                   w="100%"
+                  size="md"
+                  bgGradient="linear(135deg, brand.500, brand.400)"
+                  color="abyss.950"
+                  fontWeight="500"
+                  borderRadius="12px"
                   isLoading={loading}
-                  _hover={{ bg: 'brand.400' }}
+                  _hover={{ transform: 'translateY(-2px)', boxShadow: '0 8px 24px rgba(0,212,170,0.35)' }}
+                  _active={{ transform: 'translateY(0)' }}
+                  transition="all 0.3s ease"
                 >
                   注册
                 </Button>
-                <Text color="abyss.500" fontSize="xs" textAlign="center">
-                  已有账号？{' '}
-                  <Link color="brand.400" onClick={() => setMode('login')}>立即登录</Link>
+                <Text color="abyss.600" fontSize="xs" textAlign="center">
+                  已有账号？
+                  <Link color="brand.400" onClick={() => setMode('login')} _hover={{ color: 'brand.300' }} ml={1}>
+                    立即登录
+                  </Link>
                 </Text>
               </VStack>
             </form>
-            )
-          ) : (
-            <VStack spacing={4} className="stagger-2">
-              <HStack w="100%">
-                <Input
-                  value={newNote}
-                  onChange={e => setNewNote(e.target.value)}
-                  placeholder="写下新记录..."
-                  bg="rgba(255,255,255,0.04)"
-                  color="white"
-                  border="1px solid rgba(255,255,255,0.08)"
-                  _hover={{ bg: 'rgba(255,255,255,0.07)', borderColor: 'rgba(255,255,255,0.15)' }}
-                  _focus={{ bg: 'rgba(255,255,255,0.07)', borderColor: 'brand.500' }}
-                  onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), addNote())}
-                  _placeholder={{ color: 'abyss.500' }}
-                />
-                <Button
-                  bg="ocean.500"
-                  color="white"
-                  fontWeight="bold"
-                  onClick={addNote}
-                  _hover={{ bg: 'ocean.400' }}
-                  transition="all 0.2s ease"
-                >
-                  添加
-                </Button>
-              </HStack>
+          )}
 
-              <VStack spacing={2} align="stretch" w="100%">
-                {notes.map(note => (
-                  <HStack
-                    key={note.id}
-                    p={3}
-                    bg="rgba(255,255,255,0.04)"
-                    border="1px solid rgba(255,255,255,0.06)"
-                    borderRadius="md"
-                    justify="space-between"
-                    className="hover-lift"
-                    transition="all 0.2s ease"
-                  >
-                    <Text color="white" flex={1}>{note.text}</Text>
-                    <IconButton
-                      size="sm"
-                      variant="ghost"
-                      color="abyss.500"
-                      onClick={() => deleteNote(note.id)}
-                      _hover={{ color: 'red.400', bg: 'rgba(248,113,113,0.1)' }}
-                    >
-                      <Text>×</Text>
-                    </IconButton>
-                  </HStack>
-                ))}
-                {notes.length === 0 && (
-                  <Text color="abyss.500" textAlign="center" py={4}>暂无记录</Text>
-                )}
-              </VStack>
-
+          {/* 伪装模式 - 记事本 */}
+          {!effectiveShowLogin && (
+            <VStack spacing={4} className="stagger-2" opacity={0}>
+              <Text color="abyss.500" fontSize="sm">记事本功能开发中...</Text>
               {disguiseMode && (
                 <Button
                   size="sm"
                   variant="ghost"
                   color="abyss.500"
-                  mt={2}
                   onClick={() => setShowLogin(true)}
                   _hover={{ color: 'abyss.300' }}
                 >
@@ -396,8 +509,8 @@ export default function Login() {
               )}
             </VStack>
           )}
-        </CardBody>
-      </Card>
+        </Box>
+      </Box>
     </Box>
   );
 }

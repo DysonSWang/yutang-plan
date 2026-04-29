@@ -6,7 +6,7 @@
 const crypto = require('crypto');
 const fs = require('fs');
 
-const KEY_PATH = '/etc/ssl/private/zhuiai-encryption.key';
+const KEY_PATH = process.env.ENCRYPTION_KEY_PATH || '/etc/ssl/private/zhuiai-encryption.key';
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12; // 96bit
 const AUTH_TAG_LENGTH = 16; // 128bit
@@ -15,10 +15,12 @@ let _encryptionKey = null;
 
 function getKey() {
   if (!_encryptionKey) {
-    _encryptionKey = fs.readFileSync(KEY_PATH, 'hex');
-    if (_encryptionKey.length !== 64) {
-      throw new Error(`Invalid key length: expected 64 hex chars (32 bytes), got ${_encryptionKey.length}`);
+    // 密钥文件内容是64字符hex字符串（32字节），读作utf8
+    const hexKey = fs.readFileSync(KEY_PATH, 'utf8').trim();
+    if (hexKey.length !== 64) {
+      throw new Error(`Invalid key length: expected 64 hex chars (32 bytes), got ${hexKey.length}`);
     }
+    _encryptionKey = Buffer.from(hexKey, 'hex');
   }
   return _encryptionKey;
 }
@@ -29,7 +31,7 @@ function getKey() {
  * @returns {Buffer} - 加密后内容 (IV + 密文 + AuthTag)
  */
 function encrypt(plaintext) {
-  const key = Buffer.from(getKey(), 'hex');
+  const key = getKey();
   const iv = crypto.randomBytes(IV_LENGTH);
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
 
@@ -46,7 +48,7 @@ function encrypt(plaintext) {
  * @returns {Buffer} - 解密后明文
  */
 function decrypt(encrypted) {
-  const key = Buffer.from(getKey(), 'hex');
+  const key = getKey();
 
   if (encrypted.length < IV_LENGTH + AUTH_TAG_LENGTH) {
     throw new Error('Encrypted data too short');

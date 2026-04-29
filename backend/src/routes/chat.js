@@ -7,8 +7,15 @@ const jwt = require('jsonwebtoken');
 
 const { JWT_SECRET } = require('../config');
 const prisma = require('../prisma');
-const { decrypt } = require('../services/encryption');
-const { downloadBuffer, deleteFile } = require('../services/ossClient');
+const { encrypt, decrypt } = require('../services/encryption');
+const { downloadBuffer, deleteFile, uploadBuffer } = require('../services/ossClient');
+const { embedWatermarkToBuffer } = require('../services/watermark');
+const { execFile } = require('child_process');
+const util = require('util');
+const execPromise = util.promisify(execFile);
+const path = require('path');
+const fs = require('fs');
+const os = require('os');
 
 module.exports = function(io) {
   const router = express.Router();
@@ -218,6 +225,71 @@ module.exports = function(io) {
       // 确定发送者角色
       const senderRole = session.operatorId === req.user.id ? 'operator' : 'client';
 
+      // 敏感图片：嵌入水印（溯源接收方）→ 重新加密 → 上传新OSS文件
+      let finalMediaUrl = mediaUrl;
+      if (mediaUrl && (isFlashImage || isBurnAfterRead) && (type === 'image' || type === 'video')) {
+        try {
+          // 确定接收方（会话的另一方）
+          const recipientId = senderRole === 'operator' ? session.clientId : session.operatorId;
+          const recipient = await prisma.user.findUnique({ where: { id: recipientId } });
+          if (!recipient) {
+            console.warn('[Watermark] Recipient not found:', recipientId);
+          } else {
+            // 下载OSS密文 → 解密 → 嵌入水印 → 重新加密 → 上传
+            const ossPath = mediaUrl.replace(/^\//, '');
+            const encryptedBuffer = await downloadBuffer(ossPath);
+            const plaintext = decrypt(encryptedBuffer);
+            const timestamp = Math.floor(Date.now() / 1000);
+
+            // 水印嵌入（图片用DCT频域，视频用FFmpeg可见水印）
+            let watermarkedBuffer = plaintext;
+            if (type === 'image') {
+              watermarkedBuffer = await embedWatermarkToBuffer(
+                plaintext,
+                recipient.username || recipientId,
+                timestamp,
+                sessionId
+              );
+            } else if (type === 'video') {
+              // 视频：FFmpeg文字叠加水印（右下角半透明）
+              const tmpInput = path.join(os.tmpdir(), `vid-wm-in-${Date.now()}.mp4`);
+              const tmpOutput = path.join(os.tmpdir(), `vid-wm-out-${Date.now()}.mp4`);
+              fs.writeFileSync(tmpInput, plaintext);
+              try {
+                const wmText = `UserID: ${(recipient.username || recipientId).slice(0, 16)}`;
+                await execPromise('ffmpeg', [
+                  '-y', '-i', tmpInput,
+                  '-vf', `drawtext=text='${wmText}':fontsize=20:fontcolor=white@0.4:x=10:y=H-40:borderw=1:bordercolor=black@0.5`,
+                  '-c:a', 'copy',
+                  '-threads', '2',
+                  tmpOutput
+                ], { timeout: 120000 });
+                watermarkedBuffer = fs.readFileSync(tmpOutput);
+                console.log(`[VideoWatermark] FFmpeg OK for recipient ${recipient.username}`);
+              } finally {
+                if (fs.existsSync(tmpInput)) fs.unlinkSync(tmpInput);
+                if (fs.existsSync(tmpOutput)) fs.unlinkSync(tmpOutput);
+              }
+            }
+
+            // 重新加密（用相同密钥，新IV）
+            const reEncrypted = encrypt(watermarkedBuffer);
+            const crypto = require('crypto');
+            const newOssPath = `encrypted/${type}s/${crypto.randomBytes(16).toString('hex')}.${type === 'image' ? 'jpg' : 'mp4'}.enc`;
+            await uploadBuffer(reEncrypted, newOssPath, true);
+
+            // 删除原OSS文件
+            await deleteFile(ossPath);
+
+            finalMediaUrl = `/${newOssPath}`;
+            console.log(`[Watermark] Embedded for recipient ${recipient.username}, new path: ${newOssPath}`);
+          }
+        } catch (err) {
+          console.error('[Watermark] Failed to embed watermark:', err.message);
+          // 水印失败不影响发送，只是打日志
+        }
+      }
+
       const message = await prisma.message.create({
         data: {
           sessionId,
@@ -225,7 +297,7 @@ module.exports = function(io) {
           senderId: req.user.id,
           content,
           type,
-          mediaUrl,
+          mediaUrl: finalMediaUrl,
           isBurnAfterRead,
           burnAfterSeconds: isBurnAfterRead ? burnAfterSeconds : null,
           isFlashImage
