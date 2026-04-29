@@ -208,8 +208,8 @@ module.exports = function(io) {
         return res.status(404).json({ error: '会话不存在' });
       }
 
-      // 验证权限
-      if (session.operatorId !== req.user.id && session.clientId !== req.user.id) {
+      // 验证权限 - admin 可以访问所有会话
+      if (req.user.role !== 'admin' && session.operatorId !== req.user.id && session.clientId !== req.user.id) {
         return res.status(403).json({ error: '无权限' });
       }
 
@@ -263,8 +263,8 @@ module.exports = function(io) {
         return res.status(404).json({ error: '会话不存在' });
       }
 
-      // 验证权限
-      if (session.operatorId !== req.user.id && session.clientId !== req.user.id) {
+      // 验证权限 - admin 可以访问所有会话
+      if (req.user.role !== 'admin' && session.operatorId !== req.user.id && session.clientId !== req.user.id) {
         return res.status(403).json({ error: '无权限' });
       }
 
