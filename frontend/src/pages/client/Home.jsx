@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Box, Heading, Text, SimpleGrid, Card, CardBody, Icon, HStack, Badge, Button, VStack, Divider, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton } from '@chakra-ui/react';
-import { ChatIcon, SparklesIcon, FishIcon, BookIcon, GiftIcon, CrownIcon, CheckIcon } from '../../components/Icons';
+import { ChatIcon, SparklesIcon, FishIcon, BookIcon, GiftIcon, CrownIcon, CheckIcon, CalendarIcon } from '../../components/Icons';
 import { useEffect, useState } from 'react';
 import { clients, girls, membership as membershipApi } from '../../utils/api';
 import ServiceProgressBoard from '../../components/client/ServiceProgressBoard';
@@ -103,18 +103,20 @@ export default function ClientHome() {
         </HStack>
       </Box>
 
-      {/* 进度看板 */}
-      <Box className="stagger-2">
-        <ServiceProgressBoard
-          currentStage={stats.currentStage}
-          stats={{
-            girlCount: stats.girlCount,
-            intimacyCount: stats.intimacyCount,
-            longTermCount: stats.longTermCount,
-            dateCount: stats.dateCount
-          }}
-        />
-      </Box>
+      {/* 进度看板 - 仅高端用户可见 */}
+      {memberStatus?.membership?.type === 'premium' && (
+        <Box className="stagger-2">
+          <ServiceProgressBoard
+            currentStage={stats.currentStage}
+            stats={{
+              girlCount: stats.girlCount,
+              intimacyCount: stats.intimacyCount,
+              longTermCount: stats.longTermCount,
+              dateCount: stats.dateCount
+            }}
+          />
+        </Box>
+      )}
 
       {/* 快捷入口 */}
       <Box mt={10}>
@@ -188,14 +190,30 @@ export default function ClientHome() {
             border="1px solid rgba(255,255,255,0.08)"
             backdropFilter="blur(12px)"
             cursor="pointer"
-            onClick={() => navigate('/dating-plans')}
+            onClick={() => navigate('/dates')}
             _hover={{ bg: 'rgba(0, 212, 170, 0.06)', borderColor: 'rgba(0, 212, 170, 0.2)', transform: 'translateY(-3px)' }}
             transition="all 0.25s ease"
           >
             <CardBody>
               <Icon as={GiftIcon} w={8} h={8} color="brand.500" mb={3} />
-              <Text color="white" mt={2} fontWeight="500">AI约会方案</Text>
-              <Text color="abyss.500" fontSize="sm">让AI为你策划完美约会</Text>
+              <Text color="white" mt={2} fontWeight="500">约会与方案</Text>
+              <Text color="abyss.500" fontSize="sm">约会确认和AI方案</Text>
+            </CardBody>
+          </Card>
+          <Card
+            className="stagger-9 hover-lift"
+            bg="rgba(255,255,255,0.03)"
+            border="1px solid rgba(255,255,255,0.08)"
+            backdropFilter="blur(12px)"
+            cursor="pointer"
+            onClick={() => navigate('/dates')}
+            _hover={{ bg: 'rgba(0, 212, 170, 0.06)', borderColor: 'rgba(0, 212, 170, 0.2)', transform: 'translateY(-3px)' }}
+            transition="all 0.25s ease"
+          >
+            <CardBody>
+              <Icon as={CalendarIcon} w={8} h={8} color="brand.500" mb={3} />
+              <Text color="white" mt={2} fontWeight="500">我的日历</Text>
+              <Text color="abyss.500" fontSize="sm">查看约会与活动</Text>
             </CardBody>
           </Card>
         </SimpleGrid>

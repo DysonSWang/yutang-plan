@@ -8,13 +8,12 @@ import { FishIcon, ChatIcon, SparklesIcon, BellIcon, HomeIcon, UserIcon, Calenda
 
 const navItems = [
   { path: '/', label: '首页', icon: HomeIcon },
-  { path: '/profile', label: '档案', icon: UserIcon },
-  { path: '/dates', label: '约会', icon: CalendarIcon },
-  { path: '/chat', label: '顾问', icon: ChatIcon },
+  { path: '/chat', label: 'Mo哥', icon: ChatIcon },
   { path: '/ai-coach', label: 'AI', icon: SparklesIcon },
   { path: '/my-pond', label: '缘分', icon: FishIcon },
+  { path: '/dates', label: '约会', icon: CalendarIcon },
   { path: '/learning', label: '学习', icon: BookIcon },
-  { path: '/dating-plans', label: '方案', icon: GiftIcon },
+  { path: '/profile', label: '我的', icon: UserIcon },
 ];
 
 // 桌面端侧边导航

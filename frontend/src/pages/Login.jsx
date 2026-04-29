@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Box, Button, FormControl, FormLabel, Input, VStack, Text, Heading, HStack, IconButton, Popover, PopoverTrigger, PopoverContent, PopoverBody, PopoverHeader, Switch, Flex, useToast, Link } from '@chakra-ui/react';
+import { Box, Button, FormControl, FormLabel, Input, VStack, Text, Heading, HStack, IconButton, Popover, PopoverTrigger, PopoverContent, PopoverBody, PopoverHeader, Switch, Flex, useToast, Link, Image } from '@chakra-ui/react';
 import { useAuth } from '../contexts/AuthContext';
 import { auth } from '../utils/api';
 
@@ -9,7 +9,7 @@ export default function Login() {
   const [nickname, setNickname] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState('login');
+  const [mode, setMode] = useState('login'); // 只提供登录
   const [showLogin, setShowLogin] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [registerError, setRegisterError] = useState('');
@@ -164,14 +164,14 @@ export default function Login() {
             letterSpacing="0.1em"
             color="white"
           >
-            追爱AI
+            zhui ai
           </Heading>
           <Text
             fontSize="xs"
             color="abyss.500"
             letterSpacing="0.3em"
           >
-            ZHUIAI
+            PURSUE LOVE WITH AI
           </Text>
         </VStack>
 
@@ -226,7 +226,7 @@ export default function Login() {
               fontWeight="600"
               letterSpacing="0.05em"
             >
-              {effectiveShowLogin ? (mode === 'login' ? '登录' : '注册') : '记事本'}
+              {effectiveShowLogin ? '登录' : '记事本'}
             </Heading>
             <Popover placement="bottom-end">
               <PopoverTrigger>
@@ -265,50 +265,8 @@ export default function Login() {
             </Popover>
           </Flex>
 
-          {/* Tab 切换 */}
-          {effectiveShowLogin && (
-            <HStack
-              spacing={1}
-              bg="rgba(255,255,255,0.03)"
-              borderRadius="12px"
-              p="4px"
-              mb={6}
-              className="stagger-2"
-              opacity={0}
-            >
-              <Button
-                flex={1}
-                size="sm"
-                variant={mode === 'login' ? 'solid' : 'ghost'}
-                bg={mode === 'login' ? 'rgba(255,255,255,0.08)' : 'transparent'}
-                color={mode === 'login' ? 'white' : 'abyss.500'}
-                borderRadius="8px"
-                fontWeight="400"
-                fontSize="sm"
-                onClick={() => setMode('login')}
-                _hover={{ bg: mode === 'login' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.04)' }}
-              >
-                登录
-              </Button>
-              <Button
-                flex={1}
-                size="sm"
-                variant={mode === 'register' ? 'solid' : 'ghost'}
-                bg={mode === 'register' ? 'rgba(255,255,255,0.08)' : 'transparent'}
-                color={mode === 'register' ? 'white' : 'abyss.500'}
-                borderRadius="8px"
-                fontWeight="400"
-                fontSize="sm"
-                onClick={() => setMode('register')}
-                _hover={{ bg: mode === 'register' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.04)' }}
-              >
-                注册
-              </Button>
-            </HStack>
-          )}
-
           {/* 登录表单 */}
-          {effectiveShowLogin && mode === 'login' && (
+          {effectiveShowLogin && (
             <form onSubmit={handleLogin} className="stagger-2" style={{ opacity: 0 }}>
               <VStack spacing={4}>
                 <FormControl>
@@ -382,111 +340,6 @@ export default function Login() {
                 )}
                 <Text color="abyss.600" fontSize="xs" textAlign="center">
                   如需账号请联系管理员创建
-                </Text>
-              </VStack>
-            </form>
-          )}
-
-          {/* 注册表单 */}
-          {effectiveShowLogin && mode === 'register' && (
-            <form onSubmit={handleRegister} className="stagger-2" style={{ opacity: 0 }}>
-              <VStack spacing={4}>
-                <FormControl>
-                  <FormLabel color="abyss.500" fontSize="xs" letterSpacing="0.1em">用户名</FormLabel>
-                  <Input
-                    value={username}
-                    onChange={e => { setUsername(e.target.value); setRegisterError(''); }}
-                    placeholder="设置用户名"
-                    size="md"
-                    bg="rgba(255,255,255,0.04)"
-                    color="white"
-                    border="1px solid rgba(255,255,255,0.08)"
-                    borderRadius="12px"
-                    _hover={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)' }}
-                    _focus={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'brand.500', boxShadow: '0 0 0 3px rgba(0,212,170,0.15)' }}
-                    _placeholder={{ color: 'abyss.600' }}
-                  />
-                </FormControl>
-                <FormControl>
-                  <FormLabel color="abyss.500" fontSize="xs" letterSpacing="0.1em">昵称</FormLabel>
-                  <Input
-                    value={nickname}
-                    onChange={e => setNickname(e.target.value)}
-                    placeholder="设置昵称（选填）"
-                    size="md"
-                    bg="rgba(255,255,255,0.04)"
-                    color="white"
-                    border="1px solid rgba(255,255,255,0.08)"
-                    borderRadius="12px"
-                    _hover={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)' }}
-                    _focus={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'brand.500', boxShadow: '0 0 0 3px rgba(0,212,170,0.15)' }}
-                    _placeholder={{ color: 'abyss.600' }}
-                  />
-                </FormControl>
-                <FormControl>
-                  <FormLabel color="abyss.500" fontSize="xs" letterSpacing="0.1em">密码</FormLabel>
-                  <Input
-                    type="password"
-                    value={password}
-                    onChange={e => { setPassword(e.target.value); setRegisterError(''); }}
-                    placeholder="设置密码（至少8位）"
-                    size="md"
-                    bg="rgba(255,255,255,0.04)"
-                    color="white"
-                    border="1px solid rgba(255,255,255,0.08)"
-                    borderRadius="12px"
-                    _hover={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)' }}
-                    _focus={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'brand.500', boxShadow: '0 0 0 3px rgba(0,212,170,0.15)' }}
-                    _placeholder={{ color: 'abyss.600' }}
-                  />
-                </FormControl>
-                <FormControl>
-                  <FormLabel color="abyss.500" fontSize="xs" letterSpacing="0.1em">邀请码</FormLabel>
-                  <Input
-                    value={inviteCode}
-                    onChange={e => setInviteCode(e.target.value)}
-                    placeholder="填写邀请码获得奖励（选填）"
-                    size="md"
-                    bg="rgba(255,255,255,0.04)"
-                    color="white"
-                    border="1px solid rgba(255,255,255,0.08)"
-                    borderRadius="12px"
-                    _hover={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)' }}
-                    _focus={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'brand.500', boxShadow: '0 0 0 3px rgba(0,212,170,0.15)' }}
-                    _placeholder={{ color: 'abyss.600' }}
-                  />
-                </FormControl>
-                {registerError && (
-                  <Box
-                    w="100%"
-                    p={3}
-                    bg="rgba(248,113,113,0.1)"
-                    border="1px solid rgba(248,113,113,0.3)"
-                    borderRadius="12px"
-                  >
-                    <Text color="red.400" fontSize="sm">{registerError}</Text>
-                  </Box>
-                )}
-                <Button
-                  type="submit"
-                  w="100%"
-                  size="md"
-                  bgGradient="linear(135deg, brand.500, brand.400)"
-                  color="abyss.950"
-                  fontWeight="500"
-                  borderRadius="12px"
-                  isLoading={loading}
-                  _hover={{ transform: 'translateY(-2px)', boxShadow: '0 8px 24px rgba(0,212,170,0.35)' }}
-                  _active={{ transform: 'translateY(0)' }}
-                  transition="all 0.3s ease"
-                >
-                  注册
-                </Button>
-                <Text color="abyss.600" fontSize="xs" textAlign="center">
-                  已有账号？
-                  <Link color="brand.400" onClick={() => setMode('login')} _hover={{ color: 'brand.300' }} ml={1}>
-                    立即登录
-                  </Link>
                 </Text>
               </VStack>
             </form>

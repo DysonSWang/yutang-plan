@@ -5,6 +5,7 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
 const { JWT_SECRET, getAIConfig } = require('../config');
 const prisma = require('../prisma');
@@ -950,6 +951,41 @@ router.post('/onboarding-complete', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('[Clients] 入职完成失败:', error);
     res.status(500).json({ error: '入职完成失败' });
+  }
+});
+
+// 修改用户密码（仅管理员/操盘手）
+router.put('/:id/password', authMiddleware, async (req, res) => {
+  try {
+    // 仅 operator 和 admin 可以修改密码
+    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const { newPassword } = req.body;
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ error: '密码至少6位' });
+    }
+
+    const targetUser = await prisma.user.findUnique({
+      where: { id: req.params.id }
+    });
+    if (!targetUser) {
+      return res.status(404).json({ error: '用户不存在' });
+    }
+
+    // 加密新密码
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: req.params.id },
+      data: { password: hashedPassword }
+    });
+
+    res.json({ success: true, message: '密码修改成功' });
+  } catch (error) {
+    console.error('[Clients] 修改密码失败:', error);
+    res.status(500).json({ error: '修改失败' });
   }
 });
 

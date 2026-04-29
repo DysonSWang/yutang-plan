@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Flex, Heading, Text, Card, CardBody, CardHeader, Button, Select, Textarea, SimpleGrid, Badge, VStack, HStack, Divider, Spinner, useToast, Tabs, TabList, TabPanels, Tab, TabPanel, Icon, Input, Checkbox, Collapse, Alert, AlertIcon, Image, FormControl, FormLabel, Text as CText } from '@chakra-ui/react';
-import { clients, girls, chatLogs, chat, chatPartner, aiCoach, events as eventsApi } from '../../utils/api';
+import { clients, girls, chat, chatPartner, aiCoach, events as eventsApi } from '../../utils/api';
 import { useSocket } from '../../contexts/SocketContext';
 import { FiSend, FiMessageSquare, FiTarget, FiZap, FiAlertCircle, FiCheck, FiCopy, FiUser, FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import { HeartIcon } from '../../components/Icons';
@@ -17,8 +17,6 @@ export default function AdminWorkbench() {
   const [deepMode, setDeepMode] = useState(false);
   const [optimized, setOptimized] = useState(null); // deprecated - kept for backward compat
   const [sendingContent, setSendingContent] = useState('');
-  const [visibleToClient, setVisibleToClient] = useState(false);
-  const [recentLogs, setRecentLogs] = useState([]);
   const toast = useToast();
 
   // 实战聊天状态
@@ -464,12 +462,6 @@ export default function AdminWorkbench() {
     setBattleMode('analyze');
     setMyMessage('');
     setGirlMessage('');
-    try {
-      const res = await chatLogs.byGirl(girl.id);
-      if (res.success) setRecentLogs(res.logs);
-    } catch {
-      console.error('请求错误');
-    }
   };
 
   // ========== 情况咨询 ==========
@@ -765,31 +757,6 @@ export default function AdminWorkbench() {
       } catch {
         console.warn('反馈记录失败');
       }
-    }
-  };
-
-  // 代聊发送
-  const handleSend = async () => {
-    if (!sendingContent.trim() || !selectedGirl || !selectedClient) return;
-    try {
-      const res = await chatLogs.create({
-        girlId: selectedGirl.id,
-        clientId: selectedClient.id,
-        receiverName: selectedGirl.name,
-        content: sendingContent,
-        aiAdopted: !!optimized,
-        isVisibleToClient: visibleToClient
-      });
-      if (res.success) {
-        toast({ title: '代聊记录已保存', status: 'success' });
-        setSendingContent('');
-        setOptimized(null);
-        setVisibleToClient(false);
-        setChatHistory(prev => [...prev, { role: 'user', content: sendingContent, adopted: false }]);
-        loadGirlLogs();
-      }
-    } catch {
-      toast({ title: '保存失败', status: 'error' });
     }
   };
 
@@ -1165,26 +1132,6 @@ export default function AdminWorkbench() {
     return '🧊';
   };
 
-  const loadGirlLogs = async () => {
-    if (!selectedGirl) return;
-    try {
-      const res = await chatLogs.byGirl(selectedGirl.id);
-      if (res.success) setRecentLogs(res.logs);
-    } catch {
-      console.error('请求错误');
-    }
-  };
-
-  const toggleVisibility = async (logId, currentVisible) => {
-    try {
-      await chatLogs.updateVisibility(logId, !currentVisible);
-      toast({ title: '已更新可见性', status: 'success' });
-      loadGirlLogs();
-    } catch {
-      toast({ title: '更新失败', status: 'error' });
-    }
-  };
-
   return (
     <Box>
       <Heading color="white" mb={6}>军师工具</Heading>
@@ -1249,7 +1196,6 @@ export default function AdminWorkbench() {
             <TabList>
               <Tab>情况咨询</Tab>
               <Tab>实战聊天</Tab>
-              <Tab>代聊记录</Tab>
             </TabList>
 
             <TabPanels>
@@ -2149,10 +2095,7 @@ export default function AdminWorkbench() {
                                 maxW="80%"
                                 p={3}
                                 borderRadius="lg"
-                                bg={msg.role === 'user'
-                                  ? (msg.adopted ? 'teal.600' : 'gray.600')
-                                  : 'gray.700'
-                                }
+                                bg={msg.role === 'user' ? 'teal.600' : 'gray.700'}
                               >
                                 <HStack mb={1} spacing={1}>
                                   <Icon
@@ -2162,7 +2105,7 @@ export default function AdminWorkbench() {
                                   />
                                   <Text fontSize="xs" color="gray.300">
                                     {msg.role === 'user'
-                                      ? (msg.adopted ? '我(AI建议)' : '我(代聊)')
+                                      ? (msg.adopted ? '我(AI建议)' : '我')
                                       : selectedGirl.name}
                                   </Text>
                                 </HStack>
@@ -2397,54 +2340,6 @@ export default function AdminWorkbench() {
                   </CardBody>
                 </Card>
               </TabPanel>
-
-              {/* 代聊记录 */}
-              <TabPanel p={0} pt={4}>
-                <Card bg="gray.800" h="calc(100vh - 280px)">
-                  <CardBody overflowY="auto">
-                    {!selectedGirl ? (
-                      <Flex flex={1} align="center" justify="center" h="100%">
-                        <Text color="gray.500">先选择一个女生查看代聊记录</Text>
-                      </Flex>
-                    ) : recentLogs.length === 0 ? (
-                      <Flex flex={1} align="center" justify="center" h="100%">
-                        <Text color="gray.500">暂无代聊记录</Text>
-                      </Flex>
-                    ) : (
-                      <VStack spacing={3} align="stretch">
-                        {recentLogs.map(log => (
-                          <Box key={log.id} p={4} bg="gray.700" borderRadius="md">
-                            <HStack justify="space-between" mb={2}>
-                              <HStack spacing={2}>
-                                {log.aiAdopted && (
-                                  <Badge colorScheme="purple" fontSize="xs">AI建议</Badge>
-                                )}
-                                <Text color="gray.500" fontSize="xs">
-                                  {new Date(log.createdAt).toLocaleString()}
-                                </Text>
-                              </HStack>
-                              <Button
-                                size="xs"
-                                colorScheme={log.isVisibleToClient ? 'green' : 'gray'}
-                                variant={log.isVisibleToClient ? 'solid' : 'outline'}
-                                onClick={() => toggleVisibility(log.id, log.isVisibleToClient)}
-                              >
-                                {log.isVisibleToClient ? '已推送' : '未推送'}
-                              </Button>
-                            </HStack>
-                            <Text color="white" fontSize="sm" whiteSpace="pre-wrap">{log.content}</Text>
-                            {log.aiAnalysis && (
-                              <Text color="gray.500" fontSize="xs" mt={1}>
-                                {log.aiAnalysis}
-                              </Text>
-                            )}
-                          </Box>
-                        ))}
-                      </VStack>
-                    )}
-                  </CardBody>
-                </Card>
-              </TabPanel>
             </TabPanels>
           </Tabs>
         </Box>
@@ -2612,16 +2507,6 @@ export default function AdminWorkbench() {
                         {selectedGirl.tensionScore || 5}/10
                       </Text>
                       <Text color="orange.400">{getTensionEmoji(selectedGirl.tensionScore || 5)}</Text>
-                    </HStack>
-                  </Box>
-
-                  <Box p={3} bg="gray.700" borderRadius="md">
-                    <Text color="gray.400" fontSize="xs">代聊记录</Text>
-                    <HStack mt={1}>
-                      <Text color="white" fontSize="sm">{recentLogs.length} 条</Text>
-                      <Text color="gray.500" fontSize="xs">
-                        · {recentLogs.filter(l => l.aiAdopted).length} 条AI建议
-                      </Text>
                     </HStack>
                   </Box>
 
