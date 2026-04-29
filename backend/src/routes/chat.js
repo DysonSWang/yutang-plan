@@ -385,14 +385,15 @@ module.exports = function(io) {
         return res.status(400).json({ error: '消息已被销毁' });
       }
 
-      // 授权检查：发送者本人，或会话参与者
+      // 授权检查：发送者本人，或会话参与者，admin可以操作所有
       const session = message.sessionId
         ? await prisma.chatSession.findUnique({ where: { id: message.sessionId } })
         : null;
       const isParticipant = session && (
         session.operatorId === req.user.id || session.clientId === req.user.id
       );
-      if (message.senderId !== req.user.id && !isParticipant) {
+      const isAdmin = req.user.role === 'admin';
+      if (!isAdmin && message.senderId !== req.user.id && !isParticipant) {
         return res.status(403).json({ error: '无权限' });
       }
 
@@ -589,9 +590,10 @@ module.exports = function(io) {
 
       const { clientId } = req.params;
 
-      const session = await prisma.chatSession.findFirst({
+      const isAdmin = req.user.role === 'admin';
+      const session = !isAdmin ? await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId }
-      });
+      }) : true;
       if (!session) {
         return res.status(403).json({ error: '无权限查看此客户档案' });
       }
@@ -645,8 +647,11 @@ module.exports = function(io) {
 
       const { clientId } = req.params;
 
-      const session = await prisma.chatSession.findFirst({
+      const isAdmin = req.user.role === 'admin';
+      const session = !isAdmin ? await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId }
+      }) : await prisma.chatSession.findFirst({
+        where: { clientId }
       });
       if (!session) {
         return res.status(403).json({ error: '无权限' });
@@ -901,9 +906,10 @@ module.exports = function(io) {
 
       const { clientId } = req.params;
 
-      const session = await prisma.chatSession.findFirst({
+      const isAdmin = req.user.role === 'admin';
+      const session = !isAdmin ? await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId }
-      });
+      }) : true;
       if (!session) {
         return res.status(403).json({ error: '无权限更新此档案' });
       }
