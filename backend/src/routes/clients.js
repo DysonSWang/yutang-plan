@@ -115,33 +115,59 @@ router.get('/:id', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: '无权限' });
     }
 
-    const client = await prisma.user.findUnique({
-      where: { id: req.params.id },
-      include: {
-        clientGirls: {
-          orderBy: { updatedAt: 'desc' },
-          take: 10
-        },
-        dates: {
-          orderBy: { dateTime: 'desc' },
-          take: 10
-        },
-        progress: {
-          orderBy: { createdAt: 'desc' }
-        },
-        learnings: {
-          orderBy: { createdAt: 'desc' },
-          take: 20
-        }
-      }
-    });
+    // 先查基本信息，捕获可能的数据库错误
+    let client;
+    try {
+      client = await prisma.user.findUnique({
+        where: { id: req.params.id }
+      });
+    } catch (dbError) {
+      console.warn('[Clients] 基本查询失败:', dbError.message);
+      // 如果基本查询失败，返回错误而不是继续
+      return res.status(500).json({ error: '获取客户信息失败，请稍后重试' });
+    }
 
     if (!client) {
       return res.status(404).json({ error: '客户不存在' });
     }
 
+    // 尝试附带关联数据，如果失败则返回空数组
+    let clientGirls = [];
+    let dates = [];
+    let progress = [];
+    let learnings = [];
+
+    try {
+      const withRelations = await prisma.user.findUnique({
+        where: { id: req.params.id },
+        include: {
+          clientGirls: {
+            orderBy: { updatedAt: 'desc' },
+            take: 10
+          },
+          dates: {
+            orderBy: { dateTime: 'desc' },
+            take: 10
+          },
+          progress: {
+            orderBy: { createdAt: 'desc' }
+          },
+          learnings: {
+            orderBy: { createdAt: 'desc' },
+            take: 20
+          }
+        }
+      });
+      clientGirls = withRelations.clientGirls || [];
+      dates = withRelations.dates || [];
+      progress = withRelations.progress || [];
+      learnings = withRelations.learnings || [];
+    } catch (relError) {
+      console.warn('[Clients] 获取关联数据失败，使用空数组:', relError.message);
+    }
+
     const { password, ...clientData } = client;
-    res.json({ success: true, client: clientData });
+    res.json({ success: true, client: { ...clientData, clientGirls, dates, progress, learnings } });
   } catch (error) {
     console.error('[Clients] 获取客户详情失败:', error);
     res.status(500).json({ error: '获取失败' });
@@ -851,7 +877,16 @@ router.post('/onboarding-complete', authMiddleware, async (req, res) => {
     // 获取当前客户信息，找到对应的操盘手
     const session = await prisma.chatSession.findFirst({
       where: { clientId },
-      include: { operator: true }
+      include: {
+        operator: {
+          select: {
+            id: true,
+            username: true,
+            nickname: true,
+            avatar: true
+          }
+        }
+      }
     });
 
     // 更新客户档案

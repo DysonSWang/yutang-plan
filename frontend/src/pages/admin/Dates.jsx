@@ -80,6 +80,8 @@ export default function AdminDates() {
   const [generatingReport, setGeneratingReport] = useState(false);
   const [interviewOverview, setInterviewOverview] = useState('');
   const [reportResult, setReportResult] = useState(null);
+  // AI分析 - 事件和提醒
+  const [dateEvents, setDateEvents] = useState([]);
   // 日历视图相关
   const [calendarViewClient, setCalendarViewClient] = useState(null);
   const [calendarGirlList, setCalendarGirlList] = useState([]);
@@ -205,7 +207,48 @@ export default function AdminDates() {
         }
         setShowDiscussion(false);
         setDiscussMsg('');
+        // 加载关联的事件和提醒
+        try {
+          const evRes = await eventsApi.list({ dateId: res.date.id });
+          if (evRes.success) setDateEvents(evRes.events || []);
+          else setDateEvents([]);
+        } catch { setDateEvents([]); }
         openDetailModal();
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const toggleEventStatus = async (eventId, currentStatus) => {
+    const nextStatus = currentStatus === 'completed' ? 'pending' : 'completed';
+    try {
+      await eventsApi.updateStatus(eventId, nextStatus);
+      setDateEvents(prev => prev.map(ev => ev.id === eventId ? { ...ev, status: nextStatus } : ev));
+    } catch (e) { console.error(e); }
+  };
+
+  const deleteEvent = async (eventId) => {
+    try {
+      await eventsApi.delete(eventId);
+      setDateEvents(prev => prev.filter(ev => ev.id !== eventId));
+    } catch (e) { console.error(e); }
+  };
+
+  const addReminder = async () => {
+    if (!selectedDate) return;
+    const title = window.prompt('输入提醒内容：');
+    if (!title?.trim()) return;
+    try {
+      const res = await eventsApi.create({
+        clientId: selectedDate.clientId,
+        girlId: selectedDate.girlId || undefined,
+        title: title.trim(),
+        type: 'manual',
+        eventTime: selectedDate.dateTime || new Date().toISOString(),
+        status: 'pending',
+        dateId: selectedDate.id,
+      });
+      if (res.success && res.event) {
+        setDateEvents(prev => [...prev, res.event]);
       }
     } catch (e) { console.error(e); }
   };
@@ -392,7 +435,7 @@ export default function AdminDates() {
       if (ci !== catIndex) return cat;
       return {
         ...cat,
-        items: cat.items.map((item, ii) => {
+        items: (cat.items || []).map((item, ii) => {
           if (ii !== itemIndex) return item;
           return { ...item, checked: !item.checked };
         })
@@ -476,7 +519,7 @@ export default function AdminDates() {
           </Card>
         )}
 
-        {p.precautions?.length > 0 && (
+        {Array.isArray(p.precautions) && p.precautions.length > 0 && (
           <Card bg="gray.750" mb={4}>
             <CardBody>
               <Text color="red.400" fontWeight="bold" mb={3}>注意事项</Text>
@@ -554,7 +597,8 @@ export default function AdminDates() {
           </Tab>
         </TabList>
 
-        <TabPanel px={0}>
+        <TabPanels>
+          <TabPanel px={0}>
           <Card bg="gray.800">
             <CardBody>
               {loading ? (
@@ -691,6 +735,7 @@ export default function AdminDates() {
             </CardBody>
           </Card>
         </TabPanel>
+        </TabPanels>
       </Tabs>
 
       {/* 创建约会 */}
@@ -823,7 +868,7 @@ export default function AdminDates() {
                           <Icon as={CheckCircleIcon} color="teal.400" />
                           <Text color="teal.400" fontWeight="bold">约会前检查清单</Text>
                           <Badge colorScheme="teal" fontSize="xs">
-                            {checklist.reduce((sum, cat) => sum + cat.items.filter(i => i.checked).length, 0)}/{checklist.reduce((sum, cat) => sum + cat.items.length, 0)} 完成
+                            {checklist.reduce((sum, cat) => sum + (cat.items || []).filter(i => i.checked).length, 0)}/{checklist.reduce((sum, cat) => sum + (cat.items || []).length, 0)} 完成
                           </Badge>
                         </HStack>
                         <Button size="xs" colorScheme="teal" variant="outline" onClick={saveChecklist} isLoading={checklistSaving}>保存</Button>
@@ -1002,6 +1047,69 @@ export default function AdminDates() {
                   </Card>
                 )}
 
+                {/* AI分析 - 事件和提醒 */}
+                <Card bg="gray.750" mb={4}>
+                  <CardBody>
+                    <Flex justify="space-between" align="center" mb={3}>
+                      <HStack spacing={2}>
+                        <Icon as={SparklesIcon} color="cyan.400" />
+                        <Heading size="sm" color="cyan.400">AI分析</Heading>
+                        <Badge colorScheme="cyan" fontSize="xs">{dateEvents.length} 项</Badge>
+                      </HStack>
+                      <Button size="xs" colorScheme="cyan" variant="outline" onClick={addReminder}>
+                        + 添加提醒
+                      </Button>
+                    </Flex>
+                    {dateEvents.length === 0 ? (
+                      <Flex direction="column" align="center" py={6} gap={2}>
+                        <Icon as={SparklesIcon} color="gray.500" boxSize={8} />
+                        <Text color="gray.400" fontSize="sm">暂无事件和提醒</Text>
+                        <Text color="gray.500" fontSize="xs">AI将在约会策划后自动生成行动项</Text>
+                      </Flex>
+                    ) : (
+                      <VStack spacing={2} align="stretch">
+                        {dateEvents.map(ev => (
+                          <Flex key={ev.id} p={3} bg="gray.700" borderRadius="md" gap={3} align="center"
+                            opacity={ev.status === 'completed' ? 0.5 : 1}>
+                            <Icon
+                              as={ev.status === 'completed' ? CheckCircleIcon : CalendarIcon}
+                              color={ev.status === 'completed' ? 'green.400' : ev.type === 'date' ? 'teal.400' : 'orange.400'}
+                              boxSize={4}
+                              cursor="pointer"
+                              onClick={() => toggleEventStatus(ev.id, ev.status)}
+                            />
+                            <Box flex={1}>
+                              <Text
+                                color={ev.status === 'completed' ? 'gray.500' : 'white'}
+                                fontSize="sm"
+                                textDecoration={ev.status === 'completed' ? 'line-through' : 'none'}
+                              >
+                                {ev.title}
+                              </Text>
+                              {ev.content && (
+                                <Text color="gray.400" fontSize="xs">{ev.content}</Text>
+                              )}
+                              <HStack spacing={2} mt={1}>
+                                <Badge
+                                  colorScheme={ev.type === 'date' ? 'teal' : ev.type === 'action' ? 'orange' : 'gray'}
+                                  size="xs"
+                                >
+                                  {ev.type === 'date' ? '约会' : ev.type === 'action' ? '行动项' : '提醒'}
+                                </Badge>
+                                <Text color="gray.500" fontSize="xs">
+                                  {ev.eventTime ? new Date(ev.eventTime).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}
+                                </Text>
+                              </HStack>
+                            </Box>
+                            <Button size="xs" variant="ghost" color="gray.500"
+                              onClick={() => deleteEvent(ev.id)}>删除</Button>
+                          </Flex>
+                        ))}
+                      </VStack>
+                    )}
+                  </CardBody>
+                </Card>
+
                 {/* 客户反馈 */}
                 {selectedDate.clientFeedback && (() => {
                   const feedback = parseJSON(selectedDate.clientFeedback, []);
@@ -1147,7 +1255,7 @@ export default function AdminDates() {
                               {iv.clientSelfScore && <Box><Text color="gray.400" fontSize="xs">客户自评</Text><Tag size="sm">{iv.clientSelfScore}/5</Tag></Box>}
                               {iv.expectationGap && <Box><Text color="gray.400" fontSize="xs">预期偏差</Text><Tag size="sm" colorScheme="teal">{iv.expectationGap}</Tag></Box>}
                             </SimpleGrid>
-                            {iv.physicalProgress && <Box mb={3}><Text color="gray.400" fontSize="xs">肢体进展</Text><Wrap mt={1}>{iv.physicalProgress.split(',').filter(Boolean).map(s => <WrapItem key={s}><Tag size="sm" colorScheme="pink">{s}</Tag></WrapItem>)}</Wrap></Box>}
+                            {iv.physicalProgress && <Box mb={3}><Text color="gray.400" fontSize="xs">肢体进展</Text><Wrap mt={1}>{(iv.physicalProgress || '').split(',').filter(Boolean).map(s => <WrapItem key={s}><Tag size="sm" colorScheme="pink">{s}</Tag></WrapItem>)}</Wrap></Box>}
                             <SimpleGrid columns={2} spacing={3}>
                               {iv.highlight && <Box><Text color="green.400" fontSize="xs">亮点</Text><Text color="gray.300" fontSize="sm">{iv.highlight}</Text></Box>}
                               {iv.lowlight && <Box><Text color="red.400" fontSize="xs">槽点</Text><Text color="gray.300" fontSize="sm">{iv.lowlight}</Text></Box>}

@@ -1,16 +1,16 @@
 /**
- * E2E: 客户 - 我的鱼塘
+ * E2E: 客户 - 我的追爱
  */
 
 const { test, expect } = require('./screenshot-setup.js');
 const { clientLogin, BASE_URL, getClientToken, getOperatorToken, API_BASE } = require('./helpers');
 
-test.describe('客户-我的鱼塘', () => {
+test.describe('客户-我的追爱', () => {
   test.beforeEach(async ({ page }) => {
     await clientLogin(page);
   });
 
-  test('可以访问我的鱼塘页面', async ({ page }) => {
+  test('可以访问我的追爱页面', async ({ page }) => {
     await page.goto(`${BASE_URL}/my-pond`);
     await page.waitForTimeout(2000);
     expect(page.url()).toContain('/my-pond');
@@ -85,7 +85,7 @@ test.describe('客户-我的鱼塘', () => {
   });
 });
 
-test.describe('鱼塘 API', () => {
+test.describe('追爱 API', () => {
   test('客户可以获取自己的女生资源列表', async ({ page }) => {
     const token = await getClientToken(page);
     const resp = await page.request.get(`${API_BASE}/api/girls/client/me`, {

@@ -1,5 +1,5 @@
 {
-  "name": "yutang-plan",
+  "name": "zhuiai",
   "version": "1.0.0",
   "description": "> **让每一位成功的男人，都能实现妹子自由。**",
   "main": "index.js",
@@ -14,15 +14,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/DysonSWang/yutang-plan.git"
+    "url": "git+https://github.com/DysonSWang/zhuiai.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/DysonSWang/yutang-plan/issues"
+    "url": "https://github.com/DysonSWang/zhuiai/issues"
   },
-  "homepage": "https://github.com/DysonSWang/yutang-plan#readme",
+  "homepage": "https://github.com/DysonSWang/zhuiai#readme",
   "devDependencies": {
     "@playwright/test": "^1.59.1"
   }

@@ -192,6 +192,13 @@ model User {
   progress         ServiceProgress[]
   learnings        ClientLearning[]
   alerts           Alert[]
+  memberships      Membership[]
+  invitations      Invitation[]         @relation("Inviter")
+  invitationsUsed  Invitation[]         @relation("Invitee")
+  renewalCoupons   RenewalCoupon[]
+  pointsLedger     PointsLedger[]
+  learningProgress LearningProgress[]
+  datingPlans      DatingPlan[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -926,4 +933,200 @@ model GuardrailLog {
   @@index([passed, createdAt])
   @@index([endpoint, createdAt])
   @@map("guardrail_logs")
+}
+
+// ========== 会员系统 ==========
+model Membership {
+  id       String @id @default(uuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id])
+
+  // 类型：monthly=月度(999元), yearly=年度(8888元)
+  type     String @default("monthly")
+  // 状态：active/expired/cancelled
+  status   String @default("active")
+  // 实际支付价格（用于对账和记录）
+  price    Float  @default(0)
+
+  startDate DateTime
+  endDate   DateTime
+
+  // 是否用积分抵扣过（抵扣金额）
+  pointsDiscount Float @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("memberships")
+}
+
+// ========== 邀请机制 ==========
+model Invitation {
+  id         String @id @default(uuid())
+  inviterId  String
+  inviter    User   @relation("Inviter", fields: [inviterId], references: [id])
+  inviteeId  String?
+  invitee    User?  @relation("Invitee", fields: [inviteeId], references: [id])
+
+  // 8位邀请码
+  inviteCode String @unique
+
+  // 是否已激活（被邀请人完成注册并付费后为true）
+  activated  Boolean @default(false)
+  // 奖励是否已发放（发放500元续费抵扣券）
+  rewardPaid Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+
+@@index([inviterId])
+  @@index([inviteCode])
+  @@map("invitations")
+}
+
+// ========== 续费抵扣券 ==========
+model RenewalCoupon {
+  id        String @id @default(uuid())
+  userId    String
+  user      User   @relation(fields: [userId], references: [id])
+
+  // 面值（元）：目前统一500元
+  value     Int
+  // 类型：invite_reward(邀请奖励)/admin_grant(管理员发放)
+  type      String
+  // 关联业务ID（如 invitationId）
+  refId     String?
+  note      String?
+
+  // 使用时间（null=未使用）
+  usedAt    DateTime?
+  // 使用到的会员ID（回填）
+  usedForMembershipId String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([usedAt])
+  @@map("renewal_coupons")
+}
+
+// ========== 积分系统 ==========
+model PointsLedger {
+  id        String @id @default(uuid())
+  userId    String
+  user      User   @relation(fields: [userId], references: [id])
+
+  // 变动数量：正数=增加，负数=减少
+  amount    Int
+  // 变动后余额
+  balanceAfter Int
+  // 类型：recharge(充值)/consume(消费)/invite_reward(邀请奖励)/membership_discount(会员抵扣)/admin_adjust(管理员调整)
+  type      String
+  // 操作人ID（充值/扣减时记录）
+  operatorId String?
+  // 关联的业务ID（如 membershipId, invitationId）
+  refId     String?
+  note      String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("points_ledger")
+}
+
+// ========== 学习版块 - 教材章节 ==========
+model LearningChapter {
+  id        String  @id @default(uuid())
+  chapterId String  @unique // e.g. '01' through '20'
+  title     String
+  subtitle  String?
+  orderIndex Int
+
+  // 章节内容（从教材提取，也可以是Markdown格式的摘要）
+  content   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("learning_chapters")
+}
+
+// ========== 学习版块 - 用户进度 ==========
+model LearningProgress {
+  id        String  @id @default(uuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id])
+
+  chapterId String
+  // 状态：not_started/in_progress/completed
+  status    String  @default("not_started")
+  // 完成时间
+  completedAt DateTime?
+  // 最后访问时间（用于排序"继续学习"）
+  lastVisitedAt DateTime?
+
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, chapterId])
+  @@index([userId])
+  @@map("learning_progress")
+}
+
+// ========== 截图识别档案（操盘手上传聊天截图，AI提取用户信息）==========
+model ScreenshotProfile {
+  id         String @id @default(uuid())
+  uploadedBy String // operatorId
+
+  // 关联的客户（可能新客户未入库，也可能关联到已有客户）
+  clientId   String?
+
+  imagePath  String
+
+  // AI 提取的信息
+  extractedName  String?
+  extractedPhone String?
+  extractedAge   String?
+  extractedGender String? // 'male'/'female'
+  extractedInfo  String? // JSON: 其他提取的字段
+
+  // 状态：pending(待确认)/confirmed(已确认更新)/rejected(已拒绝)
+  status     String @default("pending")
+
+  // 确认时间
+  confirmedAt DateTime?
+  // 确认时关联的用户ID（如果是新建用户）
+  linkedUserId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([uploadedBy])
+  @@index([status])
+  @@map("screenshot_profiles")
+}
+
+// ========== AI 约会方案 ==========
+model DatingPlan {
+  id       String @id @default(uuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id])
+
+  title    String
+  scene    String?  // 约会场景描述
+  content  String?  // AI生成的方案内容（Markdown）
+  budget   String?
+  duration String?
+
+  // 状态：draft/generating/generated/approved
+  planStatus String @default("draft")
+  // 生成过程中的讨论记录 [{ role, content, timestamp }]
+  discussion String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("dating_plans")
 }

@@ -37,12 +37,14 @@ router.get('/', authMiddleware, async (req, res) => {
     if (req.user.role === 'client') {
       where.clientId = req.user.id;
     } else if (clientId) {
-      // 安全：操盘手只能查询自己负责的客户
-      const session = await prisma.chatSession.findFirst({
-        where: { operatorId: req.user.id, clientId }
-      });
-      if (!session) {
-        return res.status(403).json({ error: '无权限访问此客户的数据' });
+      // 安全：操盘手只能查询自己负责的客户（admin 跳过）
+      if (req.user.role !== 'admin') {
+        const session = await prisma.chatSession.findFirst({
+          where: { operatorId: req.user.id, clientId }
+        });
+        if (!session) {
+          return res.status(403).json({ error: '无权限访问此客户的数据' });
+        }
       }
       where.clientId = clientId;
     }
@@ -65,19 +67,16 @@ router.get('/', authMiddleware, async (req, res) => {
 // 获取女生详情
 router.get('/:id', authMiddleware, async (req, res) => {
   try {
-    const girl = await prisma.girl.findUnique({
-      where: { id: req.params.id },
-      include: {
-        chatLogs: {
-          orderBy: { createdAt: 'desc' },
-          take: 20
-        },
-        dates: {
-          orderBy: { dateTime: 'desc' },
-          take: 10
-        }
-      }
-    });
+    // 先查基本信息
+    let girl;
+    try {
+      girl = await prisma.girl.findUnique({
+        where: { id: req.params.id }
+      });
+    } catch (dbError) {
+      console.warn('[Girls] 基本查询失败:', dbError.message);
+      return res.status(500).json({ error: '获取女生信息失败，请稍后重试' });
+    }
 
     if (!girl) {
       return res.status(404).json({ error: '女生不存在' });
@@ -86,8 +85,8 @@ router.get('/:id', authMiddleware, async (req, res) => {
     if (req.user.role === 'client' && girl.clientId !== req.user.id) {
       return res.status(403).json({ error: '无权限' });
     }
-    // 安全：操盘手只能访问其负责客户的女生
-    if (req.user.role === 'operator') {
+    // 安全：操盘手只能访问其负责客户的女生（admin 跳过）
+    if (req.user.role !== 'admin') {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: girl.clientId }
       });
@@ -96,7 +95,31 @@ router.get('/:id', authMiddleware, async (req, res) => {
       }
     }
 
-    res.json({ success: true, girl });
+    // 尝试附带关联数据，如果失败则返回空数组
+    let chatLogs = [];
+    let dates = [];
+
+    try {
+      const withRelations = await prisma.girl.findUnique({
+        where: { id: req.params.id },
+        include: {
+          chatLogs: {
+            orderBy: { createdAt: 'desc' },
+            take: 20
+          },
+          dates: {
+            orderBy: { dateTime: 'desc' },
+            take: 10
+          }
+        }
+      });
+      chatLogs = withRelations.chatLogs || [];
+      dates = withRelations.dates || [];
+    } catch (relError) {
+      console.warn('[Girls] 获取关联数据失败，使用空数组:', relError.message);
+    }
+
+    res.json({ success: true, girl: { ...girl, chatLogs, dates } });
   } catch (error) {
     console.error('[Girls] 获取女生详情失败:', error);
     res.status(500).json({ error: '获取失败' });
@@ -118,12 +141,14 @@ router.post('/', authMiddleware, async (req, res) => {
       }
     }
 
-    // 安全：操盘手只能为自己的客户创建女生
-    const session = await prisma.chatSession.findFirst({
-      where: { operatorId: req.user.id, clientId: data.clientId }
-    });
-    if (!session) {
-      return res.status(403).json({ error: '无权限为该客户创建女生' });
+    // 安全：操盘手只能为自己的客户创建女生（admin 跳过）
+    if (req.user.role !== 'admin') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: data.clientId }
+      });
+      if (!session) {
+        return res.status(403).json({ error: '无权限为该客户创建女生' });
+      }
     }
 
     // 检查客户女生配额
@@ -234,12 +259,14 @@ router.put('/:id', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: '女生不存在' });
     }
 
-    // 安全：操盘手只能操作自己负责的客户的女生
-    const session = await prisma.chatSession.findFirst({
-      where: { operatorId: req.user.id, clientId: existing.clientId }
-    });
-    if (!session) {
-      return res.status(403).json({ error: '无权操作此女生数据' });
+    // 安全：操盘手只能操作自己负责的客户的女生（admin 跳过）
+    if (req.user.role !== 'admin') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: existing.clientId }
+      });
+      if (!session) {
+        return res.status(403).json({ error: '无权操作此女生数据' });
+      }
     }
 
     const data = req.body;
@@ -364,12 +391,14 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     if (!existing) {
       return res.status(404).json({ error: '女生不存在' });
     }
-    // 安全：操盘手只能操作自己负责的客户的女生
-    const session = await prisma.chatSession.findFirst({
-      where: { operatorId: req.user.id, clientId: existing.clientId }
-    });
-    if (!session) {
-      return res.status(403).json({ error: '无权删除此女生' });
+    // 安全：操盘手只能操作自己负责的客户的女生（admin 跳过）
+    if (req.user.role !== 'admin') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: existing.clientId }
+      });
+      if (!session) {
+        return res.status(403).json({ error: '无权删除此女生' });
+      }
     }
 
     await prisma.girl.delete({
@@ -394,12 +423,14 @@ router.post('/:id/intimacy', authMiddleware, async (req, res) => {
     if (!existing) {
       return res.status(404).json({ error: '女生不存在' });
     }
-    // 安全：操盘手只能操作自己负责的客户的女生
-    const session = await prisma.chatSession.findFirst({
-      where: { operatorId: req.user.id, clientId: existing.clientId }
-    });
-    if (!session) {
-      return res.status(403).json({ error: '无权操作此女生' });
+    // 安全：操盘手只能操作自己负责的客户的女生（admin 跳过）
+    if (req.user.role !== 'admin') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: existing.clientId }
+      });
+      if (!session) {
+        return res.status(403).json({ error: '无权操作此女生' });
+      }
     }
 
     const { level } = req.body;

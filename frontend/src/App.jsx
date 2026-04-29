@@ -15,6 +15,8 @@ const AICoach = lazy(() => import('./pages/client/AICoach'));
 const MyPond = lazy(() => import('./pages/client/MyPond'));
 const ClientDates = lazy(() => import('./pages/client/ClientDates'));
 const Onboarding = lazy(() => import('./pages/client/Onboarding'));
+const ClientLearning = lazy(() => import('./pages/client/Learning'));
+const DatingPlans = lazy(() => import('./pages/client/DatingPlans'));
 const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
 const AdminClients = lazy(() => import('./pages/admin/Clients'));
 const AdminGirls = lazy(() => import('./pages/admin/Girls'));
@@ -22,6 +24,7 @@ const AdminChat = lazy(() => import('./pages/admin/Chat'));
 const AdminWorkbench = lazy(() => import('./pages/admin/Workbench'));
 const AdminProgress = lazy(() => import('./pages/admin/Progress'));
 const AdminDates = lazy(() => import('./pages/admin/Dates'));
+const MembershipManagement = lazy(() => import('./pages/admin/MembershipManagement'));
 
 function PageLoader() {
   return (
@@ -87,6 +90,8 @@ function AppRoutes() {
         <Route path="ai-coach" element={<AICoach />} />
         <Route path="my-pond" element={<MyPond />} />
         <Route path="dates" element={<ClientDates />} />
+        <Route path="learning" element={<ClientLearning />} />
+        <Route path="dating-plans" element={<DatingPlans />} />
       </Route>
       <Route path="/admin" element={<ProtectedRoute requireOperator><AdminLayout /></ProtectedRoute>}>
         <Route index element={<AdminDashboard />} />
@@ -96,6 +101,7 @@ function AppRoutes() {
         <Route path="workbench" element={<AdminWorkbench />} />
         <Route path="progress" element={<AdminProgress />} />
         <Route path="dates" element={<AdminDates />} />
+        <Route path="membership" element={<MembershipManagement />} />
       </Route>
     </Routes>
     </Suspense>

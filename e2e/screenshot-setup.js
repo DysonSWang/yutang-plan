@@ -78,7 +78,7 @@ async function operatorLogin(page) {
     await loginBtn.click();
     await page.waitForTimeout(500);
   }
-  const usernameInput = page.locator('input').filter({ hasNot: page.locator('[type="password"]') }).first();
+  const usernameInput = page.locator('input[type="text"], input:not([type])').first();
   await usernameInput.waitFor({ state: 'visible', timeout: 5000 });
   await usernameInput.fill('op_e2e');
   const passwordInput = page.locator('input[type="password"]').first();
@@ -99,7 +99,7 @@ async function clientLogin(page) {
     await loginBtn.click();
     await page.waitForTimeout(500);
   }
-  const usernameInput = page.locator('input').filter({ hasNot: page.locator('[type="password"]') }).first();
+  const usernameInput = page.locator('input[type="text"], input:not([type])').first();
   const passwordInput = page.locator('input[type="password"]').first();
   await usernameInput.fill('cl_e2e');
   await passwordInput.fill('cl123456');

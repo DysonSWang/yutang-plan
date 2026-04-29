@@ -30,11 +30,12 @@ async function main() {
     await prisma.date.deleteMany({ where: { girlId: { in: existingGirlIds } } });
     await prisma.chatScreenshot.deleteMany({ where: { girlId: { in: existingGirlIds } } });
     await prisma.chatLog.deleteMany({ where: { girlId: { in: existingGirlIds } } });
+    await prisma.alert.deleteMany({ where: { girlId: { in: existingGirlIds } } });
   }
   await prisma.date.deleteMany({ where: { userId: client.id } });
   await prisma.serviceProgress.deleteMany({ where: { userId: client.id } });
   await prisma.notification.deleteMany({ where: { userId: client.id } });
-  await prisma.girl.deleteMany({ where: { clientId: client.id } });
+  await prisma.alert.deleteMany({ where: { clientId: client.id } });
   console.log('Cleared existing cl_e2e data.');
 
   // ─── 创建女生资源池 ───────────────────────────────────────────────
@@ -274,12 +275,23 @@ async function main() {
       notes: '她对艺术展很感兴趣，提前买了票',
       aiPlan: JSON.stringify({
         overview: '下午艺术展 + 晚上意大利餐厅',
-        venue: 'PSA + 附近意大利餐厅',
-        schedule: '14:00 艺术展，18:00 晚餐',
-        talkingPoints: ['艺术作品感想', '旅行见闻', '未来规划'],
-        precautions: '不要迟到，她很准时',
-        outfit: '商务休闲',
-        budgetTips: '艺术展门票150/位，晚餐预算500-800',
+        venue: { name: 'PSA + 附近意大利餐厅', type: '艺术展览+餐厅', address: '上海当代艺术博物馆', reason: '她对当代艺术感兴趣', budget: '500-1000元/人' },
+        schedule: [
+          { time: '14:00', activity: '艺术展参观', duration: '2小时', note: '提前买票，展示绅士风度' },
+          { time: '16:00', activity: '休息交流', duration: '30分钟', note: '聊观展感受，拉近关系' },
+          { time: '18:00', activity: '意大利餐厅晚餐', duration: '2小时', note: '氛围浪漫，提前订位' },
+        ],
+        talkingPoints: [
+          { topic: '艺术作品感想', content: '你觉得这幅画怎么样？', goal: '展示品味' },
+          { topic: '旅行见闻', content: '最近去过哪些有意思的地方？', goal: '增加话题' },
+          { topic: '未来规划', content: '最近有什么计划吗？', goal: '建立连接' },
+        ],
+        precautions: [
+          { point: '不要迟到', suggestion: '她很准时，提前10分钟到' },
+          { point: '保持绅士风度', suggestion: '买票、拉椅子等细节要注意' },
+        ],
+        outfit: { style: '商务休闲', colors: '深蓝/灰色', avoid: '过于休闲如T恤短裤' },
+        budgetTips: '艺术展门票150/位，晚餐预算500-800/人',
       }),
       planStatus: 'generated',
       clientConfirmed: false,
@@ -296,12 +308,23 @@ async function main() {
       notes: '她喜欢安静的环境',
       aiPlan: JSON.stringify({
         overview: '环境优雅的日料店晚餐',
-        venue: '新天地日料',
-        schedule: '18:30 晚餐',
-        talkingPoints: ['工作近况', '滑雪经历', '生活态度'],
-        precautions: '不要聊得太沉重，保持轻松',
-        outfit: '商务休闲',
-        budgetTips: '人均400-600',
+        venue: { name: '新天地日料', type: '日料餐厅', address: '新天地', reason: '环境安静，适合深入交流', budget: '400-600元/人' },
+        schedule: [
+          { time: '18:30', activity: '到达餐厅', duration: '15分钟', note: '提前订位' },
+          { time: '18:45', activity: '点餐交流', duration: '30分钟', note: '让她先选，展示尊重' },
+          { time: '19:15', activity: '用餐聊天', duration: '1.5小时', note: '话题轻松愉快' },
+        ],
+        talkingPoints: [
+          { topic: '工作近况', content: '最近工作怎么样？', goal: '了解现状' },
+          { topic: '滑雪经历', content: '你之前说去过日本滑雪？', goal: '延续话题' },
+          { topic: '生活态度', content: '你觉得什么是理想的生活？', goal: '深入了解' },
+        ],
+        precautions: [
+          { point: '不要聊得太沉重', suggestion: '保持轻松愉快的氛围' },
+          { point: '不要问敏感话题', suggestion: '避免工作压力、过往感情等' },
+        ],
+        outfit: { style: '商务休闲', colors: '深色系', avoid: '过于花哨的配饰' },
+        budgetTips: '人均400-600元，提前确认预算',
       }),
       planStatus: 'generated',
       clientConfirmed: true,
@@ -318,12 +341,22 @@ async function main() {
       notes: '约会非常顺利',
       aiPlan: JSON.stringify({
         overview: '法租界浪漫晚餐',
-        venue: '法租界',
-        schedule: '19:00 晚餐',
-        talkingPoints: ['工作', '生活', '未来'],
-        precautions: '保持绅士风度',
-        outfit: '商务休闲',
-        budgetTips: '人均500',
+        venue: { name: '法租界西餐厅', type: '西餐厅', address: '法租界', reason: '环境浪漫，适合情侣', budget: '500元/人' },
+        schedule: [
+          { time: '19:00', activity: '到达餐厅', duration: '15分钟', note: '提前订位靠窗座位' },
+          { time: '19:15', activity: '用餐交流', duration: '2小时', note: '氛围很好' },
+        ],
+        talkingPoints: [
+          { topic: '工作', content: '最近工作如何？', goal: '了解近况' },
+          { topic: '生活', content: '平时有什么爱好？', goal: '增加了解' },
+          { topic: '未来', content: '对未来有什么期待？', goal: '建立长期关系' },
+        ],
+        precautions: [
+          { point: '保持绅士风度', suggestion: '开门、拉椅子、主动买单' },
+          { point: '聊天话题要轻松', suggestion: '避免敏感话题' },
+        ],
+        outfit: { style: '商务休闲', colors: '深色系', avoid: '过于休闲' },
+        budgetTips: '人均500元，提前确认预算',
       }),
       planStatus: 'generated',
       clientConfirmed: true,
@@ -351,12 +384,22 @@ async function main() {
       notes: '第一次线下见面',
       aiPlan: JSON.stringify({
         overview: '公园散步 + 咖啡',
-        venue: '世纪公园',
-        schedule: '14:00 公园散步，16:00 咖啡',
-        talkingPoints: ['工作日常', '兴趣爱好', '生活习惯'],
-        precautions: '她比较害羞，不要太激进',
-        outfit: '休闲干净',
-        budgetTips: '人均100以内',
+        venue: { name: '世纪公园', type: '户外公园', address: '浦东世纪公园', reason: '她比较害羞，户外压力小', budget: '100元以内/人' },
+        schedule: [
+          { time: '14:00', activity: '公园散步', duration: '1小时', note: '边走边聊' },
+          { time: '15:00', activity: '咖啡厅坐坐', duration: '1.5小时', note: '继续深入交流' },
+        ],
+        talkingPoints: [
+          { topic: '工作日常', content: '最近工作忙吗？', goal: '了解近况' },
+          { topic: '兴趣爱好', content: '平时喜欢做什么？', goal: '增加了解' },
+          { topic: '生活习惯', content: '周末一般怎么过？', goal: '寻找共同点' },
+        ],
+        precautions: [
+          { point: '她比较害羞', suggestion: '不要太快推进，保持耐心' },
+          { point: '不要太过激进', suggestion: '循序渐进，给她安全感' },
+        ],
+        outfit: { style: '休闲干净', colors: '浅色系', avoid: '过于正式' },
+        budgetTips: '人均100以内，轻松约会',
       }),
       planStatus: 'generated',
       clientConfirmed: true,

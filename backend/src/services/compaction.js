@@ -86,10 +86,10 @@ function linePriority(line) {
  * 返回压缩后的文本
  */
 function compressSummary(summary) {
-  if (!summary) return '';
+  if (!summary && typeof summary !== 'number') return '';
 
   // 规范化：移除多余空白、合并重复行
-  const lines = summary.split('\n');
+  const lines = String(summary).split('\n');
   const normalized = [];
   const seen = new Set();
 
@@ -210,11 +210,11 @@ function mergeCompactSummaries(existingSummary, newSummary) {
   }
 
   // 提取新旧摘要中的关键信息（highlight extraction）
-  const existingLines = (existingSummary || '').split('\n')
+  const existingLines = String(existingSummary || '').split('\n')
     .map(l => l.trim())
     .filter(l => l && l !== 'Summary:' && l !== 'Conversation summary:');
 
-  const newLines = (newSummary || '').split('\n')
+  const newLines = String(newSummary || '').split('\n')
     .map(l => l.trim())
     .filter(l => l && l !== 'Summary:' && l !== 'Conversation summary:');
 
@@ -238,7 +238,8 @@ function mergeCompactSummaries(existingSummary, newSummary) {
  * 追加到压缩链
  */
 function appendToCompactionChain(existingChain, newSummary) {
-  const chain = existingChain ? JSON.parse(existingChain) : [];
+  let chain = [];
+  try { chain = existingChain ? JSON.parse(existingChain) : []; } catch (e) { console.warn('[compaction] appendToCompactionChain parse failed:', e.message); }
   chain.push({
     seq: chain.length + 1,
     summary: newSummary,

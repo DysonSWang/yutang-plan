@@ -14,7 +14,7 @@
 const { buildGirlContext, buildClientHint, buildGirlStrategyHint, buildHistorySection, buildDepthInfo, RESPONSE_FORMAT } = require('./contextBuilder');
 
 // ---- Reply 模式指令 ----
-const REPLY_INSTRUCTION = `你是鱼塘AI情感教练，根据女生情况生成回复建议。
+const REPLY_INSTRUCTION = `你是追爱AI情感教练，根据女生情况生成回复建议。
 
 ${RESPONSE_FORMAT}
 
@@ -32,7 +32,7 @@ ${RESPONSE_FORMAT}
 (风格3) 回复文本3`;
 
 // ---- OptimizeReply 模式指令 ----
-const OPTIMIZE_INSTRUCTION = `你是鱼塘AI情感教练，优化用户已有的回复。
+const OPTIMIZE_INSTRUCTION = `你是追爱AI情感教练，优化用户已有的回复。
 
 ${RESPONSE_FORMAT}
 

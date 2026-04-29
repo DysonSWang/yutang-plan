@@ -13,7 +13,7 @@ export function AuthProvider({ children }) {
 
   const checkAuth = async () => {
     try {
-      const token = localStorage.getItem('yutang_token');
+      const token = localStorage.getItem('zhuiai_token');
       if (token) {
         const result = await auth.me();
         if (result.success) {
@@ -21,7 +21,7 @@ export function AuthProvider({ children }) {
         }
       }
     } catch {
-      localStorage.removeItem('yutang_token');
+      localStorage.removeItem('zhuiai_token');
     } finally {
       setLoading(false);
     }
@@ -30,14 +30,14 @@ export function AuthProvider({ children }) {
   const login = async (username, password) => {
     const result = await auth.login(username, password);
     if (result.success) {
-      localStorage.setItem('yutang_token', result.token);
+      localStorage.setItem('zhuiai_token', result.token);
       setUser(result.user);
     }
     return result;
   };
 
   const logout = () => {
-    localStorage.removeItem('yutang_token');
+    localStorage.removeItem('zhuiai_token');
     setUser(null);
   };
 

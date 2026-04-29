@@ -742,7 +742,43 @@ router.post('/:id/discuss', authMiddleware, async (req, res) => {
 
     const date = await prisma.date.findUnique({
       where: { id: req.params.id },
-      include: { user: true, girl: true }
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            nickname: true,
+            avatar: true,
+            serviceStage: true,
+            interactionStyle: true,
+            communicationStyle: true,
+            strengths: true,
+            personality: true
+          }
+        },
+        girl: {
+          select: {
+            id: true,
+            name: true,
+            age: true,
+            stage: true,
+            personality: true,
+            communicationStyle: true,
+            emotionalTriggers: true,
+            thingsToAvoid: true,
+            interests: true,
+            dietPreferences: true,
+            dietRestrictions: true,
+            relationshipAttitude: true,
+            emotionalWounds: true,
+            tensionScore: true,
+            intimacyLevel: true,
+            bestApproach: true,
+            familyBackground: true,
+            familyAtmosphere: true
+          }
+        }
+      }
     });
     if (!date) return res.status(404).json({ error: '约会不存在' });
     if (req.user.role === 'operator') {
@@ -969,7 +1005,43 @@ router.post('/:id/generate-interview', authMiddleware, async (req, res) => {
 
     const date = await prisma.date.findUnique({
       where: { id: req.params.id },
-      include: { user: true, girl: true }
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            nickname: true,
+            avatar: true,
+            serviceStage: true,
+            interactionStyle: true,
+            communicationStyle: true,
+            strengths: true,
+            personality: true
+          }
+        },
+        girl: {
+          select: {
+            id: true,
+            name: true,
+            age: true,
+            stage: true,
+            personality: true,
+            communicationStyle: true,
+            emotionalTriggers: true,
+            thingsToAvoid: true,
+            interests: true,
+            dietPreferences: true,
+            dietRestrictions: true,
+            relationshipAttitude: true,
+            emotionalWounds: true,
+            tensionScore: true,
+            intimacyLevel: true,
+            bestApproach: true,
+            familyBackground: true,
+            familyAtmosphere: true
+          }
+        }
+      }
     });
     if (!date) return res.status(404).json({ error: '约会不存在' });
     if (req.user.role === 'operator') {
@@ -1145,7 +1217,43 @@ router.post('/:id/submit-interview', authMiddleware, async (req, res) => {
 
     const date = await prisma.date.findUnique({
       where: { id: req.params.id },
-      include: { user: true, girl: true }
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            nickname: true,
+            avatar: true,
+            serviceStage: true,
+            interactionStyle: true,
+            communicationStyle: true,
+            strengths: true,
+            personality: true
+          }
+        },
+        girl: {
+          select: {
+            id: true,
+            name: true,
+            age: true,
+            stage: true,
+            personality: true,
+            communicationStyle: true,
+            emotionalTriggers: true,
+            thingsToAvoid: true,
+            interests: true,
+            dietPreferences: true,
+            dietRestrictions: true,
+            relationshipAttitude: true,
+            emotionalWounds: true,
+            tensionScore: true,
+            intimacyLevel: true,
+            bestApproach: true,
+            familyBackground: true,
+            familyAtmosphere: true
+          }
+        }
+      }
     });
     if (!date) return res.status(404).json({ error: '约会不存在' });
     if (date.userId !== req.user.id) return res.status(403).json({ error: '无权操作' });
@@ -1192,7 +1300,43 @@ router.post('/:id/generate-review-report', authMiddleware, async (req, res) => {
 
     const date = await prisma.date.findUnique({
       where: { id: req.params.id },
-      include: { user: true, girl: true }
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            nickname: true,
+            avatar: true,
+            serviceStage: true,
+            interactionStyle: true,
+            communicationStyle: true,
+            strengths: true,
+            personality: true
+          }
+        },
+        girl: {
+          select: {
+            id: true,
+            name: true,
+            age: true,
+            stage: true,
+            personality: true,
+            communicationStyle: true,
+            emotionalTriggers: true,
+            thingsToAvoid: true,
+            interests: true,
+            dietPreferences: true,
+            dietRestrictions: true,
+            relationshipAttitude: true,
+            emotionalWounds: true,
+            tensionScore: true,
+            intimacyLevel: true,
+            bestApproach: true,
+            familyBackground: true,
+            familyAtmosphere: true
+          }
+        }
+      }
     });
     if (!date) return res.status(404).json({ error: '约会不存在' });
     if (req.user.role === 'operator') {

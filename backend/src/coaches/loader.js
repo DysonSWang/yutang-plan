@@ -23,7 +23,7 @@ function loadConfig() {
 
   try {
     const data = fs.readFileSync(CONFIG_PATH, 'utf-8');
-    configCache = JSON.parse(data);
+    try { configCache = JSON.parse(data); } catch (e) { console.error('[Loader] config JSON parse failed:', e.message); configCache = { skills: {}, routing: {} }; }
     return configCache;
   } catch (error) {
     console.error('[Loader] 加载配置文件失败:', error);

@@ -69,7 +69,7 @@ async function buildMasterPrompt(question, context = {}, options = {}) {
 
   // 核心：question 必须插入 prompt，否则AI看不到用户的问题
   return `
-你是鱼塘AI情感教练，帮助用户分析情感问题，给出简单实用的建议。
+你是追爱AI情感教练，帮助用户分析情感问题，给出简单实用的建议。
 
 回答要求：
 - 简洁口语化，像朋友聊天

@@ -20,7 +20,7 @@ function getHeatLevel(score) {
 
 function sortByPriority(girls, staleAlerts) {
   const alertMap = {};
-  staleAlerts.forEach(a => {
+  (staleAlerts || []).forEach(a => {
     const name = a.replace(/^[^\s]+\s/, '').replace(/\s已.*$/, '');
     alertMap[name] = a;
   });
@@ -78,7 +78,7 @@ export default function AICoach() {
   }, [selectedGirlId, girls]);
 
   const fetchOverview = async () => {
-    const token = localStorage.getItem('yutang_token');
+    const token = localStorage.getItem('zhuiai_token');
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3005';
     setOverviewLoading(true);
     try {
@@ -115,7 +115,7 @@ export default function AICoach() {
                   });
                   return;
                 }
-              } catch {}
+              } catch { /* skip malformed frames */ }
             }
           }
         }
@@ -145,7 +145,7 @@ export default function AICoach() {
     setStaleAlert(null);
     setFeedbackGiven(false);
 
-    const token = localStorage.getItem('yutang_token');
+    const token = localStorage.getItem('zhuiai_token');
 
     // 初始化显示区域
     analysisText.current = '';
@@ -214,7 +214,7 @@ export default function AICoach() {
 
   const handleNewConversation = async () => {
     try {
-      const token = localStorage.getItem('yutang_token');
+      const token = localStorage.getItem('zhuiai_token');
       await fetch(`${apiUrl}/api/ai-coach/new-session`, {
         method: 'POST',
         headers: {
@@ -245,7 +245,7 @@ export default function AICoach() {
   const handleFeedback = async (type) => {
     if (feedbackGiven) return;
     try {
-      const token = localStorage.getItem('yutang_token');
+      const token = localStorage.getItem('zhuiai_token');
       await fetch(`${apiUrl}/api/ai-coach/feedback`, {
         method: 'POST',
         headers: {
@@ -288,15 +288,15 @@ export default function AICoach() {
             <Card bg="gray.800" mb={4}>
               <CardBody textAlign="center" py={8}>
                 <Spinner size="lg" color="teal.400" />
-                <Text color="gray.400" mt={4}>加载鱼塘概况...</Text>
+                <Text color="gray.400" mt={4}>加载缘分概况...</Text>
               </CardBody>
             </Card>
           ) : overview ? (
             <>
-              {/* 今日鱼塘概况 */}
+              {/* 今日缘分概况 */}
               <Card bg="gray.800" mb={4}>
                 <CardHeader pb={2}>
-                  <Heading size="sm" color="teal.400" data-testid="今日概况">📊 今日鱼塘概况</Heading>
+                  <Heading size="sm" color="teal.400" data-testid="今日概况">📊 今日缘分概况</Heading>
                 </CardHeader>
                 <CardBody pt={0}>
                   <HStack spacing={6} mb={3}>
@@ -328,14 +328,14 @@ export default function AICoach() {
               </Card>
 
               {/* 失联提醒 */}
-              {overview.staleAlerts.length > 0 && (
+              {(overview.staleAlerts || []).length > 0 && (
                 <Card bg="gray.800" mb={4} borderLeft="4px solid" borderLeftColor="red.500">
                   <CardHeader pb={2}>
                     <Heading size="sm" color="red.400">🚨 失联提醒</Heading>
                   </CardHeader>
                   <CardBody pt={0}>
                     <VStack spacing={2} align="stretch">
-                      {overview.staleAlerts.map((alert, i) => {
+                      {(overview.staleAlerts || []).map((alert, i) => {
                         const colorScheme = alert.includes('🚨') ? 'red' : alert.includes('🔴') ? 'orange' : 'yellow';
                         const bg = colorScheme === 'red' ? 'red.900' : colorScheme === 'orange' ? 'orange.900' : 'yellow.900';
                         return (
@@ -357,11 +357,11 @@ export default function AICoach() {
                 </CardHeader>
                 <CardBody pt={0}>
                   <VStack spacing={2} align="stretch">
-                    {sortByPriority(girls, overview.staleAlerts).slice(0, 5).map((girl, i) => {
+                    {sortByPriority(girls, overview.staleAlerts || []).slice(0, 5).map((girl, i) => {
                       const heat = getHeatLevel(girl.tensionScore || 5);
                       const heatEmoji = heat === 'hot' ? '🔥' : heat === 'warm' ? '🌡️' : '❄️';
                       const heatColor = heat === 'hot' ? 'red.400' : heat === 'warm' ? 'orange.400' : 'blue.400';
-                      const girlAlert = overview.staleAlerts.find(a => a.includes(girl.name));
+                      const girlAlert = (overview.staleAlerts || []).find(a => a.includes(girl.name));
                       const priorityBadge = girlAlert?.includes('🚨') ? 'red' : girlAlert?.includes('🔴') ? 'orange' : girlAlert?.includes('⚠️') ? 'yellow' : 'gray';
                       return (
                         <HStack key={girl.id} justify="space-between" bg="gray.700" p={2} borderRadius="md">
@@ -382,10 +382,10 @@ export default function AICoach() {
                 </CardBody>
               </Card>
 
-              {overview.staleAlerts.length === 0 && (
+              {(overview.staleAlerts || []).length === 0 && (
                 <Alert status="info" bg="blue.900" mb={4} borderRadius="md">
                   <AlertIcon />
-                  <AlertDescription color="white">鱼塘状态良好，所有女生近期都有互动 🎉</AlertDescription>
+                  <AlertDescription color="white">缘分状态良好，所有女生近期都有互动 🎉</AlertDescription>
                 </Alert>
               )}
             </>

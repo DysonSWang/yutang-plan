@@ -155,7 +155,7 @@ export default function AdminWorkbench() {
     }
     activeCoachAbortRef.current = new AbortController();
 
-    const token = localStorage.getItem('yutang_token');
+    const token = localStorage.getItem('zhuiai_token');
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3005';
     // 缓存 key 要区分三级：全局概览 / 客户池分析 / 女生专项
     const cacheKey = selectedGirl?.id ? `girl:${selectedGirl.id}` : selectedClient?.id ? `client:${selectedClient.id}` : 'overview';
@@ -481,7 +481,7 @@ export default function AdminWorkbench() {
     setResponse(null);
     setAiAnalysis('');
 
-    const token = localStorage.getItem('yutang_token');
+    const token = localStorage.getItem('zhuiai_token');
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3005';
 
     try {
@@ -892,7 +892,7 @@ export default function AdminWorkbench() {
 
     if (momentRef.current) momentRef.current.textContent = '';
 
-    const token = localStorage.getItem('yutang_token');
+    const token = localStorage.getItem('zhuiai_token');
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3005';
 
     try {

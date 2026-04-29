@@ -1,7 +1,7 @@
-# 鱼塘计划 · Claude Code 项目配置
+# 追爱AI · Claude Code 项目配置
 
 ## 项目入口
-cd /home/admin/yutang-plan
+cd /home/admin/zhuiai
 
 ## 启动命令
 - 后端：`cd backend && npm run dev`（端口 3005）

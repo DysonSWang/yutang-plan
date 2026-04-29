@@ -1,5 +1,5 @@
 /**
- * 鱼塘计划 - 后端入口
+ * 追爱计划 - 后端入口
  */
 
 require('dotenv').config();
@@ -31,6 +31,7 @@ const weeklyReviewRoutes = require('./routes/weeklyReview');
 const reversalRoutes = require('./routes/reversal');
 const uploadRoutes = require('./routes/upload');
 const videoCompressRoutes = require('./routes/video-compress');
+const membershipRoutes = require('./routes/membership');
 
 const app = express();
 const server = http.createServer(app);
@@ -76,6 +77,9 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 // 上传路由
 app.use('/api/upload', uploadRoutes);
 app.use('/api/upload', videoCompressRoutes);
+
+// 会员/积分/邀请/学习版块
+app.use('/api/membership', membershipRoutes);
 
 // Socket.io 连接处理
 io.on('connection', (socket) => {
@@ -126,7 +130,7 @@ app.use((err, req, res, next) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`🐟 鱼塘计划后端启动: http://localhost:${PORT}`);
+  console.log(`🐟 追爱计划后端启动: http://localhost:${PORT}`);
 });
 
 module.exports = { app, server, io, prisma };

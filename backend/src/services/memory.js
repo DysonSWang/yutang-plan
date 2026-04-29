@@ -118,7 +118,8 @@ async function runCompaction(memory) {
   const newChain = compaction.appendToCompactionChain(memory.compactionChain, mergedSummary);
 
   // 提取或更新硬约束（女生禁忌等信息）
-  let hardConstraints = memory.hardConstraints ? JSON.parse(memory.hardConstraints) : null;
+  let hardConstraints = null;
+  try { hardConstraints = memory.hardConstraints ? JSON.parse(memory.hardConstraints) : null; } catch (e) { console.warn('[Memory] hardConstraints parse failed:', e.message); hardConstraints = null; }
   if (!hardConstraints && memory.girlId) {
     // 首次压缩：从女生档案提取硬约束
     const girl = await prisma.girl.findUnique({
@@ -133,12 +134,12 @@ async function runCompaction(memory) {
     });
     if (girl) {
       let personality = {};
-      try { personality = girl.personality ? JSON.parse(girl.personality) : {}; } catch (e) { /* ignore */ }
+      try { personality = girl.personality ? JSON.parse(girl.personality) : {}; } catch (e) { console.warn('[Memory] personality parse failed:', e.message); personality = {}; }
       hardConstraints = {
         taboos: personality.thingsToAvoid || [],
         emotionalTriggers: personality.emotionalTriggers || [],
-        thingsToAvoid: girl.thingsToAvoid ? girl.thingsToAvoid.split(',').map(s => s.trim()).filter(Boolean) : [],
-        dealbreakers: girl.dealbreakers ? girl.dealbreakers.split(',').map(s => s.trim()).filter(Boolean) : [],
+        thingsToAvoid: typeof girl.thingsToAvoid === 'string' ? girl.thingsToAvoid.split(',').map(s => s.trim()).filter(Boolean) : [],
+        dealbreakers: typeof girl.dealbreakers === 'string' ? girl.dealbreakers.split(',').map(s => s.trim()).filter(Boolean) : [],
         stage: girl.stage || null
       };
     }
@@ -474,13 +475,14 @@ async function getFeedbackStats(opts = {}) {
   for (const f of feedbacks) {
     if (!f.coachesUsed) continue;
     try {
-      const coaches = JSON.parse(f.coachesUsed);
+      const parsed = f.coachesUsed ? JSON.parse(f.coachesUsed) : null;
+      const coaches = Array.isArray(parsed) ? parsed : [];
       for (const coach of coaches) {
         if (!byCoach[coach]) byCoach[coach] = { total: 0, helpful: 0, rate: 0 };
         byCoach[coach].total++;
         if (f.type === 'helpful') byCoach[coach].helpful++;
       }
-    } catch (e) { /* ignore */ }
+    } catch (e) { console.warn('[Memory] coachesUsed parse failed:', e.message); }
   }
   for (const coach of Object.keys(byCoach)) {
     byCoach[coach].rate = byCoach[coach].total > 0
@@ -617,7 +619,7 @@ async function getClientSessions(clientId) {
     }
     let chainLength = 0;
     if (s.compactionChain) {
-      try { chainLength = JSON.parse(s.compactionChain).length; } catch (e) { console.warn(`[Memory] getClientSessions chainLength 解析失败 id=${s.id}:`, e.message); }
+      try { const parsed = JSON.parse(s.compactionChain); chainLength = Array.isArray(parsed) ? parsed.length : 0; } catch (e) { console.warn(`[Memory] getClientSessions chainLength 解析失败 id=${s.id}:`, e.message); chainLength = 0; }
     }
     byGirl.get(key).push({
       id: s.id,
@@ -628,7 +630,7 @@ async function getClientSessions(clientId) {
       chainLength,
       tokenCount: s.tokenCount,
       messageCount: (() => {
-        try { return JSON.parse(s.messages || '[]').length; } catch (e) { console.warn(`[Memory] getClientSessions messageCount 解析失败 id=${s.id}:`, e.message); return 0; }
+        try { const parsed = JSON.parse(s.messages || '[]'); return Array.isArray(parsed) ? parsed.length : 0; } catch (e) { console.warn(`[Memory] getClientSessions messageCount 解析失败 id=${s.id}:`, e.message); return 0; }
       })(),
       createdAt: s.createdAt,
       updatedAt: s.updatedAt

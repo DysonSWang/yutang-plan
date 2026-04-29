@@ -1,5 +1,7 @@
 /**
  * 文件上传路由 - 聊天消息图片/视频/音频
+ * 敏感内容(isBurnAfterRead/isFlashImage) AES-256-GCM加密后存OSS /encrypted/
+ * 普通内容直传OSS /public/
  */
 
 const express = require('express');
@@ -7,24 +9,11 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 const { JWT_SECRET } = require('../config');
-
-// 上传根目录
-const UPLOAD_DIR = path.join(__dirname, '../../uploads/chat-media');
-['images', 'videos', 'audio'].forEach(sub => {
-  const dir = path.join(UPLOAD_DIR, sub);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-});
-
-// multer 配置工厂
-const createStorage = (subDir) => multer.diskStorage({
-  destination: (req, file, cb) => cb(null, path.join(UPLOAD_DIR, subDir)),
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
+const { encrypt } = require('../services/encryption');
+const { uploadBuffer } = require('../services/ossClient');
 
 // Auth middleware
 const authMiddleware = async (req, res, next) => {
@@ -40,48 +29,132 @@ const authMiddleware = async (req, res, next) => {
   }
 };
 
+// OSS路径生成
+function generateOssPath(subDir, filename, isSensitive) {
+  const ext = path.extname(filename);
+  const randomId = crypto.randomBytes(16).toString('hex');
+  const prefix = isSensitive ? 'encrypted' : 'public';
+  return `${prefix}/${subDir}/${randomId}${ext}`;
+}
+
 const router = express.Router();
 
 // POST /api/upload/image
 router.post('/image', authMiddleware, multer({
-  storage: createStorage('images'),
-  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) cb(null, true);
     else cb(new Error('只支持图片文件'));
   }
-}).single('file'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: '未上传文件' });
-  const url = `/uploads/chat-media/images/${req.file.filename}`;
-  res.json({ url, filename: req.file.filename, size: req.file.size, mimetype: req.file.mimetype });
+}).single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: '未上传文件' });
+
+    const isBurnAfterRead = req.body.isBurnAfterRead === 'true' || req.body.isBurnAfterRead === true;
+    const isFlashImage = req.body.isFlashImage === 'true' || req.body.isFlashImage === true;
+    const isSensitive = isBurnAfterRead || isFlashImage;
+
+    const ossPath = generateOssPath('images', req.file.originalname, isSensitive);
+    let finalBuffer = req.file.buffer;
+    let finalSize = finalBuffer.length;
+    let encryptionIv = null;
+
+    if (isSensitive) {
+      const encrypted = encrypt(req.file.buffer);
+      finalBuffer = encrypted;
+      finalSize = encrypted.length;
+      // IV内嵌在加密内容头部(前12字节)，提取存储用于解密时引用
+      encryptionIv = encrypted.subarray(0, 12).toString('hex');
+    }
+
+    await uploadBuffer(finalBuffer, ossPath, isSensitive);
+
+    res.json({
+      url: `/${ossPath}`,
+      filename: path.basename(ossPath),
+      size: finalSize,
+      mimetype: req.file.mimetype,
+      isEncrypted: isSensitive,
+      encryptionIv
+    });
+  } catch (err) {
+    console.error('[Upload] image error:', err);
+    res.status(500).json({ error: '上传失败' });
+  }
 });
 
 // POST /api/upload/video
 router.post('/video', authMiddleware, multer({
-  storage: createStorage('videos'),
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 100 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('video/')) cb(null, true);
     else cb(new Error('只支持视频文件'));
   }
-}).single('file'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: '未上传文件' });
-  const url = `/uploads/chat-media/videos/${req.file.filename}`;
-  res.json({ url, filename: req.file.filename, size: req.file.size, mimetype: req.file.mimetype });
+}).single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: '未上传文件' });
+
+    const isBurnAfterRead = req.body.isBurnAfterRead === 'true' || req.body.isBurnAfterRead === true;
+    const isFlashImage = req.body.isFlashImage === 'true' || req.body.isFlashImage === true;
+    const isSensitive = isBurnAfterRead || isFlashImage;
+
+    const ossPath = generateOssPath('videos', req.file.originalname, isSensitive);
+    let finalBuffer = req.file.buffer;
+    let finalSize = finalBuffer.length;
+    let encryptionIv = null;
+
+    if (isSensitive) {
+      const encrypted = encrypt(req.file.buffer);
+      finalBuffer = encrypted;
+      finalSize = encrypted.length;
+      encryptionIv = encrypted.subarray(0, 12).toString('hex');
+    }
+
+    await uploadBuffer(finalBuffer, ossPath, isSensitive);
+
+    res.json({
+      url: `/${ossPath}`,
+      filename: path.basename(ossPath),
+      size: finalSize,
+      mimetype: req.file.mimetype,
+      isEncrypted: isSensitive,
+      encryptionIv
+    });
+  } catch (err) {
+    console.error('[Upload] video error:', err);
+    res.status(500).json({ error: '上传失败' });
+  }
 });
 
 // POST /api/upload/audio
 router.post('/audio', authMiddleware, multer({
-  storage: createStorage('audio'),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('audio/')) cb(null, true);
     else cb(new Error('只支持音频文件'));
   }
-}).single('file'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: '未上传文件' });
-  const url = `/uploads/chat-media/audio/${req.file.filename}`;
-  res.json({ url, filename: req.file.filename, size: req.file.size, mimetype: req.file.mimetype });
+}).single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: '未上传文件' });
+
+    // 音频暂不加密（聊天文字记录本身就是明文，音频加密意义不大）
+    const ossPath = generateOssPath('audio', req.file.originalname, false);
+    await uploadBuffer(req.file.buffer, ossPath, false);
+
+    res.json({
+      url: `/${ossPath}`,
+      filename: path.basename(ossPath),
+      size: req.file.size,
+      mimetype: req.file.mimetype,
+      isEncrypted: false
+    });
+  } catch (err) {
+    console.error('[Upload] audio error:', err);
+    res.status(500).json({ error: '上传失败' });
+  }
 });
 
 // 错误处理

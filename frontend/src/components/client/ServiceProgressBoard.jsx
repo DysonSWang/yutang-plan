@@ -160,7 +160,7 @@ export default function ServiceProgressBoard({ currentStage = 1, stats = {} }) {
 
       {/* 成果展示卡片 */}
       <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
-        <StatCard label="鱼塘资源" value={girlCount} unit="个女生" icon={FishIcon} color="brand" />
+        <StatCard label="缘分资源" value={girlCount} unit="个女生" icon={FishIcon} color="brand" />
         <StatCard label="暧昧中" value={intimacyCount} unit="正在推进" icon={HeartIcon} color="orange" />
         <StatCard label="约会次数" value={dateCount} unit="已完成" icon={SparklesIcon} color="purple" />
         <StatCard label="长期关系" value={longTermCount} unit="确定心动" icon={LockIcon} color="red" />

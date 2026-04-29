@@ -398,7 +398,7 @@ const dailyKey = `daily:${clientId}:${YYYYMMDD}`;
 ### 6.2 全局概览（overview）—— 每日计划模式
 
 ```
-【今日鱼塘概况】
+【今日追爱概况】
 总鱼数：${allGirls.length}
 热度分布：🔥高(${hot}) 🌡️中(${warm}) ❄️低(${cold})
 

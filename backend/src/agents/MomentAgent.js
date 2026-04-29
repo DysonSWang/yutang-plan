@@ -12,7 +12,7 @@
 const { buildGirlContext, buildClientHint, buildGirlStrategyHint, buildDepthInfo, RESPONSE_FORMAT } = require('./contextBuilder');
 
 // ---- 基础指令 ----
-const MOMENT_INSTRUCTION = `你是鱼塘AI情感教练，分析女生朋友圈并给出私聊切入建议。
+const MOMENT_INSTRUCTION = `你是追爱AI情感教练，分析女生朋友圈并给出私聊切入建议。
 
 ${RESPONSE_FORMAT}
 

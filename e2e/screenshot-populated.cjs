@@ -12,7 +12,7 @@ async function main() {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
 
-  const outDir = '/home/admin/yutang-plan/e2e/screenshots-populated';
+  const outDir = '/home/admin/zhuiai/e2e/screenshots-populated';
   if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
 
   // 客户登录
@@ -21,7 +21,7 @@ async function main() {
   const loginBtn = page.locator('button:has-text("登录")').first();
   if (await loginBtn.isVisible()) await loginBtn.click();
   await page.waitForTimeout(500);
-  await page.locator('input').filter({ hasNot: page.locator('[type="password"]') }).first().fill('cl_e2e');
+  await page.locator('input[type="text"], input:not([type])').first().fill('cl_e2e');
   await page.locator('input[type="password"]').first().fill('cl123456');
   await page.locator('button[type="submit"]').first().click();
   await page.waitForTimeout(2000);

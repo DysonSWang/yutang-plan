@@ -97,6 +97,12 @@ export default function AdminGirls() {
 
   const toast = useToast();
 
+  // 搜索和过滤状态
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [filterStage, setFilterStage] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterClientId, setFilterClientId] = useState('');
+
   const loadGirls = async () => {
     try {
       const res = await girls.list();
@@ -343,10 +349,10 @@ export default function AdminGirls() {
       if (data.observations && !data.observations.startsWith('[')) data.observations = '';
       // photos/videos: comma-separated to JSON array
       if (data.photos) {
-        data.photos = JSON.stringify(data.photos.split(',').map(s => s.trim()).filter(Boolean));
+        data.photos = JSON.stringify((data.photos || '').split(',').map(s => s.trim()).filter(Boolean));
       }
       if (data.videos) {
-        data.videos = JSON.stringify(data.videos.split(',').map(s => s.trim()).filter(Boolean));
+        data.videos = JSON.stringify((data.videos || '').split(',').map(s => s.trim()).filter(Boolean));
       }
       // 数字字段
       ['empathy', 'selfAwareness', 'communication', 'relationship', 'conflictRes', 'matchScore'].forEach(k => {
@@ -569,7 +575,7 @@ export default function AdminGirls() {
       fd.append('notes', momentNotes);
       fd.append('isMomentScreenshot', 'true');
 
-      const token = localStorage.getItem('yutang_token');
+      const token = localStorage.getItem('zhuiai_token');
       const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/chat-screenshots`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
@@ -616,7 +622,7 @@ export default function AdminGirls() {
         if (data.pendingFields && Object.keys(data.pendingFields).length > 0) {
           setPendingFields(data.pendingFields);
           const defaults = {};
-          Object.keys(data.pendingFields).forEach(k => { defaults[k] = false; }); // 默认不选中
+          Object.keys(data.pendingFields || {}).forEach(k => { defaults[k] = false; }); // 默认不选中
           setConfirmSelections(defaults);
           onConfirmOpen();
         }
@@ -642,7 +648,7 @@ export default function AdminGirls() {
     if (!confirm('确定删除?')) return;
     try {
       const existing = selectedGirl.momentPhotos ? JSON.parse(selectedGirl.momentPhotos) : [];
-      const updated = existing.filter(m => m.id !== momId);
+      const updated = (existing || []).filter(m => m.id !== momId);
       await girls.update(selectedGirl.id, { momentPhotos: JSON.stringify(updated) });
       setMomentScreenshots(updated);
       toast({ title: '已删除', status: 'success', duration: 1500 });
@@ -683,13 +689,102 @@ export default function AdminGirls() {
     return map[stage] || stage || '未设置';
   };
 
+  // 过滤后的女生列表
+  const filteredGirls = girlsList.filter(girl => {
+    const keyword = searchKeyword.toLowerCase();
+    const matchSearch = !keyword ||
+      (girl.name || '').toLowerCase().includes(keyword) ||
+      (girl.occupation || '').toLowerCase().includes(keyword) ||
+      (girl.education || '').toLowerCase().includes(keyword) ||
+      (girl.hometown || '').toLowerCase().includes(keyword) ||
+      (girl.residence || '').toLowerCase().includes(keyword);
+    const matchStage = !filterStage || girl.stage === filterStage;
+    const matchStatus = !filterStatus || girl.status === filterStatus;
+    const matchClient = !filterClientId || girl.clientId === filterClientId;
+    return matchSearch && matchStage && matchStatus && matchClient;
+  });
+
   return (
     <Box>
-      <Heading color="white" mb={6}>女生资源</Heading>
+      <Flex justify="space-between" align="center" mb={4} gap={2} direction={{ base: 'column', md: 'row' }}>
+        <Heading color="white" size={{ base: 'md', md: 'lg' }}>女生资源</Heading>
+        <Button colorScheme="teal" size="sm" onClick={() => { setFormData(getInitialFormData()); onCreateOpen(); }}>
+          + 添加女生
+        </Button>
+      </Flex>
 
+      {/* 搜索和过滤 */}
       <Card bg="gray.800" mb={4}>
-        <CardBody>
-          <Button colorScheme="teal" onClick={openAddModal} transition="all 0.15s ease" _hover={{ transform: 'translateY(-1px)' }}>+ 添加女生</Button>
+        <CardBody py={3}>
+          <Flex gap={2} direction={{ base: 'column', sm: 'row' }} wrap="wrap">
+            <Input
+              placeholder="搜索..."
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              maxW={{ base: '100%', sm: '250px' }}
+              bg="gray.700"
+              border="gray.600"
+              _placeholder={{ color: 'gray.400' }}
+              size="sm"
+            />
+            <Select
+              placeholder="阶段"
+              value={filterStage}
+              onChange={(e) => setFilterStage(e.target.value)}
+              maxW={{ base: '100%', sm: '120px' }}
+              bg="gray.700"
+              border="gray.600"
+              size="sm"
+            >
+              {STAGES.map(stage => (
+                <option key={stage} value={stage}>{stage}</option>
+              ))}
+            </Select>
+            <Select
+              placeholder="状态"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              maxW={{ base: '100%', sm: '120px' }}
+              bg="gray.700"
+              border="gray.600"
+              size="sm"
+            >
+              <option value="available">可用</option>
+              <option value="chatting">聊天中</option>
+              <option value="dating">约会中</option>
+              <option value="locked">锁定</option>
+              <option value="long_term">长期</option>
+            </Select>
+            <Select
+              placeholder="所属客户"
+              value={filterClientId}
+              onChange={(e) => setFilterClientId(e.target.value)}
+              maxW={{ base: '100%', sm: '180px' }}
+              bg="gray.700"
+              border="gray.600"
+              size="sm"
+            >
+              {clientList.filter(c => c.role !== 'admin' && c.role !== 'operator').map(client => (
+                <option key={client.id} value={client.id}>
+                  {client.nickname || client.username}
+                </option>
+              ))}
+            </Select>
+            {(searchKeyword || filterStage || filterStatus || filterClientId) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                color="gray.400"
+                onClick={() => { setSearchKeyword(''); setFilterStage(''); setFilterStatus(''); setFilterClientId(''); }}
+              >
+                清除
+              </Button>
+            )}
+            <Box flex={1} display={{ base: 'none', sm: 'block' }} />
+            <Text color="gray.400" fontSize="sm" alignSelf="center">
+              {filteredGirls.length} / {girlsList.length}
+            </Text>
+          </Flex>
         </CardBody>
       </Card>
 
@@ -711,7 +806,7 @@ export default function AdminGirls() {
                 </Tr>
               </Thead>
               <Tbody>
-                {girlsList.map(girl => (
+                {filteredGirls.map(girl => (
                   <Tr key={girl.id} _hover={{ bg: 'gray.750' }} transition="background 0.15s ease" cursor="pointer" onClick={() => openDetailModal(girl)}>
                     <Td fontWeight="bold">
                       <HStack spacing={2}>
@@ -773,8 +868,10 @@ export default function AdminGirls() {
                     </Td>
                   </Tr>
                 ))}
-                {girlsList.length === 0 && (
-                  <Tr><Td colSpan={8} textAlign="center" color="gray.500">暂无女生资源</Td></Tr>
+                {filteredGirls.length === 0 && (
+                  <Tr><Td colSpan={8} textAlign="center" color="gray.500">
+                    {girlsList.length === 0 ? '暂无女生资源' : '未找到匹配的女生'}
+                  </Td></Tr>
                 )}
               </Tbody>
             </Table>
@@ -782,11 +879,13 @@ export default function AdminGirls() {
 
           {/* 移动端卡片列表 */}
           <Box display={{ base: 'block', lg: 'none' }}>
-            {girlsList.length === 0 ? (
-              <Text color="gray.500" textAlign="center" py={8}>暂无女生资源</Text>
+            {filteredGirls.length === 0 ? (
+              <Text color="gray.500" textAlign="center" py={8}>
+                {girlsList.length === 0 ? '暂无女生资源' : '未找到匹配的女生'}
+              </Text>
             ) : (
               <VStack spacing={3} align="stretch">
-                {girlsList.map(girl => (
+                {filteredGirls.map(girl => (
                   <Card key={girl.id} bg="gray.700" size="sm" cursor="pointer" onClick={() => openDetailModal(girl)} _hover={{ bg: 'gray.650' }} transition="background 0.15s">
                     <CardBody py={3} px={4}>
                       <Flex justify="space-between" align="center" mb={2}>

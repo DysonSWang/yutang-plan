@@ -19,7 +19,7 @@ test.describe('客户登录', () => {
       await loginBtn.click();
       await page.waitForTimeout(500);
     }
-    const usernameInput = page.locator('input').filter({ hasNot: page.locator('[type="password"]') }).first();
+    const usernameInput = page.locator('input[type="text"], input:not([type])').first();
     const passwordInput = page.locator('input[type="password"]').first();
     const submitBtn = page.locator('button[type="submit"]').first();
     await usernameInput.fill('cl_e2e');
@@ -37,7 +37,7 @@ test.describe('客户登录', () => {
       await loginBtn.click();
       await page.waitForTimeout(500);
     }
-    const usernameInput = page.locator('input').filter({ hasNot: page.locator('[type="password"]') }).first();
+    const usernameInput = page.locator('input[type="text"], input:not([type])').first();
     const passwordInput = page.locator('input[type="password"]').first();
     const submitBtn = page.locator('button[type="submit"]').first();
     await usernameInput.fill('cl_e2e');
@@ -77,8 +77,8 @@ test.describe('客户首页', () => {
     expect(page.url()).toBeTruthy();
   });
 
-  test('可以访问我的鱼塘', async ({ page }) => {
-    const pondLink = page.locator('a[href*="pond"], nav >> text=鱼塘').first();
+  test('可以访问我的追爱', async ({ page }) => {
+    const pondLink = page.locator('a[href*="pond"], nav >> text=追爱').first();
     if (await pondLink.isVisible()) {
       await pondLink.click();
       await page.waitForTimeout(1000);

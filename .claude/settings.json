@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(BASE_URL)",
+      "Bash(npx *)",
+      "Bash(curl -s *)",
+      "Bash(ps aux)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(npm run *)",
+      "Bash(node -e *)",
+      "Bash(mkdir -p *)",
+      "Bash(rm -rf *)",
+      "Bash(pkill -f *)",
+      "Bash(psql -h *)"
+    ]
+  }
+}

@@ -6,7 +6,7 @@ import {
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { alerts as alertsApi } from '../../utils/api';
-import { DashboardIcon, UsersIcon, FemaleIcon, ChatIcon, BrainIcon, ChartIcon, FishIcon, CalendarIcon } from '../../components/Icons';
+import { DashboardIcon, UsersIcon, FemaleIcon, ChatIcon, BrainIcon, ChartIcon, FishIcon, CalendarIcon, MembershipIcon } from '../../components/Icons';
 import { FiBell, FiAlertTriangle, FiInfo, FiCheck, FiX, FiRefreshCw } from 'react-icons/fi';
 
 const navItems = [
@@ -17,6 +17,7 @@ const navItems = [
   { path: '/admin/chat', label: '聊天', icon: ChatIcon },
   { path: '/admin/workbench', label: '军师', icon: BrainIcon },
   { path: '/admin/progress', label: '进度', icon: ChartIcon },
+  { path: '/admin/membership', label: '会员管理', icon: MembershipIcon },
 ];
 
 const SEVERITY_COLOR = { P0: 'red', P1: 'orange', P2: 'gray' };
@@ -170,9 +171,29 @@ function DesktopSidebar() {
       display={{ base: 'none', lg: 'block' }}
     >
       <VStack spacing={2} align="stretch">
-        <Flex align="center" gap={2} mb={4}>
-          <Icon as={FishIcon} color="teal.400" boxSize={6} />
-          <Text fontSize="xl" fontWeight="bold" color="teal.400">鱼塘系统</Text>
+        <Flex align="center" gap={3} mb={6} py={2}>
+          <Box
+            bg="linear-gradient(135deg, #319795 0%, #00B5D8 50%, #38B2AC 100%)"
+            p={2}
+            borderRadius="xl"
+            boxShadow="0 4px 20px rgba(49, 151, 149, 0.4)"
+          >
+            <Icon as={FishIcon} color="white" boxSize={6} />
+          </Box>
+          <Box>
+            <Text
+              fontSize="2xl"
+              fontWeight="bold"
+              bgGradient="linear(to-r, teal.300, cyan.400, teal.300)"
+              bgClip="text"
+              letterSpacing="wider"
+            >
+              追爱
+            </Text>
+            <Text fontSize="10px" color="gray.500" letterSpacing="2px">
+              Z H U I A I
+            </Text>
+          </Box>
         </Flex>
 
         {/* 预警入口 */}
@@ -216,7 +237,7 @@ function DesktopSidebar() {
               )}
             </Flex>
           </PopoverTrigger>
-          <PopoverContent bg="gray.800" borderColor="gray.600" w="320px">
+          <PopoverContent bg="gray.800" borderColor="gray.600" w="320px" zIndex={9999}>
             <PopoverHeader borderColor="gray.600" fontWeight="bold" color="white">
               <Flex justify="space-between" align="center">
                 <Text>主动预警</Text>

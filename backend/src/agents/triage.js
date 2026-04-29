@@ -19,7 +19,7 @@
 const { routeQuestion } = require('../coaches/router');
 const { ROUTE_TYPES } = require('./UnifiedContext');
 
-const TRIAGE_INSTRUCTIONS = `你是鱼塘计划的路由 Agent。根据用户问题类型，分流到最合适的专业 Agent：
+const TRIAGE_INSTRUCTIONS = `你是追爱计划的路由 Agent。根据用户问题类型，分流到最合适的专业 Agent：
 
 路由类型：
 - situation（情况咨询）：用户描述当前情况、问怎么办、问进展如何 → Situation Agent
@@ -27,7 +27,7 @@ const TRIAGE_INSTRUCTIONS = `你是鱼塘计划的路由 Agent。根据用户问
 - reply（回复建议）：用户问怎么回复、给个回复选项 → Reply Agent
 - optimize_reply（话术优化）：用户有已有回复，让AI优化 → Reply Agent（话术优化模式）
 - moment（朋友圈分析）：用户发朋友圈截图/文字，让分析 → Moment Agent
-- overview（全局概览）：用户问全局、鱼塘整体情况 → Overview Agent
+- overview（全局概览）：用户问全局、追爱整体情况 → Overview Agent
 - general（通用教练）：不符合以上类型，使用通用教练
 
 判断规则：
@@ -35,7 +35,7 @@ const TRIAGE_INSTRUCTIONS = `你是鱼塘计划的路由 Agent。根据用户问
 2. 有朋友圈内容 → moment
 3. 问怎么回复/给回复 → reply（无原始回复则普通建议，有原始回复则优化模式）
 4. 有原始回复文本 → optimize_reply
-5. 问全局/鱼塘/所有女生 → overview
+5. 问全局/追爱/所有女生 → overview
 6. 其他 → situation（情况咨询）
 
 只输出路由类型，不要解释理由。`;
@@ -57,7 +57,7 @@ const KEYWORD_ROUTES = [
   { keywords: ['优化', '改一下', '调整一下', '改善', '太生硬', '太土'], route: ROUTE_TYPES.OPTIMIZE_REPLY, confidence: 0.8 },
 
   // 全局概览
-  { keywords: ['全局', '整体情况', '鱼塘', '所有女生', '客户池', '一览', '总结'], route: ROUTE_TYPES.OVERVIEW, confidence: 0.8 },
+  { keywords: ['全局', '整体情况', '追爱', '所有女生', '客户池', '一览', '总结'], route: ROUTE_TYPES.OVERVIEW, confidence: 0.8 },
 
   // 情况咨询（默认）
   { keywords: ['怎么办', '怎么推进', '怎么拉伸', '进展', '情况', '感觉', '应该'], route: ROUTE_TYPES.SITUATION, confidence: 0.65 },

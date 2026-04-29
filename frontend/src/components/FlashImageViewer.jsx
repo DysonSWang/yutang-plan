@@ -10,7 +10,6 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId 
   const [remaining, setRemaining] = useState(5);
   const timerRef = useRef(null);
   const onCloseRef = useRef(onClose);
-  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3005';
 
   // Keep onClose ref fresh to avoid re-effecting on every onClose change
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
@@ -101,7 +100,7 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId 
 
       {/* 图片 */}
       <Image
-        src={`${API_BASE}${imageUrl}`}
+        src={imageUrl}
         alt="闪图"
         maxW="90vw"
         maxH="85vh"

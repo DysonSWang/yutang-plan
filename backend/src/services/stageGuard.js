@@ -75,7 +75,7 @@ function addStageContext(currentStage, stageContext = '') {
   }
 
   const description = STAGE_DESCRIPTIONS[currentStage] || '';
-  const advice = STAGE_ADVICE_BY_STAGE[currentStage]?.map(a => `- ${a}`).join('\n') || '';
+  const advice = STAGE_ADVICE_BY_STAGE[currentStage]?.map(a => `- ${a}`).join('\n') ?? '';
   const label = STAGE_LABELS[currentStage] || currentStage;
 
   return `

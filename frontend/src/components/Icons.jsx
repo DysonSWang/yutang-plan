@@ -264,3 +264,74 @@ export const PlusIcon = createIcon({
     <line key="2" x1="5" y1="12" x2="19" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
   ]
 });
+
+// Book 图标
+export const BookIcon = createIcon({
+  displayName: 'BookIcon',
+  viewBox: '0 0 24 24',
+  path: [
+    <path key="1" d="M4 19.5A2.5 2.5 0 016.5 17H20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>,
+    <path key="2" d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+  ]
+});
+
+// Copy 图标
+export const CopyIcon = createIcon({
+  displayName: 'CopyIcon',
+  viewBox: '0 0 24 24',
+  path: [
+    <rect key="1" x="9" y="9" width="13" height="13" rx="2" ry="2" stroke="currentColor" strokeWidth="2" fill="none"/>,
+    <path key="2" d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
+  ]
+});
+
+// Membership 图标
+export const MembershipIcon = createIcon({
+  displayName: 'MembershipIcon',
+  viewBox: '0 0 24 24',
+  path: [
+    <path key="1" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+  ]
+});
+
+// Points 图标
+export const PointsIcon = createIcon({
+  displayName: 'PointsIcon',
+  viewBox: '0 0 24 24',
+  path: [
+    <circle key="1" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none"/>,
+    <path key="2" d="M12 8v8M8 12h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+  ]
+});
+
+// Gift 图标
+export const GiftIcon = createIcon({
+  displayName: 'GiftIcon',
+  viewBox: '0 0 24 24',
+  path: [
+    <path key="1" d="M20 12v10H4V12" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>,
+    <path key="2" d="M22 12H2" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>,
+    <path key="3" d="M12 2v10" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>,
+    <path key="4" d="M12 2c-2 2-4 4-4 6s2 4 4 6 4-4 4-6-2-4-4-6z" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+  ]
+});
+
+// Camera 图标
+export const CameraIcon = createIcon({
+  displayName: 'CameraIcon',
+  viewBox: '0 0 24 24',
+  path: [
+    <path key="1" d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>,
+    <circle key="2" cx="12" cy="13" r="4" stroke="currentColor" strokeWidth="2" fill="none"/>
+  ]
+});
+
+// Crown 图标
+export const CrownIcon = createIcon({
+  displayName: 'CrownIcon',
+  viewBox: '0 0 24 24',
+  path: [
+    <path key="1" d="M2 17l2-10 5 5 3-7 3 7 5-5 2 10H2z" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>,
+    <path key="2" d="M2 17h20v3H2z" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+  ]
+});

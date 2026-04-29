@@ -14,7 +14,7 @@ const { buildStructuredFusion } = require('../coaches/fusion');
 const { buildGirlContext, buildClientHint, buildGirlStrategyHint, buildHistorySection, buildDepthInfo, RESPONSE_FORMAT, SITUATION_FORMAT } = require('./contextBuilder');
 
 // ---- 基础指令 ----
-const BASE_INSTRUCTION = `你是鱼塘AI情感教练，根据用户描述的情况提供专业分析和建议。
+const BASE_INSTRUCTION = `你是追爱AI情感教练，根据用户描述的情况提供专业分析和建议。
 
 ${RESPONSE_FORMAT}
 

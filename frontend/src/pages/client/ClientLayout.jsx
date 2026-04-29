@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSocket } from '../../contexts/SocketContext';
 import { notifications as notifApi } from '../../utils/api';
-import { FishIcon, ChatIcon, SparklesIcon, BellIcon, HomeIcon, UserIcon, CalendarIcon } from '../../components/Icons';
+import { FishIcon, ChatIcon, SparklesIcon, BellIcon, HomeIcon, UserIcon, CalendarIcon, BookIcon, GiftIcon } from '../../components/Icons';
 
 const navItems = [
   { path: '/', label: '首页', icon: HomeIcon },
@@ -12,7 +12,9 @@ const navItems = [
   { path: '/dates', label: '约会', icon: CalendarIcon },
   { path: '/chat', label: '顾问', icon: ChatIcon },
   { path: '/ai-coach', label: 'AI', icon: SparklesIcon },
-  { path: '/my-pond', label: '鱼塘', icon: FishIcon },
+  { path: '/my-pond', label: '缘分', icon: FishIcon },
+  { path: '/learning', label: '学习', icon: BookIcon },
+  { path: '/dating-plans', label: '方案', icon: GiftIcon },
 ];
 
 // 桌面端侧边导航
@@ -82,7 +84,7 @@ function DesktopSidebar() {
         <Flex justify="space-between" align="center" mb={4}>
           <Flex align="center" gap={2}>
             <Icon as={FishIcon} color="brand.500" />
-            <Text fontSize="lg" fontWeight="bold" color="brand.500" fontFamily="heading">鱼塘</Text>
+            <Text fontSize="lg" fontWeight="bold" color="brand.500" fontFamily="heading">追爱</Text>
           </Flex>
           <Popover isOpen={showNotifications} onClose={() => setShowNotifications(false)}>
             <PopoverTrigger>

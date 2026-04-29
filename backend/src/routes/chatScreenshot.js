@@ -74,13 +74,15 @@ router.get('/girl/:girlId', authMiddleware, async (req, res) => {
     const { girlId } = req.params;
     const { limit = 50 } = req.query;
 
-    // 安全：验证操盘手拥有此女生
+    // 安全：验证操盘手拥有此女生（admin 跳过）
     const girl = await prisma.girl.findUnique({ where: { id: girlId } });
     if (!girl) return res.status(404).json({ error: '女生不存在' });
-    const session = await prisma.chatSession.findFirst({
-      where: { operatorId: req.user.id, clientId: girl.clientId }
-    });
-    if (!session) return res.status(403).json({ error: '无权限访问此女生数据' });
+    if (req.user.role !== 'admin') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: girl.clientId }
+      });
+      if (!session) return res.status(403).json({ error: '无权限访问此女生数据' });
+    }
 
     const screenshots = await prisma.chatScreenshot.findMany({
       where: { girlId },
@@ -127,12 +129,14 @@ router.post('/', authMiddleware, async (req, res) => {
         return res.status(404).json({ error: '女生不存在' });
       }
 
-      // 安全：操盘手只能为自己负责的客户的女生上传截图
-      const session = await prisma.chatSession.findFirst({
-        where: { operatorId: req.user.id, clientId: girl.clientId }
-      });
-      if (!session) {
-        return res.status(403).json({ error: '无权限为该客户上传截图' });
+      // 安全：操盘手只能为自己负责的客户的女生上传截图（admin 跳过）
+      if (req.user.role !== 'admin') {
+        const session = await prisma.chatSession.findFirst({
+          where: { operatorId: req.user.id, clientId: girl.clientId }
+        });
+        if (!session) {
+          return res.status(403).json({ error: '无权限为该客户上传截图' });
+        }
       }
 
       const imageUrl = `/uploads/chat-screenshots/${req.file.filename}`;
@@ -203,13 +207,15 @@ router.post('/confirm-fields', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: '参数不完整，需要 girlId 和 pendingId' });
     }
 
-    // 安全：操盘手只能操作自己负责的客户的女生
+    // 安全：操盘手只能操作自己负责的客户的女生（admin 跳过）
     const girl = await prisma.girl.findUnique({ where: { id: girlId } });
     if (!girl) return res.status(404).json({ error: '女生不存在' });
-    const session = await prisma.chatSession.findFirst({
-      where: { operatorId: req.user.id, clientId: girl.clientId }
-    });
-    if (!session) return res.status(403).json({ error: '无权限操作此女生数据' });
+    if (req.user.role !== 'admin') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: girl.clientId }
+      });
+      if (!session) return res.status(403).json({ error: '无权限操作此女生数据' });
+    }
 
     // 调用新的确认接口
     const result = await confirmAnalysis(girlId, pendingId, selectedFields);
@@ -237,11 +243,13 @@ router.patch('/:id/notes', authMiddleware, async (req, res) => {
 
     const screenshot = await prisma.chatScreenshot.findUnique({ where: { id } });
     if (!screenshot) return res.status(404).json({ error: '截图不存在' });
-    // 安全：操盘手只能操作自己负责的客户的截图
-    const session = await prisma.chatSession.findFirst({
-      where: { operatorId: req.user.id, clientId: screenshot.clientId }
-    });
-    if (!session) return res.status(403).json({ error: '无权限操作此截图' });
+    // 安全：操盘手只能操作自己负责的客户的截图（admin 跳过）
+    if (req.user.role !== 'admin') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: screenshot.clientId }
+      });
+      if (!session) return res.status(403).json({ error: '无权限操作此截图' });
+    }
 
     const updated = await prisma.chatScreenshot.update({
       where: { id },
@@ -264,18 +272,29 @@ router.post('/:id/ai-notes', authMiddleware, async (req, res) => {
 
     const screenshot = await prisma.chatScreenshot.findUnique({
       where: { id: req.params.id },
-      include: { girl: true }
+      include: {
+        girl: {
+          select: {
+            id: true,
+            name: true,
+            stage: true,
+            sourcePlatform: true
+          }
+        }
+      }
     });
 
     if (!screenshot) {
       return res.status(404).json({ error: '截图不存在' });
     }
 
-    // 安全：操盘手只能操作自己负责的客户的截图
-    const session = await prisma.chatSession.findFirst({
-      where: { operatorId: req.user.id, clientId: screenshot.clientId }
-    });
-    if (!session) return res.status(403).json({ error: '无权限操作此截图' });
+    // 安全：操盘手只能操作自己负责的客户的截图（admin 跳过）
+    if (req.user.role !== 'admin') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: screenshot.clientId }
+      });
+      if (!session) return res.status(403).json({ error: '无权限操作此截图' });
+    }
 
     // 调用 AI 分析截图图片
     const baseUrl = BASE_URL;
@@ -324,11 +343,13 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: '截图不存在' });
     }
 
-    // 安全：操盘手只能删除自己负责的客户的截图
-    const session = await prisma.chatSession.findFirst({
-      where: { operatorId: req.user.id, clientId: screenshot.clientId }
-    });
-    if (!session) return res.status(403).json({ error: '无权限删除此截图' });
+    // 安全：操盘手只能删除自己负责的客户的截图（admin 跳过）
+    if (req.user.role !== 'admin') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: screenshot.clientId }
+      });
+      if (!session) return res.status(403).json({ error: '无权限删除此截图' });
+    }
 
     // 删除文件
     const filePath = path.join(__dirname, '../..', screenshot.imageUrl);
@@ -392,5 +413,99 @@ router.get('/client/me', authMiddleware, async (req, res) => {
     res.status(500).json({ error: '获取失败' });
   }
 });
+
+// 客户截图提取：上传截图并AI分析，返回识别到的客户档案字段
+router.post('/client-extract', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: '请上传截图' });
+    }
+
+    const { clientId } = req.body;
+    if (!clientId) {
+      return res.status(400).json({ error: '缺少 clientId' });
+    }
+
+    // 验证客户存在
+    const client = await prisma.user.findUnique({
+      where: { id: clientId }
+    });
+    if (!client) {
+      return res.status(404).json({ error: '客户不存在' });
+    }
+
+    // 保存截图到数据库（关联到客户但不关联到女生）
+    const imageUrl = `/uploads/chat-screenshots/${req.file.filename}`;
+    const screenshot = await prisma.chatScreenshot.create({
+      data: {
+        clientId,
+        operatorId: req.user.id,
+        imageUrl,
+        notes: '客户档案截图提取'
+      }
+    });
+
+    // 调用 AI 分析截图（使用女生截图分析服务，但传入虚假的 girlId 来触发分析）
+    // 注意：这里复用了女生的AI分析，但返回的是截图中的文本内容
+    let pendingFields = {};
+    try {
+      const imageResult = await extractFromImage('fake-girl-id', imageUrl, BASE_URL, req.user.id, false);
+      if (imageResult?.pendingFields) {
+        // 重映射字段名：从女生字段映射到客户字段
+        const fieldMapping = {
+          age: 'age',
+          occupation: 'occupation',
+          education: 'education',
+          hometown: 'hometown',
+          residence: 'residence',
+          appearance: 'appearance',
+          personality: 'personality',
+          relationshipAttitude: 'relationshipAttitude',
+          interests: 'interests',
+          height: 'height'
+        };
+        for (const [girlKey, value] of Object.entries(imageResult.pendingFields)) {
+          const clientKey = fieldMapping[girlKey];
+          if (clientKey) {
+            pendingFields[clientKey] = { label: getClientFieldLabel(clientKey), value };
+          }
+        }
+      }
+    } catch (aiError) {
+      console.warn('[ChatScreenshot] AI分析失败:', aiError.message);
+    }
+
+    res.json({
+      success: true,
+      screenshotId: screenshot.id,
+      pendingFields,
+      message: Object.keys(pendingFields).length > 0 ? '识别到客户信息' : '未识别到客户信息'
+    });
+  } catch (error) {
+    console.error('[ChatScreenshot] 客户截图提取失败:', error);
+    res.status(500).json({ error: '提取失败' });
+  }
+});
+
+// 获取客户字段的中文标签
+function getClientFieldLabel(field) {
+  const labels = {
+    age: '年龄',
+    occupation: '职业',
+    education: '学历',
+    hometown: '籍贯',
+    residence: '所在地',
+    appearance: '外貌描述',
+    personality: '性格',
+    relationshipAttitude: '婚恋态度',
+    interests: '兴趣爱好',
+    height: '身高'
+  };
+  return labels[field] || field;
+}
 
 module.exports = router;

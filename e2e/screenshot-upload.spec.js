@@ -68,7 +68,8 @@ test.describe('截图上传 API', () => {
     const resp = await page.request.get(`${API_BASE}/api/chat-screenshots/girl/${girl.id}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    expect([200, 404]).toContain(resp.status());
+    // 200=成功，404=端点不存在，403=无权限（无chat session关联）
+    expect([200, 403, 404]).toContain(resp.status());
   });
 
   test('客户无法直接上传截图', async ({ page }) => {

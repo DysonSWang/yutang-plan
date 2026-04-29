@@ -15,7 +15,7 @@ let ids;
 
 // 创建小型测试文件
 const createTestFile = (name, content, mimetype) => {
-  const tmpDir = '/tmp/yutang-e2e-uploads';
+  const tmpDir = '/tmp/zhuiai-e2e-uploads';
   if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
   const filepath = path.join(tmpDir, name);
   fs.writeFileSync(filepath, content);
@@ -39,7 +39,7 @@ beforeAll(async () => {
 afterAll(async () => {
   cleanupData();
   // 清理测试文件
-  const tmpDir = '/tmp/yutang-e2e-uploads';
+  const tmpDir = '/tmp/zhuiai-e2e-uploads';
   if (fs.existsSync(tmpDir)) {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }

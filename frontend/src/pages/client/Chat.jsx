@@ -24,6 +24,13 @@ export default function ClientChat() {
   const [countdowns, setCountdowns] = useState({}); // msgId -> remaining seconds
   const [flashViewer, setFlashViewer] = useState({ isOpen: false, imageUrl: '', messageId: null, senderRole: '' });
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3005';
+  // 加密内容(/encrypted/)走解密接口，普通内容直接访问
+  const getMediaUrl = (msg) => {
+    if (msg.mediaUrl?.startsWith('/encrypted/')) {
+      return `${API_BASE}/api/chat/media/${msg.id}`;
+    }
+    return `${API_BASE}${msg.mediaUrl}`;
+  };
 
   const loadSessions = async () => {
     try {
@@ -156,11 +163,11 @@ export default function ClientChat() {
     };
   }, []);
 
-  const sendMediaMessage = async (url, type, duration) => {
+  const sendMediaMessage = async (url, type, duration, isBurnAfterRead = false, isFlashImage = false) => {
     if (!currentSession || sending) return;
     setSending(true);
     try {
-      const res = await chat.send(currentSession.id, null, type, url, duration);
+      const res = await chat.send(currentSession.id, null, type, url, duration, isBurnAfterRead, null, isFlashImage);
       if (res.success) {
         setMessages(prev => [...prev, res.message]);
         setSessions(prev => prev.map(s => {
@@ -195,7 +202,7 @@ export default function ClientChat() {
         ? await upload.video(previewFile.file)
         : await upload.image(previewFile.file);
       if (res.url) {
-        await sendMediaMessage(res.url, previewFile.type, null);
+        await sendMediaMessage(res.url, previewFile.type, null, false, false);
       } else {
         console.error('上传失败', res);
       }
@@ -312,16 +319,16 @@ export default function ClientChat() {
           position="relative"
           onClick={() => {
             if (msg.isFlashImage && !msg.burnedAt) {
-              setFlashViewer({ isOpen: true, imageUrl: msg.mediaUrl, messageId: msg.id, senderRole: msg.senderRole });
+              setFlashViewer({ isOpen: true, imageUrl: getMediaUrl(msg), messageId: msg.id, senderRole: msg.senderRole });
             } else if (msg.isBurnAfterRead && msg.senderRole !== 'client') {
               handleBurnMessage(msg);
             } else {
-              window.open(`${API_BASE}${msg.mediaUrl}`, '_blank');
+              window.open(getMediaUrl(msg), '_blank');
             }
           }}
         >
           <Image
-            src={`${API_BASE}${msg.mediaUrl}`}
+            src={getMediaUrl(msg)}
             alt="图片消息"
             borderRadius="md"
             maxH="200px"
@@ -348,7 +355,7 @@ export default function ClientChat() {
       return (
         <Box maxW="250px" cursor={msg.isBurnAfterRead ? 'pointer' : 'default'} onClick={() => msg.isBurnAfterRead && msg.senderRole !== 'client' && handleBurnMessage(msg)}>
           <video
-            src={`${API_BASE}${msg.mediaUrl}`}
+            src={getMediaUrl(msg)}
             controls={!msg.isBurnAfterRead}
             style={{ borderRadius: '8px', maxHeight: '200px', width: '100%' }}
           />
@@ -359,7 +366,7 @@ export default function ClientChat() {
       return (
         <HStack bg="blackAlpha.300" px={3} py={2} borderRadius="md" spacing={2} cursor={msg.isBurnAfterRead && msg.senderRole !== 'client' ? 'pointer' : 'default'} onClick={() => msg.isBurnAfterRead && msg.senderRole !== 'client' && handleBurnMessage(msg)}>
           <Text fontSize="lg">🔊</Text>
-          <audio src={`${API_BASE}${msg.mediaUrl}`} style={{ height: '28px' }} controls={!msg.isBurnAfterRead || msg.burnedAt} />
+          <audio src={getMediaUrl(msg)} style={{ height: '28px' }} controls={!msg.isBurnAfterRead || msg.burnedAt} />
           {msg.duration && (
             <Text fontSize="xs" color="gray.300">{msg.duration}"</Text>
           )}

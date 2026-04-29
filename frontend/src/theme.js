@@ -1,5 +1,15 @@
 import { extendTheme } from '@chakra-ui/react';
 
+// Mobile-first responsive design tokens
+const breakpoints = {
+  base: '0px',
+  sm: '640px',
+  md: '768px',
+  lg: '1024px',
+  xl: '1280px',
+  '2xl': '1536px',
+};
+
 const theme = extendTheme({
   config: {
     initialColorMode: 'dark',
@@ -9,6 +19,7 @@ const theme = extendTheme({
     heading: "'Syne', sans-serif",
     body: "'Noto Sans SC', sans-serif",
   },
+  breakpoints,
   colors: {
     brand: {
       50: '#e6fff9',
@@ -50,10 +61,14 @@ const theme = extendTheme({
   },
   styles: {
     global: {
+      'html': {
+        scrollBehavior: 'smooth',
+      },
       'html, body': {
         bg: 'abyss.950',
         color: 'white',
         fontFamily: 'body',
+        fontSize: { base: '14px', md: '15px', lg: '16px' },
       },
       'option': {
         bg: 'abyss.800',
@@ -175,25 +190,44 @@ const theme = extendTheme({
           bg: 'abyss.900',
           border: '1px solid',
           borderColor: 'rgba(255,255,255,0.08)',
+          mx: { base: 2, md: 0 },
+          maxW: { base: 'calc(100vw - 16px)', md: '90vw', lg: '80vw', xl: '70vw' },
+          maxH: { base: 'calc(100vh - 60px)', md: '85vh' },
         },
         header: {
           color: 'white',
+          fontSize: { base: 'md', md: 'lg' },
+          px: { base: 4, md: 6 },
+          py: { base: 3, md: 4 },
         },
         body: {
           color: 'abyss.300',
+          px: { base: 4, md: 6 },
+          py: { base: 3, md: 4 },
         },
       },
     },
     Table: {
       variants: {
         simple: {
+          table: {
+            display: { base: 'block', md: 'table' },
+            overflowX: 'auto',
+            whiteSpace: { base: 'nowrap', md: 'normal' },
+          },
           th: {
             color: 'abyss.400',
             borderColor: 'abyss.800',
+            fontSize: { base: '12px', md: '13px' },
+            px: { base: 2, md: 4 },
+            py: { base: 2, md: 3 },
           },
           td: {
             color: 'white',
             borderColor: 'abyss.800',
+            fontSize: { base: '12px', md: '14px' },
+            px: { base: 2, md: 4 },
+            py: { base: 2, md: 3 },
           },
           tr: {
             _hover: {
@@ -211,6 +245,8 @@ const theme = extendTheme({
           borderColor: 'rgba(255,255,255,0.08)',
           backdropFilter: 'blur(12px)',
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+          borderRadius: { base: 'md', md: 'lg' },
+          p: { base: 3, md: 4 },
         },
       },
     },

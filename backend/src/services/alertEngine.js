@@ -50,6 +50,17 @@ function parseJsonField(raw, fallback = []) {
   }
 }
 
+const toArray = (raw, fallback = []) => {
+  if (Array.isArray(raw)) return raw;
+  if (!raw) return fallback;
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
 /**
  * 检测"互动沉默"预警
  */

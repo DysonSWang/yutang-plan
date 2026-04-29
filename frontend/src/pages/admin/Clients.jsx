@@ -1,10 +1,11 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Box, Heading, Card, CardBody, Table, Thead, Tbody, Tr, Th, Td, Button, Badge, Modal, ModalOverlay,
   ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton, useDisclosure, SimpleGrid,
   FormControl, FormLabel, Input, Select, Textarea, NumberInput, NumberInputField, VStack, HStack,
   Text, Divider, useToast, Tabs, TabList, TabPanels, Tab, TabPanel, Flex, Tooltip, IconButton,
-  createIcon, Avatar, Stat, StatLabel, StatNumber, StatHelpText, Progress, Switch, Stack, Icon
+  createIcon, Avatar, Stat, StatLabel, StatNumber, StatHelpText, Progress, Switch, Stack, Icon,
+  Image, Checkbox
 } from '@chakra-ui/react';
 import { clients as clientsApi, girls as girlsApi } from '../../utils/api';
 import { FireIcon, SnowIcon, UsersIcon, CalendarIcon } from '../../components/Icons';
@@ -285,6 +286,24 @@ export default function AdminClients() {
   const [chatConfirmSelections, setChatConfirmSelections] = useState({});
   const toast = useToast();
   const [girlList, setGirlList] = useState([]);
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [filterStage, setFilterStage] = useState('');
+
+  // 截图提取相关状态
+  const { isOpen: isScreenshotExtractOpen, onOpen: onScreenshotExtractOpen, onClose: onScreenshotExtractClose } = useDisclosure();
+  const [screenshotFile, setScreenshotFile] = useState(null);
+  const [screenshotPreview, setScreenshotPreview] = useState('');
+  const [screenshotUploading, setScreenshotUploading] = useState(false);
+  const [screenshotExtracting, setScreenshotExtracting] = useState(false);
+  const [screenshotResult, setScreenshotResult] = useState(null);
+  const [screenshotPendingFields, setScreenshotPendingFields] = useState({});
+  const [screenshotConfirmSelections, setScreenshotConfirmSelections] = useState({});
+  const screenshotInputRef = useRef(null);
+
+  // 页面加载时获取客户列表
+  useEffect(() => {
+    loadClients();
+  }, []);
 
   const loadGirlsForClient = useCallback(async (clientId) => {
     try {
@@ -302,6 +321,107 @@ export default function AdminClients() {
     } catch (e) {
       console.error(e);
     }
+  };
+
+  // 截图提取处理函数
+  const handleScreenshotFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setScreenshotFile(file);
+      setScreenshotPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleUploadScreenshotExtract = async () => {
+    if (!screenshotFile || !selectedClient) return;
+    setScreenshotUploading(true);
+    setScreenshotExtracting(true);
+    setScreenshotResult(null);
+    setScreenshotPendingFields({});
+    try {
+      const fd = new FormData();
+      fd.append('image', screenshotFile);
+      fd.append('clientId', selectedClient.id);
+      fd.append('notes', '客户档案截图提取');
+      fd.append('isMomentScreenshot', 'false');
+
+      const token = localStorage.getItem('zhuiai_token');
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/chat-screenshots/client-extract`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: fd
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        if (data.pendingFields && Object.keys(data.pendingFields).length > 0) {
+          setScreenshotPendingFields(data.pendingFields);
+          const defaults = {};
+          Object.keys(data.pendingFields).forEach(k => { defaults[k] = true; });
+          setScreenshotConfirmSelections(defaults);
+        } else if (data.extractedFields) {
+          setScreenshotResult(data.extractedFields);
+        }
+        toast({ title: '提取完成', status: 'success', duration: 2000 });
+      } else {
+        toast({ title: data.error || '提取失败', status: 'error', duration: 2000 });
+      }
+    } catch (e) {
+      console.error(e);
+      toast({ title: '提取失败', status: 'error', duration: 2000 });
+    } finally {
+      setScreenshotUploading(false);
+      setScreenshotExtracting(false);
+    }
+  };
+
+  const handleConfirmScreenshotFields = () => {
+    const updates = {};
+    Object.entries(screenshotPendingFields).forEach(([key, { value }]) => {
+      if (screenshotConfirmSelections[key]) {
+        updates[key] = value;
+      }
+    });
+    if (Object.keys(updates).length === 0) {
+      toast({ title: '请至少选择一个字段', status: 'warning' });
+      return;
+    }
+    // 填充到表单
+    setFormData(prev => {
+      const next = { ...prev };
+      Object.entries(updates).forEach(([key, value]) => {
+        if (key === 'age') next.age = value;
+        else if (key === 'occupation') next.occupation = value;
+        else if (key === 'education') next.education = value;
+        else if (key === 'hometown') next.hometown = value;
+        else if (key === 'residence') next.residence = value;
+        else if (key === 'appearance') next.appearance = value;
+        else if (key === 'familyBackground') next.familyBackground = value;
+        else if (key === 'familyAtmosphere') next.familyAtmosphere = value;
+        else if (key === 'familyBurden') next.familyBurden = value;
+        else if (key === 'personality') next.personality = value;
+        else if (key === 'relationshipAttitude') next.relationshipAttitude = value;
+        else if (key === 'emotionalGoal') next.emotionalGoal = value;
+        else if (key === 'income') next.income = value;
+        else next[key] = value;
+      });
+      return next;
+    });
+    onScreenshotExtractClose();
+    setScreenshotFile(null);
+    setScreenshotPreview('');
+    setScreenshotPendingFields({});
+    setScreenshotConfirmSelections({});
+    toast({ title: '已填入档案，请确认后保存', status: 'success', duration: 3000 });
+  };
+
+  const handleCancelScreenshotExtract = () => {
+    onScreenshotExtractClose();
+    setScreenshotFile(null);
+    setScreenshotPreview('');
+    setScreenshotPendingFields({});
+    setScreenshotConfirmSelections({});
+    setScreenshotResult(null);
   };
 
   const handleExtractProfile = async () => {
@@ -331,7 +451,7 @@ export default function AdminClients() {
         const allKeys = Object.keys(labelMap);
         const fields = {};
         const defaults = {};
-        allKeys.forEach(k => {
+        (allKeys || []).forEach(k => {
           if (p[k]) {
             fields[k] = { label: labelMap[k], value: p[k] };
             defaults[k] = true;
@@ -354,7 +474,7 @@ export default function AdminClients() {
   const handleConfirmExtract = () => {
     if (!extractedProfile) return;
     const updates = {};
-    Object.entries(pendingFields).forEach(([key, { value }]) => {
+    Object.entries(pendingFields || {}).forEach(([key, { value }]) => {
       if (confirmSelections[key]) {
         updates[key] = value;
       }
@@ -650,21 +770,69 @@ export default function AdminClients() {
     return 'gray';
   };
 
+  // 过滤后的客户列表
+  const filteredClients = clientList.filter(client => {
+    const keyword = searchKeyword.toLowerCase();
+    const matchSearch = !keyword ||
+      (client.nickname || client.username || '').toLowerCase().includes(keyword) ||
+      (client.phone || '').toLowerCase().includes(keyword) ||
+      (client.occupation || '').toLowerCase().includes(keyword);
+    const matchStage = !filterStage || client.serviceStage === filterStage;
+    return matchSearch && matchStage;
+  });
+
   return (
     <Box>
       {/* 页面标题区 */}
-      <HStack justify="space-between" mb={6}>
-        <HStack spacing={4}>
-          <Icon as={UsersIcon} color="teal.400" boxSize={8} />
+      <Flex justify="space-between" align="center" mb={4} gap={2} direction={{ base: 'column', md: 'row' }}>
+        <HStack spacing={3}>
+          <Icon as={UsersIcon} color="teal.400" boxSize={{ base: 6, md: 8 }} />
           <Box>
-            <Heading color="white" size="lg">客户管理</Heading>
-            <Text color="gray.500" fontSize="sm">共 {clientList.length} 位客户</Text>
+            <Heading color="white" size={{ base: 'md', md: 'lg' }}>客户管理</Heading>
+            <Text color="gray.500" fontSize="sm">共 {filteredClients.length} / {clientList.length} 位客户</Text>
           </Box>
         </HStack>
-        <Button colorScheme="teal" size="md" onClick={() => { setFormData(getInitialFormData()); onCreateOpen(); }} transition="all 0.15s ease" _hover={{ transform: 'translateY(-1px)' }}>
-          + 新建客户
+        <Button colorScheme="teal" size="sm" onClick={() => { setFormData(getInitialFormData()); onCreateOpen(); }} transition="all 0.15s ease" _hover={{ transform: 'translateY(-1px)' }}>
+          + 新建
         </Button>
-      </HStack>
+      </Flex>
+
+      {/* 搜索和过滤 */}
+      <Flex mb={4} gap={2} direction={{ base: 'column', sm: 'row' }} wrap="wrap">
+        <Input
+          placeholder="搜索客户..."
+          value={searchKeyword}
+          onChange={(e) => setSearchKeyword(e.target.value)}
+          maxW={{ base: '100%', sm: '300px' }}
+          bg="gray.700"
+          border="gray.600"
+          _placeholder={{ color: 'gray.400' }}
+          size="md"
+        />
+        <Select
+          placeholder="全部阶段"
+          value={filterStage}
+          onChange={(e) => setFilterStage(e.target.value)}
+          maxW={{ base: '100%', sm: '150px' }}
+          bg="gray.700"
+          border="gray.600"
+          size="md"
+        >
+          {SERVICE_STAGES.map(stage => (
+            <option key={stage} value={stage}>{stage}</option>
+          ))}
+        </Select>
+        {(searchKeyword || filterStage) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            color="gray.400"
+            onClick={() => { setSearchKeyword(''); setFilterStage(''); }}
+          >
+            清除
+          </Button>
+        )}
+      </Flex>
 
       {/* 客户列表卡片 */}
       <Card bg="gray.800" borderRadius="xl" overflow="hidden">
@@ -684,7 +852,7 @@ export default function AdminClients() {
               </Tr>
             </Thead>
             <Tbody>
-              {clientList.map(client => (
+              {filteredClients.map(client => (
                 <Tr key={client.id} _hover={{ bg: 'gray.750' }} cursor="pointer" onClick={() => viewClient(client)}>
                   <Td fontWeight="600" color="white" borderColor="gray.700">
                     <HStack spacing={3}>
@@ -728,8 +896,10 @@ export default function AdminClients() {
                   </Td>
                 </Tr>
               ))}
-              {clientList.length === 0 && (
-                <Tr><Td colSpan={8} textAlign="center" color="gray.500" py={8}>暂无客户，点击上方按钮新建</Td></Tr>
+              {filteredClients.length === 0 && (
+                <Tr><Td colSpan={8} textAlign="center" color="gray.500" py={8}>
+                  {clientList.length === 0 ? '暂无客户，点击上方按钮新建' : '未找到匹配的客户'}
+                </Td></Tr>
               )}
             </Tbody>
           </Table>
@@ -737,11 +907,13 @@ export default function AdminClients() {
 
         {/* 移动端卡片列表 */}
         <Box display={{ base: 'block', lg: 'none' }}>
-          {clientList.length === 0 ? (
-            <Text color="gray.500" textAlign="center" py={8}>暂无客户，点击上方按钮新建</Text>
+          {filteredClients.length === 0 ? (
+            <Text color="gray.500" textAlign="center" py={8}>
+              {clientList.length === 0 ? '暂无客户，点击上方按钮新建' : '未找到匹配的客户'}
+            </Text>
           ) : (
             <VStack spacing={2} align="stretch" p={2}>
-              {clientList.map(client => (
+              {filteredClients.map(client => (
                 <Card key={client.id} bg="gray.750" size="sm" cursor="pointer" onClick={() => viewClient(client)} _hover={{ bg: 'gray.700' }}>
                   <CardBody py={3} px={4}>
                     <Flex justify="space-between" align="center" mb={2}>
@@ -875,7 +1047,7 @@ export default function AdminClients() {
               AI 从文本中识别到以下信息，请勾选要填充到档案的字段（默认全选）：
             </Text>
             <VStack spacing={3} align="stretch">
-              {Object.entries(pendingFields).map(([key, { label, value }]) => (
+              {Object.entries(pendingFields || {}).map(([key, { label, value }]) => (
                 <Flex key={key} align="center" gap={3} bg="gray.700" p={3} borderRadius="md">
                   <Switch
                     colorScheme="teal"
@@ -915,7 +1087,7 @@ export default function AdminClients() {
                   <Text color="gray.400" fontSize="sm">{selectedClient?.username}</Text>
                 </Box>
               </HStack>
-              <HStack spacing={4}>
+              <HStack spacing={4} flexWrap="wrap">
                 {/* 快速指标 */}
                 <HStack spacing={6} bg="gray.750" px={4} py={2} borderRadius="lg">
                   <Box textAlign="center">
@@ -941,6 +1113,9 @@ export default function AdminClients() {
                 </HStack>
                 <Button size="md" colorScheme="teal" variant="outline" onClick={() => { startEdit(); onExtractOpen(); }} borderRadius="md">
                   从文本导入
+                </Button>
+                <Button size="md" colorScheme="orange" variant="outline" onClick={onScreenshotExtractOpen} borderRadius="md">
+                  从截图导入
                 </Button>
                 <Button size="md" colorScheme="purple" variant="outline" onClick={onChatExtractOpen} borderRadius="md">
                   交流提取
@@ -1946,7 +2121,7 @@ export default function AdminClients() {
                             <Input value={formData.strengths} onChange={e => setFormData({...formData, strengths: e.target.value})} bg="gray.700" color="white" />
                           ) : (
                             <HStack spacing={2} flexWrap="wrap">
-                              {selectedClient?.strengths?.split('/').filter(Boolean).map((s, i) => (
+                              {(selectedClient?.strengths || '').split('/').filter(Boolean).map((s, i) => (
                                 <Badge key={i} colorScheme="green" borderRadius="full" px={2}>{s.trim()}</Badge>
                               )) || '-'}
                             </HStack>
@@ -1958,7 +2133,7 @@ export default function AdminClients() {
                             <Input value={formData.weaknesses} onChange={e => setFormData({...formData, weaknesses: e.target.value})} bg="gray.700" color="white" />
                           ) : (
                             <HStack spacing={2} flexWrap="wrap">
-                              {selectedClient?.weaknesses?.split('/').filter(Boolean).map((w, i) => (
+                              {(selectedClient?.weaknesses || '').split('/').filter(Boolean).map((w, i) => (
                                 <Badge key={i} colorScheme="red" borderRadius="full" px={2}>{w.trim()}</Badge>
                               )) || '-'}
                             </HStack>
@@ -2024,6 +2199,108 @@ export default function AdminClients() {
                 </TabPanel>
               </TabPanels>
             </Tabs>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+
+      {/* 截图提取弹窗：上传微信聊天截图提取客户档案 */}
+      <Modal isOpen={isScreenshotExtractOpen} onClose={handleCancelScreenshotExtract} size="xl">
+        <ModalOverlay bg="blackAlpha.700" />
+        <ModalContent bg="gray.800" borderRadius="xl" border="1px solid" borderColor="gray.700">
+          <ModalHeader borderBottom="1px solid" borderColor="gray.700" color="white" pb={3}>
+            <HStack spacing={2}>
+              <Text>📸</Text>
+              <Text>从截图导入档案</Text>
+              {selectedClient && (
+                <Badge colorScheme="orange" ml={2}>{selectedClient.nickname || selectedClient.username}</Badge>
+              )}
+            </HStack>
+          </ModalHeader>
+          <ModalCloseButton color="gray.400" />
+          <ModalBody py={6}>
+            {!screenshotResult && Object.keys(screenshotPendingFields).length === 0 ? (
+              /* 上传界面 */
+              <VStack spacing={6} align="stretch">
+                <Box bg="gray.750" borderRadius="lg" p={4}>
+                  <Text color="gray.300" fontSize="sm" mb={3}>
+                    上传客户的微信聊天截图，AI 自动识别并提取档案信息。
+                  </Text>
+                  <Text color="gray.500" fontSize="xs" mb={3}>
+                    支持识别：年龄、职业、学历、性格、情感状态等
+                  </Text>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleScreenshotFileSelect}
+                    ref={screenshotInputRef}
+                    bg="gray.700"
+                    border="gray.600"
+                  />
+                  {screenshotPreview && (
+                    <Box mt={4} textAlign="center">
+                      <Image
+                        src={screenshotPreview}
+                        alt="截图预览"
+                        maxH="300px"
+                        mx="auto"
+                        borderRadius="md"
+                        objectFit="contain"
+                      />
+                    </Box>
+                  )}
+                </Box>
+                <Button
+                  colorScheme="orange"
+                  onClick={handleUploadScreenshotExtract}
+                  isLoading={screenshotUploading || screenshotExtracting}
+                  loadingText="上传并分析中..."
+                  isDisabled={!screenshotFile}
+                >
+                  上传并提取
+                </Button>
+              </VStack>
+            ) : Object.keys(screenshotPendingFields).length > 0 ? (
+              /* AI识别结果确认界面 */
+              <VStack spacing={4} align="stretch">
+                <Text color="gray.300">
+                  AI 从截图中识别到以下信息，请勾选要录入档案的字段：
+                </Text>
+                <VStack spacing={2} align="stretch" maxH="400px" overflowY="auto">
+                  {Object.entries(screenshotPendingFields).map(([key, { label, value }]) => (
+                    <Flex key={key} align="center" gap={3} bg="gray.700" p={3} borderRadius="md">
+                      <Checkbox
+                        colorScheme="orange"
+                        isChecked={!!screenshotConfirmSelections[key]}
+                        onChange={(e) => setScreenshotConfirmSelections(prev => ({ ...prev, [key]: e.target.checked }))}
+                      />
+                      <Box flex={1}>
+                        <Text color="gray.400" fontSize="sm">{label}</Text>
+                        <Text color="white" fontSize="md">{value}</Text>
+                      </Box>
+                    </Flex>
+                  ))}
+                </VStack>
+                <HStack mt={4} spacing={4} justify="flex-end">
+                  <Button variant="ghost" colorScheme="gray" onClick={handleCancelScreenshotExtract}>取消</Button>
+                  <Button colorScheme="orange" onClick={handleConfirmScreenshotFields}>
+                    确认录入 ({Object.values(screenshotConfirmSelections).filter(Boolean).length})
+                  </Button>
+                </HStack>
+              </VStack>
+            ) : (
+              /* 提取结果显示 */
+              <VStack spacing={4} align="stretch">
+                <Box bg="green.900" borderRadius="lg" p={4}>
+                  <Text color="green.300" fontWeight="bold">提取完成！</Text>
+                  <Text color="gray.300" fontSize="sm" mt={2}>
+                    已成功提取客户信息并填入档案，请检查确认后保存。
+                  </Text>
+                </Box>
+                <HStack mt={4} spacing={4} justify="flex-end">
+                  <Button colorScheme="orange" onClick={handleCancelScreenshotExtract}>关闭</Button>
+                </HStack>
+              </VStack>
+            )}
           </ModalBody>
         </ModalContent>
       </Modal>

@@ -7,6 +7,8 @@ const jwt = require('jsonwebtoken');
 
 const { JWT_SECRET } = require('../config');
 const prisma = require('../prisma');
+const { decrypt } = require('../services/encryption');
+const { downloadBuffer, deleteFile } = require('../services/ossClient');
 
 module.exports = function(io) {
   const router = express.Router();
@@ -46,8 +48,10 @@ module.exports = function(io) {
         return res.status(403).json({ error: '无权限' });
       }
 
+      // admin 可以查看所有 sessions，否则只查看自己的
+      const where = req.user.role === 'admin' ? {} : { operatorId: req.user.id };
       const sessions = await prisma.chatSession.findMany({
-        where: { operatorId: req.user.id },
+        where,
         orderBy: { lastMessageAt: 'desc' }
       });
 
@@ -196,7 +200,7 @@ module.exports = function(io) {
   // 发送消息
   router.post('/messages', authMiddleware, async (req, res) => {
     try {
-      const { sessionId, content, type = 'text', isBurnAfterRead = false, burnAfterSeconds, isFlashImage = false } = req.body;
+      const { sessionId, content, type = 'text', isBurnAfterRead = false, burnAfterSeconds, isFlashImage = false, mediaUrl } = req.body;
 
       const session = await prisma.chatSession.findUnique({
         where: { id: sessionId }
@@ -221,6 +225,7 @@ module.exports = function(io) {
           senderId: req.user.id,
           content,
           type,
+          mediaUrl,
           isBurnAfterRead,
           burnAfterSeconds: isBurnAfterRead ? burnAfterSeconds : null,
           isFlashImage
@@ -273,6 +278,17 @@ module.exports = function(io) {
         return res.status(403).json({ error: '无权限' });
       }
 
+      // 删除OSS文件（敏感内容存OSS，非敏感也在OSS）
+      if (message.mediaUrl && (message.mediaUrl.startsWith('/encrypted/') || message.mediaUrl.startsWith('/public/'))) {
+        const ossPath = message.mediaUrl.replace(/^\//, ''); // 去掉前导 /
+        try {
+          await deleteFile(ossPath);
+          console.log(`[Burn] Deleted OSS file: ${ossPath}`);
+        } catch (err) {
+          console.error(`[Burn] Failed to delete OSS file: ${ossPath}`, err.message);
+        }
+      }
+
       const updateData = {
         content: '[消息已销毁]',
         mediaUrl: null,
@@ -304,6 +320,68 @@ module.exports = function(io) {
     } catch (error) {
       console.error('[Chat] 销毁消息失败:', error);
       res.status(500).json({ error: '操作失败' });
+    }
+  });
+
+  // 流媒体解密接口 - 敏感内容走此接口解密展示
+  router.get('/media/:messageId', authMiddleware, async (req, res) => {
+    try {
+      const message = await prisma.message.findUnique({
+        where: { id: req.params.messageId }
+      });
+
+      if (!message) {
+        return res.status(404).json({ error: '消息不存在' });
+      }
+
+      if (!message.mediaUrl) {
+        return res.status(404).json({ error: '无媒体文件' });
+      }
+
+      if (message.burnedAt) {
+        return res.status(410).json({ error: '内容已销毁' });
+      }
+
+      // 权限检查：发送者或接收者才能看
+      const session = message.sessionId
+        ? await prisma.chatSession.findUnique({ where: { id: message.sessionId } })
+        : null;
+      const isParticipant = session && (
+        session.operatorId === req.user.id || session.clientId === req.user.id
+      );
+      if (message.senderId !== req.user.id && !isParticipant) {
+        return res.status(403).json({ error: '无权限' });
+      }
+
+      // 非加密内容（/public/ 或旧本地路径），直接重定向或本地服务
+      if (!message.mediaUrl.startsWith('/encrypted/')) {
+        // 兼容旧本地文件
+        if (message.mediaUrl.startsWith('/uploads/')) {
+          return res.redirect(message.mediaUrl);
+        }
+        // public OSS 文件走重定向（需生成签名URL，暂用重定向）
+        if (message.mediaUrl.startsWith('/public/')) {
+          const { client } = require('../services/ossClient');
+          const ossPath = message.mediaUrl.replace(/^\//, '');
+          const url = await client.signatureUrl(ossPath, { expires: 3600 });
+          return res.redirect(url);
+        }
+        return res.status(400).json({ error: '无法处理此媒体类型' });
+      }
+
+      // 加密内容（/encrypted/）：从OSS下载 → 内存解密 → 流返回
+      const ossPath = message.mediaUrl.replace(/^\//, '');
+      const encryptedBuffer = await downloadBuffer(ossPath);
+      const plaintext = decrypt(encryptedBuffer);
+
+      res.setHeader('Content-Type', message.type === 'video' ? 'video/mp4' : message.type === 'audio' ? 'audio/mpeg' : 'image/jpeg');
+      res.setHeader('Cache-Control', 'no-store, no-cache, private');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Content-Length', plaintext.length);
+      res.end(plaintext);
+    } catch (error) {
+      console.error('[Chat] 流媒体获取失败:', error);
+      res.status(500).json({ error: '获取失败' });
     }
   });
 
@@ -342,6 +420,16 @@ module.exports = function(io) {
 
       if (message.senderId !== req.user.id) {
         return res.status(403).json({ error: '只能撤回自己的消息' });
+      }
+
+      // 删除OSS文件（撤回也清理媒体文件）
+      if (message.mediaUrl && (message.mediaUrl.startsWith('/encrypted/') || message.mediaUrl.startsWith('/public/'))) {
+        const ossPath = message.mediaUrl.replace(/^\//, '');
+        try {
+          await deleteFile(ossPath);
+        } catch (err) {
+          console.error(`[Recall] Failed to delete OSS file: ${ossPath}`, err.message);
+        }
       }
 
       const updated = await prisma.message.update({

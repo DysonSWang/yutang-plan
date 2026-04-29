@@ -80,7 +80,7 @@ export default function Onboarding() {
           <Icon as={CheckIcon} boxSize={16} color="teal.400" />
           <Heading color="white" size="lg">入职完成！</Heading>
           <Text color="gray.400" maxW="400px">
-            你的档案已保存，AI教练已为你准备好个性化指导。开始探索你的鱼塘吧！
+            你的档案已保存，AI教练已为你准备好个性化指导。开始探索你的缘分吧！
           </Text>
           <Button colorScheme="teal" size="lg" mt={4} onClick={() => window.location.href = '/'}>
             进入首页

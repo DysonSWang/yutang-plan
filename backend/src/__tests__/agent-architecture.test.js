@@ -106,7 +106,7 @@ describe('Triage Agent - keyword routing', () => {
   });
 
   test('should route overview by keywords', () => {
-    const result = keywordRoute('今天鱼塘整体情况怎么样');
+    const result = keywordRoute('今天追爱整体情况怎么样');
     expect(result.route).toBe(ROUTE_TYPES.OVERVIEW);
   });
 

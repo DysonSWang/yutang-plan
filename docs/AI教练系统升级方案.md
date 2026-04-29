@@ -542,7 +542,7 @@ function buildMasterPrompt(question, context = {}, options = {}) {
   const outputSection = buildOutputSection();
 
   return `
-你是鱼塘AI情感教练，综合多位顶级情感大师的视角，为用户提供专业分析和建议。
+你是追爱AI情感教练，综合多位顶级情感大师的视角，为用户提供专业分析和建议。
 
 【大师视角】
 

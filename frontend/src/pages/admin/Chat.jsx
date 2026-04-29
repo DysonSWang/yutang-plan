@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Box, Flex, VStack, HStack, Input, Button, Text, Heading, IconButton, Image, Spinner, useDisclosure, Menu, MenuButton, MenuList, MenuItem, Badge } from '@chakra-ui/react';
-import { chat, upload } from '../../utils/api';
+import { Box, Flex, VStack, HStack, Input, Button, Text, Heading, IconButton, Image, Spinner, useDisclosure, Menu, MenuButton, MenuList, MenuItem, Badge, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton, Select, List, ListItem } from '@chakra-ui/react';
+import { chat, upload, clients } from '../../utils/api';
 import { useSocket } from '../../contexts/SocketContext';
 import ProfileSuggestModal from './ProfileSuggestModal';
 import FlashImageViewer from '../../components/FlashImageViewer';
@@ -20,7 +20,12 @@ export default function AdminChat() {
   const [burnSeconds, setBurnSeconds] = useState(5);
   const [flashMode, setFlashMode] = useState(false); // 闪图模式
   const { isOpen: isModalOpen, onOpen: onModalOpen, onClose: onModalClose } = useDisclosure();
+  const { isOpen: isNewChatOpen, onOpen: onNewChatOpen, onClose: onNewChatClose } = useDisclosure();
   const [flashViewer, setFlashViewer] = useState({ isOpen: false, imageUrl: '', messageId: null, senderRole: '' });
+  const [allClients, setAllClients] = useState([]);
+  const [selectedClientId, setSelectedClientId] = useState('');
+  const [clientSearch, setClientSearch] = useState('');
+  const [showChat, setShowChat] = useState(false); // 移动端：是否显示聊天区域
   const messagesEndRef = useRef();
   const fileInputRef = useRef();
   const mediaRecorderRef = useRef();
@@ -42,6 +47,53 @@ export default function AdminChat() {
     }
   }, [currentSession]);
 
+  const loadAllClients = async () => {
+    try {
+      const res = await clients.list();
+      if (res.success) {
+        // 只显示 client 角色的用户
+        const clientUsers = res.clients.filter(c => !c.role || c.role === 'client');
+        setAllClients(clientUsers);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleStartNewChat = async () => {
+    if (!selectedClientId) return;
+    try {
+      const res = await chat.createSession(selectedClientId);
+      if (res.success) {
+        onNewChatClose();
+        setSelectedClientId('');
+        await loadSessions();
+        // 选中新创建的会话
+        const newSession = res.session || res;
+        if (newSession?.id) {
+          setCurrentSession(newSession);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleStartNewChatWithClient = async (clientId) => {
+    try {
+      const res = await chat.createSession(clientId);
+      if (res.success) {
+        await loadSessions();
+        const newSession = res.session || res;
+        if (newSession?.id) {
+          setCurrentSession(newSession);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const loadMessages = useCallback(async (sessionId) => {
     try {
       const res = await chat.messages(sessionId);
@@ -61,6 +113,16 @@ export default function AdminChat() {
     if (!currentSession) return;
     loadMessages(currentSession.id);
   }, [currentSession, loadMessages]);
+
+  // 移动端：选择会话后自动切换到聊天视图
+  useEffect(() => {
+    if (currentSession) {
+      // 在移动端，如果窗口宽度 < 1024px，则自动切换到聊天视图
+      if (window.innerWidth < 1024) {
+        setShowChat(true);
+      }
+    }
+  }, [currentSession]);
 
   useEffect(() => {
     const handler = (message) => {
@@ -330,13 +392,59 @@ export default function AdminChat() {
 
   return (
     <Box>
-      <Heading color="white" mb={6}>聊天中心</Heading>
+      <Heading color="white" mb={4} fontSize={{ base: 'lg', md: 'xl', lg: '2xl' }}>聊天中心</Heading>
 
-      <Flex h="calc(100vh - 150px)" gap={4}>
-        {/* 客户列表 */}
-        <Box w="280px" bg="gray.800" borderRadius="md" p={4}>
-          <Text color="gray.400" fontSize="sm" mb={4}>客户会话</Text>
-          <VStack spacing={2} align="stretch">
+      {/* 移动端：显示会话列表和聊天区域的切换按钮 */}
+      <Flex display={{ base: 'flex', lg: 'none' }} mb={2}>
+        <Button
+          size="sm"
+          variant={showChat ? 'outline' : 'solid'}
+          colorScheme="teal"
+          onClick={() => setShowChat(false)}
+          mr={2}
+        >
+          {showChat ? '返回列表' : '会话列表'}
+        </Button>
+        {currentSession && (
+          <Text color="gray.400" fontSize="sm" alignSelf="center">
+            正在与 {currentSession.client?.nickname || '客户'} 聊天
+          </Text>
+        )}
+      </Flex>
+
+      <Flex
+        h={{ base: 'calc(100vh - 180px)', lg: 'calc(100vh - 150px)' }}
+        gap={{ base: 0, lg: 4 }}
+        direction={{ base: showChat ? 'column' : 'row', lg: 'row' }}
+      >
+        {/* 客户列表 - 移动端全宽或隐藏，桌面端固定280px */}
+        <Box
+          w={{ base: showChat ? '0' : '100%', lg: '280px' }}
+          flex={{ base: showChat ? '0' : '1', lg: 'none' }}
+          bg="gray.800"
+          borderRadius="md"
+          p={4}
+          display={{ base: showChat ? 'none' : 'block', lg: 'block' }}
+          position={{ base: 'absolute', lg: 'relative' }}
+          left={0}
+          top={0}
+          h={{ base: '100%', lg: 'auto' }}
+          zIndex={10}
+        >
+          <Flex justify="space-between" align="center" mb={4}>
+            <Text color="gray.400" fontSize="sm">客户会话</Text>
+            <Button
+              size="xs"
+              colorScheme="teal"
+              onClick={() => {
+                loadAllClients();
+                onNewChatOpen();
+              }}
+            >
+              + 发起
+            </Button>
+          </Flex>
+          <VStack spacing={2} align="stretch" maxH={{ base: 'calc(100vh - 280px)', lg: 'calc(100vh - 200px)' }} overflowY="auto">
             {sessions.map(session => (
               <Box
                 key={session.id}
@@ -344,7 +452,10 @@ export default function AdminChat() {
                 bg={currentSession?.id === session.id ? 'teal.600' : 'gray.700'}
                 borderRadius="md"
                 cursor="pointer"
-                onClick={() => setCurrentSession(session)}
+                onClick={() => {
+                  setCurrentSession(session);
+                  setShowChat(true);
+                }}
               >
                 <Text color="white" fontWeight="bold" fontSize="sm">
                   {session.client?.nickname || '客户'}
@@ -366,33 +477,53 @@ export default function AdminChat() {
         </Box>
 
         {/* 聊天区域 */}
-        <Box flex={1} bg="gray.800" borderRadius="md" display="flex" flexDirection="column">
+        <Box
+          flex={1}
+          bg="gray.800"
+          borderRadius="md"
+          display="flex"
+          flexDirection="column"
+          w={{ base: showChat ? '100%' : '0', lg: 'auto' }}
+          overflow="hidden"
+        >
           {currentSession ? (
             <>
-              <Box p={4} borderBottom="1px" borderColor="gray.700">
+              <Box p={3} borderBottom="1px" borderColor="gray.700">
                 <HStack justify="space-between">
                   <Box>
-                    <Text color="white" fontWeight="bold">
+                    <Text color="white" fontWeight="bold" fontSize="sm">
                       {currentSession.client?.nickname || '客户'}
                     </Text>
                     <Text color="gray.500" fontSize="xs">
                       服务阶段: {currentSession.client?.serviceStage || '-'}
                     </Text>
                   </Box>
-                  <IconButton
-                    icon={<Text>📋</Text>}
-                    variant="ghost"
-                    color="gray.400"
-                    onClick={onModalOpen}
-                    aria-label="完善客户信息"
-                    title="完善客户信息"
-                    size="sm"
-                  />
+                  <HStack spacing={2}>
+                    {/* 移动端返回按钮 */}
+                    <IconButton
+                      icon={<Text>←</Text>}
+                      variant="ghost"
+                      color="gray.400"
+                      onClick={() => setShowChat(false)}
+                      aria-label="返回列表"
+                      size="sm"
+                      display={{ base: 'flex', lg: 'none' }}
+                    />
+                    <IconButton
+                      icon={<Text>📋</Text>}
+                      variant="ghost"
+                      color="gray.400"
+                      onClick={onModalOpen}
+                      aria-label="完善客户信息"
+                      title="完善客户信息"
+                      size="sm"
+                    />
+                  </HStack>
                 </HStack>
               </Box>
 
-              <Box flex={1} p={4} overflowY="auto">
-                <VStack spacing={4} align="stretch">
+              <Box flex={1} p={3} overflowY="auto">
+                <VStack spacing={3} align="stretch">
                   {messages.map(msg => (
                     <Flex key={msg.id} justify={msg.senderRole === 'operator' ? 'flex-end' : 'flex-start'} _group={{}}>
                       <Box
@@ -559,6 +690,85 @@ export default function AdminChat() {
           )}
         </Box>
       </Flex>
+
+      {/* 发起新聊天 Modal */}
+      <Modal isOpen={isNewChatOpen} onClose={onNewChatClose} size="md">
+        <ModalOverlay />
+        <ModalContent bg="gray.800" color="white">
+          <ModalHeader>发起新聊天</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody maxH="400px" overflow="hidden" display="flex" flexDirection="column">
+            <Input
+              placeholder="搜索客户..."
+              value={clientSearch}
+              onChange={(e) => setClientSearch(e.target.value)}
+              mb={3}
+              bg="gray.700"
+              border="gray.600"
+            />
+            <Box flex={1} overflowY="auto" maxH="300px">
+              <List spacing={1}>
+                {allClients
+                  .filter(c => {
+                    const keyword = clientSearch.toLowerCase();
+                    const name = (c.nickname || c.username || '客户').toLowerCase();
+                    const phone = (c.phone || '').toLowerCase();
+                    return name.includes(keyword) || phone.includes(keyword);
+                  })
+                  .map(client => (
+                    <ListItem
+                      key={client.id}
+                      p={2}
+                      borderRadius="md"
+                      cursor="pointer"
+                      bg={selectedClientId === client.id ? 'teal.600' : 'gray.700'}
+                      _hover={{ bg: selectedClientId === client.id ? 'teal.600' : 'gray.600' }}
+                      onClick={() => {
+                        setSelectedClientId(client.id);
+                        setClientSearch('');
+                        onNewChatClose();
+                        handleStartNewChatWithClient(client.id);
+                      }}
+                    >
+                      <Text fontWeight="bold" fontSize="sm">
+                        {client.nickname || client.username || '客户'}
+                      </Text>
+                      {client.phone && (
+                        <Text fontSize="xs" color="gray.400">{client.phone}</Text>
+                      )}
+                    </ListItem>
+                  ))}
+                {allClients.filter(c => {
+                  const keyword = clientSearch.toLowerCase();
+                  const name = (c.nickname || c.username || '客户').toLowerCase();
+                  const phone = (c.phone || '').toLowerCase();
+                  return name.includes(keyword) || phone.includes(keyword);
+                }).length === 0 && (
+                  <Text color="gray.500" textAlign="center" py={4}>
+                    未找到匹配的客户
+                  </Text>
+                )}
+              </List>
+            </Box>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={() => {
+              setSelectedClientId('');
+              setClientSearch('');
+              onNewChatClose();
+            }}>
+              取消
+            </Button>
+            <Button
+              colorScheme="teal"
+              onClick={handleStartNewChat}
+              isDisabled={!selectedClientId}
+            >
+              开始聊天
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
 
       <ProfileSuggestModal
         clientId={currentSession?.clientId}

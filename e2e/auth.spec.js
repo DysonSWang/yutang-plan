@@ -17,7 +17,7 @@ async function showLoginForm(page) {
 
 async function fillLoginForm(page, username, password) {
   await showLoginForm(page);
-  const usernameInput = page.locator('input').filter({ hasNot: page.locator('[type="password"]') }).first();
+  const usernameInput = page.locator('input[type="text"], input:not([type])').first();
   const passwordInput = page.locator('input[type="password"]').first();
   await usernameInput.fill(username);
   await passwordInput.fill(password);
@@ -34,7 +34,7 @@ test.describe('登录认证', () => {
 
   test('可以输入用户名和密码', async ({ page }) => {
     await showLoginForm(page);
-    const usernameInput = page.locator('input').filter({ hasNot: page.locator('[type="password"]') }).first();
+    const usernameInput = page.locator('input[type="text"], input:not([type])').first();
     const passwordInput = page.locator('input[type="password"]').first();
     if (await usernameInput.isVisible()) {
       await usernameInput.fill('op_e2e');

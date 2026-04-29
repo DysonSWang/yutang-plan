@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react';
-import { Box, Button, FormControl, FormLabel, Input, VStack, Text, Card, CardBody, Heading, HStack, IconButton, Popover, PopoverTrigger, PopoverContent, PopoverBody, PopoverHeader, Switch, Flex, useToast } from '@chakra-ui/react';
+import { Box, Button, FormControl, FormLabel, Input, VStack, Text, Card, CardBody, Heading, HStack, IconButton, Popover, PopoverTrigger, PopoverContent, PopoverBody, PopoverHeader, Switch, Flex, useToast, Link } from '@chakra-ui/react';
 import { useAuth } from '../contexts/AuthContext';
+import { auth } from '../utils/api';
 
 export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [nickname, setNickname] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showLogin, setShowLogin] = useState(true);
+  const [mode, setMode] = useState('login'); // 'login' | 'register'
+  const [showLogin, setShowLogin] = useState(false);
   const [loginError, setLoginError] = useState('');
+  const [registerError, setRegisterError] = useState('');
   const [notes, setNotes] = useState([
     { id: 1, text: '欢迎使用记事本' }
   ]);
@@ -17,11 +22,11 @@ export default function Login() {
   const toast = useToast();
 
   useEffect(() => {
-    setDisguiseMode(localStorage.getItem('yutang_disguise') === 'true');
+    setDisguiseMode(localStorage.getItem('zhuiai_disguise') === 'true');
   }, []);
 
   const toggleDisguise = (enabled) => {
-    localStorage.setItem('yutang_disguise', enabled ? 'true' : 'false');
+    localStorage.setItem('zhuiai_disguise', enabled ? 'true' : 'false');
     setDisguiseMode(enabled);
     if (enabled) {
       setShowLogin(false);
@@ -30,7 +35,7 @@ export default function Login() {
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setLoginError('');
     setLoading(true);
@@ -42,6 +47,32 @@ export default function Login() {
     } catch (err) {
       setLoginError(err.message || '用户名或密码错误');
       toast({ title: '登录失败', description: err.message || '用户名或密码错误', status: 'error', duration: 3000 });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setRegisterError('');
+    setLoading(true);
+    try {
+      const res = await auth.register({
+        username,
+        password,
+        nickname: nickname || username,
+        inviteCode: inviteCode || undefined
+      });
+      if (res.success) {
+        // 注册成功后自动登录
+        localStorage.setItem('zhuiai_token', res.token);
+        window.location.reload();
+      } else {
+        setRegisterError(res.error || '注册失败');
+      }
+    } catch (err) {
+      setRegisterError(err.message || '注册失败');
+      toast({ title: '注册失败', description: err.message, status: 'error', duration: 3000 });
     } finally {
       setLoading(false);
     }
@@ -99,7 +130,7 @@ export default function Login() {
               fontWeight="700"
               className="stagger-1"
             >
-              {effectiveShowLogin ? '登录' : '记事本'}
+              {effectiveShowLogin ? (mode === 'login' ? '登录' : '注册') : '记事本'}
             </Heading>
             <Popover placement="bottom-end">
               <PopoverTrigger>
@@ -139,7 +170,8 @@ export default function Login() {
           </HStack>
 
           {effectiveShowLogin ? (
-            <form onSubmit={handleSubmit} className="stagger-2">
+            mode === 'login' ? (
+            <form onSubmit={handleLogin} className="stagger-2">
               <VStack spacing={4}>
                 <FormControl>
                   <FormLabel color="abyss.400" fontSize="sm">用户名</FormLabel>
@@ -207,8 +239,93 @@ export default function Login() {
                     记事本
                   </Button>
                 )}
+                <Text color="abyss.500" fontSize="xs" textAlign="center">
+                  如需账号请联系管理员创建
+                </Text>
               </VStack>
             </form>
+            ) : (
+            <form onSubmit={handleRegister} className="stagger-2">
+              <VStack spacing={4}>
+                <FormControl>
+                  <FormLabel color="abyss.400" fontSize="sm">用户名</FormLabel>
+                  <Input
+                    value={username}
+                    onChange={e => { setUsername(e.target.value); setRegisterError(''); }}
+                    placeholder="设置用户名"
+                    bg="rgba(255,255,255,0.04)"
+                    color="white"
+                    border="1px solid rgba(255,255,255,0.08)"
+                    _placeholder={{ color: 'abyss.500' }}
+                  />
+                </FormControl>
+                <FormControl>
+                  <FormLabel color="abyss.400" fontSize="sm">昵称</FormLabel>
+                  <Input
+                    value={nickname}
+                    onChange={e => setNickname(e.target.value)}
+                    placeholder="设置昵称（选填）"
+                    bg="rgba(255,255,255,0.04)"
+                    color="white"
+                    border="1px solid rgba(255,255,255,0.08)"
+                    _placeholder={{ color: 'abyss.500' }}
+                  />
+                </FormControl>
+                <FormControl>
+                  <FormLabel color="abyss.400" fontSize="sm">密码</FormLabel>
+                  <Input
+                    type="password"
+                    value={password}
+                    onChange={e => { setPassword(e.target.value); setRegisterError(''); }}
+                    placeholder="设置密码（至少8位）"
+                    bg="rgba(255,255,255,0.04)"
+                    color="white"
+                    border="1px solid rgba(255,255,255,0.08)"
+                    _placeholder={{ color: 'abyss.500' }}
+                  />
+                </FormControl>
+                <FormControl>
+                  <FormLabel color="abyss.400" fontSize="sm">邀请码</FormLabel>
+                  <Input
+                    value={inviteCode}
+                    onChange={e => setInviteCode(e.target.value)}
+                    placeholder="填写邀请码获得奖励（选填）"
+                    bg="rgba(255,255,255,0.04)"
+                    color="white"
+                    border="1px solid rgba(255,255,255,0.08)"
+                    _placeholder={{ color: 'abyss.500' }}
+                  />
+                </FormControl>
+                {registerError && (
+                  <Box
+                    w="100%"
+                    p={3}
+                    bg="rgba(248,113,113,0.1)"
+                    border="1px solid rgba(248,113,113,0.3)"
+                    borderRadius="md"
+                  >
+                    <Text color="red.400" fontSize="sm">{registerError}</Text>
+                  </Box>
+                )}
+                <Button
+                  type="submit"
+                  bg="brand.500"
+                  color="abyss.950"
+                  fontWeight="bold"
+                  size="md"
+                  w="100%"
+                  isLoading={loading}
+                  _hover={{ bg: 'brand.400' }}
+                >
+                  注册
+                </Button>
+                <Text color="abyss.500" fontSize="xs" textAlign="center">
+                  已有账号？{' '}
+                  <Link color="brand.400" onClick={() => setMode('login')}>立即登录</Link>
+                </Text>
+              </VStack>
+            </form>
+            )
           ) : (
             <VStack spacing={4} className="stagger-2">
               <HStack w="100%">

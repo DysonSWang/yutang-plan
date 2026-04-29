@@ -33,7 +33,8 @@ test.describe('操盘手-聊天页面', () => {
   test('有消息输入区域', async ({ page }) => {
     await page.goto(`${BASE_URL}/admin/chat`);
     await page.waitForTimeout(2000);
-    const inputs = page.locator('input, textarea');
+    // 排除隐藏的 file input，只匹配可见的文本输入
+    const inputs = page.locator('input[type="text"], input[type="search"], textarea').filter({ hasNot: page.locator('[type="hidden"]') });
     if (await inputs.count() > 0) {
       await expect(inputs.first()).toBeVisible();
     }

@@ -177,7 +177,7 @@ async function generateAIInsights(data, girls) {
     tension: g.tensionScore || 5,
   }));
 
-  const prompt = `你是两性关系运营顾问，负责对本周的鱼塘运营数据进行复盘，并给出下周建议。
+  const prompt = `你是两性关系运营顾问，负责对本周的追爱运营数据进行复盘，并给出下周建议。
 
 【本周数据】
 - 女生总数：${data.totalGirls}，新增：${data.newGirlsThisWeek}

@@ -1,7 +1,7 @@
 {
-  "name": "yutang-backend",
+  "name": "zhuiai-backend",
   "version": "1.0.0",
-  "description": "鱼塘计划后端服务",
+  "description": "追爱AI后端服务",
   "main": "src/index.js",
   "scripts": {
     "dev": "node src/index.js",
@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@prisma/client": "^5.10.0",
+    "ali-oss": "^6.23.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

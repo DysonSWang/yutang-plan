@@ -68,7 +68,7 @@ async function chatWithTools(messages, options = {}) {
   // 获取教练配置的 tools
   const coachTools = coachConfig.tools || [];
   const toolsToUse = coachTools
-    .map(t => availableTools.find(at => at.function.name === t))
+    .map(t => availableTools.find(at => at?.function?.name === t))
     .filter(Boolean);
 
   let toolCallCount = 0;

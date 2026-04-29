@@ -1,7 +1,7 @@
 /**
  * OverviewAgent - 全局概览 Agent
  *
- * 职责：给出鱼塘整体情况、各女生状态、优先级和推进计划
+ * 职责：给出追爱整体情况、各女生状态、优先级和推进计划
  *
  * 特点：
  * - 多女生汇总视角
@@ -13,7 +13,7 @@ const prisma = require('../prisma');
 const { buildClientHint, RESPONSE_FORMAT } = require('./contextBuilder');
 
 // ---- 基础指令 ----
-const OVERVIEW_INSTRUCTION = `你是鱼塘AI情感教练，给出鱼塘整体情况和推进建议。
+const OVERVIEW_INSTRUCTION = `你是追爱AI情感教练，给出追爱整体情况和推进建议。
 
 ${RESPONSE_FORMAT}
 
@@ -24,7 +24,7 @@ ${RESPONSE_FORMAT}
 4. 风险预警（是否有需要注意的关系状态）
 
 回复格式（简洁有条理）：
-【鱼塘概览】总共N个女生，X个活跃，Y个需要关注
+【追爱概览】总共N个女生，X个活跃，Y个需要关注
 【重点关注】优先级最高的1-2个女生及原因
 【本周计划】本周重点推进方向
 【风险提示】如有需要关注的问题`;
@@ -66,7 +66,7 @@ async function buildPrompt(userQuestion, ctx, opts = {}) {
             : '未知';
           return `${i + 1}. ${g.name || '未知'} | ${g.relationshipStage || '未设置'} | 热度${g.tensionScore || 5}/10 | 亲密度${g.intimacyLevel || 1} | 最后联系${lastContactStr}`;
         }).join('\n');
-        girlsOverview = `【鱼塘女生列表】（共${girls.length}个）\n${girlLines}`;
+        girlsOverview = `【追爱女生列表】（共${girls.length}个）\n${girlLines}`;
       }
     } catch (e) {
       console.warn('[OverviewAgent] 加载女生列表失败:', e.message);
@@ -96,7 +96,7 @@ function getAgentMeta() {
   return {
     name: 'OverviewAgent',
     displayName: '全局概览',
-    description: '给出鱼塘整体情况、各女生状态和推进计划',
+    description: '给出追爱整体情况、各女生状态和推进计划',
     routeTypes: ['overview'],
     needsHistory: false,
     needsGirlProfile: false,

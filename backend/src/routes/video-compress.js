@@ -7,12 +7,15 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const { execFile } = require('child_process');
 const util = require('util');
 const execPromise = util.promisify(execFile);
 const jwt = require('jsonwebtoken');
 
 const { JWT_SECRET } = require('../config');
+const { encrypt } = require('../services/encryption');
+const { uploadBuffer } = require('../services/ossClient');
 
 // 上传临时目录（压缩完成后删除）
 const TEMP_DIR = path.join(__dirname, '../../uploads/_temp');
@@ -72,8 +75,30 @@ router.post('/compress-video', authMiddleware, upload.single('file'), async (req
   const outputFilename = `vid-${Date.now()}-${Math.round(Math.random() * 1E9)}.mp4`;
   const outputPath = path.join(VIDEO_DIR, outputFilename);
 
+  // 敏感视频不走FFmpeg，不压缩，直接加密上OSS
+  const isBurnAfterRead = req.body.isBurnAfterRead === 'true' || req.body.isBurnAfterRead === true;
+  const isFlashImage = req.body.isFlashImage === 'true' || req.body.isFlashImage === true;
+  const isSensitive = isBurnAfterRead || isFlashImage;
+
   try {
-    // 判断是否需要压缩
+    // 敏感视频：跳过压缩，直接加密存OSS
+    if (isSensitive) {
+      const videoBuffer = fs.readFileSync(inputPath);
+      fs.unlinkSync(inputPath); // 清理临时文件
+      const encrypted = encrypt(videoBuffer);
+      const ossPath = `encrypted/videos/${crypto.randomBytes(16).toString('hex')}.mp4.enc`;
+      await uploadBuffer(encrypted, ossPath, true);
+      return res.json({
+        url: `/${ossPath}`,
+        filename: path.basename(ossPath),
+        size: encrypted.length,
+        compressed: false,
+        originalSize,
+        isEncrypted: true
+      });
+    }
+
+    // 普通视频：判断是否需要压缩
     if (originalSize <= VIDEO_SIZE_THRESHOLD) {
       // 小文件直接移动到最终目录
       fs.copyFileSync(inputPath, outputPath);
@@ -84,7 +109,8 @@ router.post('/compress-video', authMiddleware, upload.single('file'), async (req
         filename: outputFilename,
         size: originalSize,
         compressed: false,
-        originalSize
+        originalSize,
+        isEncrypted: false
       });
     }
 
@@ -122,7 +148,8 @@ router.post('/compress-video', authMiddleware, upload.single('file'), async (req
       size: compressedSize,
       compressed: true,
       originalSize,
-      reduction: `${((1 - compressedSize / originalSize) * 100).toFixed(1)}%`
+      reduction: `${((1 - compressedSize / originalSize) * 100).toFixed(1)}%`,
+      isEncrypted: false
     });
 
   } catch (err) {

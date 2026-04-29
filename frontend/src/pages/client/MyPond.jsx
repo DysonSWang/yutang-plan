@@ -55,7 +55,7 @@ function SectionCard({ title, children }) {
 
 function TagRow({ label, value }) {
   if (!value) return null;
-  const tags = value.split(/[,，、/]/).map(t => t.trim()).filter(Boolean);
+  const tags = (value || '').split(/[,，、/]/).map(t => t.trim()).filter(Boolean);
   return (
     <Box>
       <Text color="gray.500" fontSize="xs" mb={1}>{label}</Text>
@@ -1000,7 +1000,7 @@ export default function MyPond() {
 
   return (
     <Box>
-      <Heading color="white" mb={6}>我的鱼塘</Heading>
+      <Heading color="white" mb={6}>我的缘分</Heading>
 
       <HStack mb={4} justify="flex-end">
         <Button

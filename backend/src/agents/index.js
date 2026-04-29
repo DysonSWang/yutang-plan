@@ -4,6 +4,8 @@
 const { triage, getRouteTypeName } = require('./triage');
 const { executeHandoff, getHandoffCallbacks } = require('./handoffs');
 const { UnifiedContext, createUnifiedContext, ROUTE_TYPES } = require('./UnifiedContext');
+const { buildGirlContext, buildClientHint, buildGirlStrategyHint, buildHistorySection, buildDepthInfo } = require('./contextBuilder');
+const tools = require('./tools');
 
 // 专业 Agent
 const SituationAgent = require('./SituationAgent');
@@ -23,6 +25,20 @@ module.exports = {
   UnifiedContext,
   createUnifiedContext,
   ROUTE_TYPES,
+
+  // Context Builder
+  buildGirlContext,
+  buildClientHint,
+  buildGirlStrategyHint,
+  buildHistorySection,
+  buildDepthInfo,
+
+  // Tools
+  tools,
+  getGirlContext: tools.getGirlContext,
+  getChatHistory: tools.getChatHistory,
+  getClientProfile: tools.getClientProfile,
+  getAllGirlsSummary: tools.getAllGirlsSummary,
 
   // 专业 Agent
   SituationAgent,

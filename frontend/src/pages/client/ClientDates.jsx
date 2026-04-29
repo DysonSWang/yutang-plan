@@ -495,7 +495,7 @@ export default function ClientDates() {
                             // 多选题
                             <Wrap spacing={2}>
                               {q.options.map((opt, oi) => {
-                                const selected = (interviewAnswers[qId] || '').split(',').includes(opt);
+                                const selected = String(interviewAnswers[qId] || '').split(',').includes(opt);
                                 return (
                                   <WrapItem key={oi}>
                                     <Tag

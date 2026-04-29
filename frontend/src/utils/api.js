@@ -11,15 +11,15 @@ class Api {
   }
 
   getToken() {
-    return localStorage.getItem('yutang_token');
+    return localStorage.getItem('zhuiai_token');
   }
 
   setToken(token) {
-    localStorage.setItem('yutang_token', token);
+    localStorage.setItem('zhuiai_token', token);
   }
 
   removeToken() {
-    localStorage.removeItem('yutang_token');
+    localStorage.removeItem('zhuiai_token');
   }
 
   async request(method, path, data = null) {
@@ -112,7 +112,7 @@ export const chat = {
 
 // 上传
 export const upload = {
-  image: async (file) => {
+  image: async (file, isBurnAfterRead = false, isFlashImage = false) => {
     const options = {
       maxSizeMB: 1,
       maxWidthOrHeight: 1920,
@@ -124,6 +124,8 @@ export const upload = {
     const token = api.getToken();
     const formData = new FormData();
     formData.append('file', compressed);
+    if (isBurnAfterRead) formData.append('isBurnAfterRead', 'true');
+    if (isFlashImage) formData.append('isFlashImage', 'true');
     const res = await fetch(`${api.baseUrl}/api/upload/image`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` },
@@ -134,10 +136,12 @@ export const upload = {
     json.compressedSize = compressed.size;
     return json;
   },
-  video: async (file) => {
+  video: async (file, isBurnAfterRead = false, isFlashImage = false) => {
     const token = api.getToken();
     const formData = new FormData();
     formData.append('file', file);
+    if (isBurnAfterRead) formData.append('isBurnAfterRead', 'true');
+    if (isFlashImage) formData.append('isFlashImage', 'true');
     const res = await fetch(`${api.baseUrl}/api/upload/compress-video`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` },
@@ -303,4 +307,44 @@ export const events = {
   delete: (id) => api.delete(`/api/events/${id}`),
   updateStatus: (id, status) => api.patch(`/api/events/${id}/status`, { status }),
   batch: (data) => api.post('/api/events/batch', data),
+};
+
+// 会员/积分/邀请/学习版块
+export const membership = {
+  status: () => api.get('/api/membership/status'),
+  purchase: (couponToUse = 0) => api.post('/api/membership/purchase', { couponToUse }),
+  // 管理员
+  adminList: () => api.get('/api/membership/admin/list'),
+  adminSet: (userId, action, data) => api.post('/api/membership/admin/set', { userId, action, ...data }),
+  // 积分
+  points: () => api.get('/api/membership/points'),
+  pointsRecharge: (userId, amount, note) => api.post('/api/membership/points/recharge', { userId, amount, note }),
+  pointsDeduct: (userId, amount, note) => api.post('/api/membership/points/deduct', { userId, amount, note }),
+  // 抵扣券
+  coupons: () => api.get('/api/membership/coupons'),
+  grantCoupon: (userId, value, note) => api.post('/api/membership/coupons/grant', { userId, value, note }),
+  // 邀请
+  createInviteCode: () => api.post('/api/membership/invitation/create'),
+  myInvitationStats: () => api.get('/api/membership/invitation/my-stats'),
+  // 学习
+  chapters: () => api.get('/api/membership/learning/chapters'),
+  learningProgress: () => api.get('/api/membership/learning/progress'),
+  updateLearningProgress: (chapterId, status) => api.put(`/api/membership/learning/progress/${chapterId}`, { status }),
+  // AI约会方案
+  generateDatingPlan: (data) => api.post('/api/membership/dating-plan/generate', data),
+  datingPlans: () => api.get('/api/membership/dating-plan'),
+  getDatingPlan: (id) => api.get(`/api/membership/dating-plan/${id}`),
+  // 截图识别档案
+  uploadScreenshot: async (formData) => {
+    const token = api.getToken();
+    const res = await fetch(`${api.baseUrl}/api/membership/screenshot/upload`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData
+    });
+    return res.json();
+  },
+  screenshotProfiles: (status) => api.get('/api/membership/screenshot/profiles' + (status ? '?status=' + status : '')),
+  confirmScreenshotProfile: (profileId, action, linkedUserId) =>
+    api.post(`/api/membership/screenshot/profile/${profileId}/confirm`, { action, linkedUserId }),
 };

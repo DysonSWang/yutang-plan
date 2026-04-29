@@ -126,7 +126,7 @@ export default function AdminProgress() {
                 <Th color="gray.400">客户</Th>
                 <Th color="gray.400">当前阶段</Th>
                 <Th color="gray.400">阶段详情</Th>
-                <Th color="gray.400">鱼塘资源</Th>
+                <Th color="gray.400">缘分资源</Th>
                 <Th color="gray.400">操作</Th>
               </Tr>
             </Thead>
