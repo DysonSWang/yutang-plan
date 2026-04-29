@@ -180,7 +180,7 @@ export default function Login() {
           className="animate-in"
           bg="rgba(255,255,255,0.03)"
           backdropFilter="blur(20px)"
-          WebkitBackdropFilter="blur(20px)"
+          webkitbackdropfilter="blur(20px)"
           border="1px solid rgba(255,255,255,0.08)"
           borderRadius="24px"
           p={{ base: 6, sm: 8 }}
