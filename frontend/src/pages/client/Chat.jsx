@@ -268,12 +268,28 @@ export default function ClientChat() {
   const sendMessage = async () => {
     if (!input.trim() || sending) return;
     if (!session) {
-      toast({ title: '暂无会话，请稍后重试', status: 'warning', duration: 3000 });
+      // 没有会话时，先创建会话
+      try {
+        const createRes = await chat.createSession();
+        if (createRes.success && createRes.session) {
+          setSession(createRes.session);
+          await sendMessageAfterSession(createRes.session.id, input);
+        } else {
+          toast({ title: '创建会话失败，请稍后重试', status: 'error', duration: 3000 });
+        }
+      } catch (e) {
+        console.error(e);
+        toast({ title: '发送失败', status: 'error', duration: 2000 });
+      }
       return;
     }
+    await sendMessageAfterSession(session.id, input);
+  };
+
+  const sendMessageAfterSession = async (sessionId, content) => {
     setSending(true);
     try {
-      const res = await chat.send(session.id, input);
+      const res = await chat.send(sessionId, content);
       if (res.success) {
         setMessages(prev => [...prev, res.message]);
         setInput('');
