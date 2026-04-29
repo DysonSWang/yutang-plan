@@ -39,13 +39,31 @@ module.exports = function(io) {
   };
 
   // Socket.io 推送消息
-  const emitNewMessage = (session, message) => {
+  const emitNewMessage = (session, message, senderUserId) => {
     if (!io) return;
     // 发送给会话的另一方
     const isOperator = session.operatorId === message.senderId;
-    const room = isOperator ? `client:${session.clientId}` : `operator:${session.operatorId}`;
-    console.log('[Chat] Emitting to room:', room, 'message:', message.id);
-    io.to(room).emit('message:new', message);
+    const clientRoom = `client:${session.clientId}`;
+    const operatorRoom = `operator:${session.operatorId}`;
+
+    // 发送给客户端
+    io.to(clientRoom).emit('message:new', message);
+
+    // 发送给操作员（如果不是发送者本人）
+    if (message.senderId !== session.operatorId) {
+      io.to(operatorRoom).emit('message:new', message);
+    }
+
+    // 如果发送者是admin，广播给所有admin房间，确保admin能看到自己发的消息
+    if (senderUserId && message.senderId === senderUserId) {
+      // 找到所有admin用户并发送给他们（通过查询数据库获取admin的user id）
+      // 但这样太复杂了，简单做法是：如果发送者是admin，同时发一份给operator:发送者id
+      if (session.operatorId !== senderUserId) {
+        io.to(`operator:${senderUserId}`).emit('message:new', message);
+      }
+    }
+
+    console.log('[Chat] Emitting message:', message.id, 'to client:', clientRoom, 'operator:', operatorRoom);
   };
 
   // 获取操盘手的所有客户会话列表
@@ -361,7 +379,7 @@ module.exports = function(io) {
       });
 
       // 通过 Socket.io 推送消息给另一方
-      emitNewMessage(session, message);
+      emitNewMessage(session, message, req.user.id);
 
       res.json({ success: true, message });
     } catch (error) {
