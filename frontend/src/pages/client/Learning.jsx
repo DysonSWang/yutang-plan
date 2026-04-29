@@ -1,10 +1,12 @@
 import { Box, Heading, Text, VStack, HStack, Button, Badge, Progress, SimpleGrid, useToast, Spinner, Center } from '@chakra-ui/react';
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { membership as membershipApi } from '../../utils/api';
 import { BookIcon, CheckIcon } from '../../components/Icons';
 
 // Chapter card component
 function ChapterCard({ chapter, progress, onUpdate }) {
+  const navigate = useNavigate();
   const p = progress.find(p => p.chapterId === chapter.chapterId);
   const status = p?.status || 'not_started';
   const statusColor = status === 'completed' ? 'green' : status === 'in_progress' ? 'blue' : 'gray';
@@ -18,6 +20,7 @@ function ChapterCard({ chapter, progress, onUpdate }) {
       _hover={{ borderColor: 'rgba(0,212,170,0.3)', bg: 'rgba(255,255,255,0.05)' }}
       transition="all 0.2s"
       cursor="pointer"
+      onClick={() => navigate(`/learning/${chapter.chapterId}`)}
     >
       <HStack justify="space-between" mb={3}>
         <HStack gap={3}>

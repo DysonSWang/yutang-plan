@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>追爱AI - 登录</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Ma+Shan+Zheng&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --abyss-950: #0a0f1a;
+      --abyss-900: #0f172a;
+      --abyss-800: #1e293b;
+      --abyss-700: #334155;
+      --abyss-600: #475569;
+      --abyss-500: #64748b;
+      --abyss-400: #94a3b8;
+      --brand-500: #00d4aa;
+      --brand-400: #1affbd;
+      --brand-warm: #e8a87c;
+      --brand-soft: rgba(0, 212, 170, 0.6);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      background: var(--abyss-950);
+      font-family: 'Noto Sans SC', sans-serif;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      overflow: hidden;
+    }
+    .bg-mist { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 0; overflow: hidden; }
+    .mist-layer { position: absolute; width: 200%; height: 100%; background: url("data:image/svg+xml,%3Csvg viewBox='0 0 800 600' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.015' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E"); animation: mist-drift 60s linear infinite; }
+    .mist-layer:nth-child(2) { animation-duration: 45s; animation-direction: reverse; opacity: 0.5; }
+    @keyframes mist-drift { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+    .mountain-bg { position: fixed; bottom: 0; left: 0; right: 0; height: 40%; opacity: 0.15; background: linear-gradient(to top, transparent, var(--abyss-950)); }
+    .mountain-bg::before { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 100%; background: url("data:image/svg+xml,%3Csvg viewBox='0 0 1440 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 400L60 350L120 380L200 300L280 340L360 280L440 320L520 250L600 290L680 220L760 260L840 200L920 240L1000 180L1080 220L1160 160L1240 200L1320 140L1400 180L1440 120V400H0Z' fill='%23334155'/%3E%3C/svg%3E") no-repeat bottom center; background-size: cover; }
+    .particles { position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; }
+    .particle { position: absolute; width: 3px; height: 3px; background: var(--brand-500); border-radius: 50%; opacity: 0.3; animation: float-particle 8s ease-in-out infinite; }
+    @keyframes float-particle { 0%, 100% { transform: translateY(0) scale(1); opacity: 0.3; } 50% { transform: translateY(-30px) scale(1.5); opacity: 0.6; } }
+    .login-container { position: relative; z-index: 1; width: 100%; max-width: 400px; }
+    .logo-section { text-align: center; margin-bottom: 48px; }
+    .logo-bracket { font-family: 'Ma Shan Zheng', cursive; font-size: 48px; color: var(--brand-warm); opacity: 0.6; letter-spacing: 0.2em; margin-bottom: -10px; }
+    .logo-title { font-family: 'Noto Serif SC', serif; font-size: 42px; font-weight: 700; color: white; letter-spacing: 0.3em; margin-bottom: 4px; text-shadow: 0 2px 20px rgba(0, 212, 170, 0.3); }
+    .logo-subtitle { font-size: 12px; color: var(--abyss-500); letter-spacing: 0.5em; }
+    .poem-line { text-align: center; font-family: 'Noto Serif SC', serif; font-size: 13px; color: var(--abyss-600); letter-spacing: 0.3em; margin-bottom: 8px; }
+    .oriental-card { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 40px 36px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); }
+    .card-header-line { display: flex; align-items: center; justify-content: center; margin-bottom: 32px; gap: 16px; }
+    .line-short { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--brand-soft), transparent); }
+    .dot-center { width: 6px; height: 6px; background: var(--brand-500); border-radius: 50%; opacity: 0.6; }
+    .tab-group { display: flex; margin-bottom: 28px; gap: 24px; }
+    .tab-item { flex: 1; padding: 12px; background: transparent; border: none; color: var(--abyss-500); font-family: 'Noto Serif SC', serif; font-size: 15px; cursor: pointer; transition: all 0.3s ease; position: relative; }
+    .tab-item::after { content: ''; position: absolute; bottom: 0; left: 50%; right: 50%; height: 2px; background: var(--brand-500); transition: all 0.3s ease; }
+    .tab-item.active { color: white; }
+    .tab-item.active::after { left: 0; right: 0; background: linear-gradient(90deg, transparent, var(--brand-500), transparent); }
+    .tab-item:hover:not(.active) { color: var(--abyss-400); }
+    .form-group { margin-bottom: 20px; }
+    .form-label { display: block; font-size: 12px; color: var(--abyss-500); margin-bottom: 8px; letter-spacing: 0.1em; }
+    .form-input { width: 100%; padding: 14px 0; background: transparent; border: none; border-bottom: 1px solid rgba(255, 255, 255, 0.1); color: white; font-size: 15px; font-family: inherit; transition: all 0.3s ease; }
+    .form-input::placeholder { color: var(--abyss-600); }
+    .form-input:focus { outline: none; border-bottom-color: var(--brand-500); }
+    .form-input:hover { border-bottom-color: rgba(255, 255, 255, 0.2); }
+    .submit-btn { width: 100%; padding: 16px; background: linear-gradient(135deg, var(--brand-500), var(--brand-400)); border: none; border-radius: 8px; color: var(--abyss-950); font-family: 'Noto Serif SC', serif; font-size: 16px; font-weight: 600; letter-spacing: 0.2em; cursor: pointer; transition: all 0.3s ease; margin-top: 12px; box-shadow: 0 4px 20px rgba(0, 212, 170, 0.3); }
+    .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0, 212, 170, 0.4); }
+    .footer-hint { text-align: center; margin-top: 28px; font-size: 13px; color: var(--abyss-600); }
+    .footer-link { color: var(--brand-500); text-decoration: none; cursor: pointer; transition: all 0.3s ease; }
+    .footer-link:hover { color: var(--brand-400); }
+    .hidden { display: none; }
+    @media (max-width: 480px) { .oriental-card { padding: 32px 24px; } .logo-title { font-size: 36px; } .logo-bracket { font-size: 40px; } }
+  </style>
+</head>
+<body>
+  <div class="bg-mist"><div class="mist-layer"></div><div class="mist-layer"></div></div>
+  <div class="mountain-bg"></div>
+  <div class="particles">
+    <div class="particle" style="top: 20%; left: 15%; animation-delay: 0s;"></div>
+    <div class="particle" style="top: 60%; left: 25%; animation-delay: 1s;"></div>
+    <div class="particle" style="top: 30%; left: 75%; animation-delay: 2s;"></div>
+    <div class="particle" style="top: 70%; left: 85%; animation-delay: 3s;"></div>
+    <div class="particle" style="top: 45%; left: 50%; animation-delay: 4s;"></div>
+  </div>
+  <div class="login-container">
+    <div class="logo-section">
+      <div class="logo-bracket">『</div>
+      <h1 class="logo-title">追爱</h1>
+      <p class="logo-subtitle">ZHUIAI</p>
+    </div>
+    <p class="poem-line">执子之手 · 与子偕老</p>
+    <div class="oriental-card">
+      <div class="card-header-line"><div class="line-short"></div><div class="dot-center"></div><div class="line-short"></div></div>
+      <div class="tab-group">
+        <button class="tab-item active" id="tab-login">登录</button>
+        <button class="tab-item" id="tab-register">注册</button>
+      </div>
+      <form id="login-form">
+        <div class="form-group">
+          <label class="form-label">用户名</label>
+          <input type="text" class="form-input" placeholder="请输入用户名" autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label class="form-label">密码</label>
+          <input type="password" class="form-input" placeholder="请输入密码" autocomplete="current-password">
+        </div>
+        <button type="submit" class="submit-btn">登 录</button>
+      </form>
+      <form id="register-form" class="hidden">
+        <div class="form-group">
+          <label class="form-label">用户名</label>
+          <input type="text" class="form-input" placeholder="设置用户名" autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label class="form-label">昵称</label>
+          <input type="text" class="form-input" placeholder="设置昵称（选填）">
+        </div>
+        <div class="form-group">
+          <label class="form-label">密码</label>
+          <input type="password" class="form-input" placeholder="设置密码（至少8位）" autocomplete="new-password">
+        </div>
+        <div class="form-group">
+          <label class="form-label">邀请码</label>
+          <input type="text" class="form-input" placeholder="填写邀请码（选填）">
+        </div>
+        <button type="submit" class="submit-btn">注 册</button>
+      </form>
+      <div class="footer-hint" id="footer-hint">还没有账号？<span class="footer-link" id="switch-link">立即注册</span></div>
+    </div>
+  </div>
+  <script>
+    var tabLogin = document.getElementById('tab-login');
+    var tabRegister = document.getElementById('tab-register');
+    var loginForm = document.getElementById('login-form');
+    var registerForm = document.getElementById('register-form');
+    var footerHint = document.getElementById('footer-hint');
+    var switchLink = document.getElementById('switch-link');
+    var isLogin = true;
+    function switchTab(toLogin) {
+      isLogin = toLogin;
+      if (toLogin) {
+        tabLogin.classList.add('active');
+        tabRegister.classList.remove('active');
+        loginForm.classList.remove('hidden');
+        registerForm.classList.add('hidden');
+        footerHint.innerHTML = '还没有账号？<span class="footer-link" id="switch-link">立即注册</span>';
+      } else {
+        tabLogin.classList.remove('active');
+        tabRegister.classList.add('active');
+        loginForm.classList.add('hidden');
+        registerForm.classList.remove('hidden');
+        footerHint.innerHTML = '已有账号？<span class="footer-link" id="switch-link">立即登录</span>';
+      }
+      document.getElementById('switch-link').onclick = function() { switchTab(isLogin); };
+    }
+    tabLogin.onclick = function() { switchTab(true); };
+    tabRegister.onclick = function() { switchTab(false); };
+    switchLink.onclick = function() { switchTab(!isLogin); };
+    loginForm.onsubmit = function(e) { e.preventDefault(); alert('登录功能演示'); };
+    registerForm.onsubmit = function(e) { e.preventDefault(); alert('注册功能演示'); };
+  </script>
+</body>
+</html>

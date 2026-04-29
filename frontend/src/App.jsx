@@ -16,6 +16,7 @@ const MyPond = lazy(() => import('./pages/client/MyPond'));
 const ClientDates = lazy(() => import('./pages/client/ClientDates'));
 const Onboarding = lazy(() => import('./pages/client/Onboarding'));
 const ClientLearning = lazy(() => import('./pages/client/Learning'));
+const ChapterDetail = lazy(() => import('./pages/client/ChapterDetail'));
 const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
 const AdminClients = lazy(() => import('./pages/admin/Clients'));
 const AdminGirls = lazy(() => import('./pages/admin/Girls'));
@@ -90,6 +91,7 @@ function AppRoutes() {
         <Route path="my-pond" element={<MyPond />} />
         <Route path="dates" element={<ClientDates />} />
         <Route path="learning" element={<ClientLearning />} />
+        <Route path="learning/:chapterId" element={<ChapterDetail />} />
       </Route>
       <Route path="/admin" element={<ProtectedRoute requireOperator><AdminLayout /></ProtectedRoute>}>
         <Route index element={<AdminDashboard />} />

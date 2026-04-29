@@ -119,6 +119,11 @@ export default function ClientChat() {
     loadSession();
   }, []);
 
+  // 进入聊天页面时清除聊天未读数
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('chat-enter'));
+  }, []);
+
   useEffect(() => {
     const handler = (message) => {
       if (message.senderRole === 'client') return;

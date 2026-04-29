@@ -23,6 +23,7 @@ function DesktopSidebar() {
   const { on } = useSocket();
   const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [chatUnread, setChatUnread] = useState(0);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
 
@@ -54,7 +55,19 @@ function DesktopSidebar() {
       });
     };
     on('chat-log:new', handler);
-  }, [on, toast]);
+
+    // 监听聊天消息
+    const chatHandler = (message) => {
+      if (location.pathname !== '/chat') {
+        setChatUnread(prev => prev + 1);
+      }
+    };
+    on('message:new', chatHandler);
+
+    // 监听进入聊天页面事件，清除未读
+    const handleChatEnter = () => setChatUnread(0);
+    window.addEventListener('chat-enter', handleChatEnter);
+  }, [on, toast, location.pathname]);
 
   const markAllAsRead = async () => {
     try {
@@ -148,9 +161,34 @@ function DesktopSidebar() {
               gap={3}
               cursor="pointer"
               transition="all 0.15s ease"
+              position="relative"
             >
               <Icon as={item.icon} />
               <Text>{item.label}</Text>
+              {/* 聊天未读小红点 */}
+              {item.path === '/chat' && chatUnread > 0 && (
+                <Box
+                  position="absolute"
+                  top="8px"
+                  right="8px"
+                  w="8px"
+                  h="8px"
+                  borderRadius="full"
+                  bg="red.500"
+                />
+              )}
+              {/* 通知未读 */}
+              {item.path !== '/chat' && unreadCount > 0 && (
+                <Box
+                  position="absolute"
+                  top="8px"
+                  right="8px"
+                  w="8px"
+                  h="8px"
+                  borderRadius="full"
+                  bg="red.500"
+                />
+              )}
             </Flex>
           </NavLink>
         ))}
@@ -168,6 +206,7 @@ function MobileBottomNav() {
   const location = useLocation();
   const { on } = useSocket();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [chatUnread, setChatUnread] = useState(0);
 
   useEffect(() => {
     const loadUnread = async () => {
@@ -185,7 +224,19 @@ function MobileBottomNav() {
     on('notification:new', () => {
       setUnreadCount(prev => prev + 1);
     });
-  }, [on]);
+
+    // 监听聊天消息，增加未读计数
+    on('message:new', (message) => {
+      // 如果当前不在聊天页面，增加未读计数
+      if (location.pathname !== '/chat') {
+        setChatUnread(prev => prev + 1);
+      }
+    });
+
+    // 监听进入聊天页面事件，清除未读
+    const handleChatEnter = () => setChatUnread(0);
+    window.addEventListener('chat-enter', handleChatEnter);
+  }, [on, location.pathname]);
 
   return (
     <Box
@@ -219,11 +270,12 @@ function MobileBottomNav() {
               >
                 <Icon as={item.icon} boxSize={5} mb={1} />
                 <Text fontSize="xs">{item.label}</Text>
-                {item.path === '/chat' && unreadCount > 0 && (
+                {/* 通知未读 */}
+                {item.path === '/chat' && (unreadCount > 0 || chatUnread > 0) && (
                   <Badge
                     position="absolute"
                     top="5px"
-                    right="15px"
+                    right="12px"
                     colorScheme="red"
                     borderRadius="full"
                     fontSize="xs"
@@ -233,7 +285,25 @@ function MobileBottomNav() {
                     alignItems="center"
                     justifyContent="center"
                   >
-                    {unreadCount > 9 ? '9+' : unreadCount}
+                    {unreadCount + chatUnread > 99 ? '99+' : unreadCount + chatUnread}
+                  </Badge>
+                )}
+                {/* 通知未读（其他页面） */}
+                {item.path !== '/chat' && unreadCount > 0 && (
+                  <Badge
+                    position="absolute"
+                    top="5px"
+                    right="12px"
+                    colorScheme="red"
+                    borderRadius="full"
+                    fontSize="xs"
+                    minW="18px"
+                    h="18px"
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                  >
+                    {unreadCount > 99 ? '99+' : unreadCount}
                   </Badge>
                 )}
               </Flex>

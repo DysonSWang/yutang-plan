@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>追爱AI - 登录</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --abyss-950: #0a0f1a;
+      --abyss-900: #0f172a;
+      --abyss-800: #1e293b;
+      --abyss-700: #334155;
+      --abyss-600: #475569;
+      --abyss-500: #64748b;
+      --abyss-400: #94a3b8;
+      --abyss-300: #cbd5e1;
+      --brand-500: #00d4aa;
+      --brand-400: #1affbd;
+      --brand-glow: rgba(0, 212, 170, 0.3);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      background: var(--abyss-950);
+      font-family: 'Noto Sans SC', sans-serif;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      overflow: hidden;
+    }
+
+    .bg-decoration { position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 0; }
+
+    .glow-orb { position: absolute; border-radius: 50%; filter: blur(100px); opacity: 0.4; }
+
+    .glow-orb-1 {
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, var(--brand-500) 0%, transparent 70%);
+      top: -100px; right: -100px;
+      animation: float 8s ease-in-out infinite;
+    }
+
+    .glow-orb-2 {
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, #0ea5e9 0%, transparent 70%);
+      bottom: -50px; left: -50px;
+      animation: float 10s ease-in-out infinite reverse;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0); }
+      50% { transform: translate(20px, -20px); }
+    }
+
+    .login-container { position: relative; z-index: 1; width: 100%; max-width: 420px; }
+
+    .logo-section { text-align: center; margin-bottom: 48px; }
+
+    .logo-icon {
+      width: 64px; height: 64px; margin: 0 auto 20px;
+      background: linear-gradient(135deg, var(--brand-500), var(--brand-400));
+      border-radius: 20px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 8px 32px var(--brand-glow);
+    }
+
+    .logo-icon svg { width: 36px; height: 36px; fill: var(--abyss-950); }
+
+    .logo-title {
+      font-family: 'Noto Serif SC', serif;
+      font-size: 28px; font-weight: 600;
+      color: white; letter-spacing: 0.1em; margin-bottom: 8px;
+    }
+
+    .logo-subtitle { font-size: 13px; color: var(--abyss-500); letter-spacing: 0.3em; }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 24px;
+      padding: 40px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      position: relative;
+    }
+
+    .corner-accent { position: absolute; width: 120px; height: 120px; pointer-events: none; opacity: 0.5; }
+    .corner-accent.top-right { top: -1px; right: -1px; border-top: 1px solid var(--brand-500); border-right: 1px solid var(--brand-500); border-top-right-radius: 24px; }
+    .corner-accent.bottom-left { bottom: -1px; left: -1px; border-bottom: 1px solid rgba(14, 165, 233, 0.5); border-left: 1px solid rgba(14, 165, 233, 0.5); border-bottom-left-radius: 24px; }
+
+    .tab-group { display: flex; margin-bottom: 32px; background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 4px; }
+
+    .tab-item {
+      flex: 1; padding: 12px; text-align: center;
+      font-size: 14px; color: var(--abyss-500); cursor: pointer;
+      border-radius: 8px; transition: all 0.3s ease; border: none; background: transparent;
+    }
+
+    .tab-item.active { background: rgba(255, 255, 255, 0.08); color: white; }
+    .tab-item:hover:not(.active) { color: var(--abyss-400); }
+
+    .form-group { margin-bottom: 24px; }
+
+    .form-label { display: block; font-size: 12px; color: var(--abyss-500); margin-bottom: 8px; letter-spacing: 0.1em; }
+
+    .form-input {
+      width: 100%; padding: 14px 16px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px; color: white; font-size: 15px; font-family: inherit;
+      transition: all 0.3s ease;
+    }
+
+    .form-input::placeholder { color: var(--abyss-600); }
+    .form-input:hover { border-color: rgba(255, 255, 255, 0.15); background: rgba(255, 255, 255, 0.06); }
+    .form-input:focus { outline: none; border-color: var(--brand-500); background: rgba(255, 255, 255, 0.06); box-shadow: 0 0 0 3px var(--brand-glow); }
+
+    .submit-btn {
+      width: 100%; padding: 16px;
+      background: linear-gradient(135deg, var(--brand-500), var(--brand-400));
+      border: none; border-radius: 12px;
+      color: var(--abyss-950); font-size: 15px; font-weight: 500; font-family: inherit;
+      cursor: pointer; transition: all 0.3s ease; margin-top: 8px;
+    }
+
+    .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px var(--brand-glow); }
+    .submit-btn:active { transform: translateY(0); }
+
+    .footer-hint { text-align: center; margin-top: 24px; font-size: 12px; color: var(--abyss-600); }
+
+    .footer-link { color: var(--brand-500); text-decoration: none; cursor: pointer; transition: color 0.3s ease; }
+    .footer-link:hover { color: var(--brand-400); }
+
+    .hidden { display: none; }
+
+    @media (max-width: 480px) {
+      .glass-card { padding: 32px 24px; }
+      .logo-title { font-size: 24px; }
+      .logo-icon { width: 56px; height: 56px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-decoration">
+    <div class="glow-orb glow-orb-1"></div>
+    <div class="glow-orb glow-orb-2"></div>
+  </div>
+
+  <div class="login-container">
+    <div class="logo-section">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+      </div>
+      <h1 class="logo-title">追爱AI</h1>
+      <p class="logo-subtitle">ZHUIAI</p>
+    </div>
+
+    <div class="glass-card">
+      <div class="corner-accent top-right"></div>
+      <div class="corner-accent bottom-left"></div>
+
+      <div class="tab-group">
+        <button class="tab-item active" id="tab-login">登录</button>
+        <button class="tab-item" id="tab-register">注册</button>
+      </div>
+
+      <form id="login-form">
+        <div class="form-group">
+          <label class="form-label">用户名</label>
+          <input type="text" class="form-input" placeholder="请输入用户名" autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label class="form-label">密码</label>
+          <input type="password" class="form-input" placeholder="请输入密码" autocomplete="current-password">
+        </div>
+        <button type="submit" class="submit-btn">登录</button>
+      </form>
+
+      <form id="register-form" class="hidden">
+        <div class="form-group">
+          <label class="form-label">用户名</label>
+          <input type="text" class="form-input" placeholder="设置用户名" autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label class="form-label">昵称</label>
+          <input type="text" class="form-input" placeholder="设置昵称（选填）">
+        </div>
+        <div class="form-group">
+          <label class="form-label">密码</label>
+          <input type="password" class="form-input" placeholder="设置密码（至少8位）" autocomplete="new-password">
+        </div>
+        <div class="form-group">
+          <label class="form-label">邀请码</label>
+          <input type="text" class="form-input" placeholder="填写邀请码获得奖励（选填）">
+        </div>
+        <button type="submit" class="submit-btn">注册</button>
+      </form>
+
+      <div class="footer-hint" id="footer-hint">
+        还没有账号？<span class="footer-link" id="switch-link">立即注册</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var tabLogin = document.getElementById('tab-login');
+    var tabRegister = document.getElementById('tab-register');
+    var loginForm = document.getElementById('login-form');
+    var registerForm = document.getElementById('register-form');
+    var footerHint = document.getElementById('footer-hint');
+    var switchLink = document.getElementById('switch-link');
+    var isLogin = true;
+
+    function switchTab(toLogin) {
+      isLogin = toLogin;
+      if (toLogin) {
+        tabLogin.classList.add('active');
+        tabRegister.classList.remove('active');
+        loginForm.classList.remove('hidden');
+        registerForm.classList.add('hidden');
+        footerHint.innerHTML = '还没有账号？<span class="footer-link" id="switch-link">立即注册</span>';
+      } else {
+        tabLogin.classList.remove('active');
+        tabRegister.classList.add('active');
+        loginForm.classList.add('hidden');
+        registerForm.classList.remove('hidden');
+        footerHint.innerHTML = '已有账号？<span class="footer-link" id="switch-link">立即登录</span>';
+      }
+      document.getElementById('switch-link').onclick = function() { switchTab(isLogin); };
+    }
+
+    tabLogin.onclick = function() { switchTab(true); };
+    tabRegister.onclick = function() { switchTab(false); };
+    switchLink.onclick = function() { switchTab(!isLogin); };
+
+    loginForm.onsubmit = function(e) { e.preventDefault(); alert('登录功能演示'); };
+    registerForm.onsubmit = function(e) { e.preventDefault(); alert('注册功能演示'); };
+  </script>
+</body>
+</html>

@@ -226,6 +226,15 @@ export const HomeIcon = createIcon({
   ]
 });
 
+// Arrow Left 图标
+export const ArrowLeftIcon = createIcon({
+  displayName: 'ArrowLeftIcon',
+  viewBox: '0 0 24 24',
+  path: [
+    <path key="1" d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+  ]
+});
+
 // Check 图标
 export const CheckIcon = createIcon({
   displayName: 'CheckIcon',

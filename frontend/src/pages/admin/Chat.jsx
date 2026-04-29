@@ -128,14 +128,26 @@ export default function AdminChat() {
     const handler = (message) => {
       if (message.senderRole === 'operator') return;
       if (currentSession && message.sessionId === currentSession.id) {
+        // 当前会话，直接添加消息
         setMessages(prev => [...prev, message]);
+        // 清空当前会话未读
+        setSessions(prev => prev.map(s =>
+          s.id === message.sessionId ? { ...s, unreadCount: 0 } : s
+        ));
+      } else {
+        // 非当前会话，增加未读数
+        setSessions(prev => prev.map(s => {
+          if (s.id === message.sessionId) {
+            return {
+              ...s,
+              lastMessage: message.content || '[媒体消息]',
+              lastMessageAt: new Date(),
+              unreadCount: (s.unreadCount || 0) + 1
+            };
+          }
+          return s;
+        }));
       }
-      setSessions(prev => prev.map(s => {
-        if (s.id === message.sessionId) {
-          return { ...s, lastMessage: message.content || '[媒体消息]', lastMessageAt: new Date() };
-        }
-        return s;
-      }));
     };
     on('message:new', handler);
 
@@ -457,8 +469,28 @@ export default function AdminChat() {
                 onClick={() => {
                   setCurrentSession(session);
                   setShowChat(true);
+                  // 清空当前会话未读数
+                  if (session.unreadCount > 0) {
+                    setSessions(prev => prev.map(s =>
+                      s.id === session.id ? { ...s, unreadCount: 0 } : s
+                    ));
+                  }
                 }}
+                position="relative"
               >
+                {/* 未读小红点 */}
+                {session.unreadCount > 0 && (
+                  <Box
+                    position="absolute"
+                    top="8px"
+                    right="8px"
+                    w="10px"
+                    h="10px"
+                    borderRadius="full"
+                    bg="red.500"
+                    boxShadow="0 0 6px rgba(255,0,0,0.5)"
+                  />
+                )}
                 <Text color="white" fontWeight="bold" fontSize="sm">
                   {session.client?.nickname || '客户'}
                 </Text>
