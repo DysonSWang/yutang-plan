@@ -148,6 +148,52 @@ module.exports = function(io) {
     }
   });
 
+  // 客户端创建自己的会话（自动分配操作员）
+  router.post('/my-session', authMiddleware, async (req, res) => {
+    try {
+      if (req.user.role !== 'client') {
+        return res.status(403).json({ error: '无权限' });
+      }
+
+      // 查找一个可用的操作员（随机选择一个在线的或第一个）
+      const operators = await prisma.user.findMany({
+        where: { role: 'operator' },
+        take: 1,
+        orderBy: { createdAt: 'asc' }
+      });
+
+      if (operators.length === 0) {
+        return res.status(400).json({ error: '暂无可用客服，请稍后再试' });
+      }
+
+      const operatorId = operators[0].id;
+
+      // 查找或创建会话
+      let session = await prisma.chatSession.findUnique({
+        where: {
+          operatorId_clientId: {
+            operatorId,
+            clientId: req.user.id
+          }
+        }
+      });
+
+      if (!session) {
+        session = await prisma.chatSession.create({
+          data: {
+            operatorId,
+            clientId: req.user.id
+          }
+        });
+      }
+
+      res.json({ success: true, session });
+    } catch (error) {
+      console.error('[Chat] 客户端创建会话失败:', error);
+      res.status(500).json({ error: '创建失败' });
+    }
+  });
+
   // 获取会话的消息历史
   router.get('/sessions/:sessionId/messages', authMiddleware, async (req, res) => {
     try {

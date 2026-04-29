@@ -96,7 +96,7 @@ export const clients = {
 export const chat = {
   sessions: () => api.get('/api/chat/sessions'),
   mySessions: () => api.get('/api/chat/my-sessions'),
-  createSession: (clientId) => api.post('/api/chat/sessions', { clientId }),
+  createSession: () => api.post('/api/chat/my-session'),
   messages: (sessionId, params) => api.get(`/api/chat/sessions/${sessionId}/messages` + (params ? '?' + new URLSearchParams(params) : '')),
   send: (sessionId, content, type = 'text', mediaUrl, duration, isBurnAfterRead = false, burnAfterSeconds = null, isFlashImage = false) =>
     api.post('/api/chat/messages', { sessionId, content, type, mediaUrl, duration, isBurnAfterRead, burnAfterSeconds, isFlashImage }),
