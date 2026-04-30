@@ -14,9 +14,32 @@ const prisma = require('../prisma');
 const membershipService = require('../services/membershipService');
 const activityService = require('../services/activityService');
 
-// 上海区域正则常量
-const SHANGHAI_AREA_REGEX = /(九亭|松江|浦东|黄浦|静安|徐汇|长宁|虹口|杨浦|闵行|宝山|嘉定|青浦|奉贤|金山|崇明)/;
-const SHANGHAI_AREA_LIST = ['九亭', '松江', '浦东', '黄浦', '静安', '徐汇', '长宁', '虹口', '杨浦', '闵行', '宝山', '嘉定', '青浦', '奉贤', '金山', '崇明'];
+// 百度地图 Geocoding（地址转坐标，支持全国）
+async function geocode(address) {
+  const { execFileSync } = require('child_process');
+  const ak = process.env.BAIDU_MAP_AK;
+  if (!ak) {
+    console.warn('[Membership] 百度地图AK未配置');
+    return null;
+  }
+  try {
+    const output = execFileSync('curl', [
+      '-s', '--noproxy', '*',
+      `https://api.map.baidu.com/geocoding/v3/?address=${encodeURIComponent(address)}&ak=${ak}`
+    ], { timeout: 10000 });
+    const data = JSON.parse(output.toString());
+    if (data.status === 0 && data.result) {
+      return {
+        lng: parseFloat(data.result.location.lng),
+        lat: parseFloat(data.result.location.lat)
+      };
+    }
+    console.warn('[Membership] Geocoding失败:', data.message || data.msg);
+  } catch (e) {
+    console.error('[Membership] Geocoding异常:', e.message);
+  }
+  return null;
+}
 
 // Auth middleware
 const authMiddleware = async (req, res, next) => {
@@ -322,26 +345,6 @@ router.put('/learning/progress/:chapterId', authMiddleware, async (req, res) => 
 // ==========================================
 // AI 约会方案
 
-// 上海区域坐标映射
-const SHANGHAI_AREAS = {
-  '九亭': { lng: 121.345, lat: 31.127 },
-  '松江': { lng: 121.223, lat: 31.022 },
-  '浦东': { lng: 121.544, lat: 31.221 },
-  '黄浦': { lng: 121.481, lat: 31.230 },
-  '静安': { lng: 121.448, lat: 31.229 },
-  '徐汇': { lng: 121.437, lat: 31.183 },
-  '长宁': { lng: 121.424, lat: 31.220 },
-  '虹口': { lng: 121.500, lat: 31.261 },
-  '杨浦': { lng: 121.527, lat: 31.270 },
-  '闵行': { lng: 121.375, lat: 31.112 },
-  '宝山': { lng: 121.489, lat: 31.405 },
-  '嘉定': { lng: 121.265, lat: 31.376 },
-  '青浦': { lng: 121.131, lat: 31.154 },
-  '奉贤': { lng: 121.474, lat: 30.918 },
-  '金山': { lng: 121.341, lat: 30.742 },
-  '崇明': { lng: 121.397, lat: 31.623 },
-};
-
 // 和风天气查询（支持按时段）
 async function getWeather(lng, lat, dateTime) {
   const { execFileSync } = require('child_process');
@@ -459,7 +462,8 @@ async function baiduVenueSearch(location, venueTypes, budget) {
   try {
     const budgetNum = parseInt((budget || '200').replace(/[^0-9]/g, '')) || 200;
     const venueTypeStr = venueTypes.join('、');
-    const query = `上海${location}适合2人约会的${venueTypeStr}推荐，包含具体店名、详细地址、人均消费，预算人均${budgetNum}元，必须包含真实街道地址`;
+    // 使用用户输入的地址进行搜索
+    const query = `${location}适合2人约会的${venueTypeStr}推荐，包含具体店名、详细地址、人均消费，预算人均${budgetNum}元，必须包含真实街道地址`;
     const postData = JSON.stringify({
       messages: [{ content: query, role: 'user' }],
       model: 'deepseek-v3',
@@ -503,9 +507,6 @@ router.post('/dating-plan/generate', authMiddleware, async (req, res) => {
     const { title, scene, budget, duration } = req.body;
     const { getAIConfig } = require('../config');
 
-    // 从scene提取区域关键词（使用常量）
-    const areaMatch = (scene || '').match(SHANGHAI_AREA_REGEX);
-    const area = areaMatch ? areaMatch[1] : '';
     // 从scene提取场所类型关键词
     const sceneLower = (scene || '').toLowerCase();
     const venueTypes = [];
@@ -529,21 +530,31 @@ router.post('/dating-plan/generate', authMiddleware, async (req, res) => {
       }
     });
 
-    // 百度AI搜索真实场地（优先按区域搜索）
+    // 提取地址关键词用于 Geocoding（取第一个连续的中文地址片段）
+    const addressMatch = (scene || '').match(/[一-龥]{2,10}(?:区|县|路|街|道|镇|城|广场|商圈|中心)/);
+    const addressKeyword = addressMatch ? addressMatch[0] : (scene || '').trim().split(/\s+/)[0];
+    console.log('[Dating] 地址关键词:', addressKeyword);
+
+    // 百度AI搜索真实场地（使用提取的地址）
     let venueContext = '';
 
-    // 并行执行搜索和天气查询
-    const [searchResult, weather] = await Promise.all([
-      area ? baiduVenueSearch(area, venueTypes, budget) : Promise.resolve({ choices: [], references: [] }),
-      (area && SHANGHAI_AREAS[area]) ? getWeather(SHANGHAI_AREAS[area].lng, SHANGHAI_AREAS[area].lat, scene + (duration || '')) : Promise.resolve(null)
+    // 并行执行：Geocoding、搜索、天气查询
+    const geoPromise = addressKeyword ? geocode(addressKeyword) : Promise.resolve(null);
+
+    const [coords, searchResult, weather] = await Promise.all([
+      geoPromise,
+      baiduVenueSearch(addressKeyword, venueTypes, budget),
+      geoPromise.then(c => c ? getWeather(c.lng, c.lat, scene + (duration || '')) : Promise.resolve(null))
     ]);
 
+    console.log('[Dating] 坐标:', coords, '天气:', weather ? '有' : '无');
+
     // 处理搜索结果
-    if (area) {
+    if (addressKeyword && searchResult) {
       const choices = searchResult.choices || [];
       const references = searchResult.references || [];
 
-      // 从choices[0]的表格内容中提取九亭/松江的餐厅
+      // 从choices[0]的表格内容中提取餐厅
       const validRestaurants = [];
       const content = choices[0]?.message?.content || '';
 
@@ -555,9 +566,9 @@ router.post('/dating-plan/generate', authMiddleware, async (req, res) => {
         if (cols.length >= 2) {
           const name = cols[0];
           const addrOrPrice = cols[1];
-          // 检查地址列是否包含目标区域
-          const hasArea = addrOrPrice.includes(area) || addrOrPrice.includes('松江') || addrOrPrice.includes('九亭');
-          if (hasArea && (name.includes('店') || name.includes('馆') || name.includes('餐厅') || name.includes('咖啡'))) {
+          // 简单检查是否是有效地址
+          const isValidAddr = addrOrPrice.includes('市') || addrOrPrice.includes('区') || addrOrPrice.includes('县') || addrOrPrice.includes('路') || addrOrPrice.includes('街');
+          if (isValidAddr && (name.includes('店') || name.includes('馆') || name.includes('餐厅') || name.includes('咖啡') || name.includes('酒吧'))) {
             validRestaurants.push(name + '，' + addrOrPrice);
           }
         }
@@ -571,9 +582,8 @@ router.post('/dating-plan/generate', authMiddleware, async (req, res) => {
           // 地址格式：餐厅地址:上海市松江区九亭镇... 或 地址：xxx
           const addrMatch = refContent.match(/(?:餐厅)?地址[：:]\s*([^，,。\n]+)/);
           const addr = addrMatch ? addrMatch[1] : '';
-          const hasAreaAddr = addr.includes(area) || addr.includes('松江') || addr.includes('九亭');
-          const isVenue = /店|馆|餐厅|咖啡|酒楼|食府/.test(refTitle);
-          if (isVenue && addr && hasAreaAddr) {
+          const isVenue = /店|馆|餐厅|咖啡|酒楼|食府|酒吧/.test(refTitle);
+          if (isVenue && addr) {
             const cleanName = refTitle.replace(/^[^\w一-龥]+/, '').replace(/[#*【】\[\]]/g, '');
             validRestaurants.push(cleanName + '，地址：' + addr);
           }
@@ -581,14 +591,14 @@ router.post('/dating-plan/generate', authMiddleware, async (req, res) => {
       }
 
       if (validRestaurants.length > 0) {
-        venueContext = `\n【百度搜索真实场地】（以下餐厅地址经核实位于${area}，请优先选择，严禁虚构）\n`;
+        venueContext = `\n【百度搜索真实场地】（以下餐厅地址经核实，请优先选择，严禁虚构）\n`;
         for (const r of validRestaurants.slice(0, 5)) {
           venueContext += `★ ${r}\n`;
         }
         venueContext += '\n';
       } else {
-        // 搜索结果中没有目标区域的真实餐厅
-        venueContext = `\n【重要提示】百度搜索未找到位于${area}的真实餐厅数据，请打开大众点评定位"${area}"搜索。\n`;
+        // 搜索结果中没有找到真实餐厅
+        venueContext = `\n【重要提示】百度搜索未找到符合条件的真实餐厅数据，请打开大众点评定位"${addressKeyword}"搜索。\n`;
       }
     }
 

@@ -188,6 +188,11 @@ model User {
   source           String? // 客户来源
   serviceStartDate DateTime? // 服务开始日期
 
+  // ===== 活跃度追踪 =====
+  lastLogin   DateTime? // 最后登录时间
+  loginCount  Int       @default(0)  // 累计登录次数
+  lastActive  DateTime? // 最后活跃时间（含任何操作）
+
   // ===== 关系 =====
   clientGirls      Girl[]            @relation("ClientGirls")
   events           Event[]
@@ -204,6 +209,7 @@ model User {
   pointsLedger     PointsLedger[]
   learningProgress LearningProgress[]
   datingPlans      DatingPlan[]
+  activities       UserActivity[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -940,14 +946,17 @@ model GuardrailLog {
   @@map("guardrail_logs")
 }
 
+// ========== 会员类型常量 ==========
+// TRIAL=试用, MONTHLY=月付, YEARLY=年付, PREMIUM=高端
+
 // ========== 会员系统 ==========
 model Membership {
   id       String @id @default(uuid())
   userId   String
   user     User   @relation(fields: [userId], references: [id])
 
-  // 类型：monthly=月度(999元), yearly=年度(8888元)
-  type     String @default("monthly")
+  // 类型：TRIAL=试用, MONTHLY=月付, YEARLY=年付, PREMIUM=高端
+  type     String @default("TRIAL")
   // 状态：active/expired/cancelled
   status   String @default("active")
   // 实际支付价格（用于对账和记录）
@@ -959,12 +968,31 @@ model Membership {
   // 是否用积分抵扣过（抵扣金额）
   pointsDiscount Float @default(0)
 
+  // 试用次数已使用（各功能共用这个计数器）
+  trialUsed Int @default(0)
+  // 女生额度（试用版=1）
+  girlQuota Int @default(1)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([status])
   @@map("memberships")
+}
+
+// ========== 试用配置（全局配置）==========
+model TrialConfig {
+  id          String @id @default("trial_config")
+  validDays   Int    @default(3)      // 有效期天数
+  maxChapters Int    @default(2)      // 可查看章节数
+  maxGirls    Int    @default(1)      // 可添加女生数
+  maxTrialUses Int   @default(2)       // 各功能试用次数上限
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("trial_config")
 }
 
 // ========== 邀请机制 ==========
@@ -1183,4 +1211,25 @@ model DatingPlan {
 
   @@index([userId])
   @@map("dating_plans")
+}
+
+// ========== 用户活跃日志 ==========
+model UserActivity {
+  id       String   @id @default(uuid())
+  userId   String
+  user     User     @relation(fields: [userId], references: [id])
+
+  // 活动类型：login | ai_coach | date_plan | chat_message | girl_add
+  type     String
+
+  // 额外数据（JSON）
+  metadata String?
+
+  // 记录时间
+  date     DateTime @default(now())
+
+  @@index([userId])
+  @@index([date])
+  @@index([userId, date])
+  @@map("user_activities")
 }

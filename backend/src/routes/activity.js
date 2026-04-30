@@ -4,18 +4,33 @@
 
 const express = require('express');
 const router = express.Router();
+const jwt = require('jsonwebtoken');
+const { JWT_SECRET } = require('../config');
+const prisma = require('../prisma');
 const activityService = require('../services/activityService');
 
+// 认证中间件
+const authMiddleware = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: '未登录' });
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch { res.status(401).json({ error: 'token无效' }); }
+};
+
 // 管理员权限校验中间件
-function requireAdmin(req, res, next) {
-  if (req.user.role !== 'admin' && req.user.role !== 'operator') {
+function operatorOnly(req, res, next) {
+  if (req.user.role !== 'admin') {
     return res.status(403).json({ error: '需要管理员权限' });
   }
   next();
 }
 
 // 获取所有客户汇总活跃数据
-router.get('/clients', requireAdmin, async (req, res) => {
+router.get('/clients', authMiddleware, operatorOnly, async (req, res) => {
   try {
     const { level } = req.query;
     let clients = await activityService.getAllClientsActivity();
@@ -41,7 +56,7 @@ router.get('/clients', requireAdmin, async (req, res) => {
 });
 
 // 获取单个客户活跃详情
-router.get('/clients/:id', requireAdmin, async (req, res) => {
+router.get('/clients/:id', authMiddleware, operatorOnly, async (req, res) => {
   try {
     const { id } = req.params;
     const { days = 30 } = req.query;
@@ -91,7 +106,7 @@ router.get('/clients/:id', requireAdmin, async (req, res) => {
 });
 
 // 获取全局看板数据
-router.get('/dashboard', requireAdmin, async (req, res) => {
+router.get('/dashboard', authMiddleware, operatorOnly, async (req, res) => {
   try {
     const stats = await activityService.getDashboardStats();
     const trend = await activityService.getGlobalDailyTrend(30);
@@ -108,7 +123,7 @@ router.get('/dashboard', requireAdmin, async (req, res) => {
 });
 
 // 获取沉睡用户列表
-router.get('/dormant-users', requireAdmin, async (req, res) => {
+router.get('/dormant-users', authMiddleware, operatorOnly, async (req, res) => {
   try {
     const dormantUsers = await activityService.getDormantUsers();
 
@@ -124,7 +139,7 @@ router.get('/dormant-users', requireAdmin, async (req, res) => {
 });
 
 // 获取每日活跃趋势
-router.get('/trend', requireAdmin, async (req, res) => {
+router.get('/trend', authMiddleware, operatorOnly, async (req, res) => {
   try {
     const { days = 30 } = req.query;
     const trend = await activityService.getGlobalDailyTrend(parseInt(days));
@@ -140,7 +155,7 @@ router.get('/trend', requireAdmin, async (req, res) => {
 });
 
 // 给沉睡用户发送提醒（待实现：实际发送站内通知）
-router.post('/dormant-users/:id/remind', requireAdmin, async (req, res) => {
+router.post('/dormant-users/:id/remind', authMiddleware, operatorOnly, async (req, res) => {
   try {
     const { id } = req.params;
 

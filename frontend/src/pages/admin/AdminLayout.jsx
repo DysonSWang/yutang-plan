@@ -17,6 +17,7 @@ const navItems = [
   { path: '/admin/chat', label: '聊天', icon: ChatIcon },
   { path: '/admin/workbench', label: '军师', icon: BrainIcon },
   { path: '/admin/progress', label: '进度', icon: ChartIcon },
+  { path: '/admin/activity', label: '活跃看板', icon: FiActivity },
   { path: '/admin/membership', label: '会员管理', icon: MembershipIcon },
   { path: '/admin/logs', label: '日志监控', icon: FiActivity },
 ];

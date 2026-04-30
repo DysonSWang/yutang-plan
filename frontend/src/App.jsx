@@ -31,6 +31,7 @@ const AdminProgress = lazy(() => import('./pages/admin/Progress'));
 const AdminDates = lazy(() => import('./pages/admin/Dates'));
 const MembershipManagement = lazy(() => import('./pages/admin/MembershipManagement'));
 const AdminLogs = lazy(() => import('./pages/admin/Logs'));
+const ActivityBoard = lazy(() => import('./pages/admin/ActivityBoard'));
 
 function PageLoader() {
   return (
@@ -45,7 +46,7 @@ function ProtectedRoute({ children, requireOperator = false }) {
   if (loading) return <PageLoader />;
   if (!user) return <Navigate to="/login" />;
   if (requireOperator && user?.role === 'client') return <Navigate to="/" />;
-  if (!requireOperator && (user?.role === 'operator' || user?.role === 'admin')) return <Navigate to="/admin" />;
+  if (!requireOperator && user?.role === 'admin') return <Navigate to="/admin" />;
   return children;
 }
 
@@ -109,6 +110,7 @@ function AppRoutes() {
         <Route path="dates" element={<AdminDates />} />
         <Route path="membership" element={<MembershipManagement />} />
         <Route path="logs" element={<AdminLogs />} />
+        <Route path="activity" element={<ActivityBoard />} />
       </Route>
     </Routes>
     </Suspense>
