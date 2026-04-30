@@ -63,3 +63,11 @@ target/
 vendor/
 .cache/
 tmp/
+# 敏感文件
+.env
+.env.local
+.env.*.local
+*.keystore
+apk/
+dist/
+node_modules/
