@@ -62,6 +62,42 @@ router.post('/purchase', authMiddleware, async (req, res) => {
   }
 });
 
+// 开通试用会员
+router.post('/trial/activate', authMiddleware, async (req, res) => {
+  try {
+    const membership = await membershipService.activateTrial(req.user.id);
+    res.json({ success: true, membership });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// 获取试用配置
+router.get('/trial/config', authMiddleware, async (req, res) => {
+  try {
+    const config = await membershipService.getTrialConfig();
+    res.json({ success: true, config });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 更新试用配置（管理员）
+router.put('/trial/config', authMiddleware, operatorOnly, async (req, res) => {
+  try {
+    const { validDays, maxChapters, maxGirls, maxTrialUses } = req.body;
+    const config = await membershipService.updateTrialConfig({
+      validDays: parseInt(validDays) || 3,
+      maxChapters: parseInt(maxChapters) || 2,
+      maxGirls: parseInt(maxGirls) || 1,
+      maxTrialUses: parseInt(maxTrialUses) || 2
+    });
+    res.json({ success: true, config });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 // 管理员：获取所有用户会员列表
 router.get('/admin/list', authMiddleware, operatorOnly, async (req, res) => {
   try {
@@ -103,7 +139,7 @@ router.post('/admin/set', authMiddleware, operatorOnly, async (req, res) => {
       await prisma.membership.create({
         data: {
           userId,
-          type: type || 'monthly',
+          type: type || 'MONTHLY',
           status: 'active',
           price: parseFloat(price) || 0,
           pointsDiscount: 0,
@@ -116,6 +152,17 @@ router.post('/admin/set', authMiddleware, operatorOnly, async (req, res) => {
     res.status(400).json({ error: '无效操作' });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// 管理员：设置试用会员
+router.post('/admin/trial', authMiddleware, operatorOnly, async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const membership = await membershipService.activateTrial(userId);
+    res.json({ success: true, membership });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
   }
 });
 
@@ -270,19 +317,20 @@ router.put('/learning/progress/:chapterId', authMiddleware, async (req, res) => 
 // ==========================================
 // AI 约会方案
 // 百度AI搜索（从scene提取区域）
-async function baiduVenueSearch(location, budget) {
+async function baiduVenueSearch(location, venueTypes, budget) {
   const { execFileSync } = require('child_process');
   const BAIDU_API_KEY = 'bce-v3/ALTAK-OLhmNcBERSUNnAlIXsXa9/80280c210c8682e7c02a2a0883ef257fe36e4692';
   try {
     const budgetNum = parseInt((budget || '200').replace(/[^0-9]/g, '')) || 200;
-    const query = `上海${location}适合2人约会的餐厅、咖啡厅推荐，包含具体店名、地址、人均消费，预算人均${budgetNum}元`;
+    const venueTypeStr = venueTypes.join('、');
+    const query = `上海${location}适合2人约会的${venueTypeStr}推荐，包含具体店名、详细地址、人均消费，预算人均${budgetNum}元，必须包含真实街道地址`;
     const postData = JSON.stringify({
       messages: [{ content: query, role: 'user' }],
       model: 'deepseek-v3',
       search_source: 'baidu_search_v2',
-      resource_type_filter: [{ type: 'web', top_k: 5 }],
+      resource_type_filter: [{ type: 'web', top_k: 10 }],
       stream: false,
-      enable_deep_search: false
+      enable_deep_search: true
     });
     const env = {
       ...process.env,
@@ -295,7 +343,7 @@ async function baiduVenueSearch(location, budget) {
       '-H', 'Authorization: Bearer ' + BAIDU_API_KEY,
       '-H', 'Content-Type: application/json',
       '-d', postData
-    ], { timeout: 15000, env });
+    ], { timeout: 20000, env });
     return JSON.parse(output.toString());
   } catch (e) {
     console.warn('[Membership] 百度场地搜索失败:', e.message);
@@ -308,12 +356,30 @@ async function baiduVenueSearch(location, budget) {
 // 创建/生成约会方案
 router.post('/dating-plan/generate', authMiddleware, async (req, res) => {
   try {
+    // 试用限制检查
+    try {
+      await membershipService.checkTrialLimit(req.user.id, 'date_plan');
+      await membershipService.useTrialCount(req.user.id);
+    } catch (e) {
+      return res.status(403).json({ error: e.message });
+    }
+
     const { title, scene, budget, duration } = req.body;
     const { getAIConfig } = require('../config');
 
     // 从scene提取区域关键词（九亭、松江、浦东等）
     const areaMatch = (scene || '').match(/(九亭|松江|浦东|黄浦|静安|徐汇|长宁|虹口|杨浦|闵行|宝山|嘉定|青浦|奉贤|金山|崇明)/);
     const area = areaMatch ? areaMatch[1] : '';
+    // 从scene提取场所类型关键词
+    const sceneLower = (scene || '').toLowerCase();
+    const venueTypes = [];
+    if (/咖啡|cafe|茶|下午茶/.test(sceneLower)) venueTypes.push('咖啡厅', '茶馆');
+    if (/餐厅|饭|餐|粤菜|川菜|日料|西餐|火锅|烧烤/.test(sceneLower)) venueTypes.push('餐厅', '饭馆');
+    if (/ktv|唱歌|卡拉|包厢/.test(sceneLower)) venueTypes.push('KTV', '量贩式KTV');
+    if (/电影|影院/.test(sceneLower)) venueTypes.push('电影院');
+    if (/酒吧|小酒馆|清吧/.test(sceneLower)) venueTypes.push('酒吧', '小酒馆');
+    if (/公园|散步|户外/.test(sceneLower)) venueTypes.push('公园', '滨江步道');
+    if (venueTypes.length === 0) venueTypes.push('约会场所');
 
     // 创建草稿
     const plan = await prisma.datingPlan.create({
@@ -330,13 +396,56 @@ router.post('/dating-plan/generate', authMiddleware, async (req, res) => {
     // 百度AI搜索真实场地（优先按区域搜索）
     let venueContext = '';
     if (area) {
-      const searchResult = await baiduVenueSearch(area, budget);
+      const searchResult = await baiduVenueSearch(area, venueTypes, budget);
       const choices = searchResult.choices || [];
-      if (choices.length > 0) {
-        const content = choices[0].message?.content || '';
-        if (content) {
-          venueContext = `\n【百度搜索真实场地】（以下为百度搜索返回的真实餐厅/咖啡厅，请优先选择这些地点，严禁虚构店名）\n${content.slice(0, 1500)}\n`;
+      const references = searchResult.references || [];
+
+      // 从choices[0]的表格内容中提取九亭/松江的餐厅
+      const validRestaurants = [];
+      const content = choices[0]?.message?.content || '';
+
+      // 匹配表格行：| 店名 | 地址 | 人均 |
+      const tableRows = content.match(/\|\s*[^|]+\|[^|]+\|\s*[^|]+\|/g) || [];
+      for (const row of tableRows) {
+        // 提取每列内容
+        const cols = row.split('|').map(c => c.trim()).filter(Boolean);
+        if (cols.length >= 2) {
+          const name = cols[0];
+          const addrOrPrice = cols[1];
+          // 检查地址列是否包含九亭/松江
+          const hasArea = addrOrPrice.includes(area) || addrOrPrice.includes('松江') || addrOrPrice.includes('九亭');
+          if (hasArea && (name.includes('店') || name.includes('馆') || name.includes('餐厅') || name.includes('咖啡'))) {
+            validRestaurants.push(name + '，' + addrOrPrice);
+          }
         }
+      }
+
+      // 如果表格没找到，尝试从references提取
+      if (validRestaurants.length === 0) {
+        for (const ref of references) {
+          const refContent = ref.content || '';
+          const title = ref.title || '';
+          // 地址格式：餐厅地址:上海市松江区九亭镇... 或 地址：xxx
+          const addrMatch = refContent.match(/(?:餐厅)?地址[：:]\s*([^，,。\n]+)/);
+          const addr = addrMatch ? addrMatch[1] : '';
+          const hasAreaAddr = addr.includes(area) || addr.includes('松江') || addr.includes('九亭');
+          const isVenue = /店|馆|餐厅|咖啡|酒楼|食府/.test(title);
+          if (isVenue && addr && hasAreaAddr) {
+            const cleanName = title.replace(/^[^\w一-龥]+/, '').replace(/[#*【】\[\]]/g, '');
+            validRestaurants.push(cleanName + '，地址：' + addr);
+          }
+        }
+      }
+
+      if (validRestaurants.length > 0) {
+        venueContext = `\n【百度搜索真实场地】（以下餐厅地址经核实位于${area}，请优先选择，严禁虚构）\n`;
+        for (const r of validRestaurants.slice(0, 5)) {
+          venueContext += `★ ${r}\n`;
+        }
+        venueContext += '\n';
+      } else {
+        // 搜索结果中没有目标区域的真实餐厅
+        venueContext = `\n【重要提示】百度搜索未找到位于${area}的真实餐厅数据，请打开大众点评定位"${area}"搜索。\n`;
       }
     }
 
