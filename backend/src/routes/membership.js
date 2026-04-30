@@ -23,10 +23,11 @@ async function geocode(address) {
     return null;
   }
   try {
+    const env = { ...process.env, https_proxy: 'http://127.0.0.1:7897', http_proxy: 'http://127.0.0.1:7897' };
     const output = execFileSync('curl', [
-      '-s', '--noproxy', '*',
-      `https://api.map.baidu.com/geocoding/v3/?address=${encodeURIComponent(address)}&ak=${ak}`
-    ], { timeout: 10000 });
+      '-s',
+      `https://api.map.baidu.com/geocoding/v3/?address=${encodeURIComponent(address)}&ak=${ak}&output=json`
+    ], { timeout: 10000, env });
     const data = JSON.parse(output.toString());
     if (data.status === 0 && data.result) {
       return {
@@ -353,11 +354,11 @@ async function getWeather(lng, lat, dateTime) {
   if (!host || !key) return null;
   try {
     // 先获取24小时预报
+    const env = { ...process.env, https_proxy: 'http://127.0.0.1:7897', http_proxy: 'http://127.0.0.1:7897' };
     const output = execFileSync('curl', [
-      '-s', '--noproxy', '*',
-      `https://${host}/v7/weather/24h?location=${lng},${lat}&key=${key}`,
-      '--compressed'
-    ], { timeout: 10000 });
+      '-s', '--compressed',
+      `https://${host}/v7/weather/24h?location=${lng},${lat}&key=${key}`
+    ], { timeout: 10000, env });
     const data = JSON.parse(output.toString());
     if (data.code !== '200' || !data.hourly) return null;
 
