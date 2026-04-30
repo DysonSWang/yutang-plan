@@ -5,7 +5,8 @@ import {
   Spinner, Divider, Icon, useToast, Tabs, TabList, TabPanels, Tab, TabPanel,
   Progress, Tooltip
 } from '@chakra-ui/react';
-import { activity as activityApi } from '../../utils/api';
+import { membership as membershipApi } from '../../utils/api';
+const activityApi = membershipApi.activity;
 
 const LEVEL_COLORS = {
   high: { bg: 'green.900', color: 'green.300', label: '高活跃' },
