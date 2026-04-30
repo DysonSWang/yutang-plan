@@ -1,8 +1,9 @@
-import { Box, Heading, Text, VStack, HStack, Button, Badge, Progress, SimpleGrid, useToast, Spinner, Center } from '@chakra-ui/react';
+import { Box, Heading, Text, VStack, HStack, Button, Badge, Progress, SimpleGrid, useToast, Spinner, Center, Collapse, Icon, Flex } from '@chakra-ui/react';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { membership as membershipApi } from '../../utils/api';
 import { BookIcon, CheckIcon } from '../../components/Icons';
+import { FiChevronDown, FiChevronUp } from 'react-icons/fi';
 
 // Chapter card component
 function ChapterCard({ chapter, progress, onUpdate }) {
@@ -91,6 +92,7 @@ export default function ClientLearning() {
   const [chapters, setChapters] = useState([]);
   const [progress, setProgress] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showPreface, setShowPreface] = useState(false);
 
   useEffect(() => {
     load();
@@ -151,20 +153,48 @@ export default function ClientLearning() {
         </Box>
       </HStack>
 
-      {/* 前言区 */}
+      {/* 前言区 - 可展开 */}
       <Box mb={6} p={5} bg="rgba(0,212,170,0.06)" borderRadius="xl" border="1px solid rgba(0,212,170,0.15)">
-        <Text color="brand.300" fontWeight="bold" mb={3} fontSize="lg">写在前面：为什么你需要这本宝典？</Text>
-        <VStack align="stretch" spacing={3}>
-          <Text color="abyss.200" fontSize="sm" lineHeight="1.8">
-            追爱不是终点，长期关系维护才是核心。本书拒绝套路与情感操纵，追求真诚平等的亲密关系。
-          </Text>
-          <HStack gap={3} flexWrap="wrap">
-            <Badge colorScheme="teal" variant="subtle">20章节</Badge>
-            <Badge colorScheme="blue" variant="subtle">5.5万字</Badge>
-            <Badge colorScheme="purple" variant="subtle">126+方法</Badge>
-            <Badge colorScheme="orange" variant="subtle">90+心理学原理</Badge>
-          </HStack>
-        </VStack>
+        <Flex justify="space-between" align="center" cursor="pointer" onClick={() => setShowPreface(!showPreface)}>
+          <Box>
+            <Text color="brand.300" fontWeight="bold" fontSize="lg">写在前面：为什么你需要这本宝典？</Text>
+            <Text color="abyss.400" fontSize="xs" mt={1}>点击展开阅读全文</Text>
+          </Box>
+          <Icon
+            as={showPreface ? FiChevronUp : FiChevronDown}
+            color="brand.300"
+            boxSize={6}
+          />
+        </Flex>
+        <Collapse in={showPreface} animateOpacity>
+          <Box mt={4} pt={4} borderTop="1px solid rgba(255,255,255,0.1)">
+            <VStack align="stretch" spacing={4}>
+              <Text color="abyss.200" fontSize="sm" lineHeight="1.9">
+                <Text as="span" fontWeight="bold" color="brand.300">你追女生失败的次数，比你知道的要多。</Text>
+              </Text>
+              <Text color="abyss.300" fontSize="sm" lineHeight="1.8">
+                不是运气差。不是她眼光高。不是「缘分没到」。
+                是因为你从第一步开始，就在用让结果变糟的方式努力。
+                你以为你在追她，其实你在推开她。每发一条「在吗」，每等20分钟才回消息，每送一次礼、解释一次自己，都在强化一个信号：「我不重要，你需要我」。
+              </Text>
+              <Text color="abyss.300" fontSize="sm" lineHeight="1.8">
+                <Text as="span" fontWeight="bold" color="brand.300">这不是你的错。</Text>从来没有人教过你这些。学校没有，爸妈没有，哥们儿只会说「大胆点」。结果就是：大多数人凭感觉在情感世界里裸奔，摸黑走路，踩一个坑学一个坑。
+              </Text>
+              <Text color="abyss.300" fontSize="sm" lineHeight="1.8">
+                <Text as="span" fontWeight="bold" color="brand.300">我现在用一套系统方法，一年做到了50个。</Text>不是理论，不是网上抄的，是我用这套方法在真实世界里一趟一趟跑出来的。这个结果不是运气。是系统。
+              </Text>
+              <HStack gap={3} flexWrap="wrap" pt={2}>
+                <Badge colorScheme="teal" variant="subtle">20章节</Badge>
+                <Badge colorScheme="blue" variant="subtle">5.5万字</Badge>
+                <Badge colorScheme="purple" variant="subtle">126+方法</Badge>
+                <Badge colorScheme="orange" variant="subtle">90+心理学原理</Badge>
+              </HStack>
+              <Text color="abyss.400" fontSize="xs" pt={2} fontStyle="italic">
+                追爱不是终点，幸福才是。—— Mo哥
+              </Text>
+            </VStack>
+          </Box>
+        </Collapse>
       </Box>
 
       <Box mb={6} p={4} bg="rgba(0,212,170,0.08)" borderRadius="lg" border="1px solid rgba(0,212,170,0.2)">
