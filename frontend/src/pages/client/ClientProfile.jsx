@@ -279,9 +279,6 @@ export default function ClientProfile() {
       <Flex justify="space-between" align="center" mb={6}>
         <Heading color="white">我的档案</Heading>
         <HStack spacing={2}>
-          <Button size="sm" variant="ghost" color="gray.400" onClick={handleCheckUpdate} isLoading={checkingUpdate}>
-            检查更新
-          </Button>
           <Button colorScheme="teal" onClick={openEdit}>编辑档案</Button>
         </HStack>
       </Flex>
