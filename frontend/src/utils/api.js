@@ -109,7 +109,8 @@ export const auth = {
   register: (data) => api.post('/api/auth/register', data),
   verify: () => api.get('/api/auth/verify'),
   me: () => api.get('/api/auth/me'),
-  logout: () => { api.removeToken(); }
+  logout: () => { api.removeToken(); },
+  changePassword: (oldPassword, newPassword) => api.post('/api/auth/change-password', { oldPassword, newPassword })
 };
 
 // 女生资源
@@ -366,9 +367,14 @@ export const events = {
 export const membership = {
   status: () => api.get('/api/membership/status'),
   purchase: (couponToUse = 0) => api.post('/api/membership/purchase', { couponToUse }),
+  // 试用
+  activateTrial: () => api.post('/api/membership/trial/activate'),
+  trialConfig: () => api.get('/api/membership/trial/config'),
+  updateTrialConfig: (data) => api.put('/api/membership/trial/config', data),
   // 管理员
   adminList: () => api.get('/api/membership/admin/list'),
   adminSet: (userId, action, data) => api.post('/api/membership/admin/set', { userId, action, ...data }),
+  adminTrial: (userId) => api.post('/api/membership/admin/trial', { userId }),
   // 积分
   points: () => api.get('/api/membership/points'),
   pointsRecharge: (userId, amount, note) => api.post('/api/membership/points/recharge', { userId, amount, note }),
@@ -400,4 +406,13 @@ export const membership = {
   screenshotProfiles: (status) => api.get('/api/membership/screenshot/profiles' + (status ? '?status=' + status : '')),
   confirmScreenshotProfile: (profileId, action, linkedUserId) =>
     api.post(`/api/membership/screenshot/profile/${profileId}/confirm`, { action, linkedUserId }),
+  // 活跃度追踪
+  activity: {
+    dashboard: () => api.get('/api/admin/activity/dashboard'),
+    clients: (level) => api.get('/api/admin/activity/clients' + (level ? '?level=' + level : '')),
+    clientDetail: (id, days = 30) => api.get(`/api/admin/activity/clients/${id}?days=${days}`),
+    dormantUsers: () => api.get('/api/admin/activity/dormant-users'),
+    trend: (days = 30) => api.get('/api/admin/activity/trend?days=' + days),
+    sendRemind: (id) => api.post(`/api/admin/activity/dormant-users/${id}/remind`),
+  },
 };

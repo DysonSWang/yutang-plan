@@ -28,6 +28,8 @@ const { addStageContext, appendStageWarning, STAGE_LABELS } = require('../servic
 
 const { JWT_SECRET, getAIConfig, getVLModelConfig } = require('../config');
 const prisma = require('../prisma');
+const membershipService = require('../services/membershipService');
+const activityService = require('../services/activityService');
 const { getCache, setCache, getOverviewCache, setOverviewCache } = require('../services/girlSummaryCache');
 const logger = require('../utils/logger');
 
@@ -312,6 +314,14 @@ router.post('/situation', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: '无权限' });
     }
 
+    // 试用限制检查
+    try {
+      await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
+      await membershipService.useTrialCount(req.user.id);
+    } catch (e) {
+      return res.status(403).json({ error: e.message });
+    }
+
     // 统一教练：无需选择教练ID，根据问题动态路由到多位大师
     const { girlId, situation, stream = true } = req.body;
 
@@ -543,6 +553,13 @@ router.post('/situation', authMiddleware, async (req, res) => {
                 .catch(err => logger.error(`[GirlProfile] 提取失败: ${err.message}`, { error: err.message }));
             }
 
+            // 记录活跃度（仅客户端用户）
+            if (req.user.role === 'client') {
+              activityService.recordActivity(req.user.id, 'ai_coach', {
+                routedType: routingMeta.routedType,
+              }).catch(err => logger.error(`[Activity] 记录ai_coach失败: ${err.message}`));
+            }
+
             res.write('data: [DONE]\n\n');
             res.end();
           },
@@ -568,6 +585,13 @@ router.post('/situation', authMiddleware, async (req, res) => {
 
         // 保存对话到记忆（非流式模式）
         await addMessage(sessionMemory.id, 'assistant', analysis);
+
+        // 记录活跃度（仅客户端用户）
+        if (req.user.role === 'client') {
+          activityService.recordActivity(req.user.id, 'ai_coach', {
+            routedType: routingMeta?.routedType,
+          }).catch(err => logger.error(`[Activity] 记录ai_coach失败: ${err.message}`));
+        }
 
         res.json({
           success: true,
@@ -3002,6 +3026,14 @@ router.post('/agent-chat', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: '无权限' });
     }
 
+    // 试用限制检查
+    try {
+      await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
+      await membershipService.useTrialCount(req.user.id);
+    } catch (e) {
+      return res.status(403).json({ error: e.message });
+    }
+
     const { message, girlId, sessionMemoryId, conversationHistory: providedHistory, stream = true } = req.body;
 
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
@@ -3155,6 +3187,14 @@ router.post('/agent-chat', authMiddleware, async (req, res) => {
             // 记录 AI 响应到记忆
             // 注意：由于是流式，我们只记录一条 assistant 消息占位
             // 完整内容需要客户端上传，这里不做处理
+
+            // 记录活跃度（仅客户端用户）
+            if (req.user.role === 'client') {
+              activityService.recordActivity(req.user.id, 'ai_coach', {
+                routeType,
+              }).catch(err => logger.error(`[Activity] 记录ai_coach失败: ${err.message}`));
+            }
+
             res.write('data: [DONE]\n\n');
             res.end();
           },
@@ -3199,6 +3239,13 @@ router.post('/agent-chat', authMiddleware, async (req, res) => {
       const content = data.choices?.[0]?.message?.content || '';
 
       await addMessage(memSessionId, 'assistant', content);
+
+      // 记录活跃度（仅客户端用户）
+      if (req.user.role === 'client') {
+        activityService.recordActivity(req.user.id, 'ai_coach', {
+          routeType: triageResult.routeType,
+        }).catch(err => logger.error(`[Activity] 记录ai_coach失败: ${err.message}`));
+      }
 
       res.json({
         success: true,

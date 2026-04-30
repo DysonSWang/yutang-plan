@@ -4,13 +4,13 @@ import {
   Table, Thead, Tbody, Tr, Th, Td, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody,
   ModalFooter, ModalCloseButton, useDisclosure, FormControl, FormLabel, Input, Select,
   NumberInput, NumberInputField, Textarea, useToast, Spinner, Center, SimpleGrid, Card, CardBody,
-  Flex, Divider, Avatar, Icon
+  Flex, Divider, Avatar, Icon, Switch, Form
 } from '@chakra-ui/react';
 import { membership as membershipApi } from '../../utils/api';
 import { MembershipIcon, PointsIcon, GiftIcon, BookIcon, CameraIcon } from '../../components/Icons';
 
-const TYPE_LABEL = { monthly: '普惠月付', yearly: '普惠年付', premium: '高端会员' };
-const TYPE_BADGE_COLOR = { monthly: 'green', yearly: 'blue', premium: 'purple' };
+const TYPE_LABEL = { TRIAL: '试用', MONTHLY: '普惠月付', YEARLY: '普惠年付', PREMIUM: '高端会员', monthly: '普惠月付', yearly: '普惠年付', premium: '高端会员' };
+const TYPE_BADGE_COLOR = { TRIAL: 'orange', MONTHLY: 'green', YEARLY: 'blue', PREMIUM: 'purple', monthly: 'green', yearly: 'blue', premium: 'purple' };
 
 function ClientMembershipCard({ client, onManage }) {
   const hasMembership = client.membership && client.membership.status === 'active';
@@ -148,6 +148,7 @@ function ManageModal({ client, onClose }) {
         <TabList mb={4}>
           <Tab><Icon as={PointsIcon} mr={1} /> 积分管理</Tab>
           <Tab><Icon as={MembershipIcon} mr={1} /> 会员管理</Tab>
+          <Tab>试用配置</Tab>
         </TabList>
 
         <TabPanels>
@@ -244,6 +245,9 @@ function ManageModal({ client, onClose }) {
                 <Button colorScheme="red" variant="outline" onClick={handleCancelMembership}>取消会员</Button>
               </HStack>
             </VStack>
+          </TabPanel>
+          <TabPanel p={0}>
+            <TrialConfigTab />
           </TabPanel>
         </TabPanels>
       </Tabs>
@@ -373,6 +377,100 @@ function ScreenshotProfilesTab() {
           ))}
         </VStack>
       )}
+    </Box>
+  );
+}
+
+function TrialConfigTab() {
+  const toast = useToast();
+  const [config, setConfig] = useState({ validDays: 3, maxChapters: 2, maxGirls: 1, maxTrialUses: 2 });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { loadConfig(); }, []);
+
+  async function loadConfig() {
+    setLoading(true);
+    try {
+      const res = await membershipApi.trialConfig();
+      if (res.success) setConfig(res.config);
+    } catch (e) { /* ignore */ }
+    finally { setLoading(false); }
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      await membershipApi.updateTrialConfig(config);
+      toast({ title: '配置已保存', status: 'success' });
+    } catch (err) {
+      toast({ title: '保存失败', description: err.message, status: 'error' });
+    } finally { setSaving(false); }
+  }
+
+  if (loading) return <Center py={10}><Spinner /></Center>;
+
+  return (
+    <Box>
+      <VStack spacing={4} align="stretch">
+        <Box p={4} bg="gray.800" borderRadius="md" border="1px solid" borderColor="gray.700">
+          <Text color="white" fontWeight="bold" mb={4}>试用会员配置</Text>
+          <VStack spacing={4} align="stretch">
+            <HStack justify="space-between">
+              <Text color="gray.300">试用有效期（天）</Text>
+              <NumberInput
+                min={1}
+                max={30}
+                value={config.validDays}
+                onChange={v => setConfig({ ...config, validDays: parseInt(v) || 3 })}
+                w="120px"
+              >
+                <NumberInputField bg="gray.700" borderColor="gray.600" />
+              </NumberInput>
+            </HStack>
+            <HStack justify="space-between">
+              <Text color="gray.300">可查看章节数</Text>
+              <NumberInput
+                min={1}
+                max={20}
+                value={config.maxChapters}
+                onChange={v => setConfig({ ...config, maxChapters: parseInt(v) || 2 })}
+                w="120px"
+              >
+                <NumberInputField bg="gray.700" borderColor="gray.600" />
+              </NumberInput>
+            </HStack>
+            <HStack justify="space-between">
+              <Text color="gray.300">可添加女生数</Text>
+              <NumberInput
+                min={1}
+                max={10}
+                value={config.maxGirls}
+                onChange={v => setConfig({ ...config, maxGirls: parseInt(v) || 1 })}
+                w="120px"
+              >
+                <NumberInputField bg="gray.700" borderColor="gray.600" />
+              </NumberInput>
+            </HStack>
+            <HStack justify="space-between">
+              <Text color="gray.300">各功能试用次数</Text>
+              <NumberInput
+                min={1}
+                max={10}
+                value={config.maxTrialUses}
+                onChange={v => setConfig({ ...config, maxTrialUses: parseInt(v) || 2 })}
+                w="120px"
+              >
+                <NumberInputField bg="gray.700" borderColor="gray.600" />
+              </NumberInput>
+            </HStack>
+            <Text color="gray.500" fontSize="sm">
+              说明：试用次数是各功能共用的（约会方案、AI教练、回复建议、话术优化、女生聊天）
+            </Text>
+          </VStack>
+        </Box>
+        <Button colorScheme="teal" onClick={handleSave} isLoading={saving}>保存配置</Button>
+      </VStack>
     </Box>
   );
 }

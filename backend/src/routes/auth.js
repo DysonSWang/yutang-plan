@@ -9,6 +9,7 @@ const jwt = require('jsonwebtoken');
 
 const { JWT_SECRET } = require('../config');
 const prisma = require('../prisma');
+const activityService = require('../services/activityService');
 
 // 注册
 router.post('/register', async (req, res) => {
@@ -95,6 +96,13 @@ router.post('/login', async (req, res) => {
       { expiresIn: '30d' }
     );
 
+    // 记录登录活跃度（客户端用户才记录）
+    if (user.role === 'client') {
+      activityService.recordLogin(user.id).catch(err => {
+        console.error('[Auth] 记录登录活跃度失败:', err);
+      });
+    }
+
     res.json({
       success: true,
       token,
@@ -179,6 +187,50 @@ router.get('/me', async (req, res) => {
   } catch (error) {
     console.warn('[Auth] me token 失败:', error.message);
     res.status(401).json({ error: 'token无效' });
+  }
+});
+
+// 修改密码
+router.post('/change-password', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.split(' ')[1];
+
+    if (!token) {
+      return res.status(401).json({ error: '未登录' });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const { oldPassword, newPassword } = req.body;
+
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ error: '旧密码和新密码都是必需的' });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: '新密码至少8位' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: decoded.id } });
+    if (!user) {
+      return res.status(401).json({ error: '用户不存在' });
+    }
+
+    const validPassword = await bcrypt.compare(oldPassword, user.password);
+    if (!validPassword) {
+      return res.status(400).json({ error: '旧密码错误' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashedPassword }
+    });
+
+    res.json({ success: true, message: '密码修改成功' });
+  } catch (error) {
+    console.error('[Auth] 修改密码失败:', error);
+    res.status(500).json({ error: '修改密码失败' });
   }
 });
 

@@ -20,6 +20,8 @@ const { GIRL_FIELD_LABELS, CLIENT_FIELD_LABELS } = require('../services/profileE
 
 const { JWT_SECRET, getAIConfig, getVLModelConfig } = require('../config');
 const prisma = require('../prisma');
+const membershipService = require('../services/membershipService');
+const activityService = require('../services/activityService');
 
 /**
  * 待审核更新队列（数据库驱动，不再使用内存 Map）
@@ -180,6 +182,14 @@ router.post('/optimize-message', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'client') {
       return res.status(403).json({ error: '无权限' });
+    }
+
+    // 试用限制检查
+    try {
+      await membershipService.checkTrialLimit(req.user.id, 'chat_optimize');
+      await membershipService.useTrialCount(req.user.id);
+    } catch (e) {
+      return res.status(403).json({ error: e.message });
     }
 
     const { girlId, myMessage, history = [] } = req.body;
@@ -979,6 +989,14 @@ router.post('/send', authMiddleware, async (req, res) => {
       }
     });
 
+    // 记录活跃度（仅客户端用户）
+    if (req.user.role === 'client') {
+      activityService.recordActivity(req.user.id, 'chat_message', {
+        girlId,
+        aiAdopted,
+      }).catch(err => console.error(`[Activity] 记录chat_message失败: ${err.message}`));
+    }
+
     res.json({ success: true, log });
 
   } catch (error) {
@@ -1000,6 +1018,14 @@ router.post('/client-analyze', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'client') {
       return res.status(403).json({ error: '无权限' });
+    }
+
+    // 试用限制检查
+    try {
+      await membershipService.checkTrialLimit(req.user.id, 'reply_suggest');
+      await membershipService.useTrialCount(req.user.id);
+    } catch (e) {
+      return res.status(403).json({ error: e.message });
     }
 
     const { clientId, message, history = [] } = req.body;
@@ -1228,6 +1254,14 @@ router.post('/client-optimize', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'client') {
       return res.status(403).json({ error: '无权限' });
+    }
+
+    // 试用限制检查
+    try {
+      await membershipService.checkTrialLimit(req.user.id, 'chat_optimize');
+      await membershipService.useTrialCount(req.user.id);
+    } catch (e) {
+      return res.status(403).json({ error: e.message });
     }
 
     const { clientId, myMessage, history = [] } = req.body;

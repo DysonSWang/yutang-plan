@@ -8,6 +8,7 @@ const jwt = require('jsonwebtoken');
 
 const { JWT_SECRET } = require('../config');
 const prisma = require('../prisma');
+const activityService = require('../services/activityService');
 const { evaluateRelationshipStage, setRelationshipStage, getStageHistory, VALID_STAGES, STAGE_LABELS } = require('../services/relationshipStage');
 
 // Auth middleware
@@ -85,8 +86,8 @@ router.get('/:id', authMiddleware, async (req, res) => {
     if (req.user.role === 'client' && girl.clientId !== req.user.id) {
       return res.status(403).json({ error: '无权限' });
     }
-    // 安全：操盘手只能访问其负责客户的女生（admin 跳过）
-    if (req.user.role !== 'admin') {
+    // 安全：操盘手只能访问其负责客户的女生（admin 和 client 跳过）
+    if (req.user.role === 'operator') {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: girl.clientId }
       });
@@ -484,6 +485,11 @@ router.post('/client-add', authMiddleware, async (req, res) => {
         tensionScore: 5.0
       }
     });
+
+    // 记录活跃度
+    activityService.recordActivity(req.user.id, 'girl_add', {
+      girlId: girl.id,
+    }).catch(err => console.error(`[Activity] 记录girl_add失败: ${err.message}`));
 
     res.json({ success: true, girl, quotaLeft: quota - currentCount - 1 });
   } catch (error) {

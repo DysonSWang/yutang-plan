@@ -41,6 +41,7 @@ const videoCompressRoutes = require('./routes/video-compress');
 const membershipRoutes = require('./routes/membership');
 const restaurantRoutes = require('./routes/restaurant');
 const versionRoutes = require('./routes/version');
+const activityRoutes = require('./routes/activity');
 
 const app = express();
 const server = http.createServer(app);
@@ -111,6 +112,9 @@ app.use('/api/restaurants', restaurantRoutes);
 
 // 版本检测
 app.use('/api/version', versionRoutes);
+
+// 活跃度追踪 API
+app.use('/api/admin/activity', activityRoutes);
 
 // 日志 API
 app.use('/api/logs', logRoutes);

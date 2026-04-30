@@ -12,6 +12,11 @@ const fs = require('fs');
 const { JWT_SECRET } = require('../config');
 const prisma = require('../prisma');
 const membershipService = require('../services/membershipService');
+const activityService = require('../services/activityService');
+
+// 上海区域正则常量
+const SHANGHAI_AREA_REGEX = /(九亭|松江|浦东|黄浦|静安|徐汇|长宁|虹口|杨浦|闵行|宝山|嘉定|青浦|奉贤|金山|崇明)/;
+const SHANGHAI_AREA_LIST = ['九亭', '松江', '浦东', '黄浦', '静安', '徐汇', '长宁', '虹口', '杨浦', '闵行', '宝山', '嘉定', '青浦', '奉贤', '金山', '崇明'];
 
 // Auth middleware
 const authMiddleware = async (req, res, next) => {
@@ -337,31 +342,108 @@ const SHANGHAI_AREAS = {
   '崇明': { lng: 121.397, lat: 31.623 },
 };
 
-// 和风天气查询
-async function getWeather(lng, lat) {
+// 和风天气查询（支持按时段）
+async function getWeather(lng, lat, dateTime) {
   const { execFileSync } = require('child_process');
   const host = process.env.QWEATHER_HOST;
   const key = process.env.QWEATHER_KEY;
   if (!host || !key) return null;
   try {
+    // 先获取24小时预报
     const output = execFileSync('curl', [
       '-s', '--noproxy', '*',
-      `https://${host}/v7/weather/now?location=${lng},${lat}&key=${key}`,
+      `https://${host}/v7/weather/24h?location=${lng},${lat}&key=${key}`,
       '--compressed'
     ], { timeout: 10000 });
     const data = JSON.parse(output.toString());
-    if (data.code === '200' && data.now) {
+    if (data.code !== '200' || !data.hourly) return null;
+
+    // 解析用户输入的时间
+    const now = new Date();
+    const targetDate = new Date(now);
+    let targetHour = null;
+
+    const dtLower = (dateTime || '').toLowerCase();
+
+    // 解析日期
+    if (/明天/.test(dtLower)) {
+      targetDate.setDate(targetDate.getDate() + 1);
+    } else if (/后天/.test(dtLower)) {
+      targetDate.setDate(targetDate.getDate() + 2);
+    }
+
+    // 解析时段
+    if (/凌晨|早上|清晨/.test(dtLower)) targetHour = 8;
+    else if (/上午|AM/.test(dtLower)) targetHour = 10;
+    else if (/中午|午饭|午餐/.test(dtLower)) targetHour = 12;
+    else if (/下午|PM/.test(dtLower)) targetHour = 14;
+    else if (/傍晚|黄昏/.test(dtLower)) targetHour = 17;
+    else if (/晚上|夜间|夜晚/.test(dtLower)) targetHour = 19;
+    else if (/深夜|凌晨/.test(dtLower)) targetHour = 22;
+    else {
+      // 尝试解析具体时间 "18:00"
+      const hourMatch = dateTime.match(/(\d{1,2}):?\d{0,2}/);
+      if (hourMatch) targetHour = parseInt(hourMatch[1]);
+    }
+
+    // 找到最接近的时段数据
+    const targetDateStr = targetDate.toISOString().split('T')[0];
+    let bestMatch = null;
+    let minDiff = 999;
+
+    // 默认目标小时：如果没有指定，假设下午2点（14:00）
+    const defaultTargetHour = targetHour !== null ? targetHour : 14;
+
+    for (const h of data.hourly) {
+      const fxTime = new Date(h.fxTime);
+      // 必须同一天
+      if (!h.fxTime.startsWith(targetDateStr)) continue;
+
+      const hour = fxTime.getHours();
+      const hourDiff = Math.abs(hour - defaultTargetHour);
+
+      if (hourDiff < minDiff) {
+        minDiff = hourDiff;
+        bestMatch = h;
+      }
+    }
+
+    // 如果没找到，尝试匹配相邻日期
+    if (!bestMatch && !targetHour) {
+      const altDate = new Date(targetDate);
+      altDate.setDate(altDate.getDate() + 1);
+      const altDateStr = altDate.toISOString().split('T')[0];
+
+      for (const h of data.hourly) {
+        if (!h.fxTime.startsWith(altDateStr)) continue;
+        const fxTime = new Date(h.fxTime);
+        const hour = fxTime.getHours();
+        const hourDiff = Math.abs(hour - defaultTargetHour);
+
+        if (hourDiff < minDiff) {
+          minDiff = hourDiff;
+          bestMatch = h;
+        }
+      }
+    }
+
+    if (bestMatch) {
+      const fxTime = new Date(bestMatch.fxTime);
+      const timeStr = `${fxTime.getMonth()+1}月${fxTime.getDate()}日${fxTime.getHours()}时`;
+      // 24h预报没有feelsLike字段，用temp代替
+      const feelsLikeStr = bestMatch.feelsLike ? bestMatch.feelsLike + '°C' : bestMatch.temp + '°C';
       return {
-        temp: data.now.temp + '°C',
-        feelsLike: data.now.feelsLike + '°C',
-        text: data.now.text,
-        windDir: data.now.windDir,
-        windScale: data.now.windScale + '级',
-        humidity: data.now.humidity + '%'
+        time: timeStr,
+        temp: bestMatch.temp + '°C',
+        feelsLike: feelsLikeStr,
+        text: bestMatch.text,
+        windDir: bestMatch.windDir,
+        windScale: bestMatch.windScale + '级',
+        humidity: bestMatch.humidity + '%'
       };
     }
   } catch (e) {
-    console.warn('[Membership] 天气查询失败:', e.message);
+    console.error('[Membership] 天气查询异常:', e.message, e.stderr ? e.stderr.toString() : '');
   }
   return null;
 }
@@ -369,7 +451,11 @@ async function getWeather(lng, lat) {
 // 百度AI搜索（从scene提取区域）
 async function baiduVenueSearch(location, venueTypes, budget) {
   const { execFileSync } = require('child_process');
-  const BAIDU_API_KEY = 'bce-v3/ALTAK-OLhmNcBERSUNnAlIXsXa9/80280c210c8682e7c02a2a0883ef257fe36e4692';
+  const BAIDU_API_KEY = process.env.BAIDU_API_KEY;
+  if (!BAIDU_API_KEY) {
+    console.warn('[Membership] 百度API密钥未配置');
+    return { choices: [], references: [] };
+  }
   try {
     const budgetNum = parseInt((budget || '200').replace(/[^0-9]/g, '')) || 200;
     const venueTypeStr = venueTypes.join('、');
@@ -417,8 +503,8 @@ router.post('/dating-plan/generate', authMiddleware, async (req, res) => {
     const { title, scene, budget, duration } = req.body;
     const { getAIConfig } = require('../config');
 
-    // 从scene提取区域关键词（九亭、松江、浦东等）
-    const areaMatch = (scene || '').match(/(九亭|松江|浦东|黄浦|静安|徐汇|长宁|虹口|杨浦|闵行|宝山|嘉定|青浦|奉贤|金山|崇明)/);
+    // 从scene提取区域关键词（使用常量）
+    const areaMatch = (scene || '').match(SHANGHAI_AREA_REGEX);
     const area = areaMatch ? areaMatch[1] : '';
     // 从scene提取场所类型关键词
     const sceneLower = (scene || '').toLowerCase();
@@ -445,8 +531,15 @@ router.post('/dating-plan/generate', authMiddleware, async (req, res) => {
 
     // 百度AI搜索真实场地（优先按区域搜索）
     let venueContext = '';
+
+    // 并行执行搜索和天气查询
+    const [searchResult, weather] = await Promise.all([
+      area ? baiduVenueSearch(area, venueTypes, budget) : Promise.resolve({ choices: [], references: [] }),
+      (area && SHANGHAI_AREAS[area]) ? getWeather(SHANGHAI_AREAS[area].lng, SHANGHAI_AREAS[area].lat, scene + (duration || '')) : Promise.resolve(null)
+    ]);
+
+    // 处理搜索结果
     if (area) {
-      const searchResult = await baiduVenueSearch(area, venueTypes, budget);
       const choices = searchResult.choices || [];
       const references = searchResult.references || [];
 
@@ -462,7 +555,7 @@ router.post('/dating-plan/generate', authMiddleware, async (req, res) => {
         if (cols.length >= 2) {
           const name = cols[0];
           const addrOrPrice = cols[1];
-          // 检查地址列是否包含九亭/松江
+          // 检查地址列是否包含目标区域
           const hasArea = addrOrPrice.includes(area) || addrOrPrice.includes('松江') || addrOrPrice.includes('九亭');
           if (hasArea && (name.includes('店') || name.includes('馆') || name.includes('餐厅') || name.includes('咖啡'))) {
             validRestaurants.push(name + '，' + addrOrPrice);
@@ -474,14 +567,14 @@ router.post('/dating-plan/generate', authMiddleware, async (req, res) => {
       if (validRestaurants.length === 0) {
         for (const ref of references) {
           const refContent = ref.content || '';
-          const title = ref.title || '';
+          const refTitle = ref.title || '';
           // 地址格式：餐厅地址:上海市松江区九亭镇... 或 地址：xxx
           const addrMatch = refContent.match(/(?:餐厅)?地址[：:]\s*([^，,。\n]+)/);
           const addr = addrMatch ? addrMatch[1] : '';
           const hasAreaAddr = addr.includes(area) || addr.includes('松江') || addr.includes('九亭');
-          const isVenue = /店|馆|餐厅|咖啡|酒楼|食府/.test(title);
+          const isVenue = /店|馆|餐厅|咖啡|酒楼|食府/.test(refTitle);
           if (isVenue && addr && hasAreaAddr) {
-            const cleanName = title.replace(/^[^\w一-龥]+/, '').replace(/[#*【】\[\]]/g, '');
+            const cleanName = refTitle.replace(/^[^\w一-龥]+/, '').replace(/[#*【】\[\]]/g, '');
             validRestaurants.push(cleanName + '，地址：' + addr);
           }
         }
@@ -499,23 +592,33 @@ router.post('/dating-plan/generate', authMiddleware, async (req, res) => {
       }
     }
 
-    // 查询天气
+    // 处理天气结果
     let weatherInfo = '';
-    if (area && SHANGHAI_AREAS[area]) {
-      const coords = SHANGHAI_AREAS[area];
-      const weather = await getWeather(coords.lng, coords.lat);
-      if (weather) {
-        weatherInfo = `\n【今日天气】${weather.text}，气温${weather.temp}（体感${weather.feelsLike}），${weather.windDir}${weather.windScale}，湿度${weather.humidity}。\n`;
-      }
+    if (weather) {
+      weatherInfo = `\n【约会时段天气（${weather.time}）】${weather.text}，气温${weather.temp}（体感${weather.feelsLike}），${weather.windDir}${weather.windScale}，湿度${weather.humidity}。\n`;
     }
 
     // 异步生成方案内容
     const aiConfig = getAIConfig();
+
+    // Prompt 注入防护：转义用户输入中的特殊字符
+    const escapePrompt = (str) => {
+      if (!str) return '';
+      return String(str)
+        .replace(/\\/g, '\\\\')
+        .replace(/`/g, '\\`')
+        .replace(/\$\{/g, '\\${');
+    };
+
+    const safeScene = escapePrompt(scene);
+    const safeBudget = escapePrompt(budget);
+    const safeDuration = escapePrompt(duration);
+
     const prompt = `你是约会策划专家，根据以下信息为用户设计一次完美的约会方案。
 
-场景：${scene || '普通约会'}
-预算：${budget || '1000元左右'}
-时长：${duration || '半天'}${venueContext}${weatherInfo}
+场景：${safeScene || '普通约会'}
+预算：${safeBudget || '1000元左右'}
+时长：${safeDuration || '半天'}${venueContext}${weatherInfo}
 
 请以Markdown格式输出，内容包含：
 1. 约会概览（适合人群、整体风格）
@@ -556,6 +659,13 @@ router.post('/dating-plan/generate', authMiddleware, async (req, res) => {
           planStatus: 'generated'
         }
       });
+
+      // 记录活跃度（仅客户端用户）
+      if (req.user.role === 'client') {
+        activityService.recordActivity(req.user.id, 'date_plan', {
+          planId: plan.id,
+        }).catch(err => console.error(`[Activity] 记录date_plan失败: ${err.message}`));
+      }
 
       res.json({ success: true, plan: updatedPlan });
     } catch (err) {

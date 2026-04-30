@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Box, Heading, Card, CardBody, SimpleGrid, Badge, Text, VStack, HStack, Flex, Avatar, Button, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure, FormControl, FormLabel, Input, Select, Textarea, useToast, Spinner, Icon, Divider } from '@chakra-ui/react';
+import { Box, Heading, Card, CardBody, SimpleGrid, Badge, Text, VStack, HStack, Flex, Avatar, Button, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton, useDisclosure, FormControl, FormLabel, Input, Select, Textarea, useToast, Spinner, Icon, Divider, InputGroup, InputRightElement, IconButton } from '@chakra-ui/react';
 import { CrownIcon, CheckIcon } from '../../components/Icons';
-import { clients, membership as membershipApi } from '../../utils/api';
+import { clients, membership as membershipApi, auth } from '../../utils/api';
 import RegionSelector from '../../components/RegionSelector';
 import { checkVersion, VERSION } from '../../utils/version';
 import VersionUpdateModal from '../../components/VersionUpdateModal';
@@ -146,8 +146,14 @@ export default function ClientProfile() {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { isOpen: isPricingOpen, onOpen: onPricingOpen, onClose: onPricingClose } = useDisclosure();
   const { isOpen: isVersionOpen, onOpen: onVersionOpen, onClose: onVersionClose } = useDisclosure();
+  const { isOpen: isPwdOpen, onOpen: onPwdOpen, onClose: onPwdClose } = useDisclosure();
   const [updateInfo, setUpdateInfo] = useState(null);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [showOld, setShowOld] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [changingPwd, setChangingPwd] = useState(false);
   const toast = useToast();
 
   useEffect(() => {
@@ -226,6 +232,33 @@ export default function ClientProfile() {
       toast({ title: '检查更新失败', status: 'error', duration: 3000 });
     } finally {
       setCheckingUpdate(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!oldPassword || !newPassword) {
+      toast({ title: '请填写旧密码和新密码', status: 'warning' });
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast({ title: '新密码至少8位', status: 'warning' });
+      return;
+    }
+    setChangingPwd(true);
+    try {
+      const res = await auth.changePassword(oldPassword, newPassword);
+      if (res.success) {
+        toast({ title: '密码修改成功', status: 'success' });
+        setOldPassword('');
+        setNewPassword('');
+        onPwdClose();
+      } else {
+        toast({ title: res.error || '修改失败', status: 'error' });
+      }
+    } catch (e) {
+      toast({ title: e.message || '修改失败', status: 'error' });
+    } finally {
+      setChangingPwd(false);
     }
   };
 
@@ -431,9 +464,14 @@ export default function ClientProfile() {
               <Text color="gray.500" fontSize="sm">当前版本</Text>
               <Text color="white" fontSize="sm">V{VERSION}</Text>
             </HStack>
-            <Button size="sm" variant="outline" colorScheme="teal" onClick={handleCheckUpdate} isLoading={checkingUpdate}>
-              检查更新
-            </Button>
+            <HStack spacing={2}>
+              <Button size="sm" variant="outline" colorScheme="teal" onClick={handleCheckUpdate} isLoading={checkingUpdate}>
+                检查更新
+              </Button>
+              <Button size="sm" variant="outline" colorScheme="orange" onClick={onPwdOpen}>
+                修改密码
+              </Button>
+            </HStack>
           </VStack>
         </CardBody>
       </Card>
@@ -551,6 +589,61 @@ export default function ClientProfile() {
           downloadUrl={updateInfo.downloadUrl}
         />
       )}
+
+      {/* 修改密码弹窗 */}
+      <Modal isOpen={isPwdOpen} onClose={onPwdClose} size="sm">
+        <ModalOverlay bg="blackAlpha.700" />
+        <ModalContent bg="gray.800">
+          <ModalHeader color="white">修改密码</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={4}>
+            <VStack spacing={4}>
+              <FormControl>
+                <FormLabel color="gray.400" fontSize="sm">旧密码</FormLabel>
+                <InputGroup>
+                  <Input
+                    type={showOld ? 'text' : 'password'}
+                    value={oldPassword}
+                    onChange={e => setOldPassword(e.target.value)}
+                    bg="gray.700" color="white" border="1px solid" borderColor="gray.600"
+                    placeholder="请输入旧密码"
+                  />
+                  <InputRightElement>
+                    <IconButton
+                      aria-label={showOld ? '隐藏密码' : '显示密码'}
+                      icon={<Text fontSize="sm">{showOld ? '🙈' : '👁'}</Text>}
+                      variant="ghost" size="sm" onClick={() => setShowOld(!showOld)}
+                    />
+                  </InputRightElement>
+                </InputGroup>
+              </FormControl>
+              <FormControl>
+                <FormLabel color="gray.400" fontSize="sm">新密码</FormLabel>
+                <InputGroup>
+                  <Input
+                    type={showNew ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                    bg="gray.700" color="white" border="1px solid" borderColor="gray.600"
+                    placeholder="请输入新密码（至少8位）"
+                  />
+                  <InputRightElement>
+                    <IconButton
+                      aria-label={showNew ? '隐藏密码' : '显示密码'}
+                      icon={<Text fontSize="sm">{showNew ? '🙈' : '👁'}</Text>}
+                      variant="ghost" size="sm" onClick={() => setShowNew(!showNew)}
+                    />
+                  </InputRightElement>
+                </InputGroup>
+              </FormControl>
+            </VStack>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" color="gray.400" mr={3} onClick={onPwdClose}>取消</Button>
+            <Button colorScheme="orange" onClick={handleChangePassword} isLoading={changingPwd}>确认修改</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 }

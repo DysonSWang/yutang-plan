@@ -190,13 +190,13 @@ export default function AICoach() {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // 自动调整 textarea 高度
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 160) + 'px';
-    }
-  }, [input]);
+  // 自动调整 textarea 高度 - 暂时禁用以排查问题
+  // useEffect(() => {
+  //   if (textareaRef.current) {
+  //     textareaRef.current.style.height = 'auto';
+  //     textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 160) + 'px';
+  //   }
+  // }, [input]);
 
   const loadGirls = async () => {
     try {
@@ -249,13 +249,122 @@ export default function AICoach() {
   };
 
   const handleRegenerate = async (content) => {
-    // 找到最后一条用户消息，重新发送
+    // 找到最后一条用户消息
     const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
-    if (lastUserMsg) {
-      // 移除最后一条助手消息
-      setMessages(prev => prev.slice(0, -1));
-      // 重新发送
-      await handleSubmitInternal(lastUserMsg.content);
+    if (!lastUserMsg) return;
+
+    const token = localStorage.getItem('zhuiai_token');
+    const userMessage = lastUserMsg.content;
+
+    // 移除最后一条助手消息（不是用户消息）
+    setMessages(prev => prev.slice(0, -1));
+
+    // 添加新的助手消息占位
+    const assistantId = `asst-${Date.now()}`;
+    setMessages(prev => [
+      ...prev,
+      {
+        id: assistantId,
+        role: 'assistant',
+        content: '',
+        createdAt: new Date().toISOString()
+      }
+    ]);
+
+    setLoading(true);
+    setError('');
+    streamingContentRef.current = '';
+    isStreamingRef.current = true;
+
+    try {
+      const res = await fetch(`${apiUrl}/api/ai-coach/situation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          situation: userMessage,
+          stream: !deepMode,
+          girlId: selectedGirlId || undefined
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: '请求失败' }));
+        throw new Error(errData.error || `HTTP ${res.status}`);
+      }
+
+      if (deepMode) {
+        const data = await res.json();
+        setMessages(prev =>
+          prev.map(m => m.id === assistantId ? { ...m, content: data.content || data.analysis || '' } : m)
+        );
+      } else {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let lastUpdate = 0;
+        const SENTENCE_ENDINGS = /[。！？\n]/;
+
+        const flushUpdate = (content) => {
+          const now = Date.now();
+          const shouldFlush = !isStreamingRef.current || now - lastUpdate >= 60 || SENTENCE_ENDINGS.test(content.slice(-1));
+          if (shouldFlush) {
+            lastUpdate = now;
+            setMessages(prev =>
+              prev.map(m => m.id === assistantId ? { ...m, content } : m)
+            );
+            if (isStreamingRef.current) setTimeout(scrollToBottom, 10);
+          } else {
+            streamingContentRef.current = content;
+          }
+        };
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed === 'data: [DONE]') continue;
+            if (trimmed.startsWith('data: ')) {
+              const jsonStr = trimmed.substring(6);
+              if (!jsonStr.startsWith('{')) continue;
+              try {
+                const parsed = JSON.parse(jsonStr);
+                if (parsed.content) {
+                  streamingContentRef.current += parsed.content;
+                  flushUpdate(streamingContentRef.current);
+                }
+              } catch { /* ignore */ }
+            }
+          }
+        }
+
+        if (buffer.trim()) {
+          try {
+            const parsed = JSON.parse(buffer.trim());
+            if (parsed.content) streamingContentRef.current += parsed.content;
+          } catch { /* ignore */ }
+        }
+
+        isStreamingRef.current = false;
+        setMessages(prev =>
+          prev.map(m => m.id === assistantId ? { ...m, content: streamingContentRef.current } : m)
+        );
+      }
+    } catch (e) {
+      console.error(e);
+      setError(e.message || '网络错误，请重试');
+      setMessages(prev => prev.filter(m => m.id !== assistantId));
+    } finally {
+      setLoading(false);
+      isStreamingRef.current = false;
     }
   };
 
@@ -375,9 +484,15 @@ export default function AICoach() {
         let buffer = '';
         let lastUpdate = 0;
 
+        // 按段落/句子缓冲：遇到句号、问号、感叹号或换行时才更新UI
+        const SENTENCE_ENDINGS = /[。！？\n]/;
         const flushUpdate = (content) => {
           const now = Date.now();
-          if (now - lastUpdate >= 60 || !isStreamingRef.current) {
+          const shouldFlush = !isStreamingRef.current ||  // 非流式直接更新
+            now - lastUpdate >= 60 ||  // 60ms间隔
+            SENTENCE_ENDINGS.test(content.slice(-1));  // 遇到句子结束符
+
+          if (shouldFlush) {
             lastUpdate = now;
             setMessages(prev =>
               prev.map(m => m.id === assistantId ? { ...m, content } : m)
@@ -714,9 +829,11 @@ export default function AICoach() {
               bg="gray.700"
               border="none"
               color="white"
-              rows={1}
               _placeholder={{ color: 'gray.400' }}
               disabled={loading}
+              minH="40px"
+              h="auto"
+              resize="none"
             />
             <Button
               type="button"
@@ -904,7 +1021,7 @@ export default function AICoach() {
         <Heading color="white" size="lg">AI教练</Heading>
       </Flex>
 
-      <Tabs variant="soft-rounded" colorScheme="teal">
+      <Tabs variant="soft-rounded" colorScheme="teal" isLazy>
         <TabList bg="gray.800" borderRadius="lg" p={1}>
           <Tab color="gray.400" _selected={{ color: 'white', bg: 'teal.600' }} fontSize="sm">
             🤖 AI教练

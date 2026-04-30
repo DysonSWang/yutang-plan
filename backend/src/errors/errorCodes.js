@@ -51,6 +51,11 @@ const ErrorCodes = {
   DATABASE_ERROR:            { code: 'S0802', status: 500, message: '数据库操作失败' },
   VALIDATION_ERROR:          { code: 'S0803', status: 400, message: '参数校验失败' },
   RESOURCE_NOT_FOUND:        { code: 'S0804', status: 404, message: '请求的资源不存在' },
+
+  // ========== T09 试用会员 ==========
+  TRIAL_LIMIT_EXCEEDED:      { code: 'T0901', status: 403, message: '试用次数已用完' },
+  TRIAL_EXPIRED:             { code: 'T0902', status: 403, message: '试用已到期，请升级会员' },
+  TRIAL_ALREADY_ACTIVE:      { code: 'T0903', status: 400, message: '已有试用或有效会员' },
 };
 
 module.exports = { ErrorCodes };
