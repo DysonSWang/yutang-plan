@@ -28,12 +28,28 @@ export function SocketProvider({ children }) {
 
     socketRef.current.on('connect', () => {
       console.log('[SocketContext] 已连接');
-      // 加入对应房间
       if (user.role === 'client') {
         socketRef.current.emit('client:join', user.id);
       } else {
         socketRef.current.emit('operator:join', user.id);
       }
+    });
+
+    socketRef.current.on('connect_error', (err) => {
+      console.error('[SocketContext] 连接错误:', err.message);
+    });
+
+    socketRef.current.on('disconnect', (reason) => {
+      console.warn('[SocketContext] 断开连接:', reason);
+      if (reason === 'io server disconnect') {
+        setTimeout(() => {
+          socketRef.current?.connect();
+        }, 1000);
+      }
+    });
+
+    socketRef.current.on('reconnect_failed', () => {
+      console.error('[SocketContext] 重连失败');
     });
 
     return () => {

@@ -10,6 +10,9 @@ const path = require('path');
 const { Server } = require('socket.io');
 const { PORT } = require('./config');
 const prisma = require('./prisma');
+const logger = require('./utils/logger');
+const requestIdMiddleware = require('./middleware/requestId');
+const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 
 const authRoutes = require('./routes/auth');
 const chatRoutes = require('./routes/chat');
@@ -50,6 +53,7 @@ app.set('io', io);
 
 // Middleware
 app.use(cors());
+app.use(requestIdMiddleware);
 app.use(express.json({ limit: '10mb' }));
 
 // 路由
@@ -100,18 +104,18 @@ app.use('/api/version', versionRoutes);
 
 // Socket.io 连接处理
 io.on('connection', (socket) => {
-  console.log('[Socket] 客户端连接:', socket.id);
+  logger.info(`[Socket] 客户端连接: ${socket.id}`);
 
   // 加入操盘手房间
   socket.on('operator:join', (operatorId) => {
     socket.join(`operator:${operatorId}`);
-    console.log(`[Socket] 操盘手 ${operatorId} 加入房间`);
+    logger.info(`[Socket] 操盘手 ${operatorId} 加入房间`);
   });
 
   // 加入客户房间
   socket.on('client:join', (clientId) => {
     socket.join(`client:${clientId}`);
-    console.log(`[Socket] 客户 ${clientId} 加入房间`);
+    logger.info(`[Socket] 客户 ${clientId} 加入房间`);
   });
 
   // 发送消息给操盘手
@@ -136,18 +140,18 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log('[Socket] 客户端断开:', socket.id);
+    logger.info(`[Socket] 客户端断开: ${socket.id}`);
   });
 });
 
+// 404 处理
+app.use(notFoundHandler);
+
 // 错误处理
-app.use((err, req, res, next) => {
-  console.error('[Error]', err);
-  res.status(500).json({ error: '服务器错误' });
-});
+app.use(errorHandler);
 
 server.listen(PORT, () => {
-  console.log(`🐟 追爱计划后端启动: http://localhost:${PORT}`);
+  logger.info(`🐟 追爱计划后端启动: http://localhost:${PORT}`);
 });
 
 module.exports = { app, server, io, prisma };

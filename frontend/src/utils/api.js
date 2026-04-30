@@ -2,12 +2,18 @@
  * API 工具类
  */
 import imageCompression from 'browser-image-compression';
+import { parseErrorResponse, ErrorType } from './errorHandler';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3005';
 
 class Api {
   constructor() {
     this.baseUrl = API_BASE;
+    this.errorHandler = null;
+  }
+
+  setErrorHandler(handler) {
+    this.errorHandler = handler;
   }
 
   getToken() {
@@ -36,12 +42,44 @@ class Api {
       options.body = JSON.stringify(data);
     }
 
-    const response = await fetch(`${this.baseUrl}${path}`, options);
-    const result = await response.json();
+    let response;
+    let result;
+
+    try {
+      response = await fetch(`${this.baseUrl}${path}`, options);
+      const contentType = response.headers.get('content-type');
+      if (contentType?.includes('application/json')) {
+        result = await response.json();
+      } else {
+        result = {};
+      }
+    } catch (err) {
+      // 网络错误
+      const error = {
+        type: ErrorType.NETWORK,
+        code: 'NETWORK_ERROR',
+        message: '网络连接失败，请检查网络设置',
+      };
+      if (this.errorHandler) this.errorHandler(error);
+      throw error;
+    }
 
     if (!response.ok) {
-      throw new Error(result.error || '请求失败');
+      const error = parseErrorResponse(response, result);
+
+      // 401 清除 token 并跳转登录
+      if (error.type === ErrorType.AUTH) {
+        this.removeToken();
+        window.location.href = '/login';
+      }
+
+      if (this.errorHandler) {
+        this.errorHandler(error);
+      }
+
+      throw Object.assign(new Error(error.message), error);
     }
+
     return result;
   }
 
@@ -96,7 +134,7 @@ export const clients = {
 export const chat = {
   sessions: () => api.get('/api/chat/sessions'),
   mySessions: () => api.get('/api/chat/my-sessions'),
-  createSession: () => api.post('/api/chat/my-session'),
+  createSession: (clientId) => api.post('/api/chat/sessions', { clientId }),
   messages: (sessionId, params) => api.get(`/api/chat/sessions/${sessionId}/messages` + (params ? '?' + new URLSearchParams(params) : '')),
   send: (sessionId, content, type = 'text', mediaUrl, duration, isBurnAfterRead = false, burnAfterSeconds = null, isFlashImage = false) =>
     api.post('/api/chat/messages', { sessionId, content, type, mediaUrl, duration, isBurnAfterRead, burnAfterSeconds, isFlashImage }),

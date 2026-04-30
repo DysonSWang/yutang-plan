@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ChakraProvider, Spinner, Center, useDisclosure } from '@chakra-ui/react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
+import ErrorBoundary from './components/ErrorBoundary';
 import theme from './theme';
 import Login from './pages/Login';
 import ClientLayout from './pages/client/ClientLayout';
@@ -113,14 +114,16 @@ function AppRoutes() {
 export default function App() {
   return (
     <ChakraProvider theme={theme}>
-      <BrowserRouter>
-        <AuthProvider>
-          <SocketProvider>
-            <VersionChecker />
-            <AppRoutes />
-          </SocketProvider>
-        </AuthProvider>
-      </BrowserRouter>
+      <ErrorBoundary>
+        <BrowserRouter>
+          <AuthProvider>
+            <SocketProvider>
+              <VersionChecker />
+              <AppRoutes />
+            </SocketProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </ErrorBoundary>
     </ChakraProvider>
   );
 }

@@ -3,9 +3,9 @@ import {
   Box, Heading, Card, CardBody, Button, Badge, Modal, ModalOverlay, ModalContent,
   ModalHeader, ModalBody, ModalCloseButton, useDisclosure, VStack, HStack, Text,
   SimpleGrid, Flex, Divider, Tag, Wrap, WrapItem, useToast, Textarea, FormControl,
-  FormLabel, Icon, Alert, AlertIcon, AlertDescription, Spinner, Progress, Tabs, TabList, TabPanels, Tab, TabPanel, Input, Select, Center
+  FormLabel, Icon, Alert, AlertIcon, AlertDescription, Spinner, Progress, Tabs, TabList, TabPanels, Tab, TabPanel, Input, Select, Center, Avatar
 } from '@chakra-ui/react';
-import { CalendarIcon, SparklesIcon, QuestionIcon, CopyIcon } from '../../components/Icons';
+import { CalendarIcon, SparklesIcon, QuestionIcon, CopyIcon, MapPinIcon, ClockIcon, FireIcon } from '../../components/Icons';
 import ClientCalendar from '../../components/ClientCalendar';
 import { dates, membership as membershipApi, clients } from '../../utils/api';
 
@@ -58,6 +58,8 @@ export default function ClientDates() {
   const [aiForm, setAiForm] = useState({ title: '', scene: '', budget: '', duration: '' });
   const [showAddModal, setShowAddModal] = useState(false);
   const [addMode, setAddMode] = useState('ai'); // 'ai' | 'manual'
+  const [addStep, setAddStep] = useState(1); // 分步添加：1=选择模式 2=选择女生 3=填写信息
+  const [selectedGirlForDate, setSelectedGirlForDate] = useState(null);
   const [manualForm, setManualForm] = useState({ title: '', girlId: '', dateTime: '', location: '', notes: '' });
   const [girlsList, setGirlsList] = useState([]);
   const [manualSubmitting, setManualSubmitting] = useState(false);
@@ -65,10 +67,71 @@ export default function ClientDates() {
 
   // 加载女生列表
   useEffect(() => {
-    if (showAddModal && addMode === 'manual') {
+    if (showAddModal && (addMode === 'manual' || addStep === 2)) {
       loadGirls();
     }
-  }, [showAddModal, addMode]);
+  }, [showAddModal, addMode, addStep]);
+
+  // 统计计算
+  const stats = {
+    pending: datesList.filter(d => d.status === 'pending_client_confirm' || d.planStatus === 'pending').length,
+    confirmed: datesList.filter(d => d.status === 'confirmed' || d.status === 'planned').length,
+    completed: datesList.filter(d => d.status === 'completed').length,
+    thisWeek: allDates.filter(d => {
+      if (!d.dateTime) return false;
+      const date = new Date(d.dateTime);
+      const now = new Date();
+      const weekEnd = new Date(now);
+      weekEnd.setDate(now.getDate() + 7);
+      return date >= now && date <= weekEnd;
+    }).length
+  };
+
+  // 获取即将到来的约会（最近一个未完成的）
+  const upcomingDate = allDates
+    .filter(d => d.dateTime && d.status !== 'completed' && d.status !== 'cancelled')
+    .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))[0] || null;
+
+  // 获取头像
+  const getAvatar = (girl) => {
+    if (!girl) return null;
+    if (girl.photos) {
+      try {
+        const photos = typeof girl.photos === 'string' ? JSON.parse(girl.photos) : girl.photos;
+        if (Array.isArray(photos) && photos[0]) return photos[0];
+      } catch {}
+    }
+    return `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70)}`;
+  };
+
+  // 格式化日期显示
+  const formatDateRelative = (dateStr) => {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+    if (target.getTime() === today.getTime()) return '今天';
+    if (target.getTime() === tomorrow.getTime()) return '明天';
+    if (target < today) return '已过期';
+
+    const diff = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
+    if (diff <= 7) return `本周${'日一二三四五六'[date.getDay()]}`;
+
+    return `${date.getMonth() + 1}月${date.getDate()}日`;
+  };
+
+  // 进度计算
+  const getProgress = (dateItem) => {
+    if (dateItem.status === 'completed') return { percent: 100, label: '已完成' };
+    if (dateItem.status === 'confirmed' || dateItem.status === 'planned') return { percent: 75, label: '方案已确认' };
+    if (dateItem.status === 'pending_client_confirm') return { percent: 50, label: '待您确认' };
+    if (dateItem.planStatus === 'pending' || dateItem.status === 'pending_plan') return { percent: 25, label: '等待策划' };
+    return { percent: 10, label: '初始化' };
+  };
 
   const loadGirls = async () => {
     try {
@@ -435,6 +498,118 @@ export default function ClientDates() {
               </Box>
             )}
 
+            {/* 统计栏 */}
+            {!loading && (datesList.length > 0 || aiPlans.length > 0) && (
+              <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4} mb={6}>
+                <Card bg="gray.800" border="1px solid" borderColor="yellow.600">
+                  <CardBody py={4} px={4}>
+                    <Flex align="center" gap={3}>
+                      <Box w="40px" h="40px" borderRadius="10px" bg="rgba(234,179,8,0.2)" display="flex" alignItems="center" justifyContent="center" fontSize="20px">⏳</Box>
+                      <Box>
+                        <Text fontSize="2xl" fontWeight="bold" color="yellow.400">{stats.pending}</Text>
+                        <Text fontSize="xs" color="gray.500">待确认</Text>
+                      </Box>
+                    </Flex>
+                  </CardBody>
+                </Card>
+                <Card bg="gray.800" border="1px solid" borderColor="green.600">
+                  <CardBody py={4} px={4}>
+                    <Flex align="center" gap={3}>
+                      <Box w="40px" h="40px" borderRadius="10px" bg="rgba(34,197,94,0.2)" display="flex" alignItems="center" justifyContent="center" fontSize="20px">✓</Box>
+                      <Box>
+                        <Text fontSize="2xl" fontWeight="bold" color="green.400">{stats.confirmed}</Text>
+                        <Text fontSize="xs" color="gray.500">已确认</Text>
+                      </Box>
+                    </Flex>
+                  </CardBody>
+                </Card>
+                <Card bg="gray.800" border="1px solid" borderColor="cyan.600">
+                  <CardBody py={4} px={4}>
+                    <Flex align="center" gap={3}>
+                      <Box w="40px" h="40px" borderRadius="10px" bg="rgba(6,182,212,0.2)" display="flex" alignItems="center" justifyContent="center" fontSize="20px">🎉</Box>
+                      <Box>
+                        <Text fontSize="2xl" fontWeight="bold" color="cyan.400">{stats.completed}</Text>
+                        <Text fontSize="xs" color="gray.500">已完成</Text>
+                      </Box>
+                    </Flex>
+                  </CardBody>
+                </Card>
+                <Card bg="gray.800" border="1px solid" borderColor="purple.600">
+                  <CardBody py={4} px={4}>
+                    <Flex align="center" gap={3}>
+                      <Box w="40px" h="40px" borderRadius="10px" bg="rgba(168,85,247,0.2)" display="flex" alignItems="center" justifyContent="center" fontSize="20px">📅</Box>
+                      <Box>
+                        <Text fontSize="2xl" fontWeight="bold" color="purple.400">{stats.thisWeek}</Text>
+                        <Text fontSize="xs" color="gray.500">本周约会</Text>
+                      </Box>
+                    </Flex>
+                  </CardBody>
+                </Card>
+              </SimpleGrid>
+            )}
+
+            {/* 即将到来卡片 */}
+            {!loading && upcomingDate && (
+              <Box mb={6}>
+                <Text fontSize="lg" fontWeight="bold" mb={3} color="white">
+                  <Box as="span" display="inline-block" w="4px" h="20px" bg="brand.500" borderRadius="2px" mr={3} verticalAlign="middle"></Box>
+                  即将到来
+                </Text>
+                <Card
+                  bg="linear-gradient(135deg, rgba(0,212,170,0.15) 0%, rgba(168,85,247,0.15) 100%)"
+                  border="1px solid"
+                  borderColor="brand.500"
+                  cursor="pointer"
+                  onClick={() => openDetail(upcomingDate)}
+                  _hover={{ borderColor: 'brand.400', transform: 'translateY(-2px)' }}
+                  transition="all 0.2s"
+                >
+                  <CardBody py={5} px={6}>
+                    <Flex align="center" gap={6} wrap="wrap">
+                      {/* 日期突出显示 */}
+                      <Box textAlign="center" minW="70px">
+                        <Text fontSize="36px" fontWeight="bold" color="brand.400" lineHeight="1">
+                          {new Date(upcomingDate.dateTime).getDate()}
+                        </Text>
+                        <Text fontSize="sm" color="gray.400">
+                          {formatDateRelative(upcomingDate.dateTime)}
+                        </Text>
+                      </Box>
+                      {/* 约会信息 */}
+                      <Box flex={1}>
+                        <HStack spacing={2} mb={1}>
+                          <Avatar size="sm" name={upcomingDate.girl?.name} src={getAvatar(upcomingDate.girl)} />
+                          <Text color="white" fontWeight="bold" fontSize="lg">{upcomingDate.girl?.name}</Text>
+                          <Badge colorScheme={upcomingDate.status === 'confirmed' || upcomingDate.status === 'planned' ? 'green' : 'yellow'}>
+                            {upcomingDate.status === 'confirmed' ? '已确认' : upcomingDate.status === 'planned' ? '已策划' : '待确认'}
+                          </Badge>
+                        </HStack>
+                        <Text color="gray.300" fontSize="sm">{upcomingDate.title || '约会'}</Text>
+                        <HStack spacing={4} mt={2} color="gray.400" fontSize="xs">
+                          {upcomingDate.location && (
+                            <HStack spacing={1}>
+                              <MapPinIcon />
+                              <Text>{upcomingDate.location}</Text>
+                            </HStack>
+                          )}
+                          {upcomingDate.dateTime && (
+                            <HStack spacing={1}>
+                              <ClockIcon />
+                              <Text>{new Date(upcomingDate.dateTime).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</Text>
+                            </HStack>
+                          )}
+                        </HStack>
+                      </Box>
+                      {/* 操作 */}
+                      <HStack spacing={2}>
+                        <Button colorScheme="brand" size="sm">查看方案</Button>
+                      </HStack>
+                    </Flex>
+                  </CardBody>
+                </Card>
+              </Box>
+            )}
+
             {/* 约会列表 */}
             {loading ? (
               <Flex justify="center" py={12}><Spinner /></Flex>
@@ -450,69 +625,153 @@ export default function ClientDates() {
               </Card>
             ) : (
               <VStack spacing={4} align="stretch">
-                {/* AI 方案列表 */}
+                {/* 图例 */}
+                <HStack spacing={4} p={3} bg="rgba(255,255,255,0.02)" borderRadius="md" flexWrap="wrap">
+                  <HStack spacing={2}>
+                    <Box w="10px" h="10px" borderRadius="full" bg="brand.500"></Box>
+                    <Text fontSize="xs" color="gray.500">AI 策划</Text>
+                  </HStack>
+                  <HStack spacing={2}>
+                    <Box w="10px" h="10px" borderRadius="full" bg="purple.500"></Box>
+                    <Text fontSize="xs" color="gray.500">顾问策划</Text>
+                  </HStack>
+                  <HStack spacing={2}>
+                    <Box w="10px" h="10px" borderRadius="full" bg="yellow.500"></Box>
+                    <Text fontSize="xs" color="gray.500">待确认</Text>
+                  </HStack>
+                  <HStack spacing={2}>
+                    <Box w="10px" h="10px" borderRadius="full" bg="green.500"></Box>
+                    <Text fontSize="xs" color="gray.500">已确认</Text>
+                  </HStack>
+                </HStack>
+
+                {/* AI 方案列表 - 新卡片设计 */}
                 {aiPlans.map(plan => (
                   <Card
                     key={plan.id}
                     bg="gray.800"
-                    border="1px solid rgba(0,212,170,0.3)"
+                    border="1px solid"
+                    borderColor="brand.500"
                     cursor="pointer"
-                    _hover={{ borderColor: 'brand.500' }}
+                    _hover={{ borderColor: 'brand.400', transform: 'translateY(-2px)' }}
                     onClick={() => setSelectedAiPlan(plan)}
+                    transition="all 0.2s"
                   >
-                    <CardBody>
-                      <Flex justify="space-between" align="flex-start" mb={2}>
-                        <Box>
-                          <HStack spacing={2} mb={1}>
-                            <Icon as={SparklesIcon} color="brand.400" />
-                            <Heading size="md" color="white">{plan.title || 'AI 约会方案'}</Heading>
+                    <CardBody py={4} px={5}>
+                      <Flex gap={4} align="flex-start">
+                        {/* 头像区域 */}
+                        <Avatar size="lg" name={plan.girl?.name} src={getAvatar(plan.girl)} />
+                        {/* 内容区域 */}
+                        <Box flex={1}>
+                          <Flex justify="space-between" align="flex-start" mb={2}>
+                            <Box>
+                              <HStack spacing={2} mb={1}>
+                                <Icon as={SparklesIcon} color="brand.400" />
+                                <Heading size="md" color="white">{plan.title || 'AI 约会方案'}</Heading>
+                              </HStack>
+                              {plan.scene && <Text color="gray.400" fontSize="sm">{plan.scene}</Text>}
+                              {plan.budget && <Text color="gray.500" fontSize="xs" mt={1}>预算：{plan.budget} · 时长：{plan.duration}</Text>}
+                            </Box>
                             <Badge colorScheme={plan.planStatus === 'generated' ? 'green' : plan.planStatus === 'generating' ? 'blue' : 'gray'}>
                               {plan.planStatus === 'generated' ? '已生成' : plan.planStatus === 'generating' ? '生成中' : '草稿'}
                             </Badge>
-                          </HStack>
-                          {plan.scene && <Text color="gray.400" fontSize="sm">{plan.scene}</Text>}
-                          {plan.budget && <Text color="gray.500" fontSize="xs">预算：{plan.budget} · 时长：{plan.duration}</Text>}
+                          </Flex>
+                          {/* 进度条 */}
+                          <Box mt={3}>
+                            <Flex justify="space-between" mb={1}>
+                              <Text fontSize="xs" color="gray.500">
+                                {plan.planStatus === 'generated' ? '方案已生成' : '生成中...'}
+                              </Text>
+                              <Text fontSize="xs" color="gray.500">{plan.planStatus === 'generated' ? '100%' : '50%'}</Text>
+                            </Flex>
+                            <Progress
+                              value={plan.planStatus === 'generated' ? 100 : 50}
+                              size="xs"
+                              colorScheme="brand"
+                              borderRadius="full"
+                              bg="gray.700"
+                            />
+                          </Box>
                         </Box>
-                        <Text color="gray.500" fontSize="xs">
-                          {new Date(plan.createdAt).toLocaleDateString('zh-CN')}
-                        </Text>
                       </Flex>
                     </CardBody>
                   </Card>
                 ))}
-                {/* 顾问方案列表 */}
+                {/* 顾问方案列表 - 新卡片设计 */}
                 {datesList.map(d => {
                   const plan = parseJSON(d.aiPlan);
+                  const progress = getProgress(d);
                   return (
-                    <Card key={d.id} bg="gray.800" border="1px solid borderColor.purple.600">
-                      <CardBody>
-                        <Flex justify="space-between" align="flex-start" mb={3}>
-                          <Box>
-                            <HStack spacing={2} mb={1}>
-                              <Heading size="md" color="white">{d.title || '约会方案'}</Heading>
-                              <Badge colorScheme="purple">顾问</Badge>
+                    <Card
+                      key={d.id}
+                      bg="gray.800"
+                      border="1px solid"
+                      borderColor="purple.500"
+                      cursor="pointer"
+                      _hover={{ borderColor: 'purple.400', transform: 'translateY(-2px)' }}
+                      onClick={() => openDetail(d)}
+                      transition="all 0.2s"
+                    >
+                      <CardBody py={4} px={5}>
+                        <Flex gap={4} align="flex-start">
+                          {/* 头像区域 */}
+                          <Avatar size="lg" name={d.girl?.name} src={getAvatar(d.girl)} />
+                          {/* 内容区域 */}
+                          <Box flex={1}>
+                            <Flex justify="space-between" align="flex-start" mb={2}>
+                              <Box>
+                                <HStack spacing={2} mb={1}>
+                                  <Heading size="md" color="white">{d.girl?.name}</Heading>
+                                  <Badge colorScheme="purple">顾问</Badge>
+                                </HStack>
+                                <Text color="gray.300" fontSize="sm">{d.title || '约会方案'}</Text>
+                              </Box>
+                              <Badge
+                                colorScheme={
+                                  d.status === 'completed' ? 'cyan' :
+                                  d.status === 'confirmed' || d.status === 'planned' ? 'green' :
+                                  d.status === 'pending_client_confirm' ? 'yellow' : 'gray'
+                                }
+                              >
+                                {d.status === 'completed' ? '已完成' :
+                                 d.status === 'confirmed' ? '已确认' :
+                                 d.status === 'planned' ? '已策划' :
+                                 d.status === 'pending_client_confirm' ? '待确认' : '待策划'}
+                              </Badge>
+                            </Flex>
+                            {/* 元信息 */}
+                            <HStack spacing={4} color="gray.400" fontSize="xs" mb={3}>
+                              <HStack spacing={1}>
+                                <ClockIcon />
+                                <Text>{formatDateRelative(d.dateTime)}</Text>
+                              </HStack>
+                              {d.location && (
+                                <HStack spacing={1}>
+                                  <MapPinIcon />
+                                  <Text>{d.location}</Text>
+                                </HStack>
+                              )}
                             </HStack>
-                            <HStack spacing={3}>
-                              <Text color="gray.400" fontSize="sm">对象：{d.girl?.name}</Text>
-                              <Text color="gray.400" fontSize="sm">时间：{d.dateTime ? new Date(d.dateTime).toLocaleString('zh-CN') : '-'}</Text>
-                              {d.location && <Text color="gray.400" fontSize="sm">地点：{d.location}</Text>}
-                            </HStack>
+                            {/* 进度条 */}
+                            <Box>
+                              <Flex justify="space-between" mb={1}>
+                                <Text fontSize="xs" color="gray.500">{progress.label}</Text>
+                                <Text fontSize="xs" color="gray.500">{progress.percent}%</Text>
+                              </Flex>
+                              <Progress
+                                value={progress.percent}
+                                size="xs"
+                                colorScheme={
+                                  d.status === 'completed' ? 'cyan' :
+                                  d.status === 'confirmed' || d.status === 'planned' ? 'green' :
+                                  'yellow'
+                                }
+                                borderRadius="full"
+                                bg="gray.700"
+                              />
+                            </Box>
                           </Box>
-                          <VStack spacing={2} align="flex-end">
-                            <Button colorScheme="purple" onClick={() => openDetail(d)} size="sm">
-                              查看方案
-                            </Button>
-                            <Text color="gray.500" fontSize="xs">
-                              推送时间：{d.pushToClientAt ? new Date(d.pushToClientAt).toLocaleDateString('zh-CN') : '-'}
-                            </Text>
-                          </VStack>
                         </Flex>
-                        {plan?.venue && (
-                          <Box bg="gray.750" p={3} borderRadius="md">
-                            <Text color="gray.400" fontSize="sm">推荐：{plan.venue.name} · {plan.venue.type}</Text>
-                            {plan.overview && <Text color="gray.300" fontSize="sm" mt={1}>{plan.overview}</Text>}
-                          </Box>
-                        )}
                       </CardBody>
                     </Card>
                   );
@@ -788,174 +1047,265 @@ export default function ClientDates() {
         </ModalContent>
       </Modal>
 
-      {/* 添加约会 Modal */}
-      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} size="lg">
+      {/* 添加约会 Modal - 分步流程 */}
+      <Modal isOpen={showAddModal} onClose={() => { setShowAddModal(false); setAddStep(1); setSelectedGirlForDate(null); }} size="lg">
         <ModalOverlay />
         <ModalContent bg="gray.800" maxH="85vh" overflow="auto">
-          <ModalHeader color="white">添加约会</ModalHeader>
-          <ModalCloseButton />
+          <ModalHeader color="white">
+            {addStep === 1 ? '创建约会' : addStep === 2 ? '选择约会对象' : (addMode === 'ai' ? 'AI 智能策划' : '填写信息')}
+          </ModalHeader>
+          <ModalCloseButton onClick={() => { setShowAddModal(false); setAddStep(1); setSelectedGirlForDate(null); }} />
           <ModalBody pb={6}>
-            {/* 模式选择 */}
-            <HStack spacing={4} mb={6}>
-              <Card
-                flex={1}
-                cursor="pointer"
-                bg={addMode === 'ai' ? 'rgba(0,212,170,0.15)' : 'gray.750'}
-                border="2px solid"
-                borderColor={addMode === 'ai' ? 'brand.500' : 'gray.600'}
-                onClick={() => setAddMode('ai')}
-                _hover={{ borderColor: 'brand.400' }}
-              >
-                <CardBody textAlign="center" py={6}>
-                  <Icon as={SparklesIcon} color={addMode === 'ai' ? 'brand.400' : 'gray.400'} boxSize={10} mb={3} />
-                  <Text color={addMode === 'ai' ? 'brand.400' : 'gray.300'} fontWeight="bold">AI 生成</Text>
-                  <Text color="gray.500" fontSize="sm">描述场景，AI 帮你策划</Text>
-                </CardBody>
-              </Card>
-              <Card
-                flex={1}
-                cursor="pointer"
-                bg={addMode === 'manual' ? 'rgba(0,212,170,0.15)' : 'gray.750'}
-                border="2px solid"
-                borderColor={addMode === 'manual' ? 'brand.500' : 'gray.600'}
-                onClick={() => setAddMode('manual')}
-                _hover={{ borderColor: 'brand.400' }}
-              >
-                <CardBody textAlign="center" py={6}>
-                  <Icon as={CalendarIcon} color={addMode === 'manual' ? 'brand.400' : 'gray.400'} boxSize={10} mb={3} />
-                  <Text color={addMode === 'manual' ? 'brand.400' : 'gray.300'} fontWeight="bold">自己填写</Text>
-                  <Text color="gray.500" fontSize="sm">手动输入约会信息</Text>
-                </CardBody>
-              </Card>
-            </HStack>
+            {/* 步骤指示器 */}
+            <Flex justify="center" gap={2} mb={8}>
+              {[1, 2, 3].map(step => (
+                <Box
+                  key={step}
+                  w={addStep === step ? '32px' : '8px'}
+                  h="8px"
+                  borderRadius="full"
+                  bg={addStep >= step ? 'brand.500' : 'gray.600'}
+                  transition="all 0.3s"
+                />
+              ))}
+            </Flex>
 
-            {addMode === 'ai' ? (
-              /* AI 生成表单 */
+            {/* Step 1: 选择模式 */}
+            {addStep === 1 && (
               <VStack spacing={4} align="stretch">
-                <Input
-                  placeholder="方案标题（选填）"
-                  value={aiForm.title}
-                  onChange={e => setAiForm({ ...aiForm, title: e.target.value })}
-                  bg="gray.700"
-                  borderColor="gray.600"
-                  _placeholder={{ color: 'gray.500' }}
-                />
-                <Textarea
-                  placeholder="约会场景描述，例如：想和女生去一家有氛围的餐厅吃饭，她是上海人，喜欢粤菜，预算1000元左右"
-                  value={aiForm.scene}
-                  onChange={e => setAiForm({ ...aiForm, scene: e.target.value })}
-                  bg="gray.700"
-                  borderColor="gray.600"
-                  _placeholder={{ color: 'gray.500' }}
-                  rows={4}
-                />
-                <HStack>
-                  <Input
-                    placeholder="预算，如：1000元左右"
-                    value={aiForm.budget}
-                    onChange={e => setAiForm({ ...aiForm, budget: e.target.value })}
-                    bg="gray.700"
-                    borderColor="gray.600"
-                    _placeholder={{ color: 'gray.500' }}
-                  />
-                  <Select
-                    placeholder="时长"
-                    value={aiForm.duration}
-                    onChange={e => setAiForm({ ...aiForm, duration: e.target.value })}
-                    bg="gray.700"
-                    borderColor="gray.600"
-                    w="140px"
+                <Text color="gray.400" textAlign="center" mb={2}>选择创建方式</Text>
+                <HStack spacing={4}>
+                  <Card
+                    flex={1}
+                    cursor="pointer"
+                    bg={addMode === 'ai' ? 'rgba(0,212,170,0.15)' : 'gray.750'}
+                    border="2px solid"
+                    borderColor={addMode === 'ai' ? 'brand.500' : 'gray.600'}
+                    onClick={() => setAddMode('ai')}
+                    _hover={{ borderColor: 'brand.400' }}
+                    transition="all 0.2s"
                   >
-                    <option value="2小时内">2小时内</option>
-                    <option value="半天">半天</option>
-                    <option value="一天">一天</option>
-                    <option value="多天">多天</option>
-                  </Select>
+                    <CardBody textAlign="center" py={8}>
+                      <Box fontSize="40px" mb={3}>✨</Box>
+                      <Text color={addMode === 'ai' ? 'brand.400' : 'gray.300'} fontWeight="bold" fontSize="lg">AI 智能策划</Text>
+                      <Text color="gray.500" fontSize="sm" mt={1}>描述场景，AI 定制专属方案</Text>
+                    </CardBody>
+                  </Card>
+                  <Card
+                    flex={1}
+                    cursor="pointer"
+                    bg={addMode === 'manual' ? 'rgba(0,212,170,0.15)' : 'gray.750'}
+                    border="2px solid"
+                    borderColor={addMode === 'manual' ? 'brand.500' : 'gray.600'}
+                    onClick={() => setAddMode('manual')}
+                    _hover={{ borderColor: 'brand.400' }}
+                    transition="all 0.2s"
+                  >
+                    <CardBody textAlign="center" py={8}>
+                      <Box fontSize="40px" mb={3}>📝</Box>
+                      <Text color={addMode === 'manual' ? 'brand.400' : 'gray.300'} fontWeight="bold" fontSize="lg">手动创建</Text>
+                      <Text color="gray.500" fontSize="sm" mt={1}>自己填写约会信息</Text>
+                    </CardBody>
+                  </Card>
                 </HStack>
                 <Button
                   colorScheme="brand"
-                  leftIcon={<SparklesIcon />}
-                  onClick={() => {
-                    if (!aiForm.scene) {
-                      toast({ title: '请填写约会场景', status: 'warning' });
-                      return;
-                    }
-                    setGenerating(true);
-                    setShowAddModal(false);
-                    generateAiPlan();
-                  }}
-                  isLoading={generating}
-                  loadingText="AI 策划中..."
+                  size="lg"
+                  mt={4}
+                  onClick={() => setAddStep(2)}
                 >
-                  开始生成
+                  下一步
                 </Button>
               </VStack>
-            ) : (
-              /* 手动填写表单 */
+            )}
+
+            {/* Step 2: 选择女生 */}
+            {addStep === 2 && (
               <VStack spacing={4} align="stretch">
-                <FormControl>
-                  <FormLabel color="gray.400" fontSize="sm">约会标题</FormLabel>
-                  <Input
-                    placeholder="如：周末约会"
-                    value={manualForm.title}
-                    onChange={e => setManualForm({ ...manualForm, title: e.target.value })}
-                    bg="gray.700"
-                    borderColor="gray.600"
-                  />
-                </FormControl>
-                <FormControl isRequired>
-                  <FormLabel color="gray.400" fontSize="sm">约会对象</FormLabel>
-                  <Select
-                    placeholder="选择女生"
-                    value={manualForm.girlId}
-                    onChange={e => setManualForm({ ...manualForm, girlId: e.target.value })}
-                    bg="gray.700"
-                    borderColor="gray.600"
+                <Text color="gray.400" textAlign="center" mb={2}>选择约会对象</Text>
+                <VStack spacing={3} align="stretch" maxH="300px" overflowY="auto">
+                  {girlList.length === 0 ? (
+                    <Text color="gray.500" textAlign="center" py={8}>暂无比心仪的女生</Text>
+                  ) : girlList.map(girl => (
+                    <Card
+                      key={girl.id}
+                      cursor="pointer"
+                      bg={selectedGirlForDate?.id === girl.id ? 'rgba(0,212,170,0.15)' : 'gray.750'}
+                      border="2px solid"
+                      borderColor={selectedGirlForDate?.id === girl.id ? 'brand.500' : 'gray.600'}
+                      onClick={() => setSelectedGirlForDate(girl)}
+                      _hover={{ borderColor: 'brand.400' }}
+                      transition="all 0.2s"
+                    >
+                      <CardBody py={3} px={4}>
+                        <HStack spacing={3}>
+                          <Avatar size="md" name={girl.name} src={getAvatar(girl)} />
+                          <Box flex={1}>
+                            <Text color="white" fontWeight="bold">{girl.name}</Text>
+                            <HStack spacing={2} mt={1}>
+                              {girl.age && <Text color="gray.400" fontSize="xs">{girl.age}岁</Text>}
+                              {girl.occupation && <Text color="gray.500" fontSize="xs">· {girl.occupation}</Text>}
+                            </HStack>
+                          </Box>
+                          {selectedGirlForDate?.id === girl.id && (
+                            <Box color="brand.400" fontSize="20px">✓</Box>
+                          )}
+                        </HStack>
+                      </CardBody>
+                    </Card>
+                  ))}
+                </VStack>
+                <HStack mt={4}>
+                  <Button variant="outline" colorScheme="gray" onClick={() => setAddStep(1)}>上一步</Button>
+                  <Button
+                    colorScheme="brand"
+                    flex={1}
+                    isDisabled={!selectedGirlForDate}
+                    onClick={() => setAddStep(3)}
                   >
-                    {girlsList.map(g => (
-                      <option key={g.id} value={g.id}>{g.name}</option>
-                    ))}
-                  </Select>
-                </FormControl>
-                <FormControl>
-                  <FormLabel color="gray.400" fontSize="sm">约会时间</FormLabel>
-                  <Input
-                    type="datetime-local"
-                    value={manualForm.dateTime}
-                    onChange={e => setManualForm({ ...manualForm, dateTime: e.target.value })}
-                    bg="gray.700"
-                    borderColor="gray.600"
-                  />
-                </FormControl>
-                <FormControl>
-                  <FormLabel color="gray.400" fontSize="sm">地点</FormLabel>
-                  <Input
-                    placeholder="约会地点"
-                    value={manualForm.location}
-                    onChange={e => setManualForm({ ...manualForm, location: e.target.value })}
-                    bg="gray.700"
-                    borderColor="gray.600"
-                  />
-                </FormControl>
-                <FormControl>
-                  <FormLabel color="gray.400" fontSize="sm">备注</FormLabel>
-                  <Textarea
-                    placeholder="备注信息（选填）"
-                    value={manualForm.notes}
-                    onChange={e => setManualForm({ ...manualForm, notes: e.target.value })}
-                    bg="gray.700"
-                    borderColor="gray.600"
-                    rows={2}
-                  />
-                </FormControl>
-                <Button
-                  colorScheme="brand"
-                  leftIcon={<CalendarIcon />}
-                  onClick={handleManualSubmit}
-                  isLoading={manualSubmitting}
-                >
-                  添加约会
-                </Button>
+                    下一步
+                  </Button>
+                </HStack>
+              </VStack>
+            )}
+
+            {/* Step 3: 填写信息 */}
+            {addStep === 3 && (
+              <VStack spacing={4} align="stretch">
+                {/* 已选女生提示 */}
+                {selectedGirlForDate && (
+                  <HStack bg="gray.750" p={3} borderRadius="md">
+                    <Avatar size="sm" name={selectedGirlForDate.name} src={getAvatar(selectedGirlForDate)} />
+                    <Text color="white">与 {selectedGirlForDate.name} 的约会</Text>
+                  </HStack>
+                )}
+
+                {addMode === 'ai' ? (
+                  /* AI 生成表单 */
+                  <VStack spacing={4} align="stretch">
+                    <Input
+                      placeholder="方案标题（选填）"
+                      value={aiForm.title}
+                      onChange={e => setAiForm({ ...aiForm, title: e.target.value })}
+                      bg="gray.700"
+                      borderColor="gray.600"
+                      _placeholder={{ color: 'gray.500' }}
+                    />
+                    <Textarea
+                      placeholder="约会场景描述，例如：想和女生去一家有氛围的餐厅吃饭，她喜欢粤菜，预算1000元左右"
+                      value={aiForm.scene}
+                      onChange={e => setAiForm({ ...aiForm, scene: e.target.value })}
+                      bg="gray.700"
+                      borderColor="gray.600"
+                      _placeholder={{ color: 'gray.500' }}
+                      rows={4}
+                    />
+                    <HStack>
+                      <Input
+                        placeholder="预算，如：1000元左右"
+                        value={aiForm.budget}
+                        onChange={e => setAiForm({ ...aiForm, budget: e.target.value })}
+                        bg="gray.700"
+                        borderColor="gray.600"
+                        _placeholder={{ color: 'gray.500' }}
+                      />
+                      <Select
+                        placeholder="时长"
+                        value={aiForm.duration}
+                        onChange={e => setAiForm({ ...aiForm, duration: e.target.value })}
+                        bg="gray.700"
+                        borderColor="gray.600"
+                        w="140px"
+                      >
+                        <option value="2小时内">2小时内</option>
+                        <option value="半天">半天</option>
+                        <option value="一天">一天</option>
+                        <option value="多天">多天</option>
+                      </Select>
+                    </HStack>
+                    <Button
+                      colorScheme="brand"
+                      leftIcon={<SparklesIcon />}
+                      size="lg"
+                      onClick={() => {
+                        if (!aiForm.scene) {
+                          toast({ title: '请填写约会场景', status: 'warning' });
+                          return;
+                        }
+                        setGenerating(true);
+                        setShowAddModal(false);
+                        setAddStep(1);
+                        setSelectedGirlForDate(null);
+                        generateAiPlan();
+                      }}
+                      isLoading={generating}
+                      loadingText="AI 策划中..."
+                    >
+                      开始生成
+                    </Button>
+                  </VStack>
+                ) : (
+                  /* 手动填写表单 */
+                  <VStack spacing={4} align="stretch">
+                    <FormControl>
+                      <FormLabel color="gray.400" fontSize="sm">约会标题</FormLabel>
+                      <Input
+                        placeholder="如：周末约会"
+                        value={manualForm.title}
+                        onChange={e => setManualForm({ ...manualForm, title: e.target.value })}
+                        bg="gray.700"
+                        borderColor="gray.600"
+                      />
+                    </FormControl>
+                    <FormControl>
+                      <FormLabel color="gray.400" fontSize="sm">约会时间</FormLabel>
+                      <Input
+                        type="datetime-local"
+                        value={manualForm.dateTime}
+                        onChange={e => setManualForm({ ...manualForm, dateTime: e.target.value })}
+                        bg="gray.700"
+                        borderColor="gray.600"
+                      />
+                    </FormControl>
+                    <FormControl>
+                      <FormLabel color="gray.400" fontSize="sm">地点</FormLabel>
+                      <Input
+                        placeholder="约会地点"
+                        value={manualForm.location}
+                        onChange={e => setManualForm({ ...manualForm, location: e.target.value })}
+                        bg="gray.700"
+                        borderColor="gray.600"
+                      />
+                    </FormControl>
+                    <FormControl>
+                      <FormLabel color="gray.400" fontSize="sm">备注</FormLabel>
+                      <Textarea
+                        placeholder="备注信息（选填）"
+                        value={manualForm.notes}
+                        onChange={e => setManualForm({ ...manualForm, notes: e.target.value })}
+                        bg="gray.700"
+                        borderColor="gray.600"
+                        rows={2}
+                      />
+                    </FormControl>
+                    <Button
+                      colorScheme="brand"
+                      leftIcon={<CalendarIcon />}
+                      size="lg"
+                      onClick={() => {
+                        setManualForm(prev => ({ ...prev, girlId: selectedGirlForDate?.id || '' }));
+                        handleManualSubmit();
+                        setShowAddModal(false);
+                        setAddStep(1);
+                        setSelectedGirlForDate(null);
+                      }}
+                      isLoading={manualSubmitting}
+                    >
+                      添加约会
+                    </Button>
+                  </VStack>
+                )}
+                <Button variant="outline" colorScheme="gray" onClick={() => setAddStep(2)}>上一步</Button>
               </VStack>
             )}
           </ModalBody>

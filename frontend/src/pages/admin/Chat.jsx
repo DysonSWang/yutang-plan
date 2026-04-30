@@ -564,7 +564,7 @@ export default function AdminChat() {
                     const prevMsg = idx > 0 ? messages[idx - 1] : null;
                     const timeGap = prevMsg ? (new Date(msg.createdAt) - new Date(prevMsg.createdAt)) / 1000 / 60 : Infinity;
                     const showTime = timeGap > 5;
-                    const isOperator = msg.senderRole === 'operator';
+                    const isOperator = msg.senderRole === 'operator' || msg.senderRole === 'admin';
                     return (
                       <Flex
                         key={msg.id}

@@ -544,28 +544,12 @@ export default function AICoach() {
     );
   }
 
-  return (
-    <Box>
-      <Flex justify="space-between" align="center" mb={6}>
-        <Box>
-          <Heading color="white" size="lg">AI教练</Heading>
-          <Text color="gray.400" fontSize="sm">多轮对话 · 深度分析</Text>
-        </Box>
-        <Button
-          size="sm"
-          variant="ghost"
-          colorScheme="gray"
-          onClick={handleNewConversation}
-          leftIcon={<SparklesIcon />}
-        >
-          新对话
-        </Button>
-      </Flex>
-
-      {/* 顶部：女生选择 + 模式切换 */}
-      <Card bg="gray.800" mb={4}>
-        <CardBody py={3}>
-          <Flex gap={4} wrap="wrap" align="center">
+  // 通用Header组件：女生选择 + 模式切换
+  const CoachHeader = () => (
+    <Card bg="gray.800" mb={4}>
+      <CardBody py={3}>
+        <Flex gap={4} wrap="wrap" align="center" justify="space-between">
+          <Flex gap={4} wrap="wrap" align="center" flex={1}>
             <Select
               value={selectedGirlId}
               onChange={e => setSelectedGirlId(e.target.value)}
@@ -573,8 +557,8 @@ export default function AICoach() {
               border="none"
               color="white"
               flex={1}
-              minW="200px"
-              placeholder="选择女生（可选）"
+              minW="180px"
+              placeholder="关联女生"
               size="sm"
             >
               {girls.map(g => (
@@ -585,7 +569,7 @@ export default function AICoach() {
             </Select>
 
             {/* 深度/快速模式切换 */}
-            <Tooltip label={deepMode ? '深度分析：调用工具，可记录信号' : '快速分析：流式输出，快'}>
+            <Tooltip label={deepMode ? '深度分析：调用工具链，全面分析' : '快速分析：流式输出，快'}>
               <HStack
                 bg={deepMode ? 'purple.900' : 'gray.700'}
                 px={3}
@@ -604,10 +588,7 @@ export default function AICoach() {
                 />
                 <Box>
                   <Text color={deepMode ? 'purple.300' : 'gray.300'} fontSize="xs" fontWeight="bold">
-                    {deepMode ? '深度分析' : '快速分析'}
-                  </Text>
-                  <Text color="gray.500" fontSize="xs">
-                    {deepMode ? '含工具调用' : '流式输出'}
+                    {deepMode ? '深度' : '快速'}
                   </Text>
                 </Box>
               </HStack>
@@ -616,30 +597,44 @@ export default function AICoach() {
 
           {/* 选中女生信息 */}
           {selectedGirl && (
-            <Flex mt={3} justify="space-between" align="center" bg="gray.700" p={2} borderRadius="md">
-              <HStack>
-                <Text color="white" fontWeight="bold">{selectedGirl.name}</Text>
-                <Badge colorScheme={STAGE_COLORS[selectedGirl.stage] || 'gray'}>
+            <HStack
+              bg="gray.700"
+              px={3}
+              py={1}
+              borderRadius="md"
+              spacing={3}
+            >
+              <HStack spacing={2}>
+                <Text color="white" fontWeight="bold" fontSize="sm">{selectedGirl.name}</Text>
+                <Badge colorScheme={STAGE_COLORS[selectedGirl.stage] || 'gray'} fontSize="xs">
                   {selectedGirl.stage || '未知'}
                 </Badge>
-                <Text color="gray.400" fontSize="sm">
-                  热度: {selectedGirl.tensionScore?.toFixed(1) || '5.0'}/10
+              </HStack>
+              <HStack spacing={1}>
+                <Text color="gray.400" fontSize="xs">热度</Text>
+                <Text color={selectedGirl.tensionScore >= 5 ? 'orange.400' : 'blue.400'} fontSize="xs" fontWeight="bold">
+                  {selectedGirl.tensionScore?.toFixed(1) || '5.0'}
                 </Text>
               </HStack>
               <Icon
                 as={selectedGirl.tensionScore >= 5 ? FireIcon : SnowIcon}
                 color={selectedGirl.tensionScore >= 5 ? 'orange.400' : 'blue.400'}
+                boxSize={4}
               />
-            </Flex>
+            </HStack>
           )}
-        </CardBody>
-      </Card>
+        </Flex>
+      </CardBody>
+    </Card>
+  );
 
-      {/* 消息列表 */}
+  // Tab 1: AI教练（多轮对话）
+  const AICoachPanel = () => (
+    <>
+      <CoachHeader />
       <Card bg="gray.800" mb={4} minH="400px">
         <CardBody>
           {messages.length === 0 ? (
-            /* 空状态 - 快速问题 */
             <VStack spacing={4} py={8}>
               <Text color="gray.400" textAlign="center">
                 描述你的情况，AI 教练为你分析
@@ -674,8 +669,6 @@ export default function AICoach() {
                   helpfulId={helpfulId}
                 />
               ))}
-
-              {/* 思考中动画 */}
               {loading && messages[messages.length - 1]?.role === 'user' && (
                 <Flex justify="flex-start" mb={4}>
                   <HStack bg="gray.700" px={4} py={3} borderRadius="2xl" spacing={2}>
@@ -699,11 +692,9 @@ export default function AICoach() {
                   </HStack>
                 </Flex>
               )}
-
               <div ref={messagesEndRef} style={{ height: 1 }} />
             </VStack>
           )}
-
           {error && (
             <Box mt={4} p={3} bg="red.900" borderRadius="md">
               <Text color="red.200">{error}</Text>
@@ -711,45 +702,205 @@ export default function AICoach() {
           )}
         </CardBody>
       </Card>
-
-      {/* 输入框 */}
       <Card bg="gray.800">
         <CardBody>
-          <form onSubmit={handleSubmit}>
-            <Flex gap={2}>
+          <Flex gap={2}>
+            <Textarea
+              ref={textareaRef}
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={deepMode ? '描述当前情况，深度分析会调用工具...' : '描述你的情况...'}
+              bg="gray.700"
+              border="none"
+              color="white"
+              rows={1}
+              _placeholder={{ color: 'gray.400' }}
+              disabled={loading}
+            />
+            <Button
+              type="button"
+              colorScheme="teal"
+              isLoading={loading}
+              disabled={!input.trim()}
+              onClick={handleSubmit}
+              px={6}
+            >
+              发送
+            </Button>
+            <Button
+              variant="ghost"
+              colorScheme="gray"
+              onClick={handleNewConversation}
+              size="sm"
+            >
+              新对话
+            </Button>
+          </Flex>
+        </CardBody>
+      </Card>
+    </>
+  );
+
+  // Tab 2: 回复建议
+  const ReplySuggestionsPanel = () => (
+    <>
+      <CoachHeader />
+      <Card bg="gray.800">
+        <CardBody>
+          <VStack spacing={4} align="stretch">
+            <Box>
+              <Text color="gray.300" fontSize="sm" mb={2}>女生最后一条消息</Text>
               <Textarea
-                ref={textareaRef}
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={deepMode ? '描述当前情况，深度分析会调用工具...' : '描述你的情况...'}
+                value={replyInput}
+                onChange={e => setReplyInput(e.target.value)}
+                placeholder="粘贴女生最近的消息..."
                 bg="gray.700"
                 border="none"
                 color="white"
-                rows={1}
+                rows={3}
                 _placeholder={{ color: 'gray.400' }}
-                disabled={loading}
               />
-              <Button
-                type="submit"
-                colorScheme="teal"
-                isLoading={loading}
-                disabled={!input.trim()}
-                px={6}
-              >
-                发送
-              </Button>
-            </Flex>
-          </form>
-          <Text fontSize="xs" color="gray.500" mt={2} textAlign="center">
-            Enter 发送 · Shift+Enter 换行
-          </Text>
+            </Box>
+            <Button
+              colorScheme="teal"
+              onClick={handleGetReplySuggestions}
+              isLoading={replyLoading}
+              isDisabled={!replyInput.trim()}
+              leftIcon={<Icon as={BrainIcon} />}
+            >
+              获取回复建议
+            </Button>
+
+            {replySuggestions && (
+              <VStack spacing={3} align="stretch" mt={2}>
+                <Flex justify="space-between" align="center">
+                  <Text color="gray.400" fontSize="sm">
+                    生成 {replySuggestions.options?.length || 0} 个回复方案
+                  </Text>
+                  {replySuggestions.relationshipStageLabel && (
+                    <Badge colorScheme="teal">{replySuggestions.relationshipStageLabel}</Badge>
+                  )}
+                </Flex>
+                {(replySuggestions.options || []).map((opt, idx) => (
+                  <Box key={idx} bg="gray.700" p={4} borderRadius="md">
+                    <Flex justify="space-between" align="center" mb={2}>
+                      <Badge colorScheme={
+                        opt.type === '稳妥型' ? 'blue' :
+                        opt.type === '进攻型' ? 'red' :
+                        opt.type === '调侃型' ? 'orange' : 'gray'
+                      }>
+                        {opt.type}
+                      </Badge>
+                      <Button
+                        size="xs"
+                        variant="ghost"
+                        colorScheme="teal"
+                        onClick={() => copyToClipboard(opt.reply)}
+                      >
+                        复制
+                      </Button>
+                    </Flex>
+                    <Text color="white" mb={2}>{opt.reply}</Text>
+                    <Text color="gray.500" fontSize="xs" mb={1}>{opt.intention}</Text>
+                    {opt.riskNote && opt.riskNote !== '无' && (
+                      <Text color="orange.400" fontSize="xs">⚠️ {opt.riskNote}</Text>
+                    )}
+                  </Box>
+                ))}
+              </VStack>
+            )}
+          </VStack>
         </CardBody>
       </Card>
+    </>
+  );
 
-      {/* AI 工具区 */}
-      <Tabs variant="soft-rounded" colorScheme="teal" mt={6}>
-        <TabList bg="gray.800" borderRadius="md" p={1}>
+  // Tab 3: 话术优化
+  const OptimizeReplyPanel = () => (
+    <>
+      <CoachHeader />
+      <Card bg="gray.800">
+        <CardBody>
+          <VStack spacing={4} align="stretch">
+            <Box>
+              <Text color="gray.300" fontSize="sm" mb={2}>你想说的话</Text>
+              <Textarea
+                value={optimizeInput}
+                onChange={e => setOptimizeInput(e.target.value)}
+                placeholder="输入你想发送的原始消息..."
+                bg="gray.700"
+                border="none"
+                color="white"
+                rows={3}
+                _placeholder={{ color: 'gray.400' }}
+              />
+            </Box>
+            <Input
+              value={optimizeGoal}
+              onChange={e => setOptimizeGoal(e.target.value)}
+              placeholder="优化方向（可选）：更幽默 / 更暧昧 / 更自然"
+              bg="gray.700"
+              border="none"
+              color="white"
+              _placeholder={{ color: 'gray.400' }}
+            />
+            <Button
+              colorScheme="teal"
+              onClick={handleOptimizeReply}
+              isLoading={optimizeLoading}
+              isDisabled={!optimizeInput.trim()}
+              leftIcon={<Icon as={SparklesIcon} />}
+            >
+              优化话术
+            </Button>
+
+            {optimizedReplies && (
+              <VStack spacing={3} align="stretch" mt={2}>
+                <Text color="gray.400" fontSize="sm">
+                  原始：<Text as="span" color="gray.300">{optimizeInput}</Text>
+                </Text>
+                {(optimizedReplies || []).map((opt, idx) => (
+                  <Box key={idx} bg="gray.700" p={4} borderRadius="md">
+                    <Flex justify="space-between" align="center" mb={2}>
+                      <Badge colorScheme="teal">{opt.style}</Badge>
+                      <Button
+                        size="xs"
+                        variant="ghost"
+                        colorScheme="teal"
+                        onClick={() => copyToClipboard(opt.text)}
+                      >
+                        复制
+                      </Button>
+                    </Flex>
+                    <Text color="white" mb={2}>{opt.text}</Text>
+                    <Text color="gray.500" fontSize="xs" mb={1}>{opt.point}</Text>
+                    {opt.riskLevel && opt.riskLevel !== '低' && (
+                      <Badge colorScheme={opt.riskLevel === '高' ? 'red' : 'orange'}>
+                        风险: {opt.riskLevel}
+                      </Badge>
+                    )}
+                  </Box>
+                ))}
+              </VStack>
+            )}
+          </VStack>
+        </CardBody>
+      </Card>
+    </>
+  );
+
+  return (
+    <Box>
+      <Flex justify="space-between" align="center" mb={4}>
+        <Heading color="white" size="lg">AI教练</Heading>
+      </Flex>
+
+      <Tabs variant="soft-rounded" colorScheme="teal">
+        <TabList bg="gray.800" borderRadius="lg" p={1}>
+          <Tab color="gray.400" _selected={{ color: 'white', bg: 'teal.600' }} fontSize="sm">
+            🤖 AI教练
+          </Tab>
           <Tab color="gray.400" _selected={{ color: 'white', bg: 'teal.600' }} fontSize="sm">
             💡 回复建议
           </Tab>
@@ -759,130 +910,14 @@ export default function AICoach() {
         </TabList>
 
         <TabPanels>
-          {/* 回复建议 Tab */}
-          <TabPanel px={0}>
-            <Card bg="gray.800">
-              <CardBody>
-                <Text color="gray.400" fontSize="sm" mb={3}>
-                  输入女生最近的消息，获取多种风格的回复建议
-                </Text>
-                <VStack spacing={3} align="stretch">
-                  <Textarea
-                    value={replyInput}
-                    onChange={e => setReplyInput(e.target.value)}
-                    placeholder="粘贴女生最近的消息..."
-                    bg="gray.700"
-                    border="none"
-                    color="white"
-                    rows={3}
-                    _placeholder={{ color: 'gray.400' }}
-                  />
-                  <Button
-                    colorScheme="teal"
-                    onClick={handleGetReplySuggestions}
-                    isLoading={replyLoading}
-                    isDisabled={!replyInput.trim()}
-                    leftIcon={<Icon as={BrainIcon} />}
-                  >
-                    获取回复建议
-                  </Button>
-
-                  {replySuggestions && (
-                    <VStack spacing={3} align="stretch" mt={4}>
-                      {(replySuggestions.options || []).map((opt, idx) => (
-                        <Box key={idx} bg="gray.700" p={4} borderRadius="md">
-                          <Flex justify="space-between" align="center" mb={2}>
-                            <Badge colorScheme={
-                              opt.type === '稳妥型' ? 'blue' :
-                              opt.type === '进攻型' ? 'red' :
-                              opt.type === '调侃型' ? 'orange' : 'gray'
-                            }>
-                              {opt.type}
-                            </Badge>
-                            <Button
-                              size="xs"
-                              variant="ghost"
-                              colorScheme="teal"
-                              onClick={() => copyToClipboard(opt.reply)}
-                            >
-                              复制
-                            </Button>
-                          </Flex>
-                          <Text color="white" mb={2}>{opt.reply}</Text>
-                          <Text color="gray.500" fontSize="xs">{opt.intention}</Text>
-                        </Box>
-                      ))}
-                    </VStack>
-                  )}
-                </VStack>
-              </CardBody>
-            </Card>
+          <TabPanel px={0} pt={4}>
+            <AICoachPanel />
           </TabPanel>
-
-          {/* 话术优化 Tab */}
-          <TabPanel px={0}>
-            <Card bg="gray.800">
-              <CardBody>
-                <Text color="gray.400" fontSize="sm" mb={3}>
-                  输入你想发送的消息，AI 将帮你优化成更有吸引力的表达
-                </Text>
-                <VStack spacing={3} align="stretch">
-                  <Textarea
-                    value={optimizeInput}
-                    onChange={e => setOptimizeInput(e.target.value)}
-                    placeholder="输入你想发送的原始消息..."
-                    bg="gray.700"
-                    border="none"
-                    color="white"
-                    rows={3}
-                    _placeholder={{ color: 'gray.400' }}
-                  />
-                  <Input
-                    value={optimizeGoal}
-                    onChange={e => setOptimizeGoal(e.target.value)}
-                    placeholder="优化目标（可选）：更幽默/更暧昧/更自然..."
-                    bg="gray.700"
-                    border="none"
-                    color="white"
-                    _placeholder={{ color: 'gray.400' }}
-                  />
-                  <Button
-                    colorScheme="teal"
-                    onClick={handleOptimizeReply}
-                    isLoading={optimizeLoading}
-                    isDisabled={!optimizeInput.trim()}
-                    leftIcon={<Icon as={SparklesIcon} />}
-                  >
-                    优化话术
-                  </Button>
-
-                  {optimizedReplies && (
-                    <VStack spacing={3} align="stretch" mt={4}>
-                      <Text color="gray.400" fontSize="sm" mb={2}>
-                        原始：{optimizeInput}
-                      </Text>
-                      {(optimizedReplies || []).map((opt, idx) => (
-                        <Box key={idx} bg="gray.700" p={4} borderRadius="md">
-                          <Flex justify="space-between" align="center" mb={2}>
-                            <Badge colorScheme="teal">{opt.style}</Badge>
-                            <Button
-                              size="xs"
-                              variant="ghost"
-                              colorScheme="teal"
-                              onClick={() => copyToClipboard(opt.text)}
-                            >
-                              复制
-                            </Button>
-                          </Flex>
-                          <Text color="white" mb={2}>{opt.text}</Text>
-                          <Text color="gray.500" fontSize="xs">{opt.point}</Text>
-                        </Box>
-                      ))}
-                    </VStack>
-                  )}
-                </VStack>
-              </CardBody>
-            </Card>
+          <TabPanel px={0} pt={4}>
+            <ReplySuggestionsPanel />
+          </TabPanel>
+          <TabPanel px={0} pt={4}>
+            <OptimizeReplyPanel />
           </TabPanel>
         </TabPanels>
       </Tabs>

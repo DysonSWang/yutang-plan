@@ -344,3 +344,23 @@ export const CrownIcon = createIcon({
     <path key="2" d="M2 17h20v3H2z" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
   ]
 });
+
+// MapPin 图标
+export const MapPinIcon = createIcon({
+  displayName: 'MapPinIcon',
+  viewBox: '0 0 24 24',
+  path: [
+    <path key="1" d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>,
+    <circle key="2" cx="12" cy="10" r="3" stroke="currentColor" strokeWidth="2" fill="none"/>
+  ]
+});
+
+// Clock 图标
+export const ClockIcon = createIcon({
+  displayName: 'ClockIcon',
+  viewBox: '0 0 24 24',
+  path: [
+    <circle key="1" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none"/>,
+    <polyline key="2" points="12 6 12 12 16 14" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+  ]
+});
