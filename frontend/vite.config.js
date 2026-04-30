@@ -5,6 +5,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 const isProduction = process.env.NODE_ENV === 'production'
 
 export default defineConfig({
+  base: isProduction ? '/app/' : '/',
   plugins: [
     react(),
     VitePWA({
@@ -18,8 +19,8 @@ export default defineConfig({
         background_color: '#0a0f1a',
         display: 'standalone',
         orientation: 'portrait',
-        scope: '/',
-        start_url: '/',
+        scope: '/app/',
+        start_url: '/app/',
         icons: [
           {
             src: '/pwa-192x192.png',
