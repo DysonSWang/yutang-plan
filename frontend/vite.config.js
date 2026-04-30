@@ -5,7 +5,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 const isProduction = process.env.NODE_ENV === 'production'
 
 export default defineConfig({
-  base: isProduction ? '/app/' : '/',
+  base: './',
   plugins: [
     react(),
     VitePWA({
