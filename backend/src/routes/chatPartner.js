@@ -21,6 +21,11 @@ const { GIRL_FIELD_LABELS, CLIENT_FIELD_LABELS } = require('../services/profileE
 const { JWT_SECRET, getAIConfig, getVLModelConfig } = require('../config');
 const prisma = require('../prisma');
 
+const AppError = require('../errors/AppError');
+const { ErrorCodes } = require('../errors/errorCodes');
+const asyncHandler = require('../middleware/asyncHandler');
+const { success } = require('../utils/response');
+
 /**
  * 待审核更新队列（数据库驱动，不再使用内存 Map）
  * 写入：runAsyncFeedbackAnalysis() → PendingProfileUpdate 表
@@ -146,18 +151,13 @@ async function runAsyncFeedbackAnalysis({ girlId, clientId, operatorId, logId, r
   return pending.id;
 }
 
-const authMiddleware = async (req, res, next) => {
+const authMiddleware = asyncHandler(async (req, res) => {
   const authHeader = req.headers.authorization;
   const token = authHeader?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: '未登录' });
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch {
-    res.status(401).json({ error: 'token无效' });
-  }
-};
+  if (!token) throw new AppError(ErrorCodes.AUTH_TOKEN_MISSING);
+  const decoded = jwt.verify(token, JWT_SECRET);
+  req.user = decoded;
+});
 
 function getTensionEmoji(score) {
   if (score >= 8) return '🔥🔥🔥';
@@ -176,36 +176,35 @@ function getTensionEmoji(score) {
  * - 基于女生性格、关系阶段给出定制化优化
  * - 返回多条不同风格的优化版本
  */
-router.post('/optimize-message', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
-    }
+router.post('/optimize-message', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
+  }
 
-    const { girlId, myMessage, history = [] } = req.body;
+  const { girlId, myMessage, history = [] } = req.body;
 
-    if (!myMessage) {
-      return res.status(400).json({ error: '消息内容是必需的' });
-    }
+  if (!myMessage) {
+    throw new AppError(ErrorCodes.VALIDATION_ERROR);
+  }
 
-    const context = girlId
-      ? await buildAICoachContext(req.user.id, girlId)
-      : { girlInfo: null, recentSignals: [], pendingActions: [], observations: [], conversationSummary: '' };
+  const context = girlId
+    ? await buildAICoachContext(req.user.id, girlId)
+    : { girlInfo: null, recentSignals: [], pendingActions: [], observations: [], conversationSummary: '' };
 
-    const { girlInfo, recentSignals, pendingActions, observations, conversationSummary } = context;
+  const { girlInfo, recentSignals, pendingActions, observations, conversationSummary } = context;
 
-    let personality = {};
-    if (girlInfo?.personality) {
-      try { personality = girlInfo.personality; } catch (e) { console.warn('[ChatPartner] personality 赋值失败:', e.message); }
-    }
+  let personality = {};
+  if (girlInfo?.personality) {
+    try { personality = girlInfo.personality; } catch (e) { console.warn('[ChatPartner] personality 赋值失败:', e.message); }
+  }
 
-    const stage = girlInfo?.stage || '聊天';
-    const historyString = history.slice(-10).map(m => {
-      const role = m.role === 'user' ? '我（客户）' : (girlInfo?.name || '女生');
-      return `${role}: ${m.content}`;
-    }).join('\n');
+  const stage = girlInfo?.stage || '聊天';
+  const historyString = history.slice(-10).map(m => {
+    const role = m.role === 'user' ? '我（客户）' : (girlInfo?.name || '女生');
+    return `${role}: ${m.content}`;
+  }).join('\n');
 
-    const systemPrompt = `你是童锦程，两性关系专家，情感老中医。你的风格：接地气，有温度，懂人心，有经验，真诚自然，不油腔滑调，不套路撩骚。
+  const systemPrompt = `你是童锦程，两性关系专家，情感老中医。你的风格：接地气，有温度，懂人心，有经验，真诚自然，不油腔滑调，不套路撩骚。
 
 你是一个专业的话术优化专家。你擅长把平淡或生硬的回复优化成有温度、有情商、有吸引力的聊天内容。
 
@@ -268,56 +267,50 @@ ${historyString || '（暂无历史记录）'}
 
 只输出 JSON，不要其他内容。优化版本要15-30字，不要超过30字。`;
 
-    const aiConfig = getAIConfig();
-    const response = await fetch(aiConfig.url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${aiConfig.key}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: aiConfig.model,
-        messages: [
-          { role: 'user', content: systemPrompt }
-        ],
-        temperature: 0.8,
-        max_tokens: 1200
-      })
-    });
-
-    const data = await response.json();
-    const aiContent = data.choices?.[0]?.message?.content || '';
-
-    let result;
-    try {
-      const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        result = JSON.parse(jsonMatch[0]);
-      }
-    } catch (e) {
-      console.warn('[ChatPartner] 话术优化返回非 JSON 格式');
-    }
-
-    res.json({
-      success: true,
-      girlId: girlId || null,
-      original: result?.original || myMessage,
-      optimizations: result?.optimizations || [
-        { text: myMessage, point: '暂无优化建议', style: '原版' }
+  const aiConfig = getAIConfig();
+  const response = await fetch(aiConfig.url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${aiConfig.key}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: aiConfig.model,
+      messages: [
+        { role: 'user', content: systemPrompt }
       ],
-      context: {
-        stage,
-        tensionScore: girlInfo?.tensionScore || 5,
-        intimacyLevel: girlInfo?.intimacyLevel || 1,
-        personalityMatch: personality.mbti ? `${personality.mbti} · ${personality.communicationStyle || '未知风格'}` : '未知'
-      }
-    });
+      temperature: 0.8,
+      max_tokens: 1200
+    })
+  });
 
-  } catch (error) {
-    console.error('[ChatPartner] 话术优化失败:', error);
-    res.status(500).json({ error: '话术优化失败' });
+  const data = await response.json();
+  const aiContent = data.choices?.[0]?.message?.content || '';
+
+  let result;
+  try {
+    const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      result = JSON.parse(jsonMatch[0]);
+    }
+  } catch (e) {
+    console.warn('[ChatPartner] 话术优化返回非 JSON 格式');
   }
-});
+
+  return success(res, {
+    girlId: girlId || null,
+    original: result?.original || myMessage,
+    optimizations: result?.optimizations || [
+      { text: myMessage, point: '暂无优化建议', style: '原版' }
+    ],
+    context: {
+      stage,
+      tensionScore: girlInfo?.tensionScore || 5,
+      intimacyLevel: girlInfo?.intimacyLevel || 1,
+      personalityMatch: personality.mbti ? `${personality.mbti} · ${personality.communicationStyle || '未知风格'}` : '未知'
+    }
+  });
+}));
 
 /**
  * AI 分析 + 建议回复（实战聊天核心 API）
@@ -328,59 +321,58 @@ ${historyString || '（暂无历史记录）'}
  * - 注入聊天历史（最近10条）
  * - prompt 按关系阶段推荐回复风格
  */
-router.post('/analyze', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
-    }
+router.post('/analyze', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
+  }
 
-    const { girlId, message, history = [], operatorNotes } = req.body;
+  const { girlId, message, history = [], operatorNotes } = req.body;
 
-    if (!message) {
-      return res.status(400).json({ error: '消息内容是必需的' });
-    }
+  if (!message) {
+    throw new AppError(ErrorCodes.VALIDATION_ERROR);
+  }
 
-    // 使用 contextBuilder 构建完整上下文
-    const context = girlId
-      ? await buildAICoachContext(req.user.id, girlId)
-      : { girlInfo: null, recentSignals: [], pendingActions: [], observations: [], conversationSummary: '' };
+  // 使用 contextBuilder 构建完整上下文
+  const context = girlId
+    ? await buildAICoachContext(req.user.id, girlId)
+    : { girlInfo: null, recentSignals: [], pendingActions: [], observations: [], conversationSummary: '' };
 
-    const { girlInfo, recentSignals, pendingActions, observations, conversationSummary } = context;
+  const { girlInfo, recentSignals, pendingActions, observations, conversationSummary } = context;
 
-    // 解析 personality
-    let personality = {};
-    if (girlInfo?.personality) {
-      try { personality = girlInfo.personality; } catch (e) { console.warn('[ChatPartner] personality 赋值失败:', e.message); }
-    }
+  // 解析 personality
+  let personality = {};
+  if (girlInfo?.personality) {
+    try { personality = girlInfo.personality; } catch (e) { console.warn('[ChatPartner] personality 赋值失败:', e.message); }
+  }
 
-    // 聊天历史（最近10条）
-    const historyString = history.slice(-10).map(m => {
-      const role = m.role === 'user' ? '我（客户）' : (girlInfo?.name || '女生');
-      return `${role}: ${m.content}`;
-    }).join('\n');
+  // 聊天历史（最近10条）
+  const historyString = history.slice(-10).map(m => {
+    const role = m.role === 'user' ? '我（客户）' : (girlInfo?.name || '女生');
+    return `${role}: ${m.content}`;
+  }).join('\n');
 
-    // 近期信号
-    const signalsText = recentSignals.length > 0
-      ? recentSignals.map(s => {
+  // 近期信号
+  const signalsText = recentSignals.length > 0
+    ? recentSignals.map(s => {
           const icon = s.type === 'positive' ? '[+]' : s.type === 'negative' ? '[-]' : '[*]';
           return `${icon} ${s.event} — ${s.date}`;
         }).join('\n')
       : '暂无';
 
-    // 根据关系阶段决定默认风格
-    const stage = girlInfo?.stage || '聊天';
-    const stageStyleMap = {
-      '陌生': ['稳妥型', '破冰型', '探索型'],
-      '搭讪': ['稳妥型', '自然型', '幽默型'],
-      '聊天': ['稳妥型', '进攻型', '调侃型'],
-      '暧昧': ['进攻型', '暧昧型', '试探型'],
-      '约会': ['浪漫型', '推进型', '调侃型'],
-      '长期': ['陪伴型', '关心型', '默契型'],
-    };
-    const defaultStyles = stageStyleMap[stage] || ['稳妥型', '进攻型', '调侃型'];
+  // 根据关系阶段决定默认风格
+  const stage = girlInfo?.stage || '聊天';
+  const stageStyleMap = {
+    '陌生': ['稳妥型', '破冰型', '探索型'],
+    '搭讪': ['稳妥型', '自然型', '幽默型'],
+    '聊天': ['稳妥型', '进攻型', '调侃型'],
+    '暧昧': ['进攻型', '暧昧型', '试探型'],
+    '约会': ['浪漫型', '推进型', '调侃型'],
+    '长期': ['陪伴型', '关心型', '默契型'],
+  };
+  const defaultStyles = stageStyleMap[stage] || ['稳妥型', '进攻型', '调侃型'];
 
-    // 构建提示词
-    const systemPrompt = `你是童锦程，两性关系专家，情感老中医。你的风格：接地气，有温度，懂人心，有经验，真诚自然，不油腔滑调，不套路撩骚。
+  // 构建提示词
+  const systemPrompt = `你是童锦程，两性关系专家，情感老中医。你的风格：接地气，有温度，懂人心，有经验，真诚自然，不油腔滑调，不套路撩骚。
 
 分析女生刚刚发来的消息，结合她的完整档案，给出专业分析和高情商回复建议。
 
@@ -464,106 +456,100 @@ ${operatorNotes || '无'}
 
 只输出 JSON，不要其他内容。`;
 
-    // 并行执行：AI 回复建议 + 档案字段提取（一次 fetch，复用结果）
-    const aiConfig = getAIConfig();
-    const [replyResult, profileResult] = await Promise.allSettled([
-      // AI 回复建议
-      fetch(aiConfig.url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${aiConfig.key}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: aiConfig.model,
-          messages: [
-            { role: 'user', content: systemPrompt }
-          ],
-          temperature: 0.8,
-          max_tokens: 1500
-        })
-      }),
-      // 档案字段提取（女生 + 客户）
-      Promise.all([
-        girlId ? extractGirlFromChat(girlId, req.user.id, message, { history, pendingActions, observations, conversationSummary }) : Promise.resolve(null),
-        clientId ? extractClientFromChat(clientId, req.user.id, message, { recentMessages: history }) : Promise.resolve(null)
-      ])
-    ]);
+  // 并行执行：AI 回复建议 + 档案字段提取（一次 fetch，复用结果）
+  const aiConfig = getAIConfig();
+  const [replyResult, profileResult] = await Promise.allSettled([
+    // AI 回复建议
+    fetch(aiConfig.url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${aiConfig.key}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: aiConfig.model,
+        messages: [
+          { role: 'user', content: systemPrompt }
+        ],
+        temperature: 0.8,
+        max_tokens: 1500
+      })
+    }),
+    // 档案字段提取（女生 + 客户）
+    Promise.all([
+      girlId ? extractGirlFromChat(girlId, req.user.id, message, { history, pendingActions, observations, conversationSummary }) : Promise.resolve(null),
+      clientId ? extractClientFromChat(clientId, req.user.id, message, { recentMessages: history }) : Promise.resolve(null)
+    ])
+  ]);
 
-    // 解析回复建议
-    let replySuggestions = [
-      { text: '嗯嗯，我在呢~', style: defaultStyles[0], intention: '维持联系' },
-      { text: '想我啦？', style: defaultStyles[1], intention: '制造暧昧' },
-      { text: '怎么突然找我呀？', style: defaultStyles[2], intention: '试探对方' }
-    ];
-    let replyAnalysis = '分析中...';
+  // 解析回复建议
+  let replySuggestions = [
+    { text: '嗯嗯，我在呢~', style: defaultStyles[0], intention: '维持联系' },
+    { text: '想我啦？', style: defaultStyles[1], intention: '制造暧昧' },
+    { text: '怎么突然找我呀？', style: defaultStyles[2], intention: '试探对方' }
+  ];
+  let replyAnalysis = '分析中...';
 
-    if (replyResult.status === 'fulfilled' && replyResult.value.ok) {
-      const replyData = await replyResult.value.json();
-      const aiContent = replyData.choices?.[0]?.message?.content || '';
-      try {
-        const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          replyAnalysis = parsed.analysis || replyAnalysis;
-          replySuggestions = parsed.suggestions || replySuggestions;
-          // 新字段
-          if (parsed.intent) context.intent = parsed.intent;
-          if (parsed.emotion) context.emotion = parsed.emotion;
-          if (parsed.subtext) context.subtext = parsed.subtext;
-          if (parsed.riskWarning) context.riskWarning = parsed.riskWarning;
-          if (parsed.timingAdvice) context.timingAdvice = parsed.timingAdvice;
-        }
-      } catch (e) { console.warn('[ChatPartner] replyAnalysis JSON 解析失败:', e.message); }
-    }
-
-    // 解析档案提取结果（女生 + 客户）
-    let pendingFields = {};
-    let profilePendingId = null;
-    let clientPendingFields = {};
-    let clientProfilePendingId = null;
-    if (profileResult.status === 'fulfilled' && profileResult.value) {
-      if (Array.isArray(profileResult.value)) {
-        // [girlResult, clientResult]
-        const [girlResult, clientResult] = profileResult.value;
-        if (girlResult) {
-          pendingFields = girlResult.pendingFields || {};
-          profilePendingId = girlResult.pendingId;
-        }
-        if (clientResult) {
-          clientPendingFields = clientResult.pendingFields || {};
-          clientProfilePendingId = clientResult.pendingId;
-        }
-      } else {
-        pendingFields = profileResult.value.pendingFields || {};
-        profilePendingId = profileResult.value.pendingId;
+  if (replyResult.status === 'fulfilled' && replyResult.value.ok) {
+    const replyData = await replyResult.value.json();
+    const aiContent = replyData.choices?.[0]?.message?.content || '';
+    try {
+      const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        replyAnalysis = parsed.analysis || replyAnalysis;
+        replySuggestions = parsed.suggestions || replySuggestions;
+        // 新字段
+        if (parsed.intent) context.intent = parsed.intent;
+        if (parsed.emotion) context.emotion = parsed.emotion;
+        if (parsed.subtext) context.subtext = parsed.subtext;
+        if (parsed.riskWarning) context.riskWarning = parsed.riskWarning;
+        if (parsed.timingAdvice) context.timingAdvice = parsed.timingAdvice;
       }
-    }
-
-    res.json({
-      success: true,
-      girlId: girlId || null,
-      analysis: replyAnalysis,
-      suggestions: replySuggestions,
-      profilePendingId,  // 女生档案待确认 ID
-      pendingFields,     // 女生待确认档案字段 { fieldKey: { label, value } }
-      fieldLabels: GIRL_FIELD_LABELS,
-      clientProfilePendingId, // 客户档案待确认 ID
-      clientPendingFields,    // 客户待确认档案字段
-      clientFieldLabels: CLIENT_FIELD_LABELS,
-      context: {
-        stage,
-        tensionScore: girlInfo?.tensionScore || 5,
-        intimacyLevel: girlInfo?.intimacyLevel || 1,
-        signalCount: recentSignals.length
-      }
-    });
-
-  } catch (error) {
-    console.error('[ChatPartner] 分析失败:', error);
-    res.status(500).json({ error: '分析失败' });
+    } catch (e) { console.warn('[ChatPartner] replyAnalysis JSON 解析失败:', e.message); }
   }
-});
+
+  // 解析档案提取结果（女生 + 客户）
+  let pendingFields = {};
+  let profilePendingId = null;
+  let clientPendingFields = {};
+  let clientProfilePendingId = null;
+  if (profileResult.status === 'fulfilled' && profileResult.value) {
+    if (Array.isArray(profileResult.value)) {
+      // [girlResult, clientResult]
+      const [girlResult, clientResult] = profileResult.value;
+      if (girlResult) {
+        pendingFields = girlResult.pendingFields || {};
+        profilePendingId = girlResult.pendingId;
+      }
+      if (clientResult) {
+        clientPendingFields = clientResult.pendingFields || {};
+        clientProfilePendingId = clientResult.pendingId;
+      }
+    } else {
+      pendingFields = profileResult.value.pendingFields || {};
+      profilePendingId = profileResult.value.pendingId;
+    }
+  }
+
+  return success(res, {
+    girlId: girlId || null,
+    analysis: replyAnalysis,
+    suggestions: replySuggestions,
+    profilePendingId,  // 女生档案待确认 ID
+    pendingFields,     // 女生待确认档案字段 { fieldKey: { label, value } }
+    fieldLabels: GIRL_FIELD_LABELS,
+    clientProfilePendingId, // 客户档案待确认 ID
+    clientPendingFields,    // 客户待确认档案字段
+    clientFieldLabels: CLIENT_FIELD_LABELS,
+    context: {
+      stage,
+      tensionScore: girlInfo?.tensionScore || 5,
+      intimacyLevel: girlInfo?.intimacyLevel || 1,
+      signalCount: recentSignals.length
+    }
+  });
+}));
 
 /**
  * 采纳建议后的反馈闭环（异步版本）
@@ -575,274 +561,179 @@ ${operatorNotes || '无'}
  * 3. 结果写入 pendingUpdates 队列，不直接更新女生档案
  * 4. 前端轮询获取待审核更新，操盘手确认后再写入
  */
-router.post('/feedback', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
-    }
+router.post('/feedback', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
+  }
 
-    const { girlId, receiverName, chosenReply, originalGirlMessage, style, intention,
-      profilePendingId, selectedProfileFields } = req.body;
+  const { girlId, receiverName, chosenReply, originalGirlMessage, style, intention,
+    profilePendingId, selectedProfileFields } = req.body;
 
-    if (!girlId || !chosenReply) {
-      return res.status(400).json({ error: '参数不完整' });
-    }
+  if (!girlId || !chosenReply) {
+    throw new AppError(ErrorCodes.VALIDATION_ERROR);
+  }
 
-    // 安全：从女生记录获取 clientId，防止操作不属于自己的客户数据
-    const girl = await prisma.girl.findUnique({ where: { id: girlId } });
-    if (!girl) {
-      return res.status(404).json({ error: '女生不存在' });
-    }
-    // 客户端只能操作自己的女生
-    if (req.user.role === 'client' && girl.clientId !== req.user.id) {
-      return res.status(403).json({ error: '无权限' });
-    }
-    const clientId = girl.clientId;
+  // 安全：从女生记录获取 clientId，防止操作不属于自己的客户数据
+  const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+  if (!girl) {
+    throw new AppError(ErrorCodes.GIRL_NOT_FOUND);
+  }
+  // 客户端只能操作自己的女生
+  if (req.user.role === 'client' && girl.clientId !== req.user.id) {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
+  }
+  const clientId = girl.clientId;
 
-    // 1. 同步保存到代聊记录
-    const log = await prisma.chatLog.create({
-      data: {
-        girlId,
-        clientId,
-        operatorId: req.user.id,
-        receiverName: receiverName || '女生',
-        content: chosenReply,
-        aiAdopted: true,
-        aiAnalysis: originalGirlMessage ? `女生原文: ${originalGirlMessage}` : null
-      }
-    });
-
-    // 2. 异步执行反馈分析（不等待，写入 pendingUpdates）
-    const updateId = await runAsyncFeedbackAnalysis({
+  // 1. 同步保存到代聊记录
+  const log = await prisma.chatLog.create({
+    data: {
       girlId,
       clientId,
       operatorId: req.user.id,
-      logId: log.id,
-      replyText: chosenReply,
-      originalGirlMessage,
-      style: style || '建议',
-      intention: intention || ''
-    });
-
-    // 3. 处理档案字段确认（女生 + 客户）
-    let profileConfirmResult = null;
-    let clientProfileConfirmResult = null;
-    if (profilePendingId) {
-      try {
-        const { confirmProfileUpdate } = require('../services/girlProfileExtractor');
-        const fieldsToApply = selectedProfileFields === undefined ? {} : selectedProfileFields;
-        profileConfirmResult = await confirmProfileUpdate(girlId, profilePendingId, fieldsToApply);
-      } catch (e) {
-        console.warn('[ChatPartner] 女生档案确认失败:', e.message);
-      }
+      receiverName: receiverName || '女生',
+      content: chosenReply,
+      aiAdopted: true,
+      aiAnalysis: originalGirlMessage ? `女生原文: ${originalGirlMessage}` : null
     }
-    // 同时确认客户档案更新
-    const { clientProfilePendingId, clientSelectedProfileFields } = req.body;
-    if (clientProfilePendingId) {
-      try {
-        const { confirmProfileUpdate } = require('../services/clientProfileExtractor');
-        const fieldsToApply = clientSelectedProfileFields === undefined ? {} : clientSelectedProfileFields;
-        clientProfileConfirmResult = await confirmProfileUpdate(clientId, clientProfilePendingId, fieldsToApply);
-      } catch (e) {
-        console.warn('[ChatPartner] 客户档案确认失败:', e.message);
-      }
+  });
+
+  // 2. 异步执行反馈分析（不等待，写入 pendingUpdates）
+  const updateId = await runAsyncFeedbackAnalysis({
+    girlId,
+    clientId,
+    operatorId: req.user.id,
+    logId: log.id,
+    replyText: chosenReply,
+    originalGirlMessage,
+    style: style || '建议',
+    intention: intention || ''
+  });
+
+  // 3. 处理档案字段确认（女生 + 客户）
+  let profileConfirmResult = null;
+  let clientProfileConfirmResult = null;
+  if (profilePendingId) {
+    try {
+      const { confirmProfileUpdate } = require('../services/girlProfileExtractor');
+      const fieldsToApply = selectedProfileFields === undefined ? {} : selectedProfileFields;
+      profileConfirmResult = await confirmProfileUpdate(girlId, profilePendingId, fieldsToApply);
+    } catch (e) {
+      console.warn('[ChatPartner] 女生档案确认失败:', e.message);
     }
-
-    res.json({
-      success: true,
-      logId: log.id,
-      feedbackId: updateId,
-      profileConfirm: profileConfirmResult,
-      clientProfileConfirm: clientProfileConfirmResult,
-      status: 'pending_review'
-    });
-
-  } catch (error) {
-    console.error('[ChatPartner] 反馈保存失败:', error);
-    res.status(500).json({ error: '反馈保存失败' });
   }
-});
+  // 同时确认客户档案更新
+  const { clientProfilePendingId, clientSelectedProfileFields } = req.body;
+  if (clientProfilePendingId) {
+    try {
+      const { confirmProfileUpdate } = require('../services/clientProfileExtractor');
+      const fieldsToApply = clientSelectedProfileFields === undefined ? {} : clientSelectedProfileFields;
+      clientProfileConfirmResult = await confirmProfileUpdate(clientId, clientProfilePendingId, fieldsToApply);
+    } catch (e) {
+      console.warn('[ChatPartner] 客户档案确认失败:', e.message);
+    }
+  }
+
+  return success(res, {
+    logId: log.id,
+    feedbackId: updateId,
+    profileConfirm: profileConfirmResult,
+    clientProfileConfirm: clientProfileConfirmResult,
+    status: 'pending_review'
+  });
+}));
 
 /**
  * 获取女生的待审核更新
  * GET /api/chat-partner/pending-updates/:girlId
  */
-router.get('/pending-updates/:girlId', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
-    }
-
-    const { girlId } = req.params;
-
-    // 安全：操盘手只能访问自己负责的客户的女生
-    if (req.user.role === 'operator') {
-      const girl = await prisma.girl.findUnique({ where: { id: girlId } });
-      if (!girl) return res.status(404).json({ error: '女生不存在' });
-      const session = await prisma.chatSession.findFirst({
-        where: { operatorId: req.user.id, clientId: girl.clientId }
-      });
-      if (!session) return res.status(403).json({ error: '无权限访问此女生数据' });
-    }
-
-    // 从数据库查询待审核记录（包括 chat_feedback 和 chat_analyze 等来源）
-    const pending = await prisma.pendingProfileUpdate.findMany({
-      where: { targetType: 'girl', targetId: girlId, status: 'pending' },
-      orderBy: { createdAt: 'desc' }
-    });
-
-    const updates = pending.map(p => ({
-      id: p.id,
-      operatorId: p.operatorId,
-      source: p.source,
-      createdAt: p.createdAt,
-      status: p.status,
-      analysis: JSON.parse(p.analysisData),
-      profileContext: p.profileContext ? JSON.parse(p.profileContext) : null,
-      adoptedReply: p.adoptedReply,
-      replyStyle: p.replyStyle
-    }));
-
-    // 附带女生当前状态（用于 diff）
-    let currentGirl = null;
-    if (girlId && girlId !== 'null' && girlId !== 'undefined') {
-      try {
-        currentGirl = await prisma.girl.findUnique({
-          where: { id: girlId },
-          select: {
-            tensionScore: true,
-            intimacyLevel: true,
-            stage: true,
-            signals: true
-          }
-        });
-      } catch (e) { console.warn('[ChatPartner] 女生状态查询失败 girlId:', girlId, e.message); }
-    }
-
-    res.json({
-      success: true,
-      updates,
-      currentState: currentGirl ? {
-        tensionScore: currentGirl.tensionScore,
-        intimacyLevel: currentGirl.intimacyLevel,
-        stage: currentGirl.stage,
-        signals: currentGirl.signals || []
-      } : null
-    });
-
-  } catch (error) {
-    console.error('[ChatPartner] 获取待审核更新失败:', error);
-    res.status(500).json({ error: '获取待审核更新失败' });
+router.get('/pending-updates/:girlId', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
   }
-});
+
+  const { girlId } = req.params;
+
+  // 安全：操盘手只能访问自己负责的客户的女生
+  if (req.user.role === 'operator') {
+    const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+    if (!girl) throw new AppError(ErrorCodes.GIRL_NOT_FOUND);
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId: girl.clientId }
+    });
+    if (!session) throw new AppError(ErrorCodes.GIRL_ACCESS_DENIED);
+  }
+
+  // 从数据库查询待审核记录（包括 chat_feedback 和 chat_analyze 等来源）
+  const pending = await prisma.pendingProfileUpdate.findMany({
+    where: { targetType: 'girl', targetId: girlId, status: 'pending' },
+    orderBy: { createdAt: 'desc' }
+  });
+
+  const updates = pending.map(p => ({
+    id: p.id,
+    operatorId: p.operatorId,
+    source: p.source,
+    createdAt: p.createdAt,
+    status: p.status,
+    analysis: JSON.parse(p.analysisData),
+    profileContext: p.profileContext ? JSON.parse(p.profileContext) : null,
+    adoptedReply: p.adoptedReply,
+    replyStyle: p.replyStyle
+  }));
+
+  // 附带女生当前状态（用于 diff）
+  let currentGirl = null;
+  if (girlId && girlId !== 'null' && girlId !== 'undefined') {
+    try {
+      currentGirl = await prisma.girl.findUnique({
+        where: { id: girlId },
+        select: {
+          tensionScore: true,
+          intimacyLevel: true,
+          stage: true,
+          signals: true
+        }
+      });
+    } catch (e) { console.warn('[ChatPartner] 女生状态查询失败 girlId:', girlId, e.message); }
+  }
+
+  return success(res, {
+    updates,
+    currentState: currentGirl ? {
+      tensionScore: currentGirl.tensionScore,
+      intimacyLevel: currentGirl.intimacyLevel,
+      stage: currentGirl.stage,
+      signals: currentGirl.signals || []
+    } : null
+  });
+}));
 
 /**
  * 批量审核待审核更新（全部采纳或全部忽略）
  * POST /api/chat-partner/approve-updates
  */
-router.post('/approve-updates', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
-    }
-
-    const { updateIds, approve } = req.body;
-
-    if (!Array.isArray(updateIds)) {
-      return res.status(400).json({ error: 'updateIds 必须是数组' });
-    }
-
-    const results = [];
-
-    for (const updateId of updateIds) {
-      // 从数据库查找待审核记录
-      const pending = await prisma.pendingProfileUpdate.findFirst({
-        where: { id: updateId, status: 'pending' }
-      });
-
-      if (!pending) {
-        results.push({ updateId, success: false, reason: '未找到或已处理' });
-        continue;
-      }
-
-      // 安全：操盘手只能操作自己负责的客户的更新
-      if (req.user.role === 'operator') {
-        let targetClientId = null;
-        if (pending.targetType === 'girl') {
-          const girl = await prisma.girl.findUnique({ where: { id: pending.targetId } });
-          if (!girl) { results.push({ updateId, success: false, reason: '女生不存在' }); continue; }
-          targetClientId = girl.clientId;
-        } else {
-          targetClientId = pending.targetId;
-        }
-        const session = await prisma.chatSession.findFirst({
-          where: { operatorId: req.user.id, clientId: targetClientId }
-        });
-        if (!session) { results.push({ updateId, success: false, reason: '无权限操作此更新' }); continue; }
-      }
-
-      // 更新数据库状态
-      await prisma.pendingProfileUpdate.update({
-        where: { id: updateId },
-        data: { status: approve ? 'approved' : 'rejected' }
-      });
-
-      if (approve) {
-        const analysis = JSON.parse(pending.analysisData);
-
-        try {
-          if (analysis.fieldChanges?.tensionScore) {
-            await executeTool('update_tension', {
-              girlId: pending.targetId,
-              adjustment: analysis.fieldChanges.tensionScore.delta,
-              reason: `操盘手审核采纳: ${analysis.fieldChanges.tensionScore.reason}`
-            });
-          }
-
-          if (analysis.newSignals?.length > 0) {
-            for (const signal of analysis.newSignals) {
-              await executeTool('add_signal', {
-                girlId: pending.targetId,
-                type: signal.type,
-                event: signal.event
-              });
-            }
-          }
-        } catch (toolError) {
-          console.warn(`[PendingUpdates] apply update ${updateId} failed:`, toolError);
-        }
-      }
-
-      results.push({ updateId, success: true, approved: approve });
-    }
-
-    res.json({ success: true, results });
-
-  } catch (error) {
-    console.error('[ChatPartner] 审核更新失败:', error);
-    res.status(500).json({ error: '审核更新失败' });
+router.post('/approve-updates', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
   }
-});
 
-/**
- * 单独采纳一条待审核更新
- * POST /api/chat-partner/apply-update/:updateId
- */
-router.post('/apply-update/:updateId', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
-    }
+  const { updateIds, approve } = req.body;
 
-    const { updateId } = req.params;
+  if (!Array.isArray(updateIds)) {
+    throw new AppError(ErrorCodes.VALIDATION_ERROR);
+  }
 
+  const results = [];
+
+  for (const updateId of updateIds) {
     // 从数据库查找待审核记录
     const pending = await prisma.pendingProfileUpdate.findFirst({
       where: { id: updateId, status: 'pending' }
     });
 
     if (!pending) {
-      return res.status(404).json({ error: '未找到待审核更新' });
+      results.push({ updateId, success: false, reason: '未找到或已处理' });
+      continue;
     }
 
     // 安全：操盘手只能操作自己负责的客户的更新
@@ -850,7 +741,7 @@ router.post('/apply-update/:updateId', authMiddleware, async (req, res) => {
       let targetClientId = null;
       if (pending.targetType === 'girl') {
         const girl = await prisma.girl.findUnique({ where: { id: pending.targetId } });
-        if (!girl) return res.status(404).json({ error: '女生不存在' });
+        if (!girl) { results.push({ updateId, success: false, reason: '女生不存在' }); continue; }
         targetClientId = girl.clientId;
       } else {
         targetClientId = pending.targetId;
@@ -858,134 +749,191 @@ router.post('/apply-update/:updateId', authMiddleware, async (req, res) => {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: targetClientId }
       });
-      if (!session) return res.status(403).json({ error: '无权限操作此更新' });
+      if (!session) { results.push({ updateId, success: false, reason: '无权限操作此更新' }); continue; }
     }
 
     // 更新数据库状态
     await prisma.pendingProfileUpdate.update({
       where: { id: updateId },
-      data: { status: 'approved' }
+      data: { status: approve ? 'approved' : 'rejected' }
     });
 
-    // 执行档案更新
-    const analysis = JSON.parse(pending.analysisData);
-    if (analysis.fieldChanges?.tensionScore) {
-      await executeTool('update_tension', {
-        girlId: pending.targetId,
-        adjustment: analysis.fieldChanges.tensionScore.delta,
-        reason: `操盘手审核采纳: ${analysis.fieldChanges.tensionScore.reason}`
-      });
-    }
+    if (approve) {
+      const analysis = JSON.parse(pending.analysisData);
 
-    if (analysis.newSignals?.length > 0) {
-      for (const signal of analysis.newSignals) {
-        await executeTool('add_signal', {
-          girlId: pending.targetId,
-          type: signal.type,
-          event: signal.event
-        });
+      try {
+        if (analysis.fieldChanges?.tensionScore) {
+          await executeTool('update_tension', {
+            girlId: pending.targetId,
+            adjustment: analysis.fieldChanges.tensionScore.delta,
+            reason: `操盘手审核采纳: ${analysis.fieldChanges.tensionScore.reason}`
+          });
+        }
+
+        if (analysis.newSignals?.length > 0) {
+          for (const signal of analysis.newSignals) {
+            await executeTool('add_signal', {
+              girlId: pending.targetId,
+              type: signal.type,
+              event: signal.event
+            });
+          }
+        }
+      } catch (toolError) {
+        console.warn(`[PendingUpdates] apply update ${updateId} failed:`, toolError);
       }
     }
 
-    res.json({ success: true, updateId, approved: true });
-
-  } catch (error) {
-    console.error('[ChatPartner] 采纳更新失败:', error);
-    res.status(500).json({ error: '采纳更新失败' });
+    results.push({ updateId, success: true, approved: approve });
   }
-});
+
+  return success(res, { results });
+}));
+
+/**
+ * 单独采纳一条待审核更新
+ * POST /api/chat-partner/apply-update/:updateId
+ */
+router.post('/apply-update/:updateId', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
+  }
+
+  const { updateId } = req.params;
+
+  // 从数据库查找待审核记录
+  const pending = await prisma.pendingProfileUpdate.findFirst({
+    where: { id: updateId, status: 'pending' }
+  });
+
+  if (!pending) {
+    throw new AppError(ErrorCodes.RESOURCE_NOT_FOUND);
+  }
+
+  // 安全：操盘手只能操作自己负责的客户的更新
+  if (req.user.role === 'operator') {
+    let targetClientId = null;
+    if (pending.targetType === 'girl') {
+      const girl = await prisma.girl.findUnique({ where: { id: pending.targetId } });
+      if (!girl) throw new AppError(ErrorCodes.GIRL_NOT_FOUND);
+      targetClientId = girl.clientId;
+    } else {
+      targetClientId = pending.targetId;
+    }
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId: targetClientId }
+    });
+    if (!session) throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
+  }
+
+  // 更新数据库状态
+  await prisma.pendingProfileUpdate.update({
+    where: { id: updateId },
+    data: { status: 'approved' }
+  });
+
+  // 执行档案更新
+  const analysis = JSON.parse(pending.analysisData);
+  if (analysis.fieldChanges?.tensionScore) {
+    await executeTool('update_tension', {
+      girlId: pending.targetId,
+      adjustment: analysis.fieldChanges.tensionScore.delta,
+      reason: `操盘手审核采纳: ${analysis.fieldChanges.tensionScore.reason}`
+    });
+  }
+
+  if (analysis.newSignals?.length > 0) {
+    for (const signal of analysis.newSignals) {
+      await executeTool('add_signal', {
+        girlId: pending.targetId,
+        type: signal.type,
+        event: signal.event
+      });
+    }
+  }
+
+  return success(res, { updateId, approved: true });
+}));
 
 /**
  * 获取女生的聊天历史（从代聊记录）
  * GET /api/chat-partner/history/:girlId
  */
-router.get('/history/:girlId', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
-    }
-
-    const { girlId } = req.params;
-    const { limit = 50 } = req.query;
-
-    // 安全：操盘手只能访问自己负责的客户的女生
-    if (req.user.role === 'operator') {
-      const girl = await prisma.girl.findUnique({ where: { id: girlId } });
-      if (!girl) return res.status(404).json({ error: '女生不存在' });
-      const session = await prisma.chatSession.findFirst({
-        where: { operatorId: req.user.id, clientId: girl.clientId }
-      });
-      if (!session) return res.status(403).json({ error: '无权限访问此女生历史记录' });
-    }
-
-    const logs = await prisma.chatLog.findMany({
-      where: { girlId },
-      orderBy: { createdAt: 'desc' },
-      take: parseInt(limit)
-    });
-
-    const history = logs.reverse().map(log => ({
-      role: 'user',
-      content: log.content,
-      timestamp: log.createdAt,
-      aiAdopted: log.aiAdopted,
-      id: log.id
-    }));
-
-    res.json({ success: true, history });
-
-  } catch (error) {
-    console.error('[ChatPartner] 获取历史失败:', error);
-    res.status(500).json({ error: '获取历史失败' });
+router.get('/history/:girlId', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
   }
-});
+
+  const { girlId } = req.params;
+  const { limit = 50 } = req.query;
+
+  // 安全：操盘手只能访问自己负责的客户的女生
+  if (req.user.role === 'operator') {
+    const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+    if (!girl) throw new AppError(ErrorCodes.GIRL_NOT_FOUND);
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId: girl.clientId }
+    });
+    if (!session) throw new AppError(ErrorCodes.GIRL_ACCESS_DENIED);
+  }
+
+  const logs = await prisma.chatLog.findMany({
+    where: { girlId },
+    orderBy: { createdAt: 'desc' },
+    take: parseInt(limit)
+  });
+
+  const history = logs.reverse().map(log => ({
+    role: 'user',
+    content: log.content,
+    timestamp: log.createdAt,
+    aiAdopted: log.aiAdopted,
+    id: log.id
+  }));
+
+  return success(res, { history });
+}));
 
 /**
  * 保存代聊消息（保留原有端点，简化逻辑）
  * POST /api/chat-partner/send
  */
-router.post('/send', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
-    }
-
-    const { girlId, receiverName, content, aiAdopted = false, originalMessage } = req.body;
-
-    if (!girlId || !content) {
-      return res.status(400).json({ error: '参数不完整' });
-    }
-
-    // 安全：从女生记录获取 clientId，防止操作不属于自己的客户数据
-    const girl = await prisma.girl.findUnique({ where: { id: girlId } });
-    if (!girl) {
-      return res.status(404).json({ error: '女生不存在' });
-    }
-    // 客户端只能操作自己的女生
-    if (req.user.role === 'client' && girl.clientId !== req.user.id) {
-      return res.status(403).json({ error: '无权限' });
-    }
-    const clientId = girl.clientId;
-
-    const log = await prisma.chatLog.create({
-      data: {
-        girlId,
-        clientId,
-        operatorId: req.user.id,
-        receiverName,
-        content,
-        aiAdopted,
-        aiAnalysis: originalMessage ? `原文: ${originalMessage}` : null
-      }
-    });
-
-    res.json({ success: true, log });
-
-  } catch (error) {
-    console.error('[ChatPartner] 保存失败:', error);
-    res.status(500).json({ error: '保存失败' });
+router.post('/send', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
   }
-});
+
+  const { girlId, receiverName, content, aiAdopted = false, originalMessage } = req.body;
+
+  if (!girlId || !content) {
+    throw new AppError(ErrorCodes.VALIDATION_ERROR);
+  }
+
+  // 安全：从女生记录获取 clientId，防止操作不属于自己的客户数据
+  const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+  if (!girl) {
+    throw new AppError(ErrorCodes.GIRL_NOT_FOUND);
+  }
+  // 客户端只能操作自己的女生
+  if (req.user.role === 'client' && girl.clientId !== req.user.id) {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
+  }
+  const clientId = girl.clientId;
+
+  const log = await prisma.chatLog.create({
+    data: {
+      girlId,
+      clientId,
+      operatorId: req.user.id,
+      receiverName,
+      content,
+      aiAdopted,
+      aiAnalysis: originalMessage ? `原文: ${originalMessage}` : null
+    }
+  });
+
+  return success(res, { log });
+}));
 
 /**
  * 客户聊天分析 - 操盘手和客户沟通时的 AI 军师
@@ -996,72 +944,71 @@ router.post('/send', authMiddleware, async (req, res) => {
  * - 目标是帮助操盘手更有效地与客户沟通
  * - 建议风格要适配客户的性格和沟通偏好
  */
-router.post('/client-analyze', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
-    }
+router.post('/client-analyze', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
+  }
 
-    const { clientId, message, history = [] } = req.body;
+  const { clientId, message, history = [] } = req.body;
 
-    if (!message) {
-      return res.status(400).json({ error: '消息内容是必需的' });
-    }
-    if (!clientId) {
-      return res.status(400).json({ error: 'clientId 是必需的' });
-    }
+  if (!message) {
+    throw new AppError(ErrorCodes.VALIDATION_ERROR);
+  }
+  if (!clientId) {
+    throw new AppError(ErrorCodes.VALIDATION_ERROR);
+  }
 
-    // 安全校验：验证 clientId 属于当前操盘手（通过会话关联校验）
-    const operatorSession = await prisma.chatSession.findFirst({
-      where: { clientId, operatorId: req.user.id }
+  // 安全校验：验证 clientId 属于当前操盘手（通过会话关联校验）
+  const operatorSession = await prisma.chatSession.findFirst({
+    where: { clientId, operatorId: req.user.id }
+  });
+  if (!operatorSession) {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
+  }
+
+  // 获取客户档案
+  const client = await prisma.user.findUnique({ where: { id: clientId, role: 'client' } });
+  if (!client) {
+    throw new AppError(ErrorCodes.CLIENT_NOT_FOUND);
+  }
+
+  // 获取与该客户的聊天历史
+  const session = await prisma.chatSession.findFirst({
+    where: { clientId },
+    orderBy: { updatedAt: 'desc' }
+  });
+
+  let recentMessages = [];
+  if (session) {
+    const msgs = await prisma.message.findMany({
+      where: { sessionId: session.id },
+      orderBy: { createdAt: 'desc' },
+      take: 20
     });
-    if (!operatorSession) {
-      return res.status(403).json({ error: '无权操作此客户' });
-    }
+    recentMessages = msgs.reverse().map(m => ({
+      role: m.senderRole === 'operator' ? '操盘手' : '客户',
+      content: m.content
+    }));
+  }
 
-    // 获取客户档案
-    const client = await prisma.user.findUnique({ where: { id: clientId, role: 'client' } });
-    if (!client) {
-      return res.status(404).json({ error: '客户不存在' });
-    }
+  const historyString = recentMessages.map(m => `${m.role}: ${m.content}`).join('\n') || '（暂无历史记录）';
 
-    // 获取与该客户的聊天历史
-    const session = await prisma.chatSession.findFirst({
-      where: { clientId },
-      orderBy: { updatedAt: 'desc' }
-    });
-
-    let recentMessages = [];
-    if (session) {
-      const msgs = await prisma.message.findMany({
-        where: { sessionId: session.id },
-        orderBy: { createdAt: 'desc' },
-        take: 20
-      });
-      recentMessages = msgs.reverse().map(m => ({
-        role: m.senderRole === 'operator' ? '操盘手' : '客户',
-        content: m.content
-      }));
-    }
-
-    const historyString = recentMessages.map(m => `${m.role}: ${m.content}`).join('\n') || '（暂无历史记录）';
-
-    const clientType = client.clientType || '执行型';
-    const communicationStyle = client.communicationStyle || '含蓄';
-    const cooperation = client.coachCooperation || '配合';
-    const serviceStage = client.serviceStage || '建池';
+  const clientType = client.clientType || '执行型';
+  const communicationStyle = client.communicationStyle || '含蓄';
+  const cooperation = client.coachCooperation || '配合';
+  const serviceStage = client.serviceStage || '建池';
 
 
-    // 沟通风格适配
-    const styleMap = {
-      '直接': ['直接型', '真诚型', '简洁型'],
-      '含蓄': ['委婉型', '细腻型', '试探型'],
-      '话多': ['耐心型', '互动型', '引导型'],
-      '话少': ['精简型', '沉稳型', '观察型'],
-    };
-    const defaultStyles = styleMap[communicationStyle] || ['真诚型', '细腻型', '引导型'];
+  // 沟通风格适配
+  const styleMap = {
+    '直接': ['直接型', '真诚型', '简洁型'],
+    '含蓄': ['委婉型', '细腻型', '试探型'],
+    '话多': ['耐心型', '互动型', '引导型'],
+    '话少': ['精简型', '沉稳型', '观察型'],
+  };
+  const defaultStyles = styleMap[communicationStyle] || ['真诚型', '细腻型', '引导型'];
 
-    const systemPrompt = `你是童锦程，情感咨询领域的老中医。你的风格：专业、精准、有温度，懂客户心理，能快速判断客户诉求并给出适配的沟通策略。
+  const systemPrompt = `你是童锦程，情感咨询领域的老中医。你的风格：专业、精准、有温度，懂客户心理，能快速判断客户诉求并给出适配的沟通策略。
 
 分析客户刚刚发来的消息，结合他的档案和服务阶段，给出专业的操盘手沟通建议。
 
@@ -1134,137 +1081,130 @@ ${historyString}
 
 只输出 JSON，不要其他内容。`;
 
-    // 并行执行：AI 回复建议 + 档案字段提取（一次 fetch，复用结果）
-    const aiConfig = getAIConfig();
-    const [replyResult, profileResult] = await Promise.allSettled([
-      // AI 回复建议
-      fetch(aiConfig.url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${aiConfig.key}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: aiConfig.model,
-          messages: [
-            { role: 'user', content: systemPrompt }
-          ],
-          temperature: 0.8,
-          max_tokens: 1500
-        })
-      }),
-      // 档案字段提取
-      extractClientFromChat(clientId, req.user.id, message, { recentMessages })
-    ]);
+  // 并行执行：AI 回复建议 + 档案字段提取（一次 fetch，复用结果）
+  const aiConfig = getAIConfig();
+  const [replyResult, profileResult] = await Promise.allSettled([
+    // AI 回复建议
+    fetch(aiConfig.url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${aiConfig.key}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: aiConfig.model,
+        messages: [
+          { role: 'user', content: systemPrompt }
+        ],
+        temperature: 0.8,
+        max_tokens: 1500
+      })
+    }),
+    // 档案字段提取
+    extractClientFromChat(clientId, req.user.id, message, { recentMessages })
+  ]);
 
-    // 解析回复建议
-    let replySuggestions = [
-      { text: '收到，我来看看情况。', style: defaultStyles[0], intention: '确认收到' },
-      { text: '嗯嗯，说说你的想法？', style: defaultStyles[1], intention: '引导表达' },
-      { text: '这个情况我理解，我们来分析一下。', style: defaultStyles[2], intention: '共情+分析' }
-    ];
-    let replyAnalysis = '分析中...';
-    let replySummary = '';
+  // 解析回复建议
+  let replySuggestions = [
+    { text: '收到，我来看看情况。', style: defaultStyles[0], intention: '确认收到' },
+    { text: '嗯嗯，说说你的想法？', style: defaultStyles[1], intention: '引导表达' },
+    { text: '这个情况我理解，我们来分析一下。', style: defaultStyles[2], intention: '共情+分析' }
+  ];
+  let replyAnalysis = '分析中...';
+  let replySummary = '';
 
-    if (replyResult.status === 'fulfilled' && replyResult.value.ok) {
-      const replyData = await replyResult.value.json();
-      const aiContent = replyData.choices?.[0]?.message?.content || '';
-      try {
-        const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          replyAnalysis = parsed.analysis || replyAnalysis;
-          replySuggestions = parsed.suggestions || replySuggestions;
-          replySummary = parsed.summary || '';
-          // 新字段
-          if (parsed.intent) context.intent = parsed.intent;
-          if (parsed.emotion) context.emotion = parsed.emotion;
-          if (parsed.subtext) context.subtext = parsed.subtext;
-          if (parsed.cooperationSignal) context.cooperationSignal = parsed.cooperationSignal;
-          if (parsed.trustSignal) context.trustSignal = parsed.trustSignal;
-          if (parsed.serviceNeed) context.serviceNeed = parsed.serviceNeed;
-          if (parsed.riskWarning) context.riskWarning = parsed.riskWarning;
-        }
-      } catch (e) { console.warn('[ChatPartner] context JSON 解析失败:', e.message); }
-    }
-
-    // 解析档案提取结果
-    let pendingFields = {};
-    let profilePendingId = null;
-    if (profileResult.status === 'fulfilled' && profileResult.value) {
-      pendingFields = profileResult.value.pendingFields || {};
-      profilePendingId = profileResult.value.pendingId;
-    }
-
-    res.json({
-      success: true,
-      clientId,
-      analysis: replyAnalysis,
-      suggestions: replySuggestions,
-      summary: replySummary,
-      profilePendingId,
-      pendingFields,
-      fieldLabels: CLIENT_FIELD_LABELS,
-      context: {
-        serviceStage,
-        communicationStyle,
-        trustLevel: client.trustLevel || 1,
-        interactionHeat: client.interactionHeat || 5,
-        cooperation: client.coachCooperation || '配合'
+  if (replyResult.status === 'fulfilled' && replyResult.value.ok) {
+    const replyData = await replyResult.value.json();
+    const aiContent = replyData.choices?.[0]?.message?.content || '';
+    try {
+      const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        replyAnalysis = parsed.analysis || replyAnalysis;
+        replySuggestions = parsed.suggestions || replySuggestions;
+        replySummary = parsed.summary || '';
+        // 新字段
+        if (parsed.intent) context.intent = parsed.intent;
+        if (parsed.emotion) context.emotion = parsed.emotion;
+        if (parsed.subtext) context.subtext = parsed.subtext;
+        if (parsed.cooperationSignal) context.cooperationSignal = parsed.cooperationSignal;
+        if (parsed.trustSignal) context.trustSignal = parsed.trustSignal;
+        if (parsed.serviceNeed) context.serviceNeed = parsed.serviceNeed;
+        if (parsed.riskWarning) context.riskWarning = parsed.riskWarning;
       }
-    });
-
-  } catch (error) {
-    console.error('[ChatPartner] 客户聊天分析失败:', error);
-    res.status(500).json({ error: '客户聊天分析失败' });
+    } catch (e) { console.warn('[ChatPartner] context JSON 解析失败:', e.message); }
   }
-});
+
+  // 解析档案提取结果
+  let pendingFields = {};
+  let profilePendingId = null;
+  if (profileResult.status === 'fulfilled' && profileResult.value) {
+    pendingFields = profileResult.value.pendingFields || {};
+    profilePendingId = profileResult.value.pendingId;
+  }
+
+  return success(res, {
+    clientId,
+    analysis: replyAnalysis,
+    suggestions: replySuggestions,
+    summary: replySummary,
+    profilePendingId,
+    pendingFields,
+    fieldLabels: CLIENT_FIELD_LABELS,
+    context: {
+      serviceStage,
+      communicationStyle,
+      trustLevel: client.trustLevel || 1,
+      interactionHeat: client.interactionHeat || 5,
+      cooperation: client.coachCooperation || '配合'
+    }
+  });
+}));
 
 /**
  * 客户聊天话术优化 - 操盘手准备发给客户的话，AI 给出优化版本
  * POST /api/chat-partner/client-optimize
  */
-router.post('/client-optimize', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
-    }
+router.post('/client-optimize', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
+  }
 
-    const { clientId, myMessage, history = [] } = req.body;
+  const { clientId, myMessage, history = [] } = req.body;
 
-    if (!myMessage) {
-      return res.status(400).json({ error: '消息内容是必需的' });
-    }
+  if (!myMessage) {
+    throw new AppError(ErrorCodes.VALIDATION_ERROR);
+  }
 
-    // 安全：操盘手只能优化自己负责的客户的消息
-    if (req.user.role === 'operator') {
-      const session = await prisma.chatSession.findFirst({
-        where: { operatorId: req.user.id, clientId }
-      });
-      if (!session) return res.status(403).json({ error: '无权限优化该客户的消息' });
-    }
+  // 安全：操盘手只能优化自己负责的客户的消息
+  if (req.user.role === 'operator') {
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId }
+    });
+    if (!session) throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
+  }
 
-    const context = await buildAICoachContext(req.user.id, null);
-    const { client } = context;
+  const context = await buildAICoachContext(req.user.id, null);
+  const { client } = context;
 
-    if (!client || client.role !== 'client') {
-      return res.status(404).json({ error: '客户不存在' });
-    }
+  if (!client || client.role !== 'client') {
+    throw new AppError(ErrorCodes.CLIENT_NOT_FOUND);
+  }
 
-    const communicationStyle = client.communicationStyle || '含蓄';
-    const serviceStage = client.serviceStage || '建池';
-    const cooperation = client.coachCooperation || '配合';
-    const interactionStyle = client.interactionStyle || '细腻型';
-    const humorStyle = client.humorStyle || '正经';
-    const chatTaboos = client.chatTaboos || '暂无';
-    const petPhrases = client.petPhrases || '暂无';
+  const communicationStyle = client.communicationStyle || '含蓄';
+  const serviceStage = client.serviceStage || '建池';
+  const cooperation = client.coachCooperation || '配合';
+  const interactionStyle = client.interactionStyle || '细腻型';
+  const humorStyle = client.humorStyle || '正经';
+  const chatTaboos = client.chatTaboos || '暂无';
+  const petPhrases = client.petPhrases || '暂无';
 
-    const historyString = history.slice(-10).map(m => {
-      const role = m.role === 'operator' ? '操盘手' : (client.nickname || '客户');
-      return `${role}: ${m.content}`;
-    }).join('\n');
+  const historyString = history.slice(-10).map(m => {
+    const role = m.role === 'operator' ? '操盘手' : (client.nickname || '客户');
+    return `${role}: ${m.content}`;
+  }).join('\n');
 
-    const systemPrompt = `你是童锦程，情感咨询领域的老中医。你的风格：专业、精准、有温度，懂客户心理，能快速判断客户诉求并给出适配的沟通策略。
+  const systemPrompt = `你是童锦程，情感咨询领域的老中医。你的风格：专业、精准、有温度，懂客户心理，能快速判断客户诉求并给出适配的沟通策略。
 
 你是一个专业的客户服务话术优化专家，帮助操盘手（情感咨询师）把准备发送给客户的回复优化得更专业、更有效。
 
@@ -1331,56 +1271,50 @@ ${historyString || '（暂无历史记录）'}
 
 只输出 JSON，不要其他内容。优化版本要15-30字，不要超过30字。注意避开禁区。`;
 
-    const aiConfig = getAIConfig();
-    const response = await fetch(aiConfig.url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${aiConfig.key}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: aiConfig.model,
-        messages: [
-          { role: 'user', content: systemPrompt }
-        ],
-        temperature: 0.8,
-        max_tokens: 1200
-      })
-    });
-
-    const data = await response.json();
-    const aiContent = data.choices?.[0]?.message?.content || '';
-
-    let result;
-    try {
-      const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        result = JSON.parse(jsonMatch[0]);
-      }
-    } catch (e) {
-      console.warn('[ChatPartner] 客户话术优化返回非 JSON 格式');
-    }
-
-    res.json({
-      success: true,
-      clientId,
-      original: result?.original || myMessage,
-      optimizations: result?.optimizations || [
-        { text: myMessage, point: '暂无优化建议', style: '原版' }
+  const aiConfig = getAIConfig();
+  const response = await fetch(aiConfig.url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${aiConfig.key}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: aiConfig.model,
+      messages: [
+        { role: 'user', content: systemPrompt }
       ],
-      context: {
-        serviceStage,
-        communicationStyle,
-        interactionStyle,
-        cooperation
-      }
-    });
+      temperature: 0.8,
+      max_tokens: 1200
+    })
+  });
 
-  } catch (error) {
-    console.error('[ChatPartner] 客户话术优化失败:', error);
-    res.status(500).json({ error: '客户话术优化失败' });
+  const data = await response.json();
+  const aiContent = data.choices?.[0]?.message?.content || '';
+
+  let result;
+  try {
+    const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      result = JSON.parse(jsonMatch[0]);
+    }
+  } catch (e) {
+    console.warn('[ChatPartner] 客户话术优化返回非 JSON 格式');
   }
-});
+
+  return success(res, {
+    clientId,
+    original: result?.original || myMessage,
+    optimizations: result?.optimizations || [
+      { text: myMessage, point: '暂无优化建议', style: '原版' }
+    ],
+    context: {
+      serviceStage,
+      communicationStyle,
+      interactionStyle,
+      cooperation
+    }
+  });
+}));
 
 // ============================================================================
 // 女生档案待确认管理
@@ -1390,110 +1324,95 @@ ${historyString || '（暂无历史记录）'}
  * 获取女生的待确认档案更新列表
  * GET /api/chat-partner/girl-profile/pending/:girlId
  */
-router.get('/girl-profile/pending/:girlId', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
-    }
-
-    const { girlId } = req.params;
-
-    // 安全：操盘手只能访问自己负责的客户的女生
-    if (req.user.role === 'operator') {
-      const girl = await prisma.girl.findUnique({ where: { id: girlId } });
-      if (!girl) return res.status(404).json({ error: '女生不存在' });
-      const session = await prisma.chatSession.findFirst({
-        where: { operatorId: req.user.id, clientId: girl.clientId }
-      });
-      if (!session) return res.status(403).json({ error: '无权限访问此女生数据' });
-    }
-
-    const { getPendingUpdates } = require('../services/girlProfileExtractor');
-    const updates = await getPendingUpdates(girlId);
-
-    res.json({ success: true, updates });
-  } catch (error) {
-    console.error('[ChatPartner] 获取女生待确认更新失败:', error);
-    res.status(500).json({ error: '获取失败' });
+router.get('/girl-profile/pending/:girlId', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
   }
+
+  const { girlId } = req.params;
+
+  // 安全：操盘手只能访问自己负责的客户的女生
+  if (req.user.role === 'operator') {
+    const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+    if (!girl) throw new AppError(ErrorCodes.GIRL_NOT_FOUND);
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId: girl.clientId }
+    });
+    if (!session) throw new AppError(ErrorCodes.GIRL_ACCESS_DENIED);
+  }
+
+  const { getPendingUpdates } = require('../services/girlProfileExtractor');
+  const updates = await getPendingUpdates(girlId);
+
+  return success(res, { updates });
 });
 
 /**
  * 确认女生档案更新
  * POST /api/chat-partner/girl-profile/confirm
  */
-router.post('/girl-profile/confirm', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
-    }
-
-    const { girlId, pendingId, selectedFields } = req.body;
-    if (!girlId || !pendingId) {
-      return res.status(400).json({ error: '参数不完整' });
-    }
-
-    // 安全：操盘手只能操作自己负责的客户的女生
-    if (req.user.role === 'operator') {
-      const girl = await prisma.girl.findUnique({ where: { id: girlId } });
-      if (!girl) return res.status(404).json({ error: '女生不存在' });
-      const session = await prisma.chatSession.findFirst({
-        where: { operatorId: req.user.id, clientId: girl.clientId }
-      });
-      if (!session) return res.status(403).json({ error: '无权限操作此女生数据' });
-    }
-
-    const { confirmProfileUpdate } = require('../services/girlProfileExtractor');
-    const result = await confirmProfileUpdate(girlId, pendingId, selectedFields);
-
-    if (!result.success) {
-      return res.status(404).json({ error: result.reason });
-    }
-
-    res.json({ success: true, ...result });
-  } catch (error) {
-    console.error('[ChatPartner] 确认女生档案更新失败:', error);
-    res.status(500).json({ error: '确认失败' });
+router.post('/girl-profile/confirm', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
   }
+
+  const { girlId, pendingId, selectedFields } = req.body;
+  if (!girlId || !pendingId) {
+    throw new AppError(ErrorCodes.VALIDATION_ERROR);
+  }
+
+  // 安全：操盘手只能操作自己负责的客户的女生
+  if (req.user.role === 'operator') {
+    const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+    if (!girl) throw new AppError(ErrorCodes.GIRL_NOT_FOUND);
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId: girl.clientId }
+    });
+    if (!session) throw new AppError(ErrorCodes.GIRL_ACCESS_DENIED);
+  }
+
+  const { confirmProfileUpdate } = require('../services/girlProfileExtractor');
+  const result = await confirmProfileUpdate(girlId, pendingId, selectedFields);
+
+  if (!result.success) {
+    throw new AppError(ErrorCodes.RESOURCE_NOT_FOUND);
+  }
+
+  return success(res, result);
 });
 
 /**
  * 驳回女生档案更新
  * POST /api/chat-partner/girl-profile/reject
  */
-router.post('/girl-profile/reject', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
-    }
-
-    const { girlId, pendingId } = req.body;
-    if (!girlId || !pendingId) {
-      return res.status(400).json({ error: '参数不完整' });
-    }
-
-    // 安全：操盘手只能操作自己负责的客户的女生
-    if (req.user.role === 'operator') {
-      const girl = await prisma.girl.findUnique({ where: { id: girlId } });
-      if (!girl) return res.status(404).json({ error: '女生不存在' });
-      const session = await prisma.chatSession.findFirst({
-        where: { operatorId: req.user.id, clientId: girl.clientId }
-      });
-      if (!session) return res.status(403).json({ error: '无权限操作此女生数据' });
-    }
-
-    const { rejectProfileUpdate } = require('../services/girlProfileExtractor');
-    const result = await rejectProfileUpdate(girlId, pendingId);
-
-    if (!result.success) {
-      return res.status(404).json({ error: result.reason });
-    }
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('[ChatPartner] 驳回女生档案更新失败:', error);
-    res.status(500).json({ error: '驳回失败' });
+router.post('/girl-profile/reject', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
   }
+
+  const { girlId, pendingId } = req.body;
+  if (!girlId || !pendingId) {
+    throw new AppError(ErrorCodes.VALIDATION_ERROR);
+  }
+
+  // 安全：操盘手只能操作自己负责的客户的女生
+  if (req.user.role === 'operator') {
+    const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+    if (!girl) throw new AppError(ErrorCodes.GIRL_NOT_FOUND);
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId: girl.clientId }
+    });
+    if (!session) throw new AppError(ErrorCodes.GIRL_ACCESS_DENIED);
+  }
+
+  const { rejectProfileUpdate } = require('../services/girlProfileExtractor');
+  const result = await rejectProfileUpdate(girlId, pendingId);
+
+  if (!result.success) {
+    throw new AppError(ErrorCodes.RESOURCE_NOT_FOUND);
+  }
+
+  return success(res, { success: true });
 });
 
 // ============================================================================
@@ -1504,104 +1423,89 @@ router.post('/girl-profile/reject', authMiddleware, async (req, res) => {
  * 获取客户的待确认档案更新列表
  * GET /api/chat-partner/client-profile/pending/:clientId
  */
-router.get('/client-profile/pending/:clientId', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
-    }
-
-    const { clientId } = req.params;
-
-    // 安全：操盘手只能访问自己负责的客户的数据
-    if (req.user.role === 'operator') {
-      const session = await prisma.chatSession.findFirst({
-        where: { operatorId: req.user.id, clientId }
-      });
-      if (!session) return res.status(403).json({ error: '无权限访问此客户数据' });
-    }
-
-    const { getPendingUpdates } = require('../services/clientProfileExtractor');
-    const updates = await getPendingUpdates(clientId);
-
-    res.json({ success: true, updates });
-  } catch (error) {
-    console.error('[ChatPartner] 获取客户待确认更新失败:', error);
-    res.status(500).json({ error: '获取失败' });
+router.get('/client-profile/pending/:clientId', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
   }
+
+  const { clientId } = req.params;
+
+  // 安全：操盘手只能访问自己负责的客户的数据
+  if (req.user.role === 'operator') {
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId }
+    });
+    if (!session) throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
+  }
+
+  const { getPendingUpdates } = require('../services/clientProfileExtractor');
+  const updates = await getPendingUpdates(clientId);
+
+  return success(res, { updates });
 });
 
 /**
  * 确认客户档案更新
  * POST /api/chat-partner/client-profile/confirm
  */
-router.post('/client-profile/confirm', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
-    }
-
-    const { clientId, pendingId, selectedFields } = req.body;
-    if (!clientId || !pendingId) {
-      return res.status(400).json({ error: '参数不完整' });
-    }
-
-    // 安全：操盘手只能操作自己负责的客户的数据
-    if (req.user.role === 'operator') {
-      const session = await prisma.chatSession.findFirst({
-        where: { operatorId: req.user.id, clientId }
-      });
-      if (!session) return res.status(403).json({ error: '无权限操作此客户数据' });
-    }
-
-    const { confirmProfileUpdate } = require('../services/clientProfileExtractor');
-    const result = await confirmProfileUpdate(clientId, pendingId, selectedFields);
-
-    if (!result.success) {
-      return res.status(404).json({ error: result.reason });
-    }
-
-    res.json({ success: true, ...result });
-  } catch (error) {
-    console.error('[ChatPartner] 确认客户档案更新失败:', error);
-    res.status(500).json({ error: '确认失败' });
+router.post('/client-profile/confirm', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
   }
+
+  const { clientId, pendingId, selectedFields } = req.body;
+  if (!clientId || !pendingId) {
+    throw new AppError(ErrorCodes.VALIDATION_ERROR);
+  }
+
+  // 安全：操盘手只能操作自己负责的客户的数据
+  if (req.user.role === 'operator') {
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId }
+    });
+    if (!session) throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
+  }
+
+  const { confirmProfileUpdate } = require('../services/clientProfileExtractor');
+  const result = await confirmProfileUpdate(clientId, pendingId, selectedFields);
+
+  if (!result.success) {
+    throw new AppError(ErrorCodes.RESOURCE_NOT_FOUND);
+  }
+
+  return success(res, result);
 });
 
 /**
  * 驳回客户档案更新
  * POST /api/chat-partner/client-profile/reject
  */
-router.post('/client-profile/reject', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
-    }
-
-    const { clientId, pendingId } = req.body;
-    if (!clientId || !pendingId) {
-      return res.status(400).json({ error: '参数不完整' });
-    }
-
-    // 安全：操盘手只能操作自己负责的客户的数据
-    if (req.user.role === 'operator') {
-      const session = await prisma.chatSession.findFirst({
-        where: { operatorId: req.user.id, clientId }
-      });
-      if (!session) return res.status(403).json({ error: '无权限操作此客户数据' });
-    }
-
-    const { rejectProfileUpdate } = require('../services/clientProfileExtractor');
-    const result = await rejectProfileUpdate(clientId, pendingId);
-
-    if (!result.success) {
-      return res.status(404).json({ error: result.reason });
-    }
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('[ChatPartner] 驳回客户档案更新失败:', error);
-    res.status(500).json({ error: '驳回失败' });
+router.post('/client-profile/reject', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
   }
+
+  const { clientId, pendingId } = req.body;
+  if (!clientId || !pendingId) {
+    throw new AppError(ErrorCodes.VALIDATION_ERROR);
+  }
+
+  // 安全：操盘手只能操作自己负责的客户的数据
+  if (req.user.role === 'operator') {
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId }
+    });
+    if (!session) throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
+  }
+
+  const { rejectProfileUpdate } = require('../services/clientProfileExtractor');
+  const result = await rejectProfileUpdate(clientId, pendingId);
+
+  if (!result.success) {
+    throw new AppError(ErrorCodes.RESOURCE_NOT_FOUND);
+  }
+
+  return success(res, { success: true });
 });
 
 /**
@@ -1614,64 +1518,63 @@ router.post('/client-profile/reject', authMiddleware, async (req, res) => {
  *
  * 输出：AI 分析 + 回复建议，作为聊天上下文记录下来
  */
-router.post('/analyze-moment', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
-    }
+router.post('/analyze-moment', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
+  }
 
-    const { girlId, momentText, momentImage, operatorNotes } = req.body;
+  const { girlId, momentText, momentImage, operatorNotes } = req.body;
 
-    if (!momentText && !momentImage) {
-      return res.status(400).json({ error: '朋友圈文字或图片至少需要提供一个' });
-    }
+  if (!momentText && !momentImage) {
+    throw new AppError(ErrorCodes.VALIDATION_ERROR);
+  }
 
-    // 安全：操盘手只能分析自己负责的客户的女生朋友圈
-    if (girlId && req.user.role === 'operator') {
-      const girl = await prisma.girl.findUnique({ where: { id: girlId } });
-      if (!girl) return res.status(404).json({ error: '女生不存在' });
-      const session = await prisma.chatSession.findFirst({
-        where: { operatorId: req.user.id, clientId: girl.clientId }
-      });
-      if (!session) return res.status(403).json({ error: '无权限分析此女生朋友圈' });
-    }
+  // 安全：操盘手只能分析自己负责的客户的女生朋友圈
+  if (girlId && req.user.role === 'operator') {
+    const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+    if (!girl) throw new AppError(ErrorCodes.GIRL_NOT_FOUND);
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId: girl.clientId }
+    });
+    if (!session) throw new AppError(ErrorCodes.GIRL_ACCESS_DENIED);
+  }
 
-    // 构建上下文
-    const context = girlId
-      ? await buildAICoachContext(req.user.id, girlId)
-      : { girlInfo: null, recentSignals: [], pendingActions: [], observations: [], conversationSummary: '' };
+  // 构建上下文
+  const context = girlId
+    ? await buildAICoachContext(req.user.id, girlId)
+    : { girlInfo: null, recentSignals: [], pendingActions: [], observations: [], conversationSummary: '' };
 
-    const { girlInfo, recentSignals, pendingActions, observations, conversationSummary } = context;
+  const { girlInfo, recentSignals, pendingActions, observations, conversationSummary } = context;
 
-    let personality = {};
-    if (girlInfo?.personality) {
-      try { personality = girlInfo.personality; } catch (e) { console.warn('[ChatPartner] personality 赋值失败:', e.message); }
-    }
+  let personality = {};
+  if (girlInfo?.personality) {
+    try { personality = girlInfo.personality; } catch (e) { console.warn('[ChatPartner] personality 赋值失败:', e.message); }
+  }
 
-    const stage = girlInfo?.stage || '聊天';
-    const signalsText = recentSignals.length > 0
-      ? recentSignals.map(s => {
+  const stage = girlInfo?.stage || '聊天';
+  const signalsText = recentSignals.length > 0
+    ? recentSignals.map(s => {
           const icon = s.type === 'positive' ? '[+]' : s.type === 'negative' ? '[-]' : '[*]';
           return `${icon} ${s.event} — ${s.date}`;
         }).join('\n')
       : '暂无';
 
-    const stageStyleMap = {
-      '陌生': ['稳妥型', '破冰型', '探索型'],
-      '搭讪': ['稳妥型', '自然型', '幽默型'],
-      '聊天': ['稳妥型', '进攻型', '调侃型'],
-      '暧昧': ['进攻型', '暧昧型', '试探型'],
-      '约会': ['浪漫型', '推进型', '调侃型'],
-      '长期': ['陪伴型', '关心型', '默契型'],
-    };
-    const defaultStyles = stageStyleMap[stage] || ['稳妥型', '进攻型', '调侃型'];
+  const stageStyleMap = {
+    '陌生': ['稳妥型', '破冰型', '探索型'],
+    '搭讪': ['稳妥型', '自然型', '幽默型'],
+    '聊天': ['稳妥型', '进攻型', '调侃型'],
+    '暧昧': ['进攻型', '暧昧型', '试探型'],
+    '约会': ['浪漫型', '推进型', '调侃型'],
+    '长期': ['陪伴型', '关心型', '默契型'],
+  };
+  const defaultStyles = stageStyleMap[stage] || ['稳妥型', '进攻型', '调侃型'];
 
-    // 构建 prompt
-    let contentDescription = '';
-    if (momentText) contentDescription += `【朋友圈文字】\n${momentText}\n\n`;
-    if (momentImage) contentDescription += '【朋友圈图片】\n（见下方图片）\n';
+  // 构建 prompt
+  let contentDescription = '';
+  if (momentText) contentDescription += `【朋友圈文字】\n${momentText}\n\n`;
+  if (momentImage) contentDescription += '【朋友圈图片】\n（见下方图片）\n';
 
-    const systemPrompt = `你是童锦程，两性关系专家，情感老中医。你的风格：接地气，有温度，懂人心，有经验，真诚自然，不油腔滑调，不套路撩骚。
+  const systemPrompt = `你是童锦程，两性关系专家，情感老中医。你的风格：接地气，有温度，懂人心，有经验，真诚自然，不油腔滑调，不套路撩骚。
 
 分析以下女生朋友圈，提取对她有帮助的信息，结合她的档案给出发评论/私聊建议。
 
@@ -1740,142 +1643,135 @@ ${contentDescription}
 
 只输出 JSON，不要其他内容。`;
 
-    const aiConfig = getAIConfig();
+  const aiConfig = getAIConfig();
 
-    // 构建 AI 消息
-    if (momentImage) {
-      // 视觉模型
-      const vlConfig = getVLModelConfig() || getAIConfig();
+  // 构建 AI 消息
+  if (momentImage) {
+    // 视觉模型
+    const vlConfig = getVLModelConfig() || getAIConfig();
 
-      const baseMessages = [
-        { role: 'user', content: systemPrompt + '\n\n【图片】见下方。' }
-      ];
+    const baseMessages = [
+      { role: 'user', content: systemPrompt + '\n\n【图片】见下方。' }
+    ];
 
-      let analysisResult = {
-        momentContent: '图片分析中...',
-        commentSuggestions: defaultStyles.slice(0, 2).map((s) => ({ text: '分析中...', style: s, intention: '' })),
-        dmSuggestions: defaultStyles.slice(0, 2).map((s) => ({ text: '分析中...', style: s, intention: '' }))
-      };
+    let analysisResult = {
+      momentContent: '图片分析中...',
+      commentSuggestions: defaultStyles.slice(0, 2).map((s) => ({ text: '分析中...', style: s, intention: '' })),
+      dmSuggestions: defaultStyles.slice(0, 2).map((s) => ({ text: '分析中...', style: s, intention: '' }))
+    };
 
-      try {
-        // 本地路径转为 base64（DashScope 无法访问 localhost）
-        const resolvedImage = await resolveImageForVL(momentImage);
+    try {
+      // 本地路径转为 base64（DashScope 无法访问 localhost）
+      const resolvedImage = await resolveImageForVL(momentImage);
 
-        const vlResp = await fetch(vlConfig.url, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${vlConfig.key}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            model: vlConfig.model,
-            messages: [
-              ...baseMessages,
-              { role: 'user', content: [
-                { type: 'text', text: '以上是朋友圈内容，这是图片：' },
-                { type: 'image_url', image_url: { url: resolvedImage } }
-              ]}
-            ],
-            temperature: 0.7,
-            max_tokens: 1500
-          })
-        });
-
-        if (vlResp.ok) {
-          const vlData = await vlResp.json();
-          const aiContent = vlData.choices?.[0]?.message?.content || '';
-          try {
-            const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-              analysisResult = JSON.parse(jsonMatch[0]);
-            }
-          } catch (e) { console.warn('[ChatPartner] 视觉分析 JSON 解析失败:', e.message); }
-        }
-      } catch (err) {
-        console.error('[ChatPartner] 视觉分析失败:', err.message);
-      }
-
-      return res.json({
-        success: true,
-        girlId: girlId || null,
-        analysis: analysisResult.momentContent || analysisResult.momentAnalysis || '',
-        lifestyleSignals: analysisResult.lifestyleSignals || [],
-        aestheticPreferences: analysisResult.aestheticPreferences || '',
-        socialSignals: analysisResult.socialSignals || [],
-        emotionalState: analysisResult.emotionalState || '',
-        relationshipHints: analysisResult.relationshipHints || [],
-        personalityInsights: analysisResult.personalityInsights || '',
-        interactionAdvice: analysisResult.interactionAdvice || '',
-        commentSuggestions: analysisResult.commentSuggestions || [],
-        dmSuggestions: analysisResult.dmSuggestions || [],
-        context: {
-          stage,
-          tensionScore: girlInfo?.tensionScore || 5,
-          intimacyLevel: girlInfo?.intimacyLevel || 1
-        }
-      });
-
-    } else {
-      // 纯文本模式
-      const resp = await fetch(aiConfig.url, {
+      const vlResp = await fetch(vlConfig.url, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${aiConfig.key}`,
+          'Authorization': `Bearer ${vlConfig.key}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: aiConfig.model,
+          model: vlConfig.model,
           messages: [
-            { role: 'user', content: systemPrompt }
+            ...baseMessages,
+            { role: 'user', content: [
+              { type: 'text', text: '以上是朋友圈内容，这是图片：' },
+              { type: 'image_url', image_url: { url: resolvedImage } }
+            ]}
           ],
-          temperature: 0.8,
-          max_tokens: 1200
+          temperature: 0.7,
+          max_tokens: 1500
         })
       });
 
-      let analysisResult = {
-        momentContent: '分析中...',
-        commentSuggestions: defaultStyles.slice(0, 2).map((s, i) => ({ text: '分析中...', style: s, intention: '' })),
-        dmSuggestions: defaultStyles.slice(0, 2).map((s, i) => ({ text: '分析中...', style: s, intention: '' }))
-      };
-
-      if (resp.ok) {
-        const data = await resp.json();
-        const aiContent = data.choices?.[0]?.message?.content || '';
+      if (vlResp.ok) {
+        const vlData = await vlResp.json();
+        const aiContent = vlData.choices?.[0]?.message?.content || '';
         try {
           const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
             analysisResult = JSON.parse(jsonMatch[0]);
           }
-        } catch (e) { console.warn('[ChatPartner] analyzeMoment JSON 解析失败:', e.message); }
+        } catch (e) { console.warn('[ChatPartner] 视觉分析 JSON 解析失败:', e.message); }
       }
-
-      return res.json({
-        success: true,
-        girlId: girlId || null,
-        analysis: analysisResult.momentContent || analysisResult.momentAnalysis || '',
-        lifestyleSignals: analysisResult.lifestyleSignals || [],
-        aestheticPreferences: analysisResult.aestheticPreferences || '',
-        socialSignals: analysisResult.socialSignals || [],
-        emotionalState: analysisResult.emotionalState || '',
-        relationshipHints: analysisResult.relationshipHints || [],
-        personalityInsights: analysisResult.personalityInsights || '',
-        interactionAdvice: analysisResult.interactionAdvice || '',
-        commentSuggestions: analysisResult.commentSuggestions || [],
-        dmSuggestions: analysisResult.dmSuggestions || [],
-        context: {
-          stage,
-          tensionScore: girlInfo?.tensionScore || 5,
-          intimacyLevel: girlInfo?.intimacyLevel || 1
-        }
-      });
+    } catch (err) {
+      console.error('[ChatPartner] 视觉分析失败:', err.message);
     }
 
-  } catch (error) {
-    console.error('[ChatPartner] 朋友圈分析失败:', error);
-    res.status(500).json({ error: '朋友圈分析失败' });
+    return success(res, {
+      girlId: girlId || null,
+      analysis: analysisResult.momentContent || analysisResult.momentAnalysis || '',
+      lifestyleSignals: analysisResult.lifestyleSignals || [],
+      aestheticPreferences: analysisResult.aestheticPreferences || '',
+      socialSignals: analysisResult.socialSignals || [],
+      emotionalState: analysisResult.emotionalState || '',
+      relationshipHints: analysisResult.relationshipHints || [],
+      personalityInsights: analysisResult.personalityInsights || '',
+      interactionAdvice: analysisResult.interactionAdvice || '',
+      commentSuggestions: analysisResult.commentSuggestions || [],
+      dmSuggestions: analysisResult.dmSuggestions || [],
+      context: {
+        stage,
+        tensionScore: girlInfo?.tensionScore || 5,
+        intimacyLevel: girlInfo?.intimacyLevel || 1
+      }
+    });
+
+  } else {
+    // 纯文本模式
+    const resp = await fetch(aiConfig.url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${aiConfig.key}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: aiConfig.model,
+        messages: [
+          { role: 'user', content: systemPrompt }
+        ],
+        temperature: 0.8,
+        max_tokens: 1200
+      })
+    });
+
+    let analysisResult = {
+      momentContent: '分析中...',
+      commentSuggestions: defaultStyles.slice(0, 2).map((s, i) => ({ text: '分析中...', style: s, intention: '' })),
+      dmSuggestions: defaultStyles.slice(0, 2).map((s, i) => ({ text: '分析中...', style: s, intention: '' }))
+    };
+
+    if (resp.ok) {
+      const data = await resp.json();
+      const aiContent = data.choices?.[0]?.message?.content || '';
+      try {
+        const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          analysisResult = JSON.parse(jsonMatch[0]);
+        }
+      } catch (e) { console.warn('[ChatPartner] analyzeMoment JSON 解析失败:', e.message); }
+    }
+
+    return success(res, {
+      girlId: girlId || null,
+      analysis: analysisResult.momentContent || analysisResult.momentAnalysis || '',
+      lifestyleSignals: analysisResult.lifestyleSignals || [],
+      aestheticPreferences: analysisResult.aestheticPreferences || '',
+      socialSignals: analysisResult.socialSignals || [],
+      emotionalState: analysisResult.emotionalState || '',
+      relationshipHints: analysisResult.relationshipHints || [],
+      personalityInsights: analysisResult.personalityInsights || '',
+      interactionAdvice: analysisResult.interactionAdvice || '',
+      commentSuggestions: analysisResult.commentSuggestions || [],
+      dmSuggestions: analysisResult.dmSuggestions || [],
+      context: {
+        stage,
+        tensionScore: girlInfo?.tensionScore || 5,
+        intimacyLevel: girlInfo?.intimacyLevel || 1
+      }
+    });
   }
-});
+}));
 
 /**
  * 朋友圈建议采纳反馈
@@ -1884,76 +1780,70 @@ ${contentDescription}
  * 将采纳的朋友圈互动记录到 ChatLog，
  * 同时异步分析对档案的影响（热度、信号提取）
  */
-router.post('/moment-feedback', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
-    }
-
-    const { girlId, chosenReply, replyType, momentText, momentImageUrl, style, intention } = req.body;
-
-    if (!girlId || !chosenReply) {
-      return res.status(400).json({ error: '参数不完整' });
-    }
-
-    const girl = await prisma.girl.findUnique({ where: { id: girlId } });
-    if (!girl) {
-      return res.status(404).json({ error: '女生不存在' });
-    }
-
-    // 安全：操盘手只能操作自己负责的客户的女生
-    if (req.user.role === 'operator') {
-      const session = await prisma.chatSession.findFirst({
-        where: { operatorId: req.user.id, clientId: girl.clientId }
-      });
-      if (!session) return res.status(403).json({ error: '无权限操作此女生数据' });
-    }
-
-    // 保存到 ChatLog
-    const log = await prisma.chatLog.create({
-      data: {
-        girlId,
-        clientId: girl.clientId,
-        operatorId: req.user.id,
-        receiverName: girl.name,
-        content: chosenReply,
-        type: replyType === 'dm' ? 'text' : 'text',
-        momentText: momentText || null,
-        momentImageUrl: momentImageUrl || null,
-        aiAdopted: true,
-        aiAnalysis: `朋友圈互动 | 类型: ${replyType} | 风格: ${style || ''} | 意图: ${intention || ''}`
-      }
-    });
-
-    // 热度调整
-    const tensionAdjustments = {
-      '进攻型': 1, '暧昧型': 1.5, '浪漫型': 1.5, '试探型': 0.5,
-      '推进型': 1, '调侃型': 0.5, '制造暧昧': 1, '推进关系': 1,
-      '稳妥型': 0, '破冰型': 0, '自然型': 0, '探索型': 0,
-      '陪伴型': 0, '关心型': 0, '默契型': 0,
-      '评论': 0.5, '私聊': 1,
-    };
-    const adjustment = tensionAdjustments[intention] || tensionAdjustments[replyType] || 0;
-
-    if (adjustment !== 0) {
-      await executeTool('update_tension', {
-        girlId,
-        adjustment,
-        reason: `朋友圈互动采纳"${style || replyType}"建议：${chosenReply.slice(0, 20)}`
-      });
-      await executeTool('add_signal', {
-        girlId,
-        type: adjustment > 0 ? 'positive' : 'neutral',
-        event: `朋友圈互动：${intention || replyType} - ${chosenReply.slice(0, 30)}`
-      });
-    }
-
-    res.json({ success: true, logId: log.id });
-
-  } catch (error) {
-    console.error('[ChatPartner] 朋友圈反馈失败:', error);
-    res.status(500).json({ error: '朋友圈反馈失败' });
+router.post('/moment-feedback', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
   }
-});
+
+  const { girlId, chosenReply, replyType, momentText, momentImageUrl, style, intention } = req.body;
+
+  if (!girlId || !chosenReply) {
+    throw new AppError(ErrorCodes.VALIDATION_ERROR);
+  }
+
+  const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+  if (!girl) {
+    throw new AppError(ErrorCodes.GIRL_NOT_FOUND);
+  }
+
+  // 安全：操盘手只能操作自己负责的客户的女生
+  if (req.user.role === 'operator') {
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId: girl.clientId }
+    });
+    if (!session) throw new AppError(ErrorCodes.GIRL_ACCESS_DENIED);
+  }
+
+  // 保存到 ChatLog
+  const log = await prisma.chatLog.create({
+    data: {
+      girlId,
+      clientId: girl.clientId,
+      operatorId: req.user.id,
+      receiverName: girl.name,
+      content: chosenReply,
+      type: replyType === 'dm' ? 'text' : 'text',
+      momentText: momentText || null,
+      momentImageUrl: momentImageUrl || null,
+      aiAdopted: true,
+      aiAnalysis: `朋友圈互动 | 类型: ${replyType} | 风格: ${style || ''} | 意图: ${intention || ''}`
+    }
+  });
+
+  // 热度调整
+  const tensionAdjustments = {
+    '进攻型': 1, '暧昧型': 1.5, '浪漫型': 1.5, '试探型': 0.5,
+    '推进型': 1, '调侃型': 0.5, '制造暧昧': 1, '推进关系': 1,
+    '稳妥型': 0, '破冰型': 0, '自然型': 0, '探索型': 0,
+    '陪伴型': 0, '关心型': 0, '默契型': 0,
+    '评论': 0.5, '私聊': 1,
+  };
+  const adjustment = tensionAdjustments[intention] || tensionAdjustments[replyType] || 0;
+
+  if (adjustment !== 0) {
+    await executeTool('update_tension', {
+      girlId,
+      adjustment,
+      reason: `朋友圈互动采纳"${style || replyType}"建议：${chosenReply.slice(0, 20)}`
+    });
+    await executeTool('add_signal', {
+      girlId,
+      type: adjustment > 0 ? 'positive' : 'neutral',
+      event: `朋友圈互动：${intention || replyType} - ${chosenReply.slice(0, 30)}`
+    });
+  }
+
+  return success(res, { logId: log.id });
+}));
 
 module.exports = router;

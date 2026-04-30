@@ -17,26 +17,26 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
+const AppError = require('../errors/AppError');
+const { ErrorCodes } = require('../errors/errorCodes');
+const asyncHandler = require('../middleware/asyncHandler');
+const { success } = require('../utils/response');
+
 module.exports = function(io) {
   const router = express.Router();
 
   // Auth middleware
-  const authMiddleware = async (req, res, next) => {
+  const authMiddleware = asyncHandler(async (req, res) => {
     const authHeader = req.headers.authorization;
     const token = authHeader?.split(' ')[1];
 
     if (!token) {
-      return res.status(401).json({ error: '未登录' });
+      throw new AppError(ErrorCodes.AUTH_TOKEN_MISSING);
     }
 
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET);
-      req.user = decoded;
-      next();
-    } catch (err) {
-      res.status(401).json({ error: 'token无效' });
-    }
-  };
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+  });
 
   // Socket.io 推送消息
   const emitNewMessage = (session, message, senderUserId, senderRole) => {
@@ -63,227 +63,201 @@ module.exports = function(io) {
   };
 
   // 获取操盘手的所有客户会话列表
-  router.get('/sessions', authMiddleware, async (req, res) => {
-    try {
-      if (req.user.role !== 'operator' && req.user.role !== 'admin') {
-        return res.status(403).json({ error: '无权限' });
-      }
-
-      // admin 可以查看所有 sessions，否则只查看自己的
-      const where = req.user.role === 'admin' ? {} : { operatorId: req.user.id };
-      const sessions = await prisma.chatSession.findMany({
-        where,
-        orderBy: { lastMessageAt: 'desc' }
-      });
-
-      // 获取每个会话的客户信息
-      const sessionsWithClients = await Promise.all(
-        sessions.map(async (session) => {
-          const client = await prisma.user.findUnique({
-            where: { id: session.clientId },
-            select: {
-              id: true,
-              nickname: true,
-              avatar: true,
-              serviceStage: true
-            }
-          });
-          return { ...session, clientId: session.clientId, client };
-        })
-      );
-
-      res.json({ success: true, sessions: sessionsWithClients });
-    } catch (error) {
-      console.error('[Chat] 获取会话列表失败:', error);
-      res.status(500).json({ error: '获取失败' });
+  router.get('/sessions', authMiddleware, asyncHandler(async (req, res) => {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+      throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
     }
-  });
+
+    // admin 可以查看所有 sessions，否则只查看自己的
+    const where = req.user.role === 'admin' ? {} : { operatorId: req.user.id };
+    const sessions = await prisma.chatSession.findMany({
+      where,
+      orderBy: { lastMessageAt: 'desc' }
+    });
+
+    // 获取每个会话的客户信息
+    const sessionsWithClients = await Promise.all(
+      sessions.map(async (session) => {
+        const client = await prisma.user.findUnique({
+          where: { id: session.clientId },
+          select: {
+            id: true,
+            nickname: true,
+            avatar: true,
+            serviceStage: true
+          }
+        });
+        return { ...session, clientId: session.clientId, client };
+      })
+    );
+
+    return success(res, { sessions: sessionsWithClients });
+  }));
 
   // 客户获取自己的会话列表
-  router.get('/my-sessions', authMiddleware, async (req, res) => {
-    try {
-      const sessions = await prisma.chatSession.findMany({
-        where: { clientId: req.user.id },
-        orderBy: { lastMessageAt: 'desc' }
-      });
+  router.get('/my-sessions', authMiddleware, asyncHandler(async (req, res) => {
+    const sessions = await prisma.chatSession.findMany({
+      where: { clientId: req.user.id },
+      orderBy: { lastMessageAt: 'desc' }
+    });
 
-      const sessionsWithOperators = await Promise.all(
-        sessions.map(async (session) => {
-          const operator = await prisma.user.findUnique({
-            where: { id: session.operatorId },
-            select: { id: true, nickname: true, avatar: true }
-          });
-          return { ...session, client: operator };
-        })
-      );
+    const sessionsWithOperators = await Promise.all(
+      sessions.map(async (session) => {
+        const operator = await prisma.user.findUnique({
+          where: { id: session.operatorId },
+          select: { id: true, nickname: true, avatar: true }
+        });
+        return { ...session, client: operator };
+      })
+    );
 
-      res.json({ success: true, sessions: sessionsWithOperators });
-    } catch (error) {
-      console.error('[Chat] 获取客户会话列表失败:', error);
-      res.status(500).json({ error: '获取失败' });
-    }
-  });
+    return success(res, { sessions: sessionsWithOperators });
+  }));
 
   // 获取或创建与客户的会话
-  router.post('/sessions', authMiddleware, async (req, res) => {
-    try {
-      if (req.user.role !== 'operator' && req.user.role !== 'admin') {
-        return res.status(403).json({ error: '无权限' });
-      }
+  router.post('/sessions', authMiddleware, asyncHandler(async (req, res) => {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+      throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
+    }
 
-      const { clientId } = req.body;
-      if (!clientId) {
-        return res.status(400).json({ error: '客户ID是必需的' });
-      }
+    const { clientId } = req.body;
+    if (!clientId) {
+      throw new AppError(ErrorCodes.VALIDATION_ERROR);
+    }
 
-      // 查找或创建会话
-      let session = await prisma.chatSession.findUnique({
-        where: {
-          operatorId_clientId: {
-            operatorId: req.user.id,
-            clientId
-          }
+    // 查找或创建会话
+    let session = await prisma.chatSession.findUnique({
+      where: {
+        operatorId_clientId: {
+          operatorId: req.user.id,
+          clientId
+        }
+      }
+    });
+
+    if (!session) {
+      session = await prisma.chatSession.create({
+        data: {
+          operatorId: req.user.id,
+          clientId
         }
       });
-
-      if (!session) {
-        session = await prisma.chatSession.create({
-          data: {
-            operatorId: req.user.id,
-            clientId
-          }
-        });
-      }
-
-      res.json({ success: true, session });
-    } catch (error) {
-      console.error('[Chat] 创建会话失败:', error);
-      res.status(500).json({ error: '创建失败' });
     }
-  });
+
+    return success(res, { session });
+  }));
 
   // 客户端创建自己的会话（自动分配操作员）
-  router.post('/my-session', authMiddleware, async (req, res) => {
-    try {
-      if (req.user.role !== 'client') {
-        return res.status(403).json({ error: '无权限' });
+  router.post('/my-session', authMiddleware, asyncHandler(async (req, res) => {
+    if (req.user.role !== 'client') {
+      throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
+    }
+
+    // 查找一个可用的操作员（随机选择一个在线的或第一个）
+    const operators = await prisma.user.findMany({
+      where: { role: 'operator' },
+      take: 1,
+      orderBy: { createdAt: 'asc' }
+    });
+
+    if (operators.length === 0) {
+      throw new AppError(ErrorCodes.VALIDATION_ERROR);
+    }
+
+    const operatorId = operators[0].id;
+
+    // 查找或创建会话
+    let session = await prisma.chatSession.findUnique({
+      where: {
+        operatorId_clientId: {
+          operatorId,
+          clientId: req.user.id
+        }
       }
+    });
 
-      // 查找一个可用的操作员（随机选择一个在线的或第一个）
-      const operators = await prisma.user.findMany({
-        where: { role: 'operator' },
-        take: 1,
-        orderBy: { createdAt: 'asc' }
-      });
-
-      if (operators.length === 0) {
-        return res.status(400).json({ error: '暂无可用客服，请稍后再试' });
-      }
-
-      const operatorId = operators[0].id;
-
-      // 查找或创建会话
-      let session = await prisma.chatSession.findUnique({
-        where: {
-          operatorId_clientId: {
-            operatorId,
-            clientId: req.user.id
-          }
+    if (!session) {
+      session = await prisma.chatSession.create({
+        data: {
+          operatorId,
+          clientId: req.user.id
         }
       });
-
-      if (!session) {
-        session = await prisma.chatSession.create({
-          data: {
-            operatorId,
-            clientId: req.user.id
-          }
-        });
-      }
-
-      res.json({ success: true, session });
-    } catch (error) {
-      console.error('[Chat] 客户端创建会话失败:', error);
-      res.status(500).json({ error: '创建失败' });
     }
-  });
+
+    return success(res, { session });
+  }));
 
   // 获取会话的消息历史
-  router.get('/sessions/:sessionId/messages', authMiddleware, async (req, res) => {
-    try {
-      const { sessionId } = req.params;
-      const { limit = 50, before } = req.query;
+  router.get('/sessions/:sessionId/messages', authMiddleware, asyncHandler(async (req, res) => {
+    const { sessionId } = req.params;
+    const { limit = 50, before } = req.query;
 
-      const session = await prisma.chatSession.findUnique({
-        where: { id: sessionId }
-      });
+    const session = await prisma.chatSession.findUnique({
+      where: { id: sessionId }
+    });
 
-      if (!session) {
-        return res.status(404).json({ error: '会话不存在' });
-      }
-
-      // 验证权限 - admin 可以访问所有会话
-      if (req.user.role !== 'admin' && session.operatorId !== req.user.id && session.clientId !== req.user.id) {
-        return res.status(403).json({ error: '无权限' });
-      }
-
-      const where = { sessionId };
-      if (before) {
-        where.createdAt = { lt: new Date(before) };
-      }
-
-      const messages = await prisma.message.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        take: parseInt(limit)
-      });
-
-      // 标记消息为已读
-      await prisma.message.updateMany({
-        where: {
-          sessionId,
-          senderRole: 'client',
-          isRead: false
-        },
-        data: {
-          isRead: true,
-          readAt: new Date()
-        }
-      });
-
-      // 更新未读数
-      await prisma.chatSession.update({
-        where: { id: sessionId },
-        data: { unreadCount: 0 }
-      });
-
-      res.json({ success: true, messages: messages.reverse() });
-    } catch (error) {
-      console.error('[Chat] 获取消息失败:', error);
-      res.status(500).json({ error: '获取失败' });
+    if (!session) {
+      throw new AppError(ErrorCodes.CHAT_SESSION_NOT_FOUND);
     }
-  });
+
+    // 验证权限 - admin 可以访问所有会话
+    if (req.user.role !== 'admin' && session.operatorId !== req.user.id && session.clientId !== req.user.id) {
+      throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
+    }
+
+    const where = { sessionId };
+    if (before) {
+      where.createdAt = { lt: new Date(before) };
+    }
+
+    const messages = await prisma.message.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: parseInt(limit)
+    });
+
+    // 标记消息为已读
+    await prisma.message.updateMany({
+      where: {
+        sessionId,
+        senderRole: 'client',
+        isRead: false
+      },
+      data: {
+        isRead: true,
+        readAt: new Date()
+      }
+    });
+
+    // 更新未读数
+    await prisma.chatSession.update({
+      where: { id: sessionId },
+      data: { unreadCount: 0 }
+    });
+
+    return success(res, { messages: messages.reverse() });
+  }));
 
   // 发送消息
-  router.post('/messages', authMiddleware, async (req, res) => {
-    try {
-      const { sessionId, content, type = 'text', isBurnAfterRead = false, burnAfterSeconds, isFlashImage = false, mediaUrl } = req.body;
+  router.post('/messages', authMiddleware, asyncHandler(async (req, res) => {
+    const { sessionId, content, type = 'text', isBurnAfterRead = false, burnAfterSeconds, isFlashImage = false, mediaUrl } = req.body;
 
-      const session = await prisma.chatSession.findUnique({
-        where: { id: sessionId }
-      });
+    const session = await prisma.chatSession.findUnique({
+      where: { id: sessionId }
+    });
 
-      if (!session) {
-        return res.status(404).json({ error: '会话不存在' });
-      }
+    if (!session) {
+      throw new AppError(ErrorCodes.CHAT_SESSION_NOT_FOUND);
+    }
 
-      // 验证权限 - admin 可以访问所有会话
-      if (req.user.role !== 'admin' && session.operatorId !== req.user.id && session.clientId !== req.user.id) {
-        return res.status(403).json({ error: '无权限' });
-      }
+    // 验证权限 - admin 可以访问所有会话
+    if (req.user.role !== 'admin' && session.operatorId !== req.user.id && session.clientId !== req.user.id) {
+      throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
+    }
 
-      // 确定发送者角色：admin 发送时为 'admin'
-      const senderRole = req.user.role === 'admin' ? 'admin' : (session.operatorId === req.user.id ? 'operator' : 'client');
+    // 确定发送者角色：admin 发送时为 'admin'
+    const senderRole = req.user.role === 'admin' ? 'admin' : (session.operatorId === req.user.id ? 'operator' : 'client');
 
       // 敏感图片：嵌入水印（溯源接收方）→ 重新加密 → 上传新OSS文件
       let finalMediaUrl = mediaUrl;
@@ -377,310 +351,281 @@ module.exports = function(io) {
       // 通过 Socket.io 推送消息给另一方
       emitNewMessage(session, message, req.user.id, senderRole);
 
-      res.json({ success: true, message });
-    } catch (error) {
-      console.error('[Chat] 发送消息失败:', error);
-      res.status(500).json({ error: '发送失败' });
+      return success(res, { message });
     }
-  });
+  }));
 
   // 阅后即焚 / 闪图 - 标记消息已销毁
-  router.post('/messages/:id/burn', authMiddleware, async (req, res) => {
-    try {
-      const message = await prisma.message.findUnique({
-        where: { id: req.params.id }
-      });
+  router.post('/messages/:id/burn', authMiddleware, asyncHandler(async (req, res) => {
+    const message = await prisma.message.findUnique({
+      where: { id: req.params.id }
+    });
 
-      if (!message) {
-        return res.status(404).json({ error: '消息不存在' });
-      }
-
-      if (message.burnedAt) {
-        return res.status(400).json({ error: '消息已被销毁' });
-      }
-
-      // 授权检查：发送者本人，或会话参与者，admin可以操作所有
-      const session = message.sessionId
-        ? await prisma.chatSession.findUnique({ where: { id: message.sessionId } })
-        : null;
-      const isParticipant = session && (
-        session.operatorId === req.user.id || session.clientId === req.user.id
-      );
-      const isAdmin = req.user.role === 'admin';
-      if (!isAdmin && message.senderId !== req.user.id && !isParticipant) {
-        return res.status(403).json({ error: '无权限' });
-      }
-
-      // 删除OSS文件（敏感内容存OSS，非敏感也在OSS）
-      if (message.mediaUrl && (message.mediaUrl.startsWith('/encrypted/') || message.mediaUrl.startsWith('/public/'))) {
-        const ossPath = message.mediaUrl.replace(/^\//, ''); // 去掉前导 /
-        try {
-          await deleteFile(ossPath);
-          console.log(`[Burn] Deleted OSS file: ${ossPath}`);
-        } catch (err) {
-          console.error(`[Burn] Failed to delete OSS file: ${ossPath}`, err.message);
-        }
-      }
-
-      const updateData = {
-        content: '[消息已销毁]',
-        mediaUrl: null,
-        burnedAt: new Date()
-      };
-
-      // 闪图时额外记录 flashBurnedAt
-      if (message.isFlashImage) {
-        updateData.flashBurnedAt = new Date();
-      }
-
-      await prisma.message.update({
-        where: { id: req.params.id },
-        data: updateData
-      });
-
-      const updated = await prisma.message.findUnique({ where: { id: req.params.id } });
-
-      // 广播给会话另一方（同步销毁状态）
-      if (session) {
-        io.to(`operator:${session.operatorId}`).emit('message:burned', {
-          sessionId: message.sessionId, messageId: message.id
-        });
-        io.to(`client:${session.clientId}`).emit('message:burned', {
-          sessionId: message.sessionId, messageId: message.id
-        });
-      }
-      res.json({ success: true, message: updated });
-    } catch (error) {
-      console.error('[Chat] 销毁消息失败:', error);
-      res.status(500).json({ error: '操作失败' });
+    if (!message) {
+      throw new AppError(ErrorCodes.RESOURCE_NOT_FOUND);
     }
-  });
+
+    if (message.burnedAt) {
+      throw new AppError(ErrorCodes.VALIDATION_ERROR);
+    }
+
+    // 授权检查：发送者本人，或会话参与者，admin可以操作所有
+    const session = message.sessionId
+      ? await prisma.chatSession.findUnique({ where: { id: message.sessionId } })
+      : null;
+    const isParticipant = session && (
+      session.operatorId === req.user.id || session.clientId === req.user.id
+    );
+    const isAdmin = req.user.role === 'admin';
+    if (!isAdmin && message.senderId !== req.user.id && !isParticipant) {
+      throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
+    }
+
+    // 删除OSS文件（敏感内容存OSS，非敏感也在OSS）
+    if (message.mediaUrl && (message.mediaUrl.startsWith('/encrypted/') || message.mediaUrl.startsWith('/public/'))) {
+      const ossPath = message.mediaUrl.replace(/^\//, ''); // 去掉前导 /
+      try {
+        await deleteFile(ossPath);
+        console.log(`[Burn] Deleted OSS file: ${ossPath}`);
+      } catch (err) {
+        console.error(`[Burn] Failed to delete OSS file: ${ossPath}`, err.message);
+      }
+    }
+
+    const updateData = {
+      content: '[消息已销毁]',
+      mediaUrl: null,
+      burnedAt: new Date()
+    };
+
+    // 闪图时额外记录 flashBurnedAt
+    if (message.isFlashImage) {
+      updateData.flashBurnedAt = new Date();
+    }
+
+    await prisma.message.update({
+      where: { id: req.params.id },
+      data: updateData
+    });
+
+    const updated = await prisma.message.findUnique({ where: { id: req.params.id } });
+
+    // 广播给会话另一方（同步销毁状态）
+    if (session) {
+      io.to(`operator:${session.operatorId}`).emit('message:burned', {
+        sessionId: message.sessionId, messageId: message.id
+      });
+      io.to(`client:${session.clientId}`).emit('message:burned', {
+        sessionId: message.sessionId, messageId: message.id
+      });
+    }
+    return success(res, { message: updated });
+  }));
 
   // 流媒体解密接口 - 敏感内容走此接口解密展示
-  router.get('/media/:messageId', authMiddleware, async (req, res) => {
-    try {
-      const message = await prisma.message.findUnique({
-        where: { id: req.params.messageId }
-      });
+  router.get('/media/:messageId', authMiddleware, asyncHandler(async (req, res) => {
+    const message = await prisma.message.findUnique({
+      where: { id: req.params.messageId }
+    });
 
-      if (!message) {
-        return res.status(404).json({ error: '消息不存在' });
-      }
-
-      if (!message.mediaUrl) {
-        return res.status(404).json({ error: '无媒体文件' });
-      }
-
-      if (message.burnedAt) {
-        return res.status(410).json({ error: '内容已销毁' });
-      }
-
-      // 权限检查：发送者或接收者才能看
-      const session = message.sessionId
-        ? await prisma.chatSession.findUnique({ where: { id: message.sessionId } })
-        : null;
-      const isParticipant = session && (
-        session.operatorId === req.user.id || session.clientId === req.user.id
-      );
-      if (message.senderId !== req.user.id && !isParticipant) {
-        return res.status(403).json({ error: '无权限' });
-      }
-
-      // 非加密内容（/public/ 或旧本地路径），直接重定向或本地服务
-      if (!message.mediaUrl.startsWith('/encrypted/')) {
-        // 兼容旧本地文件
-        if (message.mediaUrl.startsWith('/uploads/')) {
-          return res.redirect(message.mediaUrl);
-        }
-        // public OSS 文件走重定向（需生成签名URL，暂用重定向）
-        if (message.mediaUrl.startsWith('/public/')) {
-          const { client } = require('../services/ossClient');
-          const ossPath = message.mediaUrl.replace(/^\//, '');
-          const url = await client.signatureUrl(ossPath, { expires: 3600 });
-          return res.redirect(url);
-        }
-        return res.status(400).json({ error: '无法处理此媒体类型' });
-      }
-
-      // 加密内容（/encrypted/）：从OSS下载 → 内存解密 → 流返回
-      const ossPath = message.mediaUrl.replace(/^\//, '');
-      const encryptedBuffer = await downloadBuffer(ossPath);
-      const plaintext = decrypt(encryptedBuffer);
-
-      res.setHeader('Content-Type', message.type === 'video' ? 'video/mp4' : message.type === 'audio' ? 'audio/mpeg' : 'image/jpeg');
-      res.setHeader('Cache-Control', 'no-store, no-cache, private');
-      res.setHeader('X-Content-Type-Options', 'nosniff');
-      res.setHeader('Content-Length', plaintext.length);
-      res.end(plaintext);
-    } catch (error) {
-      console.error('[Chat] 流媒体获取失败:', error);
-      res.status(500).json({ error: '获取失败' });
+    if (!message) {
+      throw new AppError(ErrorCodes.RESOURCE_NOT_FOUND);
     }
-  });
+
+    if (!message.mediaUrl) {
+      throw new AppError(ErrorCodes.RESOURCE_NOT_FOUND);
+    }
+
+    if (message.burnedAt) {
+      throw new AppError(ErrorCodes.VALIDATION_ERROR);
+    }
+
+    // 权限检查：发送者或接收者才能看
+    const session = message.sessionId
+      ? await prisma.chatSession.findUnique({ where: { id: message.sessionId } })
+      : null;
+    const isParticipant = session && (
+      session.operatorId === req.user.id || session.clientId === req.user.id
+    );
+    if (message.senderId !== req.user.id && !isParticipant) {
+      throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
+    }
+
+    // 非加密内容（/public/ 或旧本地路径），直接重定向或本地服务
+    if (!message.mediaUrl.startsWith('/encrypted/')) {
+      // 兼容旧本地文件
+      if (message.mediaUrl.startsWith('/uploads/')) {
+        return res.redirect(message.mediaUrl);
+      }
+      // public OSS 文件走重定向（需生成签名URL，暂用重定向）
+      if (message.mediaUrl.startsWith('/public/')) {
+        const { client } = require('../services/ossClient');
+        const ossPath = message.mediaUrl.replace(/^\//, '');
+        const url = await client.signatureUrl(ossPath, { expires: 3600 });
+        return res.redirect(url);
+      }
+      throw new AppError(ErrorCodes.VALIDATION_ERROR);
+    }
+
+    // 加密内容（/encrypted/）：从OSS下载 → 内存解密 → 流返回
+    const ossPath = message.mediaUrl.replace(/^\//, '');
+    const encryptedBuffer = await downloadBuffer(ossPath);
+    const plaintext = decrypt(encryptedBuffer);
+
+    res.setHeader('Content-Type', message.type === 'video' ? 'video/mp4' : message.type === 'audio' ? 'audio/mpeg' : 'image/jpeg');
+    res.setHeader('Cache-Control', 'no-store, no-cache, private');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Length', plaintext.length);
+    res.end(plaintext);
+  }));
 
   // 标记消息已读
-  router.post('/messages/:id/read', authMiddleware, async (req, res) => {
-    try {
-      const message = await prisma.message.update({
-        where: { id: req.params.id },
-        data: {
-          isRead: true,
-          readAt: new Date()
-        }
-      });
+  router.post('/messages/:id/read', authMiddleware, asyncHandler(async (req, res) => {
+    const message = await prisma.message.update({
+      where: { id: req.params.id },
+      data: {
+        isRead: true,
+        readAt: new Date()
+      }
+    });
 
-      res.json({ success: true, message });
-    } catch (error) {
-      console.error('[Chat] 标记已读失败:', error);
-      res.status(500).json({ error: '操作失败' });
-    }
-  });
+    return success(res, { message });
+  }));
 
   // 撤回消息
-  router.post('/messages/:id/recall', authMiddleware, async (req, res) => {
-    try {
-      const message = await prisma.message.findUnique({
-        where: { id: req.params.id }
-      });
+  router.post('/messages/:id/recall', authMiddleware, asyncHandler(async (req, res) => {
+    const message = await prisma.message.findUnique({
+      where: { id: req.params.id }
+    });
 
-      if (!message) {
-        return res.status(404).json({ error: '消息不存在' });
-      }
-
-      if (message.recalledAt) {
-        return res.status(400).json({ error: '消息已被撤回' });
-      }
-
-      if (message.senderId !== req.user.id) {
-        return res.status(403).json({ error: '只能撤回自己的消息' });
-      }
-
-      // 删除OSS文件（撤回也清理媒体文件）
-      if (message.mediaUrl && (message.mediaUrl.startsWith('/encrypted/') || message.mediaUrl.startsWith('/public/'))) {
-        const ossPath = message.mediaUrl.replace(/^\//, '');
-        try {
-          await deleteFile(ossPath);
-        } catch (err) {
-          console.error(`[Recall] Failed to delete OSS file: ${ossPath}`, err.message);
-        }
-      }
-
-      const updated = await prisma.message.update({
-        where: { id: req.params.id },
-        data: {
-          content: '[消息已撤回]',
-          mediaUrl: null,
-          recalledAt: new Date()
-        }
-      });
-
-      const session = await prisma.chatSession.findUnique({
-        where: { id: message.sessionId }
-      });
-      if (session) {
-        io.to(`operator:${session.operatorId}`).emit('message:recalled', {
-          sessionId: message.sessionId, messageId: message.id
-        });
-        io.to(`client:${session.clientId}`).emit('message:recalled', {
-          sessionId: message.sessionId, messageId: message.id
-        });
-      }
-
-      res.json({ success: true, message: updated });
-    } catch (error) {
-      console.error('[Chat] 撤回消息失败:', error);
-      res.status(500).json({ error: '操作失败' });
+    if (!message) {
+      throw new AppError(ErrorCodes.RESOURCE_NOT_FOUND);
     }
-  });
+
+    if (message.recalledAt) {
+      throw new AppError(ErrorCodes.VALIDATION_ERROR);
+    }
+
+    if (message.senderId !== req.user.id) {
+      throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
+    }
+
+    // 删除OSS文件（撤回也清理媒体文件）
+    if (message.mediaUrl && (message.mediaUrl.startsWith('/encrypted/') || message.mediaUrl.startsWith('/public/'))) {
+      const ossPath = message.mediaUrl.replace(/^\//, '');
+      try {
+        await deleteFile(ossPath);
+      } catch (err) {
+        console.error(`[Recall] Failed to delete OSS file: ${ossPath}`, err.message);
+      }
+    }
+
+    const updated = await prisma.message.update({
+      where: { id: req.params.id },
+      data: {
+        content: '[消息已撤回]',
+        mediaUrl: null,
+        recalledAt: new Date()
+      }
+    });
+
+    const session = await prisma.chatSession.findUnique({
+      where: { id: message.sessionId }
+    });
+    if (session) {
+      io.to(`operator:${session.operatorId}`).emit('message:recalled', {
+        sessionId: message.sessionId, messageId: message.id
+      });
+      io.to(`client:${session.clientId}`).emit('message:recalled', {
+        sessionId: message.sessionId, messageId: message.id
+      });
+    }
+
+    return success(res, { message: updated });
+  }));
 
   // ========== 客户档案（操盘手专用）==========
 
   // 获取客户档案
-  router.get('/profile/:clientId', authMiddleware, async (req, res) => {
-    try {
-      if (req.user.role !== 'operator' && req.user.role !== 'admin') {
-        return res.status(403).json({ error: '无权限' });
-      }
-
-      const { clientId } = req.params;
-
-      const isAdmin = req.user.role === 'admin';
-      const session = !isAdmin ? await prisma.chatSession.findFirst({
-        where: { operatorId: req.user.id, clientId }
-      }) : true;
-      if (!session) {
-        return res.status(403).json({ error: '无权限查看此客户档案' });
-      }
-
-      const user = await prisma.user.findUnique({
-        where: { id: clientId },
-        select: {
-          id: true, nickname: true, avatar: true, phone: true,
-          age: true, occupation: true, education: true, income: true,
-          height: true, residence: true, hometown: true,
-          appearance: true, personality: true, emotionalStable: true,
-          eqLevel: true, communicationStyle: true, socialStyle: true,
-          relationshipAttitude: true, marriageHistory: true,
-          emotionalWounds: true, exPartnerTaboos: true,
-          emotionalGoal: true, relationshipGoal: true,
-          commitmentWillingness: true, emotionalMaturity: true,
-          learningAbility: true, coachCooperation: true,
-          feedbackQuality: true, clientType: true,
-          selfValuePerception: true, cognitiveAccuracy: true,
-          assetsLevel: true, budgetRange: true,
-          timeInvestment: true, serviceStage: true,
-          signals: true, pendingActions: true,
-          observations: true, conversationSummary: true,
-          matchPreferences: true, dealbreakers: true,
-          interactionStyle: true, chatTaboos: true,
-          humorStyle: true, currentStage: true,
-          stageProgress: true, lastMilestone: true,
-          selfEsteemLevel: true, antiFrustrationLevel: true,
-          pacePreference: true, investmentWillingness: true,
-          comfortZone: true, notes: true, source: true,
-        }
-      });
-
-      if (!user) {
-        return res.status(404).json({ error: '客户不存在' });
-      }
-
-      res.json({ success: true, profile: user });
-    } catch (error) {
-      console.error('[Chat] 获取客户档案失败:', error);
-      res.status(500).json({ error: '获取失败' });
+  router.get('/profile/:clientId', authMiddleware, asyncHandler(async (req, res) => {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+      throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
     }
-  });
+
+    const { clientId } = req.params;
+
+    const isAdmin = req.user.role === 'admin';
+    const session = !isAdmin ? await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId }
+    }) : true;
+    if (!session) {
+      throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: clientId },
+      select: {
+        id: true, nickname: true, avatar: true, phone: true,
+        age: true, occupation: true, education: true, income: true,
+        height: true, residence: true, hometown: true,
+        appearance: true, personality: true, emotionalStable: true,
+        eqLevel: true, communicationStyle: true, socialStyle: true,
+        relationshipAttitude: true, marriageHistory: true,
+        emotionalWounds: true, exPartnerTaboos: true,
+        emotionalGoal: true, relationshipGoal: true,
+        commitmentWillingness: true, emotionalMaturity: true,
+        learningAbility: true, coachCooperation: true,
+        feedbackQuality: true, clientType: true,
+        selfValuePerception: true, cognitiveAccuracy: true,
+        assetsLevel: true, budgetRange: true,
+        timeInvestment: true, serviceStage: true,
+        signals: true, pendingActions: true,
+        observations: true, conversationSummary: true,
+        matchPreferences: true, dealbreakers: true,
+        interactionStyle: true, chatTaboos: true,
+        humorStyle: true, currentStage: true,
+        stageProgress: true, lastMilestone: true,
+        selfEsteemLevel: true, antiFrustrationLevel: true,
+        pacePreference: true, investmentWillingness: true,
+        comfortZone: true, notes: true, source: true,
+      }
+    });
+
+    if (!user) {
+      throw new AppError(ErrorCodes.CLIENT_NOT_FOUND);
+    }
+
+    return success(res, { profile: user });
+  }));
 
   // 分析聊天记录，建议客户档案字段
-  router.post('/profile/:clientId/suggest', authMiddleware, async (req, res) => {
-    try {
-      if (req.user.role !== 'operator' && req.user.role !== 'admin') {
-        return res.status(403).json({ error: '无权限' });
-      }
+  router.post('/profile/:clientId/suggest', authMiddleware, asyncHandler(async (req, res) => {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+      throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
+    }
 
-      const { clientId } = req.params;
+    const { clientId } = req.params;
 
-      const isAdmin = req.user.role === 'admin';
-      const session = !isAdmin ? await prisma.chatSession.findFirst({
-        where: { operatorId: req.user.id, clientId }
-      }) : await prisma.chatSession.findFirst({
-        where: { clientId }
-      });
-      if (!session) {
-        return res.status(403).json({ error: '无权限' });
-      }
+    const isAdmin = req.user.role === 'admin';
+    const session = !isAdmin ? await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId }
+    }) : await prisma.chatSession.findFirst({
+      where: { clientId }
+    });
+    if (!session) {
+      throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
+    }
 
-      const messages = await prisma.message.findMany({
-        where: { sessionId: session.id, recalledAt: null, burnedAt: null, content: { not: null } },
-        orderBy: { createdAt: 'desc' },
-        take: 50,
-        select: { content: true, senderRole: true, createdAt: true }
-      });
+    const messages = await prisma.message.findMany({
+      where: { sessionId: session.id, recalledAt: null, burnedAt: null, content: { not: null } },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      select: { content: true, senderRole: true, createdAt: true }
+    });
 
-      if (messages.length === 0) {
-        return res.json({ success: true, suggestions: [], chatSummary: '', messageCount: 0 });
-      }
+    if (messages.length === 0) {
+      return success(res, { suggestions: [], chatSummary: '', messageCount: 0 });
+    }
 
       const chatText = messages.map(m => {
         const role = m.senderRole === 'operator' ? '[操盘手]' : '[客户]';
@@ -904,76 +849,71 @@ module.exports = function(io) {
         }
       }
 
-      res.json({ success: true, suggestions, chatSummary, messageCount: messages.length });
+      return success(res, { suggestions, chatSummary, messageCount: messages.length });
     } catch (error) {
       console.error('[Chat] 分析聊天记录失败:', error);
-      res.status(500).json({ error: '分析失败' });
+      throw new AppError(ErrorCodes.INTERNAL_ERROR);
     }
-  });
+  }));
 
   // 批量更新客户档案
-  router.patch('/profile/:clientId', authMiddleware, async (req, res) => {
-    try {
-      if (req.user.role !== 'operator' && req.user.role !== 'admin') {
-        return res.status(403).json({ error: '无权限' });
-      }
-
-      const { clientId } = req.params;
-
-      const isAdmin = req.user.role === 'admin';
-      const session = !isAdmin ? await prisma.chatSession.findFirst({
-        where: { operatorId: req.user.id, clientId }
-      }) : true;
-      if (!session) {
-        return res.status(403).json({ error: '无权限更新此档案' });
-      }
-
-      const user = await prisma.user.findUnique({ where: { id: clientId } });
-      if (!user) {
-        return res.status(404).json({ error: '客户不存在' });
-      }
-
-      const allowedFields = [
-        'nickname', 'phone', 'age', 'height',
-        'occupation', 'education', 'income', 'residence', 'hometown',
-        'appearance', 'personality', 'emotionalStable', 'eqLevel',
-        'communicationStyle', 'socialStyle',
-        'relationshipAttitude', 'marriageHistory', 'emotionalWounds', 'exPartnerTaboos',
-        'emotionalGoal', 'relationshipGoal', 'commitmentWillingness', 'emotionalMaturity',
-        'learningAbility', 'coachCooperation', 'feedbackQuality',
-        'clientType', 'selfValuePerception', 'cognitiveAccuracy',
-        'assetsLevel', 'budgetRange', 'timeInvestment', 'serviceStage',
-        'signals', 'pendingActions', 'observations', 'conversationSummary',
-        'matchPreferences', 'dealbreakers',
-        'interactionStyle', 'chatTaboos', 'humorStyle',
-        'currentStage', 'stageProgress', 'lastMilestone',
-        'selfEsteemLevel', 'antiFrustrationLevel', 'pacePreference',
-        'investmentWillingness', 'comfortZone',
-        'notes', 'source',
-      ];
-
-      const updates = {};
-      for (const [key, val] of Object.entries(req.body)) {
-        if (allowedFields.includes(key)) {
-          updates[key] = val;
-        }
-      }
-
-      if (Object.keys(updates).length === 0) {
-        return res.status(400).json({ error: '无可更新字段' });
-      }
-
-      const updated = await prisma.user.update({
-        where: { id: clientId },
-        data: updates
-      });
-
-      res.json({ success: true, profile: updated });
-    } catch (error) {
-      console.error('[Chat] 更新客户档案失败:', error);
-      res.status(500).json({ error: '更新失败' });
+  router.patch('/profile/:clientId', authMiddleware, asyncHandler(async (req, res) => {
+    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+      throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
     }
-  });
+
+    const { clientId } = req.params;
+
+    const isAdmin = req.user.role === 'admin';
+    const session = !isAdmin ? await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId }
+    }) : true;
+    if (!session) {
+      throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: clientId } });
+    if (!user) {
+      throw new AppError(ErrorCodes.CLIENT_NOT_FOUND);
+    }
+
+    const allowedFields = [
+      'nickname', 'phone', 'age', 'height',
+      'occupation', 'education', 'income', 'residence', 'hometown',
+      'appearance', 'personality', 'emotionalStable', 'eqLevel',
+      'communicationStyle', 'socialStyle',
+      'relationshipAttitude', 'marriageHistory', 'emotionalWounds', 'exPartnerTaboos',
+      'emotionalGoal', 'relationshipGoal', 'commitmentWillingness', 'emotionalMaturity',
+      'learningAbility', 'coachCooperation', 'feedbackQuality',
+      'clientType', 'selfValuePerception', 'cognitiveAccuracy',
+      'assetsLevel', 'budgetRange', 'timeInvestment', 'serviceStage',
+      'signals', 'pendingActions', 'observations', 'conversationSummary',
+      'matchPreferences', 'dealbreakers',
+      'interactionStyle', 'chatTaboos', 'humorStyle',
+      'currentStage', 'stageProgress', 'lastMilestone',
+      'selfEsteemLevel', 'antiFrustrationLevel', 'pacePreference',
+      'investmentWillingness', 'comfortZone',
+      'notes', 'source',
+    ];
+
+    const updates = {};
+    for (const [key, val] of Object.entries(req.body)) {
+      if (allowedFields.includes(key)) {
+        updates[key] = val;
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      throw new AppError(ErrorCodes.VALIDATION_ERROR);
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: clientId },
+      data: updates
+    });
+
+    return success(res, { profile: updated });
+  }));
 
   return router;
 };

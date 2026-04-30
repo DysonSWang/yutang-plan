@@ -11,24 +11,25 @@ const { JWT_SECRET, getAIConfig } = require('../config');
 const prisma = require('../prisma');
 const AppError = require('../errors/AppError');
 const { ErrorCodes } = require('../errors/errorCodes');
+const asyncHandler = require('../middleware/asyncHandler');
+const { success } = require('../utils/response');
 
 // Auth middleware
-const authMiddleware = async (req, res, next) => {
+const authMiddleware = asyncHandler(async (req, res) => {
   const authHeader = req.headers.authorization;
   const token = authHeader?.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ error: '未登录' });
+    throw new AppError(ErrorCodes.AUTH_TOKEN_MISSING);
   }
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
-    next();
-  } catch (err) {
-    res.status(401).json({ error: 'token无效' });
+  } catch {
+    throw new AppError(ErrorCodes.AUTH_TOKEN_INVALID);
   }
-};
+});
 
 // ========== AI 策划引擎 ==========
 async function callAI(messages, options = {}) {
@@ -194,102 +195,92 @@ function buildPostDateReviewPrompt({ client, girl, date, evaluation }) {
 // ========== 路由实现 ==========
 
 // 获取约会列表
-router.get('/', authMiddleware, async (req, res) => {
-  try {
-    const { clientId, girlId, status } = req.query;
+router.get('/', authMiddleware, asyncHandler(async (req, res) => {
+  const { clientId, girlId, status } = req.query;
 
-    let where = {};
-    if (req.user.role === 'client') {
-      where.userId = req.user.id;
-    } else if (clientId) {
-      // 安全：操盘手只能查询自己负责的客户
-      const session = await prisma.chatSession.findFirst({
-        where: { operatorId: req.user.id, clientId }
-      });
-      if (!session) {
-        return res.status(403).json({ error: '无权限访问此客户的数据' });
-      }
-      where.userId = clientId;
-    }
-    if (girlId) where.girlId = girlId;
-    if (status) where.status = status;
-
-    const dates = await prisma.date.findMany({
-      where,
-      include: {
-        user: {
-          select: { id: true, nickname: true, username: true, interactionStyle: true, communicationStyle: true, strengths: true }
-        },
-        girl: {
-          select: {
-            id: true, name: true, age: true, occupation: true, residence: true, stage: true,
-            personality: true, communicationStyle: true, emotionalTriggers: true, thingsToAvoid: true,
-            interests: true, dietPreferences: true, dietRestrictions: true, relationshipAttitude: true, emotionalWounds: true,
-            tensionScore: true, intimacyLevel: true, bestApproach: true, familyBackground: true,
-            familyAtmosphere: true
-          }
-        }
-      },
-      orderBy: { dateTime: 'desc' }
-    });
-
-    res.json({ success: true, dates });
-  } catch (error) {
-    console.error('[Dates] 获取约会列表失败:', error);
-    res.status(500).json({ error: '获取失败' });
-  }
-});
-
-// 创建约会
-router.post('/', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
-    }
-
-    const { clientId, girlId, dateTime, location, title, conditions, notes } = req.body;
-
-    if (!clientId || !girlId || !dateTime) {
-      return res.status(400).json({ error: '参数不完整（需 clientId、girlId、dateTime）' });
-    }
-
-    // 安全：操盘手只能为自己的客户创建约会
+  let where = {};
+  if (req.user.role === 'client') {
+    where.userId = req.user.id;
+  } else if (clientId) {
+    // 安全：操盘手只能查询自己负责的客户
     const session = await prisma.chatSession.findFirst({
       where: { operatorId: req.user.id, clientId }
     });
     if (!session) {
-      return res.status(403).json({ error: '无权限为该客户创建约会' });
+      throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '无权限访问此客户的数据' });
     }
-
-    const date = await prisma.date.create({
-      data: {
-        userId: clientId,
-        girlId,
-        dateTime: new Date(dateTime),
-        location,
-        title,
-        conditions: conditions ? JSON.stringify(conditions) : null,
-        notes,
-        status: 'pending_plan',
-        planStatus: 'pending'
-      }
-    });
-
-    // 更新女生阶段为约会
-    await prisma.girl.update({
-      where: { id: girlId },
-      data: { stage: '约会', status: 'dating' }
-    });
-
-    res.json({ success: true, date });
-  } catch (error) {
-    console.error('[Dates] 创建约会失败:', error);
-    res.status(500).json({ error: '创建失败' });
+    where.userId = clientId;
   }
-});
+  if (girlId) where.girlId = girlId;
+  if (status) where.status = status;
+
+  const dates = await prisma.date.findMany({
+    where,
+    include: {
+      user: {
+        select: { id: true, nickname: true, username: true, interactionStyle: true, communicationStyle: true, strengths: true }
+      },
+      girl: {
+        select: {
+          id: true, name: true, age: true, occupation: true, residence: true, stage: true,
+          personality: true, communicationStyle: true, emotionalTriggers: true, thingsToAvoid: true,
+          interests: true, dietPreferences: true, dietRestrictions: true, relationshipAttitude: true, emotionalWounds: true,
+          tensionScore: true, intimacyLevel: true, bestApproach: true, familyBackground: true,
+          familyAtmosphere: true
+        }
+      }
+    },
+    orderBy: { dateTime: 'desc' }
+  });
+
+  return success(res, { dates });
+}));
+
+// 创建约会
+router.post('/', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '无权限' });
+  }
+
+  const { clientId, girlId, dateTime, location, title, conditions, notes } = req.body;
+
+  if (!clientId || !girlId || !dateTime) {
+    throw new AppError(ErrorCodes.VALIDATION_ERROR, { userMessage: '参数不完整（需 clientId、girlId、dateTime）' });
+  }
+
+  // 安全：操盘手只能为自己的客户创建约会
+  const session = await prisma.chatSession.findFirst({
+    where: { operatorId: req.user.id, clientId }
+  });
+  if (!session) {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '无权限为该客户创建约会' });
+  }
+
+  const date = await prisma.date.create({
+    data: {
+      userId: clientId,
+      girlId,
+      dateTime: new Date(dateTime),
+      location,
+      title,
+      conditions: conditions ? JSON.stringify(conditions) : null,
+      notes,
+      status: 'pending_plan',
+      planStatus: 'pending'
+    }
+  });
+
+  // 更新女生阶段为约会
+  await prisma.girl.update({
+    where: { id: girlId },
+    data: { stage: '约会', status: 'dating' }
+  });
+
+  return success(res, { date });
+}));
 
 // 约会前检查清单模板
-router.get('/checklist-template', authMiddleware, async (req, res) => {
+router.get('/checklist-template', authMiddleware, asyncHandler(async (req, res) => {
   const template = [
     { category: '邀约确认', items: [
       { id: 'invite_confirmed', label: '女生已明确答应邀约' },
@@ -328,484 +319,469 @@ router.get('/checklist-template', authMiddleware, async (req, res) => {
       { id: 'pace_respect', label: '推进节奏尊重女生的反馈信号' },
     ]},
   ];
-  res.json({ success: true, template });
-});
+  return success(res, { template });
+}));
 
 
 // ========== 客户获取待确认的约会方案 ==========
-router.get('/client-pending', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'client') {
-      return res.status(403).json({ error: '仅客户可访问' });
-    }
-
-    const dates = await prisma.date.findMany({
-      where: {
-        userId: req.user.id,
-        status: 'pending_client_confirm',
-        clientConfirmed: false
-      },
-      include: {
-        girl: { select: { id: true, name: true, age: true, stage: true, personality: true } }
-      },
-      orderBy: { dateTime: 'asc' }
-    });
-
-    res.json({ success: true, dates });
-  } catch (error) {
-    console.error('[Dates] 获取待确认方案失败:', error);
-    res.status(500).json({ error: '获取失败' });
+router.get('/client-pending', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'client') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '仅客户可访问' });
   }
-});
+
+  const dates = await prisma.date.findMany({
+    where: {
+      userId: req.user.id,
+      status: 'pending_client_confirm',
+      clientConfirmed: false
+    },
+    include: {
+      girl: { select: { id: true, name: true, age: true, stage: true, personality: true } }
+    },
+    orderBy: { dateTime: 'asc' }
+  });
+
+  return success(res, { dates });
+}));
 
 
 // ========== 客户获取待填写的访谈 ==========
-router.get('/client-interviews', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'client') return res.status(403).json({ error: '仅客户可访问' });
-
-    // 查找已推送但未回答的访谈
-    const completedDates = await prisma.date.findMany({
-      where: {
-        userId: req.user.id,
-        status: 'completed',
-        postDateInterview: { not: null }
-      },
-      include: {
-        girl: { select: { id: true, name: true, stage: true } }
-      },
-      orderBy: { dateTime: 'desc' }
-    });
-
-    const pending = completedDates.filter(d => {
-      const interview = JSON.parse(d.postDateInterview || '{}');
-      return interview.questionStatus === 'pending' && interview.generatedQuestions?.length > 0;
-    }).map(d => {
-      const interview = JSON.parse(d.postDateInterview);
-      return {
-        dateId: d.id,
-        title: d.title || '约会反馈访谈',
-        girlName: d.girl?.name,
-        dateTime: d.dateTime,
-        interviewOverview: interview.interviewOverview,
-        questions: interview.generatedQuestions,
-        pushedAt: interview.pushedAt
-      };
-    });
-
-    res.json({ success: true, interviews: pending });
-  } catch (error) {
-    console.error('[Dates] 获取客户访谈失败:', error);
-    res.status(500).json({ error: '获取失败' });
+router.get('/client-interviews', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'client') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '仅客户可访问' });
   }
+
+  // 查找已推送但未回答的访谈
+  const completedDates = await prisma.date.findMany({
+    where: {
+      userId: req.user.id,
+      status: 'completed',
+      postDateInterview: { not: null }
+    },
+    include: {
+      girl: { select: { id: true, name: true, stage: true } }
+    },
+    orderBy: { dateTime: 'desc' }
+  });
+
+  const pending = completedDates.filter(d => {
+    const interview = JSON.parse(d.postDateInterview || '{}');
+    return interview.questionStatus === 'pending' && interview.generatedQuestions?.length > 0;
+  }).map(d => {
+    const interview = JSON.parse(d.postDateInterview);
+    return {
+      dateId: d.id,
+      title: d.title || '约会反馈访谈',
+      girlName: d.girl?.name,
+      dateTime: d.dateTime,
+      interviewOverview: interview.interviewOverview,
+      questions: interview.generatedQuestions,
+      pushedAt: interview.pushedAt
+    };
+  });
+
+  return success(res, { interviews: pending });
 });
 
 
 // 获取单个约会详情
-router.get('/:id', authMiddleware, async (req, res) => {
-  try {
-    const date = await prisma.date.findUnique({
-      where: { id: req.params.id },
-      include: {
-        user: {
-          select: { id: true, nickname: true, username: true, interactionStyle: true, communicationStyle: true, strengths: true, emotionalWounds: true, age: true, occupation: true, residence: true }
-        },
-        girl: {
-          select: { id: true, name: true, age: true, occupation: true, residence: true, stage: true, personality: true, communicationStyle: true, emotionalTriggers: true, thingsToAvoid: true, interests: true, dietPreferences: true, dietRestrictions: true, relationshipAttitude: true, emotionalWounds: true, tensionScore: true, intimacyLevel: true, bestApproach: true, familyBackground: true, familyAtmosphere: true }
-        }
-      }
-    });
-
-    if (!date) return res.status(404).json({ error: '约会不存在' });
-
-    // 安全：客户只能查看自己的约会
-    if (req.user.role === 'client' && date.userId !== req.user.id) {
-      return res.status(403).json({ error: '无权访问' });
-    }
-    // 安全：操盘手只能访问自己负责的客户的约会
-    if (req.user.role === 'operator') {
-      const session = await prisma.chatSession.findFirst({
-        where: { operatorId: req.user.id, clientId: date.userId }
-      });
-      if (!session) {
-        return res.status(403).json({ error: '无权访问此约会' });
+router.get('/:id', authMiddleware, asyncHandler(async (req, res) => {
+  const date = await prisma.date.findUnique({
+    where: { id: req.params.id },
+    include: {
+      user: {
+        select: { id: true, nickname: true, username: true, interactionStyle: true, communicationStyle: true, strengths: true, emotionalWounds: true, age: true, occupation: true, residence: true }
+      },
+      girl: {
+        select: { id: true, name: true, age: true, occupation: true, residence: true, stage: true, personality: true, communicationStyle: true, emotionalTriggers: true, thingsToAvoid: true, interests: true, dietPreferences: true, dietRestrictions: true, relationshipAttitude: true, emotionalWounds: true, tensionScore: true, intimacyLevel: true, bestApproach: true, familyBackground: true, familyAtmosphere: true }
       }
     }
+  });
 
-    res.json({ success: true, date });
-  } catch (error) {
-    console.error('[Dates] 获取约会详情失败:', error);
-    res.status(500).json({ error: '获取失败' });
+  if (!date) {
+    throw new AppError(ErrorCodes.DATE_NOT_FOUND);
   }
-});
+
+  // 安全：客户只能查看自己的约会
+  if (req.user.role === 'client' && date.userId !== req.user.id) {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '无权访问' });
+  }
+  // 安全：操盘手只能访问自己负责的客户的约会
+  if (req.user.role === 'operator') {
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId: date.userId }
+    });
+    if (!session) {
+      throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '无权访问此约会' });
+    }
+  }
+
+  return success(res, { date });
+}));
 
 // 更新约会
-router.put('/:id', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
-    }
-
-    const existing = await prisma.date.findUnique({ where: { id: req.params.id } });
-    if (!existing) return res.status(404).json({ error: '约会不存在' });
-    // 安全：操盘手只能操作自己负责的客户的约会
-    const session = await prisma.chatSession.findFirst({
-      where: { operatorId: req.user.id, clientId: existing.userId }
-    });
-    if (!session) {
-      return res.status(403).json({ error: '无权操作此约会' });
-    }
-
-    const {
-      dateTime, location, status, notes, nextAction,
-      conditions, aiPlan, planStatus,
-      expenseRecord, totalExpense, duration,
-      rating, positiveSignals, negativeSignals, followUpActions, postNotes,
-      girlStageAfter, title, preDateChecklist
-    } = req.body;
-
-    const updateData = {};
-    if (dateTime !== undefined) updateData.dateTime = new Date(dateTime);
-    if (location !== undefined) updateData.location = location;
-    if (status !== undefined) updateData.status = status;
-    if (notes !== undefined) updateData.notes = notes;
-    if (nextAction !== undefined) updateData.nextAction = nextAction;
-    if (title !== undefined) updateData.title = title;
-    if (conditions !== undefined) updateData.conditions = typeof conditions === 'string' ? conditions : JSON.stringify(conditions);
-    if (aiPlan !== undefined) updateData.aiPlan = typeof aiPlan === 'string' ? aiPlan : JSON.stringify(aiPlan);
-    if (planStatus !== undefined) updateData.planStatus = planStatus;
-    if (expenseRecord !== undefined) updateData.expenseRecord = typeof expenseRecord === 'string' ? expenseRecord : JSON.stringify(expenseRecord);
-    if (totalExpense !== undefined) updateData.totalExpense = parseFloat(totalExpense);
-    if (duration !== undefined) updateData.duration = duration;
-    if (rating !== undefined) updateData.rating = parseInt(rating);
-    if (positiveSignals !== undefined) updateData.positiveSignals = typeof positiveSignals === 'string' ? positiveSignals : JSON.stringify(positiveSignals);
-    if (negativeSignals !== undefined) updateData.negativeSignals = typeof negativeSignals === 'string' ? negativeSignals : JSON.stringify(negativeSignals);
-    if (followUpActions !== undefined) updateData.followUpActions = typeof followUpActions === 'string' ? followUpActions : JSON.stringify(followUpActions);
-    if (postNotes !== undefined) updateData.postNotes = postNotes;
-    if (girlStageAfter !== undefined) {
-      updateData.girlStageAfter = girlStageAfter;
-      // 同步更新女生的阶段
-      await prisma.girl.update({
-        where: { id: (await prisma.date.findUnique({ where: { id: req.params.id } }))?.girlId },
-        data: { stage: girlStageAfter }
-      });
-    }
-    if (preDateChecklist !== undefined) updateData.preDateChecklist = typeof preDateChecklist === 'string' ? preDateChecklist : JSON.stringify(preDateChecklist);
-
-    const date = await prisma.date.update({
-      where: { id: req.params.id },
-      data: updateData
-    });
-
-    res.json({ success: true, date });
-  } catch (error) {
-    console.error('[Dates] 更新约会失败:', error);
-    res.status(500).json({ error: '更新失败' });
+router.put('/:id', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '无权限' });
   }
-});
+
+  const existing = await prisma.date.findUnique({ where: { id: req.params.id } });
+  if (!existing) {
+    throw new AppError(ErrorCodes.DATE_NOT_FOUND);
+  }
+  // 安全：操盘手只能操作自己负责的客户的约会
+  const session = await prisma.chatSession.findFirst({
+    where: { operatorId: req.user.id, clientId: existing.userId }
+  });
+  if (!session) {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '无权操作此约会' });
+  }
+
+  const {
+    dateTime, location, status, notes, nextAction,
+    conditions, aiPlan, planStatus,
+    expenseRecord, totalExpense, duration,
+    rating, positiveSignals, negativeSignals, followUpActions, postNotes,
+    girlStageAfter, title, preDateChecklist
+  } = req.body;
+
+  const updateData = {};
+  if (dateTime !== undefined) updateData.dateTime = new Date(dateTime);
+  if (location !== undefined) updateData.location = location;
+  if (status !== undefined) updateData.status = status;
+  if (notes !== undefined) updateData.notes = notes;
+  if (nextAction !== undefined) updateData.nextAction = nextAction;
+  if (title !== undefined) updateData.title = title;
+  if (conditions !== undefined) updateData.conditions = typeof conditions === 'string' ? conditions : JSON.stringify(conditions);
+  if (aiPlan !== undefined) updateData.aiPlan = typeof aiPlan === 'string' ? aiPlan : JSON.stringify(aiPlan);
+  if (planStatus !== undefined) updateData.planStatus = planStatus;
+  if (expenseRecord !== undefined) updateData.expenseRecord = typeof expenseRecord === 'string' ? expenseRecord : JSON.stringify(expenseRecord);
+  if (totalExpense !== undefined) updateData.totalExpense = parseFloat(totalExpense);
+  if (duration !== undefined) updateData.duration = duration;
+  if (rating !== undefined) updateData.rating = parseInt(rating);
+  if (positiveSignals !== undefined) updateData.positiveSignals = typeof positiveSignals === 'string' ? positiveSignals : JSON.stringify(positiveSignals);
+  if (negativeSignals !== undefined) updateData.negativeSignals = typeof negativeSignals === 'string' ? negativeSignals : JSON.stringify(negativeSignals);
+  if (followUpActions !== undefined) updateData.followUpActions = typeof followUpActions === 'string' ? followUpActions : JSON.stringify(followUpActions);
+  if (postNotes !== undefined) updateData.postNotes = postNotes;
+  if (girlStageAfter !== undefined) {
+    updateData.girlStageAfter = girlStageAfter;
+    // 同步更新女生的阶段
+    await prisma.girl.update({
+      where: { id: (await prisma.date.findUnique({ where: { id: req.params.id } }))?.girlId },
+      data: { stage: girlStageAfter }
+    });
+  }
+  if (preDateChecklist !== undefined) updateData.preDateChecklist = typeof preDateChecklist === 'string' ? preDateChecklist : JSON.stringify(preDateChecklist);
+
+  const date = await prisma.date.update({
+    where: { id: req.params.id },
+    data: updateData
+  });
+
+  return success(res, { date });
+}));
 
 // 更新检查清单状态
-router.put('/:id/checklist', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
-    }
-    const existing = await prisma.date.findUnique({ where: { id: req.params.id } });
-    if (!existing) return res.status(404).json({ error: '约会不存在' });
-    // 安全：操盘手只能操作自己负责的客户的约会
-    const session = await prisma.chatSession.findFirst({
-      where: { operatorId: req.user.id, clientId: existing.userId }
-    });
-    if (!session) {
-      return res.status(403).json({ error: '无权操作此约会' });
-    }
-    const { checklist } = req.body;
-    const updateData = {};
-    if (checklist !== undefined) {
-      updateData.preDateChecklist = typeof checklist === 'string' ? checklist : JSON.stringify(checklist);
-    }
-    const date = await prisma.date.update({
-      where: { id: req.params.id },
-      data: updateData
-    });
-    res.json({ success: true, date });
-  } catch (error) {
-    console.error('[Dates] 更新检查清单失败:', error);
-    res.status(500).json({ error: '更新失败' });
+router.put('/:id/checklist', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '无权限' });
   }
-});
+  const existing = await prisma.date.findUnique({ where: { id: req.params.id } });
+  if (!existing) {
+    throw new AppError(ErrorCodes.DATE_NOT_FOUND);
+  }
+  // 安全：操盘手只能操作自己负责的客户的约会
+  const session = await prisma.chatSession.findFirst({
+    where: { operatorId: req.user.id, clientId: existing.userId }
+  });
+  if (!session) {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '无权操作此约会' });
+  }
+  const { checklist } = req.body;
+  const updateData = {};
+  if (checklist !== undefined) {
+    updateData.preDateChecklist = typeof checklist === 'string' ? checklist : JSON.stringify(checklist);
+  }
+  const date = await prisma.date.update({
+    where: { id: req.params.id },
+    data: updateData
+  });
+  return success(res, { date });
+}));
 
 // AI 生成约会方案
-router.post('/:id/generate-plan', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
-    }
+router.post('/:id/generate-plan', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '无权限' });
+  }
 
-    const date = await prisma.date.findUnique({
-      where: { id: req.params.id },
-      include: {
-        user: true,
-        girl: true
-      }
+  const date = await prisma.date.findUnique({
+    where: { id: req.params.id },
+    include: {
+      user: true,
+      girl: true
+    }
+  });
+
+  if (!date) {
+    throw new AppError(ErrorCodes.DATE_NOT_FOUND);
+  }
+
+  // 安全：操盘手只能操作自己负责的客户的约会
+  if (req.user.role === 'operator') {
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId: date.userId }
     });
-
-    if (!date) return res.status(404).json({ error: '约会不存在' });
-
-    // 安全：操盘手只能操作自己负责的客户的约会
-    if (req.user.role === 'operator') {
-      const session = await prisma.chatSession.findFirst({
-        where: { operatorId: req.user.id, clientId: date.userId }
-      });
-      if (!session) return res.status(403).json({ error: '无权操作此约会' });
+    if (!session) {
+      throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '无权操作此约会' });
     }
+  }
 
-    // 更新状态为生成中
+  // 更新状态为生成中
+  await prisma.date.update({
+    where: { id: req.params.id },
+    data: { planStatus: 'generating' }
+  });
+
+  const conditions = date.conditions ? JSON.parse(date.conditions) : {};
+  const prompt = buildDatePlanPrompt({ client: date.user, girl: date.girl, conditions });
+
+  let planText;
+  try {
+    planText = await callAI([
+      { role: 'user', content: prompt }
+    ], { temperature: 0.8, maxTokens: 3000 });
+  } catch (err) {
+    console.error('[Dates] AI策划失败:', err);
     await prisma.date.update({
       where: { id: req.params.id },
-      data: { planStatus: 'generating' }
+      data: { planStatus: 'pending' }
     });
+    throw new AppError(ErrorCodes.AI_SERVICE_UNAVAILABLE, { devMessage: `AI调用失败: ${err.message}` });
+  }
 
-    const conditions = date.conditions ? JSON.parse(date.conditions) : {};
-    const prompt = buildDatePlanPrompt({ client: date.user, girl: date.girl, conditions });
-
-    let planText;
+  // 提取JSON
+  let plan = null;
+  const jsonMatch = planText.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
     try {
-      planText = await callAI([
-        { role: 'user', content: prompt }
-      ], { temperature: 0.8, maxTokens: 3000 });
-    } catch (err) {
-      console.error('[Dates] AI策划失败:', err);
-      await prisma.date.update({
-        where: { id: req.params.id },
-        data: { planStatus: 'pending' }
-      });
-      return res.status(500).json({ error: `AI调用失败: ${err.message}` });
-    }
-
-    // 提取JSON
-    let plan = null;
-    const jsonMatch = planText.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      try {
-        plan = JSON.parse(jsonMatch[0]);
-      } catch {
-        plan = { overview: planText };
-      }
-    } else {
+      plan = JSON.parse(jsonMatch[0]);
+    } catch {
       plan = { overview: planText };
     }
-
-    const updated = await prisma.date.update({
-      where: { id: req.params.id },
-      data: {
-        aiPlan: JSON.stringify(plan),
-        planStatus: 'generated',
-        status: 'planned'
-      }
-    });
-
-    res.json({ success: true, plan, date: updated });
-  } catch (error) {
-    console.error('[Dates] AI策划失败:', error);
-    res.status(500).json({ error: '策划失败' });
+  } else {
+    plan = { overview: planText };
   }
-});
+
+  const updated = await prisma.date.update({
+    where: { id: req.params.id },
+    data: {
+      aiPlan: JSON.stringify(plan),
+      planStatus: 'generated',
+      status: 'planned'
+    }
+  });
+
+  return success(res, { plan, date: updated });
+}));
 
 // AI 约会后复盘评价
-router.post('/:id/evaluate', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
-    }
-
-    const date = await prisma.date.findUnique({
-      where: { id: req.params.id },
-      include: {
-        user: true,
-        girl: true
-      }
-    });
-
-    if (!date) return res.status(404).json({ error: '约会不存在' });
-    if (req.user.role === 'operator') {
-      const session = await prisma.chatSession.findFirst({
-        where: { operatorId: req.user.id, clientId: date.userId }
-      });
-      if (!session) return res.status(403).json({ error: '无权操作此约会' });
-    }
-
-    const {
-      rating, positiveSignals, negativeSignals, postNotes,
-      nextPurpose, tensionChange, girlStageAfter,
-      expenseRecord, totalExpense, duration,
-      // 访谈新字段
-      girlAppearance, girlOnTime, girlGreetedFirst,
-      silenceDuration, awkwardMoments,
-      physicalProgress,
-      goodbyeInitiator, nextDateMentioned,
-      moodStart, moodMid, moodEnd,
-      highlight, lowlight, clientSelfScore, expectationGap,
-      // 评审团新增
-      girlEngagementStart, girlEngagementMid, girlEngagementEnd,
-      comfortBehaviors, topicDepth, clientAnchor
-    } = req.body;
-
-    // 构造结构化访谈数据
-    const postDateInterview = {
-      girlAppearance, girlOnTime, girlGreetedFirst,
-      silenceDuration, awkwardMoments,
-      physicalProgress,
-      goodbyeInitiator, nextDateMentioned,
-      moodStart, moodMid, moodEnd,
-      highlight, lowlight, clientSelfScore, expectationGap,
-      girlEngagementStart, girlEngagementMid, girlEngagementEnd,
-      comfortBehaviors, topicDepth, clientAnchor
-    };
-
-    // 更新数据库
-    const updateData = {
-      status: 'completed',
-      rating: rating ? parseInt(rating) : undefined,
-      positiveSignals: positiveSignals ? JSON.stringify(positiveSignals) : undefined,
-      negativeSignals: negativeSignals ? JSON.stringify(negativeSignals) : undefined,
-      postNotes,
-      followUpActions: null,
-      duration,
-      expenseRecord: expenseRecord ? JSON.stringify(expenseRecord) : undefined,
-      totalExpense: totalExpense ? parseFloat(totalExpense) : undefined,
-      girlStageAfter,
-      postDateInterview: JSON.stringify(postDateInterview)
-    };
-
-    // 如果指定了新阶段，同步更新女生
-    if (girlStageAfter) {
-      await prisma.girl.update({
-        where: { id: date.girlId },
-        data: {
-          stage: girlStageAfter,
-          status: girlStageAfter === '锁定' ? 'locked' : girlStageAfter === '长期' ? 'long_term' : 'dating'
-        }
-      });
-    }
-
-    const updated = await prisma.date.update({
-      where: { id: req.params.id },
-      data: Object.fromEntries(Object.entries(updateData).filter(([_, v]) => v !== undefined))
-    });
-
-    // AI 深度复盘
-    const evaluation = { rating, positiveSignals, negativeSignals, postNotes, nextPurpose, tensionChange, girlStageAfter };
-    const prompt = buildPostDateReviewPrompt({ client: date.user, girl: date.girl, date, evaluation });
-
-    let reviewText;
-    try {
-      reviewText = await callAI([
-        { role: 'user', content: prompt }
-      ], { temperature: 0.7, maxTokens: 2000 });
-
-      const jsonMatch = reviewText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        try {
-          const review = JSON.parse(jsonMatch[0]);
-          await prisma.date.update({
-            where: { id: req.params.id },
-            data: {
-              followUpActions: JSON.stringify(review.nextActions || []),
-              nextAction: review.nextActions?.[0]?.action || null
-            }
-          });
-          res.json({ success: true, date: updated, review });
-          return;
-        } catch (e) { console.warn('[Dates] AI复盘 JSON 解析失败:', e.message); }
-      }
-    } catch (err) {
-      console.error('[Dates] AI复盘失败:', err);
-    }
-
-    res.json({ success: true, date: updated });
-  } catch (error) {
-    console.error('[Dates] 约会后评价失败:', error);
-    res.status(500).json({ error: '评价失败' });
+router.post('/:id/evaluate', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '无权限' });
   }
-});
+
+  const date = await prisma.date.findUnique({
+    where: { id: req.params.id },
+    include: {
+      user: true,
+      girl: true
+    }
+  });
+
+  if (!date) {
+    throw new AppError(ErrorCodes.DATE_NOT_FOUND);
+  }
+  if (req.user.role === 'operator') {
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId: date.userId }
+    });
+    if (!session) {
+      throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '无权操作此约会' });
+    }
+  }
+
+  const {
+    rating, positiveSignals, negativeSignals, postNotes,
+    nextPurpose, tensionChange, girlStageAfter,
+    expenseRecord, totalExpense, duration,
+    // 访谈新字段
+    girlAppearance, girlOnTime, girlGreetedFirst,
+    silenceDuration, awkwardMoments,
+    physicalProgress,
+    goodbyeInitiator, nextDateMentioned,
+    moodStart, moodMid, moodEnd,
+    highlight, lowlight, clientSelfScore, expectationGap,
+    // 评审团新增
+    girlEngagementStart, girlEngagementMid, girlEngagementEnd,
+    comfortBehaviors, topicDepth, clientAnchor
+  } = req.body;
+
+  // 构造结构化访谈数据
+  const postDateInterview = {
+    girlAppearance, girlOnTime, girlGreetedFirst,
+    silenceDuration, awkwardMoments,
+    physicalProgress,
+    goodbyeInitiator, nextDateMentioned,
+    moodStart, moodMid, moodEnd,
+    highlight, lowlight, clientSelfScore, expectationGap,
+    girlEngagementStart, girlEngagementMid, girlEngagementEnd,
+    comfortBehaviors, topicDepth, clientAnchor
+  };
+
+  // 更新数据库
+  const updateData = {
+    status: 'completed',
+    rating: rating ? parseInt(rating) : undefined,
+    positiveSignals: positiveSignals ? JSON.stringify(positiveSignals) : undefined,
+    negativeSignals: negativeSignals ? JSON.stringify(negativeSignals) : undefined,
+    postNotes,
+    followUpActions: null,
+    duration,
+    expenseRecord: expenseRecord ? JSON.stringify(expenseRecord) : undefined,
+    totalExpense: totalExpense ? parseFloat(totalExpense) : undefined,
+    girlStageAfter,
+    postDateInterview: JSON.stringify(postDateInterview)
+  };
+
+  // 如果指定了新阶段，同步更新女生
+  if (girlStageAfter) {
+    await prisma.girl.update({
+      where: { id: date.girlId },
+      data: {
+        stage: girlStageAfter,
+        status: girlStageAfter === '锁定' ? 'locked' : girlStageAfter === '长期' ? 'long_term' : 'dating'
+      }
+    });
+  }
+
+  const updated = await prisma.date.update({
+    where: { id: req.params.id },
+    data: Object.fromEntries(Object.entries(updateData).filter(([_, v]) => v !== undefined))
+  });
+
+  // AI 深度复盘
+  const evaluation = { rating, positiveSignals, negativeSignals, postNotes, nextPurpose, tensionChange, girlStageAfter };
+  const prompt = buildPostDateReviewPrompt({ client: date.user, girl: date.girl, date, evaluation });
+
+  let reviewText;
+  try {
+    reviewText = await callAI([
+      { role: 'user', content: prompt }
+    ], { temperature: 0.7, maxTokens: 2000 });
+
+    const jsonMatch = reviewText.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        const review = JSON.parse(jsonMatch[0]);
+        await prisma.date.update({
+          where: { id: req.params.id },
+          data: {
+            followUpActions: JSON.stringify(review.nextActions || []),
+            nextAction: review.nextActions?.[0]?.action || null
+          }
+        });
+        return success(res, { date: updated, review });
+      } catch (e) { console.warn('[Dates] AI复盘 JSON 解析失败:', e.message); }
+    }
+  } catch (err) {
+    console.error('[Dates] AI复盘失败:', err);
+  }
+
+  return success(res, { date: updated });
+}));
 
 // ========== 操盘手与AI讨论优化方案 ==========
-router.post('/:id/discuss', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
-    }
+router.post('/:id/discuss', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '无权限' });
+  }
 
-    const { message } = req.body;
-    if (!message?.trim()) {
-      return res.status(400).json({ error: '消息不能为空' });
-    }
+  const { message } = req.body;
+  if (!message?.trim()) {
+    throw new AppError(ErrorCodes.VALIDATION_ERROR, { userMessage: '消息不能为空' });
+  }
 
-    const date = await prisma.date.findUnique({
-      where: { id: req.params.id },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            nickname: true,
-            avatar: true,
-            serviceStage: true,
-            interactionStyle: true,
-            communicationStyle: true,
-            strengths: true,
-            personality: true
-          }
-        },
-        girl: {
-          select: {
-            id: true,
-            name: true,
-            age: true,
-            stage: true,
-            personality: true,
-            communicationStyle: true,
-            emotionalTriggers: true,
-            thingsToAvoid: true,
-            interests: true,
-            dietPreferences: true,
-            dietRestrictions: true,
-            relationshipAttitude: true,
-            emotionalWounds: true,
-            tensionScore: true,
-            intimacyLevel: true,
-            bestApproach: true,
-            familyBackground: true,
-            familyAtmosphere: true
-          }
+  const date = await prisma.date.findUnique({
+    where: { id: req.params.id },
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+          nickname: true,
+          avatar: true,
+          serviceStage: true,
+          interactionStyle: true,
+          communicationStyle: true,
+          strengths: true,
+          personality: true
+        }
+      },
+      girl: {
+        select: {
+          id: true,
+          name: true,
+          age: true,
+          stage: true,
+          personality: true,
+          communicationStyle: true,
+          emotionalTriggers: true,
+          thingsToAvoid: true,
+          interests: true,
+          dietPreferences: true,
+          dietRestrictions: true,
+          relationshipAttitude: true,
+          emotionalWounds: true,
+          tensionScore: true,
+          intimacyLevel: true,
+          bestApproach: true,
+          familyBackground: true,
+          familyAtmosphere: true
         }
       }
+    }
+  });
+  if (!date) {
+    throw new AppError(ErrorCodes.DATE_NOT_FOUND);
+  }
+  if (req.user.role === 'operator') {
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId: date.userId }
     });
-    if (!date) return res.status(404).json({ error: '约会不存在' });
-    if (req.user.role === 'operator') {
-      const session = await prisma.chatSession.findFirst({
-        where: { operatorId: req.user.id, clientId: date.userId }
+    if (!session) {
+      throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '无权操作此约会' });
+    }
+  }
+  if (!date.aiPlan) {
+    throw new AppError(ErrorCodes.VALIDATION_ERROR, { userMessage: '请先生成约会方案' });
+  }
+
+  const currentPlan = JSON.parse(date.aiPlan);
+  const conditions = date.conditions ? JSON.parse(date.conditions) : {};
+
+  // 构造历史讨论上下文
+  const historyMessages = [];
+  if (date.planDiscussion) {
+    try {
+      const history = JSON.parse(date.planDiscussion);
+      history.forEach(h => {
+        historyMessages.push({ role: h.role === 'ai' ? 'assistant' : 'user', content: h.content });
       });
-      if (!session) return res.status(403).json({ error: '无权操作此约会' });
-    }
-    if (!date.aiPlan) return res.status(400).json({ error: '请先生成约会方案' });
+    } catch (e) { console.warn('[Dates] planDiscussion JSON 解析失败:', e.message); }
+  }
 
-    const currentPlan = JSON.parse(date.aiPlan);
-    const conditions = date.conditions ? JSON.parse(date.conditions) : {};
-
-    // 构造历史讨论上下文
-    const historyMessages = [];
-    if (date.planDiscussion) {
-      try {
-        const history = JSON.parse(date.planDiscussion);
-        history.forEach(h => {
-          historyMessages.push({ role: h.role === 'ai' ? 'assistant' : 'user', content: h.content });
-        });
-      } catch (e) { console.warn('[Dates] planDiscussion JSON 解析失败:', e.message); }
-    }
-
-    const discussPrompt = `你是一位顶尖约会策划师，代号"月老"。客户正在就以下约会方案征求你的意见。
+  const discussPrompt = `你是一位顶尖约会策划师，代号"月老"。客户正在就以下约会方案征求你的意见。
 
 【当前约会方案】
 ${JSON.stringify(currentPlan, null, 2)}
@@ -821,249 +797,246 @@ ${JSON.stringify(conditions, null, 2)}
 
 请根据操盘手的调整意见，给出具体可执行的优化建议。如果涉及方案改动，请给出新的完整方案结构（JSON格式）。`;
 
-    const allMessages = [
-      ...historyMessages,
-      { role: 'user', content: discussPrompt + `\n\n操盘手说："${message}"` }
-    ];
+  const allMessages = [
+    ...historyMessages,
+    { role: 'user', content: discussPrompt + `\n\n操盘手说："${message}"` }
+  ];
 
-    let reply;
-    try {
-      reply = await callAI(allMessages, { temperature: 0.7, maxTokens: 2000 });
-    } catch (err) {
-      return res.status(500).json({ error: `AI调用失败: ${err.message}` });
-    }
-
-    // 保存讨论记录
-    const discussion = date.planDiscussion ? JSON.parse(date.planDiscussion) : [];
-    discussion.push(
-      { role: 'operator', content: message, timestamp: new Date().toISOString() },
-      { role: 'ai', content: reply, timestamp: new Date().toISOString() }
-    );
-
-    // 检查AI是否给出了优化后的方案
-    const jsonMatch = reply.match(/\{[\s\S]*"overview"[\s\S]*\}/);
-    if (jsonMatch) {
-      try {
-        const newPlan = JSON.parse(jsonMatch[0]);
-        await prisma.date.update({
-          where: { id: req.params.id },
-          data: {
-            planDiscussion: JSON.stringify(discussion),
-            aiPlan: JSON.stringify(newPlan)
-          }
-        });
-        return res.json({ success: true, reply, planUpdated: true, newPlan });
-      } catch (e) { console.warn('[Dates] 约会讨论 JSON 解析失败:', e.message); }
-    }
-
-    await prisma.date.update({
-      where: { id: req.params.id },
-      data: { planDiscussion: JSON.stringify(discussion) }
-    });
-
-    res.json({ success: true, reply, planUpdated: false });
-  } catch (error) {
-    console.error('[Dates] 方案讨论失败:', error);
-    res.status(500).json({ error: '讨论失败' });
+  let reply;
+  try {
+    reply = await callAI(allMessages, { temperature: 0.7, maxTokens: 2000 });
+  } catch (err) {
+    throw new AppError(ErrorCodes.AI_SERVICE_UNAVAILABLE, { devMessage: `AI调用失败: ${err.message}` });
   }
-});
+
+  // 保存讨论记录
+  const discussion = date.planDiscussion ? JSON.parse(date.planDiscussion) : [];
+  discussion.push(
+    { role: 'operator', content: message, timestamp: new Date().toISOString() },
+    { role: 'ai', content: reply, timestamp: new Date().toISOString() }
+  );
+
+  // 检查AI是否给出了优化后的方案
+  const jsonMatch = reply.match(/\{[\s\S]*"overview"[\s\S]*\}/);
+  if (jsonMatch) {
+    try {
+      const newPlan = JSON.parse(jsonMatch[0]);
+      await prisma.date.update({
+        where: { id: req.params.id },
+        data: {
+          planDiscussion: JSON.stringify(discussion),
+          aiPlan: JSON.stringify(newPlan)
+        }
+      });
+      return success(res, { reply, planUpdated: true, newPlan });
+    } catch (e) { console.warn('[Dates] 约会讨论 JSON 解析失败:', e.message); }
+  }
+
+  await prisma.date.update({
+    where: { id: req.params.id },
+    data: { planDiscussion: JSON.stringify(discussion) }
+  });
+
+  return success(res, { reply, planUpdated: false });
+}));
 
 // ========== 推送方案给客户 ==========
-router.post('/:id/push-to-client', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
-    }
-
-    const date = await prisma.date.findUnique({ where: { id: req.params.id } });
-    if (!date) return res.status(404).json({ error: '约会不存在' });
-    if (req.user.role === 'operator') {
-      const session = await prisma.chatSession.findFirst({
-        where: { operatorId: req.user.id, clientId: date.userId }
-      });
-      if (!session) return res.status(403).json({ error: '无权操作此约会' });
-    }
-    if (!date.aiPlan) return res.status(400).json({ error: '请先生成约会方案' });
-
-    await prisma.date.update({
-      where: { id: req.params.id },
-      data: {
-        planStatus: 'pushed',
-        status: 'pending_client_confirm',
-        pushToClientAt: new Date()
-      }
-    });
-
-    res.json({ success: true, message: '方案已推送给客户' });
-  } catch (error) {
-    console.error('[Dates] 推送方案失败:', error);
-    res.status(500).json({ error: '推送失败' });
+router.post('/:id/push-to-client', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '无权限' });
   }
-});
 
-// ========== 客户提交调整建议 ==========
-router.post('/:id/client-feedback', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'client') {
-      return res.status(403).json({ error: '仅客户可提交反馈' });
-    }
-
-    const { adjustment, reason } = req.body;
-    if (!adjustment?.trim()) {
-      return res.status(400).json({ error: '请填写调整建议' });
-    }
-
-    const date = await prisma.date.findUnique({ where: { id: req.params.id } });
-    if (!date) return res.status(404).json({ error: '约会不存在' });
-    if (date.userId !== req.user.id) return res.status(403).json({ error: '无权操作此约会' });
-    if (date.status !== 'pending_client_confirm') {
-      return res.status(400).json({ error: '当前不在确认阶段' });
-    }
-
-    const feedbackList = date.clientFeedback ? JSON.parse(date.clientFeedback) : [];
-    feedbackList.push({ adjustment, reason: reason || '', submittedAt: new Date().toISOString() });
-
-    await prisma.date.update({
-      where: { id: req.params.id },
-      data: {
-        clientFeedback: JSON.stringify(feedbackList),
-        status: 'planned', // 退回给操盘手处理
-        planStatus: 'generated'
-      }
-    });
-
-    res.json({ success: true, message: '调整建议已提交，操盘手会优化方案' });
-  } catch (error) {
-    console.error('[Dates] 提交反馈失败:', error);
-    res.status(500).json({ error: '提交失败' });
+  const date = await prisma.date.findUnique({ where: { id: req.params.id } });
+  if (!date) {
+    throw new AppError(ErrorCodes.DATE_NOT_FOUND);
   }
-});
-
-// ========== 客户确认方案 ==========
-router.post('/:id/client-confirm', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'client') {
-      return res.status(403).json({ error: '仅客户可确认' });
-    }
-
-    const date = await prisma.date.findUnique({ where: { id: req.params.id } });
-    if (!date) return res.status(404).json({ error: '约会不存在' });
-    if (date.userId !== req.user.id) return res.status(403).json({ error: '无权操作此约会' });
-    if (date.status !== 'pending_client_confirm') {
-      return res.status(400).json({ error: '当前不在确认阶段' });
-    }
-
-    await prisma.date.update({
-      where: { id: req.params.id },
-      data: {
-        status: 'confirmed',
-        clientConfirmed: true,
-        confirmedAt: new Date(),
-        planStatus: 'confirmed'
-      }
-    });
-
-    res.json({ success: true, message: '方案已确认，祝约会顺利！' });
-  } catch (error) {
-    console.error('[Dates] 确认方案失败:', error);
-    res.status(500).json({ error: '确认失败' });
-  }
-});
-
-// 删除约会
-router.delete('/:id', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
-    }
-
-    const existing = await prisma.date.findUnique({ where: { id: req.params.id } });
-    if (!existing) return res.status(404).json({ error: '约会不存在' });
-    // 安全：操盘手只能操作自己负责的客户的约会
+  if (req.user.role === 'operator') {
     const session = await prisma.chatSession.findFirst({
-      where: { operatorId: req.user.id, clientId: existing.userId }
+      where: { operatorId: req.user.id, clientId: date.userId }
     });
     if (!session) {
-      return res.status(403).json({ error: '无权删除此约会' });
+      throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '无权操作此约会' });
     }
-
-    await prisma.date.delete({
-      where: { id: req.params.id }
-    });
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('[Dates] 删除约会失败:', error);
-    res.status(500).json({ error: '删除失败' });
   }
-});
+  if (!date.aiPlan) {
+    throw new AppError(ErrorCodes.VALIDATION_ERROR, { userMessage: '请先生成约会方案' });
+  }
+
+  await prisma.date.update({
+    where: { id: req.params.id },
+    data: {
+      planStatus: 'pushed',
+      status: 'pending_client_confirm',
+      pushToClientAt: new Date()
+    }
+  });
+
+  return success(res, { message: '方案已推送给客户' });
+}));
+
+// ========== 客户提交调整建议 ==========
+router.post('/:id/client-feedback', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'client') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '仅客户可提交反馈' });
+  }
+
+  const { adjustment, reason } = req.body;
+  if (!adjustment?.trim()) {
+    throw new AppError(ErrorCodes.VALIDATION_ERROR, { userMessage: '请填写调整建议' });
+  }
+
+  const date = await prisma.date.findUnique({ where: { id: req.params.id } });
+  if (!date) {
+    throw new AppError(ErrorCodes.DATE_NOT_FOUND);
+  }
+  if (date.userId !== req.user.id) {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '无权操作此约会' });
+  }
+  if (date.status !== 'pending_client_confirm') {
+    throw new AppError(ErrorCodes.VALIDATION_ERROR, { userMessage: '当前不在确认阶段' });
+  }
+
+  const feedbackList = date.clientFeedback ? JSON.parse(date.clientFeedback) : [];
+  feedbackList.push({ adjustment, reason: reason || '', submittedAt: new Date().toISOString() });
+
+  await prisma.date.update({
+    where: { id: req.params.id },
+    data: {
+      clientFeedback: JSON.stringify(feedbackList),
+      status: 'planned', // 退回给操盘手处理
+      planStatus: 'generated'
+    }
+  });
+
+  return success(res, { message: '调整建议已提交，操盘手会优化方案' });
+}));
+
+// ========== 客户确认方案 ==========
+router.post('/:id/client-confirm', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'client') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '仅客户可确认' });
+  }
+
+  const date = await prisma.date.findUnique({ where: { id: req.params.id } });
+  if (!date) {
+    throw new AppError(ErrorCodes.DATE_NOT_FOUND);
+  }
+  if (date.userId !== req.user.id) {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '无权操作此约会' });
+  }
+  if (date.status !== 'pending_client_confirm') {
+    throw new AppError(ErrorCodes.VALIDATION_ERROR, { userMessage: '当前不在确认阶段' });
+  }
+
+  await prisma.date.update({
+    where: { id: req.params.id },
+    data: {
+      status: 'confirmed',
+      clientConfirmed: true,
+      confirmedAt: new Date(),
+      planStatus: 'confirmed'
+    }
+  });
+
+  return success(res, { message: '方案已确认，祝约会顺利！' });
+}));
+
+// 删除约会
+router.delete('/:id', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '无权限' });
+  }
+
+  const existing = await prisma.date.findUnique({ where: { id: req.params.id } });
+  if (!existing) {
+    throw new AppError(ErrorCodes.DATE_NOT_FOUND);
+  }
+  // 安全：操盘手只能操作自己负责的客户的约会
+  const session = await prisma.chatSession.findFirst({
+    where: { operatorId: req.user.id, clientId: existing.userId }
+  });
+  if (!session) {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '无权删除此约会' });
+  }
+
+  await prisma.date.delete({
+    where: { id: req.params.id }
+  });
+
+  return success(res, { success: true });
+}));
 
 // ========== 个性化访谈问题生成 ==========
-router.post('/:id/generate-interview', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
-    }
+router.post('/:id/generate-interview', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '无权限' });
+  }
 
-    const date = await prisma.date.findUnique({
-      where: { id: req.params.id },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            nickname: true,
-            avatar: true,
-            serviceStage: true,
-            interactionStyle: true,
-            communicationStyle: true,
-            strengths: true,
-            personality: true
-          }
-        },
-        girl: {
-          select: {
-            id: true,
-            name: true,
-            age: true,
-            stage: true,
-            personality: true,
-            communicationStyle: true,
-            emotionalTriggers: true,
-            thingsToAvoid: true,
-            interests: true,
-            dietPreferences: true,
-            dietRestrictions: true,
-            relationshipAttitude: true,
-            emotionalWounds: true,
-            tensionScore: true,
-            intimacyLevel: true,
-            bestApproach: true,
-            familyBackground: true,
-            familyAtmosphere: true
-          }
+  const date = await prisma.date.findUnique({
+    where: { id: req.params.id },
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+          nickname: true,
+          avatar: true,
+          serviceStage: true,
+          interactionStyle: true,
+          communicationStyle: true,
+          strengths: true,
+          personality: true
+        }
+      },
+      girl: {
+        select: {
+          id: true,
+          name: true,
+          age: true,
+          stage: true,
+          personality: true,
+          communicationStyle: true,
+          emotionalTriggers: true,
+          thingsToAvoid: true,
+          interests: true,
+          dietPreferences: true,
+          dietRestrictions: true,
+          relationshipAttitude: true,
+          emotionalWounds: true,
+          tensionScore: true,
+          intimacyLevel: true,
+          bestApproach: true,
+          familyBackground: true,
+          familyAtmosphere: true
         }
       }
+    }
+  });
+  if (!date) {
+    throw new AppError(ErrorCodes.DATE_NOT_FOUND);
+  }
+  if (req.user.role === 'operator') {
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId: date.userId }
     });
-    if (!date) return res.status(404).json({ error: '约会不存在' });
-    if (req.user.role === 'operator') {
-      const session = await prisma.chatSession.findFirst({
-        where: { operatorId: req.user.id, clientId: date.userId }
-      });
-      if (!session) return res.status(403).json({ error: '无权操作此约会' });
+    if (!session) {
+      throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '无权操作此约会' });
     }
-    if (date.status !== 'completed') return res.status(400).json({ error: '请先完成约会后评价' });
+  }
+  if (date.status !== 'completed') {
+    throw new AppError(ErrorCodes.VALIDATION_ERROR, { userMessage: '请先完成约会后评价' });
+  }
 
-    // 检查是否已有访谈问题
-    if (date.postDateInterview) {
-      const existing = JSON.parse(date.postDateInterview);
-      if (existing.generatedQuestions && existing.generatedQuestions.length > 0) {
-        return res.json({ success: true, questions: existing.generatedQuestions, alreadyGenerated: true });
-      }
+  // 检查是否已有访谈问题
+  if (date.postDateInterview) {
+    const existing = JSON.parse(date.postDateInterview);
+    if (existing.generatedQuestions && existing.generatedQuestions.length > 0) {
+      return success(res, { questions: existing.generatedQuestions, alreadyGenerated: true });
     }
+  }
 
-    const interviewData = date.postDateInterview ? JSON.parse(date.postDateInterview) : {};
-    const prompt = `你是一位约会复盘访谈专家，代号"脱不花"。请根据以下信息，生成针对性的访谈问题，帮助操盘手深度了解约会情况。
+  const interviewData = date.postDateInterview ? JSON.parse(date.postDateInterview) : {};
+  const prompt = `你是一位约会复盘访谈专家，代号"脱不花"。请根据以下信息，生成针对性的访谈问题，帮助操盘手深度了解约会情况。
 
 【客户信息】
 姓名：${date.user.nickname || date.user.username}
@@ -1119,247 +1092,248 @@ F. 下次约会预期（如：是否愿意再见、下次怎么改进）
   "interviewOverview": "本次访谈的核心目标是什么"
 }`;
 
-    let reply;
-    try {
-      reply = await callAI([
-        { role: 'user', content: prompt }
-      ], { temperature: 0.7, maxTokens: 2500 });
-    } catch (err) {
-      return res.status(500).json({ error: `AI调用失败: ${err.message}` });
-    }
-
-    const jsonMatch = reply.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return res.status(500).json({ error: 'AI返回格式异常' });
-
-    const { questions, interviewOverview } = JSON.parse(jsonMatch[0]);
-    if (!questions || !Array.isArray(questions)) {
-      return res.status(500).json({ error: 'AI返回问题格式异常' });
-    }
-
-    // 保存到 postDateInterview
-    const interviewObj = {
-      ...interviewData,
-      generatedQuestions: questions,
-      interviewOverview: interviewOverview || '',
-      questionsGeneratedAt: new Date().toISOString(),
-      questionStatus: 'pending' // pending | answered | reviewed
-    };
-
-    await prisma.date.update({
-      where: { id: req.params.id },
-      data: { postDateInterview: JSON.stringify(interviewObj) }
-    });
-
-    res.json({ success: true, questions, interviewOverview, alreadyGenerated: false });
-  } catch (error) {
-    console.error('[Dates] 生成访谈问题失败:', error);
-    res.status(500).json({ error: '生成失败' });
+  let reply;
+  try {
+    reply = await callAI([
+      { role: 'user', content: prompt }
+    ], { temperature: 0.7, maxTokens: 2500 });
+  } catch (err) {
+    throw new AppError(ErrorCodes.AI_SERVICE_UNAVAILABLE, { devMessage: `AI调用失败: ${err.message}` });
   }
-});
+
+  const jsonMatch = reply.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new AppError(ErrorCodes.AI_INVALID_RESPONSE, { devMessage: 'AI返回格式异常' });
+  }
+
+  const { questions, interviewOverview } = JSON.parse(jsonMatch[0]);
+  if (!questions || !Array.isArray(questions)) {
+    throw new AppError(ErrorCodes.AI_INVALID_RESPONSE, { devMessage: 'AI返回问题格式异常' });
+  }
+
+  // 保存到 postDateInterview
+  const interviewObj = {
+    ...interviewData,
+    generatedQuestions: questions,
+    interviewOverview: interviewOverview || '',
+    questionsGeneratedAt: new Date().toISOString(),
+    questionStatus: 'pending' // pending | answered | reviewed
+  };
+
+  await prisma.date.update({
+    where: { id: req.params.id },
+    data: { postDateInterview: JSON.stringify(interviewObj) }
+  });
+
+  return success(res, { questions, interviewOverview, alreadyGenerated: false });
+}));
 
 // ========== 推送访谈给客户 ==========
-router.post('/:id/push-interview', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
-    }
-
-    const date = await prisma.date.findUnique({ where: { id: req.params.id } });
-    if (!date) return res.status(404).json({ error: '约会不存在' });
-    if (req.user.role === 'operator') {
-      const session = await prisma.chatSession.findFirst({
-        where: { operatorId: req.user.id, clientId: date.userId }
-      });
-      if (!session) return res.status(403).json({ error: '无权操作此约会' });
-    }
-
-    const interview = date.postDateInterview ? JSON.parse(date.postDateInterview) : {};
-    if (!interview.generatedQuestions || interview.generatedQuestions.length === 0) {
-      return res.status(400).json({ error: '请先生成访谈问题' });
-    }
-    if (interview.questionStatus === 'answered') {
-      return res.status(400).json({ error: '访谈已完成，请勿重复推送' });
-    }
-
-    interview.questionStatus = 'pending';
-    interview.pushedAt = new Date().toISOString();
-
-    await prisma.date.update({
-      where: { id: req.params.id },
-      data: { postDateInterview: JSON.stringify(interview) }
-    });
-
-    // 创建通知给客户
-    await prisma.notification.create({
-      data: {
-        userId: date.userId,
-        type: 'interview',
-        title: '约会访谈 — 请填写约会反馈',
-        content: `您有一份关于约会（${date.girl ? date.girl.name : date.title || '约会'}）的访谈问卷等待填写，请点击查看。`,
-        metadata: JSON.stringify({ dateId: date.id, girlId: date.girlId })
-      }
-    });
-
-    res.json({ success: true, message: '访谈已推送给客户' });
-  } catch (error) {
-    console.error('[Dates] 推送访谈失败:', error);
-    res.status(500).json({ error: '推送失败' });
+router.post('/:id/push-interview', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '无权限' });
   }
-});
+
+  const date = await prisma.date.findUnique({ where: { id: req.params.id } });
+  if (!date) {
+    throw new AppError(ErrorCodes.DATE_NOT_FOUND);
+  }
+  if (req.user.role === 'operator') {
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId: date.userId }
+    });
+    if (!session) {
+      throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '无权操作此约会' });
+    }
+  }
+
+  const interview = date.postDateInterview ? JSON.parse(date.postDateInterview) : {};
+  if (!interview.generatedQuestions || interview.generatedQuestions.length === 0) {
+    throw new AppError(ErrorCodes.VALIDATION_ERROR, { userMessage: '请先生成访谈问题' });
+  }
+  if (interview.questionStatus === 'answered') {
+    throw new AppError(ErrorCodes.VALIDATION_ERROR, { userMessage: '访谈已完成，请勿重复推送' });
+  }
+
+  interview.questionStatus = 'pending';
+  interview.pushedAt = new Date().toISOString();
+
+  await prisma.date.update({
+    where: { id: req.params.id },
+    data: { postDateInterview: JSON.stringify(interview) }
+  });
+
+  // 创建通知给客户
+  await prisma.notification.create({
+    data: {
+      userId: date.userId,
+      type: 'interview',
+      title: '约会访谈 — 请填写约会反馈',
+      content: `您有一份关于约会（${date.girl ? date.girl.name : date.title || '约会'}）的访谈问卷等待填写，请点击查看。`,
+      metadata: JSON.stringify({ dateId: date.id, girlId: date.girlId })
+    }
+  });
+
+  return success(res, { message: '访谈已推送给客户' });
+}));
 
 // ========== 客户提交访谈回答 ==========
-router.post('/:id/submit-interview', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'client') return res.status(403).json({ error: '仅客户可提交' });
+router.post('/:id/submit-interview', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'client') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '仅客户可提交' });
+  }
 
-    const { answers } = req.body;
-    if (!answers || !Array.isArray(answers)) {
-      return res.status(400).json({ error: '答案格式错误' });
-    }
+  const { answers } = req.body;
+  if (!answers || !Array.isArray(answers)) {
+    throw new AppError(ErrorCodes.VALIDATION_ERROR, { userMessage: '答案格式错误' });
+  }
 
-    const date = await prisma.date.findUnique({
-      where: { id: req.params.id },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            nickname: true,
-            avatar: true,
-            serviceStage: true,
-            interactionStyle: true,
-            communicationStyle: true,
-            strengths: true,
-            personality: true
-          }
-        },
-        girl: {
-          select: {
-            id: true,
-            name: true,
-            age: true,
-            stage: true,
-            personality: true,
-            communicationStyle: true,
-            emotionalTriggers: true,
-            thingsToAvoid: true,
-            interests: true,
-            dietPreferences: true,
-            dietRestrictions: true,
-            relationshipAttitude: true,
-            emotionalWounds: true,
-            tensionScore: true,
-            intimacyLevel: true,
-            bestApproach: true,
-            familyBackground: true,
-            familyAtmosphere: true
-          }
+  const date = await prisma.date.findUnique({
+    where: { id: req.params.id },
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+          nickname: true,
+          avatar: true,
+          serviceStage: true,
+          interactionStyle: true,
+          communicationStyle: true,
+          strengths: true,
+          personality: true
+        }
+      },
+      girl: {
+        select: {
+          id: true,
+          name: true,
+          age: true,
+          stage: true,
+          personality: true,
+          communicationStyle: true,
+          emotionalTriggers: true,
+          thingsToAvoid: true,
+          interests: true,
+          dietPreferences: true,
+          dietRestrictions: true,
+          relationshipAttitude: true,
+          emotionalWounds: true,
+          tensionScore: true,
+          intimacyLevel: true,
+          bestApproach: true,
+          familyBackground: true,
+          familyAtmosphere: true
         }
       }
-    });
-    if (!date) return res.status(404).json({ error: '约会不存在' });
-    if (date.userId !== req.user.id) return res.status(403).json({ error: '无权操作' });
-
-    const interview = date.postDateInterview ? JSON.parse(date.postDateInterview) : {};
-    if (interview.questionStatus === 'answered') {
-      return res.status(400).json({ error: '访谈已回答，请勿重复提交' });
     }
-
-    // 保存客户回答
-    interview.clientAnswers = answers;
-    interview.answeredAt = new Date().toISOString();
-    interview.questionStatus = 'answered';
-
-    await prisma.date.update({
-      where: { id: req.params.id },
-      data: { postDateInterview: JSON.stringify(interview) }
-    });
-
-    // 创建通知给操盘手
-    await prisma.notification.create({
-      data: {
-        userId: req.user.id, // 实际上应该发给操盘手，找operator
-        type: 'interview_answered',
-        title: '客户已完成访谈',
-        content: `客户 ${date.user.nickname || date.user.username} 已完成约会访谈，请查看复盘分析。`,
-        metadata: JSON.stringify({ dateId: date.id, clientId: date.userId })
-      }
-    });
-
-    res.json({ success: true, message: '访谈已提交，复盘分析生成中...' });
-  } catch (error) {
-    console.error('[Dates] 提交访谈失败:', error);
-    res.status(500).json({ error: '提交失败' });
+  });
+  if (!date) {
+    throw new AppError(ErrorCodes.DATE_NOT_FOUND);
   }
-});
+  if (date.userId !== req.user.id) {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '无权操作' });
+  }
+
+  const interview = date.postDateInterview ? JSON.parse(date.postDateInterview) : {};
+  if (interview.questionStatus === 'answered') {
+    throw new AppError(ErrorCodes.VALIDATION_ERROR, { userMessage: '访谈已回答，请勿重复提交' });
+  }
+
+  // 保存客户回答
+  interview.clientAnswers = answers;
+  interview.answeredAt = new Date().toISOString();
+  interview.questionStatus = 'answered';
+
+  await prisma.date.update({
+    where: { id: req.params.id },
+    data: { postDateInterview: JSON.stringify(interview) }
+  });
+
+  // 创建通知给操盘手
+  await prisma.notification.create({
+    data: {
+      userId: req.user.id, // 实际上应该发给操盘手，找operator
+      type: 'interview_answered',
+      title: '客户已完成访谈',
+      content: `客户 ${date.user.nickname || date.user.username} 已完成约会访谈，请查看复盘分析。`,
+      metadata: JSON.stringify({ dateId: date.id, clientId: date.userId })
+    }
+  });
+
+  return success(res, { message: '访谈已提交，复盘分析生成中...' });
+}));
 
 // ========== AI 提炼访谈回答，生成复盘报告并更新档案 ==========
-router.post('/:id/generate-review-report', authMiddleware, async (req, res) => {
-  try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
-    }
+router.post('/:id/generate-review-report', authMiddleware, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '无权限' });
+  }
 
-    const date = await prisma.date.findUnique({
-      where: { id: req.params.id },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            nickname: true,
-            avatar: true,
-            serviceStage: true,
-            interactionStyle: true,
-            communicationStyle: true,
-            strengths: true,
-            personality: true
-          }
-        },
-        girl: {
-          select: {
-            id: true,
-            name: true,
-            age: true,
-            stage: true,
-            personality: true,
-            communicationStyle: true,
-            emotionalTriggers: true,
-            thingsToAvoid: true,
-            interests: true,
-            dietPreferences: true,
-            dietRestrictions: true,
-            relationshipAttitude: true,
-            emotionalWounds: true,
-            tensionScore: true,
-            intimacyLevel: true,
-            bestApproach: true,
-            familyBackground: true,
-            familyAtmosphere: true
-          }
+  const date = await prisma.date.findUnique({
+    where: { id: req.params.id },
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+          nickname: true,
+          avatar: true,
+          serviceStage: true,
+          interactionStyle: true,
+          communicationStyle: true,
+          strengths: true,
+          personality: true
+        }
+      },
+      girl: {
+        select: {
+          id: true,
+          name: true,
+          age: true,
+          stage: true,
+          personality: true,
+          communicationStyle: true,
+          emotionalTriggers: true,
+          thingsToAvoid: true,
+          interests: true,
+          dietPreferences: true,
+          dietRestrictions: true,
+          relationshipAttitude: true,
+          emotionalWounds: true,
+          tensionScore: true,
+          intimacyLevel: true,
+          bestApproach: true,
+          familyBackground: true,
+          familyAtmosphere: true
         }
       }
+    }
+  });
+  if (!date) {
+    throw new AppError(ErrorCodes.DATE_NOT_FOUND);
+  }
+  if (req.user.role === 'operator') {
+    const session = await prisma.chatSession.findFirst({
+      where: { operatorId: req.user.id, clientId: date.userId }
     });
-    if (!date) return res.status(404).json({ error: '约会不存在' });
-    if (req.user.role === 'operator') {
-      const session = await prisma.chatSession.findFirst({
-        where: { operatorId: req.user.id, clientId: date.userId }
-      });
-      if (!session) return res.status(403).json({ error: '无权操作此约会' });
+    if (!session) {
+      throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED, { userMessage: '无权操作此约会' });
     }
+  }
 
-    const interview = date.postDateInterview ? JSON.parse(date.postDateInterview) : {};
-    if (!interview.clientAnswers || interview.questionStatus !== 'answered') {
-      return res.status(400).json({ error: '客户尚未回答访谈' });
-    }
+  const interview = date.postDateInterview ? JSON.parse(date.postDateInterview) : {};
+  if (!interview.clientAnswers || interview.questionStatus !== 'answered') {
+    throw new AppError(ErrorCodes.VALIDATION_ERROR, { userMessage: '客户尚未回答访谈' });
+  }
 
-    const postDateData = {
-      ...interview,
-      clientAnswers: interview.clientAnswers
-    };
+  const postDateData = {
+    ...interview,
+    clientAnswers: interview.clientAnswers
+  };
 
-    // 生成深度复盘报告 prompt
-    const reportPrompt = `你是一位约会复盘分析专家，代号"月老"。请根据客户提交的访谈回答，生成一份完整的复盘报告，并提出下一步行动建议。
+  // 生成深度复盘报告 prompt
+  const reportPrompt = `你是一位约会复盘分析专家，代号"月老"。请根据客户提交的访谈回答，生成一份完整的复盘报告，并提出下一步行动建议。
 
 【客户信息】
 姓名：${date.user.nickname || date.user.username}
@@ -1447,74 +1421,72 @@ ${postDateData.clientAnswers.map(a => `Q${a.id}: ${a.question}\n回答: ${a.answ
   }
 }`;
 
-    let reply;
-    try {
-      reply = await callAI([
-        { role: 'user', content: reportPrompt }
-      ], { temperature: 0.7, maxTokens: 3000 });
-    } catch (err) {
-      return res.status(500).json({ error: `AI调用失败: ${err.message}` });
-    }
-
-    const jsonMatch = reply.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return res.status(500).json({ error: 'AI返回格式异常' });
-
-    const report = JSON.parse(jsonMatch[0]);
-
-    // 更新 postDateInterview 中的报告
-    interview.reviewReport = report;
-    interview.reviewGeneratedAt = new Date().toISOString();
-
-    await prisma.date.update({
-      where: { id: req.params.id },
-      data: {
-        postDateInterview: JSON.stringify(interview),
-        followUpActions: JSON.stringify(report.nextActions || []),
-        nextAction: report.nextActions?.[0]?.action || null
-      }
-    });
-
-    // 更新女生档案
-    if (report.girlUpdates) {
-      const girlUpdate = {};
-      if (report.girlUpdates.personality) girlUpdate.personality = report.girlUpdates.personality;
-      if (report.girlUpdates.emotionalTriggers) girlUpdate.emotionalTriggers = report.girlUpdates.emotionalTriggers;
-      if (report.girlUpdates.tensionScore) girlUpdate.tensionScore = report.girlUpdates.tensionScore;
-      if (report.girlUpdates.intimacyLevel) girlUpdate.intimacyLevel = report.girlUpdates.intimacyLevel;
-      if (report.girlUpdates.observations) {
-        const existingObs = date.girl.observations ? JSON.parse(date.girl.observations) : [];
-        existingObs.push({ date: new Date().toISOString(), type: 'interview_review', content: report.girlUpdates.observations });
-        girlUpdate.observations = JSON.stringify(existingObs);
-      }
-      if (Object.keys(girlUpdate).length > 0) {
-        await prisma.girl.update({ where: { id: date.girlId }, data: girlUpdate });
-      }
-    }
-
-    // 更新客户档案
-    if (report.clientUpdates) {
-      const clientUpdate = {};
-      if (report.clientUpdates.learningPoints) {
-        const existingLearnings = date.user.signals ? JSON.parse(date.user.signals) : [];
-        existingLearnings.push({ date: new Date().toISOString(), type: 'date_review', event: report.clientUpdates.learningPoints });
-        clientUpdate.signals = JSON.stringify(existingLearnings);
-      }
-      if (report.clientUpdates.strengths && !date.user.strengths?.includes(report.clientUpdates.strengths)) {
-        clientUpdate.strengths = (date.user.strengths ? date.user.strengths + ' / ' : '') + report.clientUpdates.strengths;
-      }
-      if (report.clientUpdates.weaknesses) {
-        clientUpdate.weaknesses = (date.user.weaknesses ? date.user.weaknesses + ' / ' : '') + report.clientUpdates.weaknesses;
-      }
-      if (Object.keys(clientUpdate).length > 0) {
-        await prisma.user.update({ where: { id: date.userId }, data: clientUpdate });
-      }
-    }
-
-    res.json({ success: true, report });
-  } catch (error) {
-    console.error('[Dates] 生成复盘报告失败:', error);
-    res.status(500).json({ error: '生成失败' });
+  let reply;
+  try {
+    reply = await callAI([
+      { role: 'user', content: reportPrompt }
+    ], { temperature: 0.7, maxTokens: 3000 });
+  } catch (err) {
+    throw new AppError(ErrorCodes.AI_SERVICE_UNAVAILABLE, { devMessage: `AI调用失败: ${err.message}` });
   }
-});
+
+  const jsonMatch = reply.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new AppError(ErrorCodes.AI_INVALID_RESPONSE, { devMessage: 'AI返回格式异常' });
+  }
+
+  const report = JSON.parse(jsonMatch[0]);
+
+  // 更新 postDateInterview 中的报告
+  interview.reviewReport = report;
+  interview.reviewGeneratedAt = new Date().toISOString();
+
+  await prisma.date.update({
+    where: { id: req.params.id },
+    data: {
+      postDateInterview: JSON.stringify(interview),
+      followUpActions: JSON.stringify(report.nextActions || []),
+      nextAction: report.nextActions?.[0]?.action || null
+    }
+  });
+
+  // 更新女生档案
+  if (report.girlUpdates) {
+    const girlUpdate = {};
+    if (report.girlUpdates.personality) girlUpdate.personality = report.girlUpdates.personality;
+    if (report.girlUpdates.emotionalTriggers) girlUpdate.emotionalTriggers = report.girlUpdates.emotionalTriggers;
+    if (report.girlUpdates.tensionScore) girlUpdate.tensionScore = report.girlUpdates.tensionScore;
+    if (report.girlUpdates.intimacyLevel) girlUpdate.intimacyLevel = report.girlUpdates.intimacyLevel;
+    if (report.girlUpdates.observations) {
+      const existingObs = date.girl.observations ? JSON.parse(date.girl.observations) : [];
+      existingObs.push({ date: new Date().toISOString(), type: 'interview_review', content: report.girlUpdates.observations });
+      girlUpdate.observations = JSON.stringify(existingObs);
+    }
+    if (Object.keys(girlUpdate).length > 0) {
+      await prisma.girl.update({ where: { id: date.girlId }, data: girlUpdate });
+    }
+  }
+
+  // 更新客户档案
+  if (report.clientUpdates) {
+    const clientUpdate = {};
+    if (report.clientUpdates.learningPoints) {
+      const existingLearnings = date.user.signals ? JSON.parse(date.user.signals) : [];
+      existingLearnings.push({ date: new Date().toISOString(), type: 'date_review', event: report.clientUpdates.learningPoints });
+      clientUpdate.signals = JSON.stringify(existingLearnings);
+    }
+    if (report.clientUpdates.strengths && !date.user.strengths?.includes(report.clientUpdates.strengths)) {
+      clientUpdate.strengths = (date.user.strengths ? date.user.strengths + ' / ' : '') + report.clientUpdates.strengths;
+    }
+    if (report.clientUpdates.weaknesses) {
+      clientUpdate.weaknesses = (date.user.weaknesses ? date.user.weaknesses + ' / ' : '') + report.clientUpdates.weaknesses;
+    }
+    if (Object.keys(clientUpdate).length > 0) {
+      await prisma.user.update({ where: { id: date.userId }, data: clientUpdate });
+    }
+  }
+
+  return success(res, { report });
+}));
 
 module.exports = router;

@@ -25,6 +25,11 @@ const crypto = require('crypto');
 const { JWT_SECRET, getAIConfig } = require('../config');
 const prisma = require('../prisma');
 
+const AppError = require('../errors/AppError');
+const { ErrorCodes } = require('../errors/errorCodes');
+const asyncHandler = require('../middleware/asyncHandler');
+const { success } = require('../utils/response');
+
 const { createUnifiedContext, ROUTE_TYPES } = require('../agents/UnifiedContext');
 const { runInputGuardrails, formatGuardrailEvents } = require('../guardrails/input');
 const { triage, getRouteTypeName } = require('../agents/triage');
@@ -36,16 +41,11 @@ const { buildDynamicPersona, buildPersonaSection } = require('../services/coachP
 const { addStageContext } = require('../services/stageGuard');
 
 // Auth middleware
-const authMiddleware = async (req, res, next) => {
+const authMiddleware = asyncHandler(async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: '未登录' });
-  try {
-    req.user = jwt.verify(token, JWT_SECRET);
-    next();
-  } catch {
-    res.status(401).json({ error: 'token无效' });
-  }
-};
+  if (!token) throw new AppError(ErrorCodes.AUTH_TOKEN_MISSING);
+  req.user = jwt.verify(token, JWT_SECRET);
+});
 
 // ---- 流式响应工具 ----
 
@@ -632,137 +632,131 @@ ${personaSection}`;
  *   mode?: string,         // 强制路由类型（可选，agent自动判断）
  * }
  */
-router.post('/chat', authMiddleware, async (req, res) => {
+router.post('/chat', authMiddleware, asyncHandler(async (req, res) => {
   const startTime = Date.now();
 
-  try {
-    // Role check
-    if (!['operator', 'admin', 'client'].includes(req.user.role)) {
-      return res.status(403).json({ error: '无权限' });
-    }
-
-    const { message, girlId, chatHistory } = req.body;
-
-    if (!message || typeof message !== 'string' || message.trim().length === 0) {
-      return res.status(400).json({ error: 'message 是必需的' });
-    }
-
-    const userId = req.user.id;
-    const aiConfig = getAIConfig();
-
-    // ---- 1. 构建 UnifiedContext ----
-    const ctx = await createUnifiedContext(userId, {
-      girlId,
-      clientId: userId,
-      originalInput: message,
-    });
-
-    // 如果有女生，获取 memory session
-    if (girlId && ctx.girlProfile) {
-      const { girl } = await prisma.girl.findUnique({ where: { id: girlId } }).then(g => ({ girl: g }));
-      if (girl && girl.clientId) {
-        ctx.clientId = girl.clientId;
-        // 重新加载客户档案
-        const client = await prisma.user.findUnique({
-          where: { id: girl.clientId },
-          select: {
-            emotionalMaturity: true, emotionalMaturityLevel: true,
-            antiFrustrationLevel: true, pacePreference: true,
-            clientType: true, coachCooperation: true, coachCooperationLevel: true,
-            emotionalStable: true, eqLevel: true, learningAbility: true,
-            attachmentStyle: true, loveStyle: true,
-            loveLanguage1: true, loveLanguage2: true, loveLanguage3: true,
-            clientBestApproach: true, clientRiskFactors: true,
-            clientRecommendedTopics: true, clientStrategicNotes: true,
-          }
-        });
-        if (client) ctx.clientProfile = client;
-      }
-
-      // Memory session
-      const { memory } = await getOrCreateSession(userId, 'unified', girlId);
-      ctx.memorySessionId = memory.id;
-      const history = await getConversationHistory(memory.id);
-      ctx.conversationHistory = history;
-      ctx.turnCount = history.filter(m => m.role === 'user' || m.role === 'assistant').length;
-    }
-
-    // ---- 2. 设置 SSE ----
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no');
-    res.flushHeaders();
-
-    // ---- 3. Input Guardrails ----
-    const guardrailResult = await runInputGuardrails(message);
-
-    // 发送 guardrail 检查结果
-    const guardrailEvents = formatGuardrailEvents(guardrailResult.results);
-    for (const evt of guardrailEvents) {
-      res.write(`data: ${JSON.stringify({ event: 'guardrail', ...evt })}\n\n`);
-    }
-
-    if (!guardrailResult.passed) {
-      // Guardrail 失败，返回拒绝响应
-      const refusal = '抱歉，这个问题我无法回答。请换个和情感相关的话题。';
-      res.write(`data: ${JSON.stringify({ content: refusal, guardrailFailed: true })}\n\n`);
-      res.write('data: [DONE]\n\n');
-      res.end();
-      return;
-    }
-
-    // ---- 4. Triage Agent 路由 ----
-    const triageResult = await triage(message, ctx, aiConfig);
-
-    res.write(`data: ${JSON.stringify({
-      event: 'triage',
-      routeType: triageResult.routeType,
-      routeName: getRouteTypeName(triageResult.routeType),
-      confidence: triageResult.confidence,
-      method: triageResult.method,
-    })}\n\n`);
-
-    // 记录用户消息到记忆
-    if (ctx.memorySessionId) {
-      addMessage(ctx.memorySessionId, 'user', message).catch(console.error);
-    }
-
-    // ---- 5. 执行对应 Agent ----
-    await executeHandoff(ctx, triageResult.routeType, triageResult.meta?.coachType || null);
-
-    switch (triageResult.routeType) {
-      case ROUTE_TYPES.SITUATION:
-      case ROUTE_TYPES.GENERAL:
-        await handleSituation(message, ctx, res);
-        break;
-
-      case ROUTE_TYPES.CHAT_ANALYSIS:
-        await handleChatAnalysis(message, ctx, res);
-        break;
-
-      case ROUTE_TYPES.REPLY:
-        await handleReply(message, ctx, res, 'suggest');
-        break;
-
-      case ROUTE_TYPES.OPTIMIZE_REPLY:
-        await handleReply(message, ctx, res, 'optimize');
-        break;
-
-      case ROUTE_TYPES.MOMENT:
-        await handleMoment(message, ctx, res);
-        break;
-
-      default:
-        await handleSituation(message, ctx, res);
-    }
-
-  } catch (error) {
-    console.error('[AgentChat] 处理失败:', error);
-    res.write(`data: ${JSON.stringify({ error: '服务暂时不可用' })}\n\n`);
-    res.end();
+  // Role check
+  if (!['operator', 'admin', 'client'].includes(req.user.role)) {
+    throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
   }
-});
+
+  const { message, girlId, chatHistory } = req.body;
+
+  if (!message || typeof message !== 'string' || message.trim().length === 0) {
+    throw new AppError(ErrorCodes.VALIDATION_ERROR);
+  }
+
+  const userId = req.user.id;
+  const aiConfig = getAIConfig();
+
+  // ---- 1. 构建 UnifiedContext ----
+  const ctx = await createUnifiedContext(userId, {
+    girlId,
+    clientId: userId,
+    originalInput: message,
+  });
+
+  // 如果有女生，获取 memory session
+  if (girlId && ctx.girlProfile) {
+    const { girl } = await prisma.girl.findUnique({ where: { id: girlId } }).then(g => ({ girl: g }));
+    if (girl && girl.clientId) {
+      ctx.clientId = girl.clientId;
+      // 重新加载客户档案
+      const client = await prisma.user.findUnique({
+        where: { id: girl.clientId },
+        select: {
+          emotionalMaturity: true, emotionalMaturityLevel: true,
+          antiFrustrationLevel: true, pacePreference: true,
+          clientType: true, coachCooperation: true, coachCooperationLevel: true,
+          emotionalStable: true, eqLevel: true, learningAbility: true,
+          attachmentStyle: true, loveStyle: true,
+          loveLanguage1: true, loveLanguage2: true, loveLanguage3: true,
+          clientBestApproach: true, clientRiskFactors: true,
+          clientRecommendedTopics: true, clientStrategicNotes: true,
+        }
+      });
+      if (client) ctx.clientProfile = client;
+    }
+
+    // Memory session
+    const { memory } = await getOrCreateSession(userId, 'unified', girlId);
+    ctx.memorySessionId = memory.id;
+    const history = await getConversationHistory(memory.id);
+    ctx.conversationHistory = history;
+    ctx.turnCount = history.filter(m => m.role === 'user' || m.role === 'assistant').length;
+  }
+
+  // ---- 2. 设置 SSE ----
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+
+  // ---- 3. Input Guardrails ----
+  const guardrailResult = await runInputGuardrails(message);
+
+  // 发送 guardrail 检查结果
+  const guardrailEvents = formatGuardrailEvents(guardrailResult.results);
+  for (const evt of guardrailEvents) {
+    res.write(`data: ${JSON.stringify({ event: 'guardrail', ...evt })}\n\n`);
+  }
+
+  if (!guardrailResult.passed) {
+    // Guardrail 失败，返回拒绝响应
+    const refusal = '抱歉，这个问题我无法回答。请换个和情感相关的话题。';
+    res.write(`data: ${JSON.stringify({ content: refusal, guardrailFailed: true })}\n\n`);
+    res.write('data: [DONE]\n\n');
+    res.end();
+    return;
+  }
+
+  // ---- 4. Triage Agent 路由 ----
+  const triageResult = await triage(message, ctx, aiConfig);
+
+  res.write(`data: ${JSON.stringify({
+    event: 'triage',
+    routeType: triageResult.routeType,
+    routeName: getRouteTypeName(triageResult.routeType),
+    confidence: triageResult.confidence,
+    method: triageResult.method,
+  })}\n\n`);
+
+  // 记录用户消息到记忆
+  if (ctx.memorySessionId) {
+    addMessage(ctx.memorySessionId, 'user', message).catch(console.error);
+  }
+
+  // ---- 5. 执行对应 Agent ----
+  await executeHandoff(ctx, triageResult.routeType, triageResult.meta?.coachType || null);
+
+  switch (triageResult.routeType) {
+    case ROUTE_TYPES.SITUATION:
+    case ROUTE_TYPES.GENERAL:
+      await handleSituation(message, ctx, res);
+      break;
+
+    case ROUTE_TYPES.CHAT_ANALYSIS:
+      await handleChatAnalysis(message, ctx, res);
+      break;
+
+    case ROUTE_TYPES.REPLY:
+      await handleReply(message, ctx, res, 'suggest');
+      break;
+
+    case ROUTE_TYPES.OPTIMIZE_REPLY:
+      await handleReply(message, ctx, res, 'optimize');
+      break;
+
+    case ROUTE_TYPES.MOMENT:
+      await handleMoment(message, ctx, res);
+      break;
+
+    default:
+      await handleSituation(message, ctx, res);
+  }
+
+}));
 
 /**
  * GET /api/agent/health

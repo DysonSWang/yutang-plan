@@ -7,12 +7,16 @@ const express = require('express');
 const cors = require('cors');
 const http = require('http');
 const path = require('path');
+const fs = require('fs');
 const { Server } = require('socket.io');
 const { PORT } = require('./config');
 const prisma = require('./prisma');
 const logger = require('./utils/logger');
 const requestIdMiddleware = require('./middleware/requestId');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
+const requestLogger = require('./middleware/requestLogger');
+const errorCollector = require('./middleware/errorCollector');
+const logRoutes = require('./routes/logs');
 
 const authRoutes = require('./routes/auth');
 const chatRoutes = require('./routes/chat');
@@ -54,7 +58,9 @@ app.set('io', io);
 // Middleware
 app.use(cors());
 app.use(requestIdMiddleware);
+app.use(requestLogger);
 app.use(express.json({ limit: '10mb' }));
+app.use(errorCollector);
 
 // 路由
 app.use('/api/auth', authRoutes);
@@ -87,7 +93,7 @@ app.get('/public/*', async (req, res) => {
     const url = await client.signatureUrl(ossPath, { expires: 3600 });
     return res.redirect(url);
   } catch (err) {
-    console.error('[Public] OSS redirect error:', err);
+    logger.error('[Public] OSS redirect error', { err: err.message });
     return res.status(404).json({ error: '文件不存在' });
   }
 });
@@ -101,6 +107,9 @@ app.use('/api/membership', membershipRoutes);
 
 // 版本检测
 app.use('/api/version', versionRoutes);
+
+// 日志 API
+app.use('/api/logs', logRoutes);
 
 // Socket.io 连接处理
 io.on('connection', (socket) => {
@@ -182,10 +191,10 @@ async function runAlertCheck() {
     }
 
     if (newAlertCount > 0) {
-      console.log(`[AlertScheduler] 生成 ${newAlertCount} 条新预警`);
+      logger.info('[AlertScheduler] 生成新预警', { count: newAlertCount });
     }
   } catch (err) {
-    console.error('[AlertScheduler] 预警检测失败:', err.message);
+    logger.error('[AlertScheduler] 预警检测失败', { err: err.message });
   }
 }
 
@@ -195,4 +204,37 @@ runAlertCheck();
 // 每 6 小时跑一次
 const SIX_HOURS = 6 * 60 * 60 * 1000;
 setInterval(runAlertCheck, SIX_HOURS);
-console.log('[AlertScheduler] 预警定时器已启动（每 6 小时）');
+logger.info('[AlertScheduler] 预警定时器已启动（每 6 小时）');
+
+// ============================================================
+// 实时日志推送 - 每秒读取新行推送给管理员
+// ============================================================
+let lastLogPosition = 0;
+
+function tailLogFile() {
+  const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const filePath = path.join(__dirname, `../logs/app-${today}.json`);
+
+  if (!fs.existsSync(filePath)) return;
+
+  try {
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const lines = content.trim().split('\n').filter(Boolean);
+
+    if (lines.length > lastLogPosition) {
+      const newLines = lines.slice(lastLogPosition).filter(Boolean).map(line => {
+        try { return JSON.parse(line); } catch { return null; }
+      }).filter(Boolean);
+
+      if (newLines.length > 0) {
+        io.emit('log:new', { logs: newLines });
+      }
+      lastLogPosition = lines.length;
+    }
+  } catch (e) {
+    // 忽略文件读取错误
+  }
+}
+
+setInterval(tailLogFile, 1000);
+logger.info('[LogTailing] 实时日志推送已启动');
