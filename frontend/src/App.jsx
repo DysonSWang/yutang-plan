@@ -141,7 +141,7 @@ export default function App() {
   return (
     <ChakraProvider theme={theme}>
       <ErrorBoundary>
-        <BrowserRouter basename="/app">
+        <BrowserRouter basename="/app/">
           <AuthProvider>
             <SocketProvider>
               <VersionChecker />
