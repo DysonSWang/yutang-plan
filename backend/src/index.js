@@ -32,6 +32,7 @@ const reversalRoutes = require('./routes/reversal');
 const uploadRoutes = require('./routes/upload');
 const videoCompressRoutes = require('./routes/video-compress');
 const membershipRoutes = require('./routes/membership');
+const versionRoutes = require('./routes/version');
 
 const app = express();
 const server = http.createServer(app);
@@ -74,12 +75,28 @@ app.use('/api/girls', reversalRoutes(io));
 // 静态文件服务 - 截图图片
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
+// 兼容旧 public 路径 → 重定向到 OSS
+app.get('/public/*', async (req, res) => {
+  const ossPath = req.path.replace(/^\//, '');
+  try {
+    const { client } = require('./services/ossClient');
+    const url = await client.signatureUrl(ossPath, { expires: 3600 });
+    return res.redirect(url);
+  } catch (err) {
+    console.error('[Public] OSS redirect error:', err);
+    return res.status(404).json({ error: '文件不存在' });
+  }
+});
+
 // 上传路由
 app.use('/api/upload', uploadRoutes);
 app.use('/api/upload', videoCompressRoutes);
 
 // 会员/积分/邀请/学习版块
 app.use('/api/membership', membershipRoutes);
+
+// 版本检测
+app.use('/api/version', versionRoutes);
 
 // Socket.io 连接处理
 io.on('connection', (socket) => {

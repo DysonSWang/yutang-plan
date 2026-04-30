@@ -324,6 +324,7 @@ export default function ClientChat() {
     if (msg.burnedAt) return <Text color="gray.500" fontStyle="italic">{msg.content}</Text>;
     if (msg.type === 'image') {
       const isClickable = msg.isBurnAfterRead && msg.senderRole !== 'client' && !msg.burnedAt;
+      const imageUrl = getMediaUrl(msg);
       return (
         <Box
           maxW="250px"
@@ -332,11 +333,13 @@ export default function ClientChat() {
           position="relative"
           onClick={() => {
             if (msg.isFlashImage && !msg.burnedAt) {
-              setFlashViewer({ isOpen: true, imageUrl: getMediaUrl(msg), messageId: msg.id, senderRole: msg.senderRole });
+              // 闪图：打开满屏查看器（带倒计时）
+              setFlashViewer({ isOpen: true, imageUrl, messageId: msg.id, senderRole: msg.senderRole, isFlashMode: true });
             } else if (msg.isBurnAfterRead && msg.senderRole !== 'client') {
               handleBurnMessage(msg);
             } else {
-              window.open(getMediaUrl(msg), '_blank');
+              // 普通图片：打开满屏查看器（无倒计时）
+              setFlashViewer({ isOpen: true, imageUrl, messageId: msg.id, senderRole: msg.senderRole, isFlashMode: false });
             }
           }}
         >
@@ -401,50 +404,96 @@ export default function ClientChat() {
               </VStack>
             </Center>
           ) : (
-            <VStack spacing={4} align="stretch">
-              {messages.map(msg => (
-                <Flex key={msg.id} justify={msg.senderRole === 'client' ? 'flex-end' : 'flex-start'}>
-                  <Box
-                    maxW="70%"
-                    p={3}
-                    borderRadius="lg"
-                    bg={msg.senderRole === 'client' ? 'brand.500' : 'rgba(255,255,255,0.08)'}
-                    color="white"
-                    position="relative"
-                    role="group"
-                    _hover={{ '.recall-btn': { opacity: 1 } }}
+            <Box w="100%">
+              {messages.map((msg, idx) => {
+                const prevMsg = idx > 0 ? messages[idx - 1] : null;
+                const timeGap = prevMsg ? (new Date(msg.createdAt) - new Date(prevMsg.createdAt)) / 1000 / 60 : Infinity;
+                const showTime = timeGap > 5;
+                const isClient = msg.senderRole === 'client';
+                return (
+                  <Flex
+                    key={msg.id}
+                    w="100%"
+                    direction="column"
+                    align={isClient ? 'flex-end' : 'flex-start'}
+                    mb={3}
                   >
-                    {renderMessageContent(msg)}
-                    {msg.isBurnAfterRead && !msg.burnedAt && (
-                      <Text fontSize="xs" display="inline" ml={1} color="orange.300">
-                        🔥{countdowns[msg.id] != null ? `${countdowns[msg.id]}s` : (msg.burnAfterSeconds ? `${msg.burnAfterSeconds}s` : '手动')}
+                    {showTime && (
+                      <Text color="abyss.500" fontSize="xs" textAlign="center" w="100%" my={2}>
+                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </Text>
                     )}
-                    <Text fontSize="xs" color="gray.300" mt={1}>
-                      {new Date(msg.createdAt).toLocaleTimeString()}
-                    </Text>
-                    {!msg.recalledAt && !msg.burnedAt && msg.senderRole === 'client' && (
-                      <IconButton
-                        className="recall-btn"
-                        icon={<Text fontSize="xs">↩</Text>}
-                        size="xs"
-                        variant="ghost"
-                        color="gray.400"
-                        opacity={0}
-                        position="absolute"
-                        top={1}
-                        right={1}
-                        onClick={() => handleRecallMessage(msg)}
-                        aria-label="撤回"
-                        minW="20px"
-                        h="20px"
-                      />
-                    )}
-                  </Box>
-                </Flex>
-              ))}
+                    <HStack spacing={2} maxW="85%">
+                      {!isClient && (
+                        <Box
+                          w="28px"
+                          h="28px"
+                          borderRadius="full"
+                          bg="abyss.600"
+                          display="flex"
+                          alignItems="center"
+                          justifyContent="center"
+                          flexShrink={0}
+                        >
+                          <Text fontSize="xs">🤖</Text>
+                        </Box>
+                      )}
+                      <Box
+                        w="75%"
+                        p={3}
+                        borderRadius="lg"
+                        bg={isClient ? 'brand.500' : 'rgba(255,255,255,0.08)'}
+                        color="white"
+                        role="group"
+                        _hover={{ '.recall-btn': { opacity: 1 } }}
+                      >
+                        {renderMessageContent(msg)}
+                        {msg.isBurnAfterRead && !msg.burnedAt && (
+                          <Text fontSize="xs" display="inline" ml={1} color="orange.300">
+                            🔥{countdowns[msg.id] != null ? `${countdowns[msg.id]}s` : (msg.burnAfterSeconds ? `${msg.burnAfterSeconds}s` : '手动')}
+                          </Text>
+                        )}
+                        <Text fontSize="xs" color="gray.300" mt={1}>
+                          {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </Text>
+                        {!msg.recalledAt && !msg.burnedAt && isClient && (
+                          <IconButton
+                            className="recall-btn"
+                            icon={<Text fontSize="xs">↩</Text>}
+                            size="xs"
+                            variant="ghost"
+                            color="gray.400"
+                            opacity={0}
+                            position="absolute"
+                            top={1}
+                            right={1}
+                            onClick={() => handleRecallMessage(msg)}
+                            aria-label="撤回"
+                            minW="20px"
+                            h="20px"
+                          />
+                        )}
+                      </Box>
+                      {isClient && (
+                        <Box
+                          w="28px"
+                          h="28px"
+                          borderRadius="full"
+                          bg="brand.500"
+                          display="flex"
+                          alignItems="center"
+                          justifyContent="center"
+                          flexShrink={0}
+                        >
+                          <Text fontSize="xs">👤</Text>
+                        </Box>
+                      )}
+                    </HStack>
+                  </Flex>
+                );
+              })}
               <div ref={messagesEndRef} />
-            </VStack>
+            </Box>
           )}
         </Box>
 
@@ -573,6 +622,7 @@ export default function ClientChat() {
         imageUrl={flashViewer.imageUrl}
         messageId={flashViewer.messageId}
         senderRole={flashViewer.senderRole}
+        isFlashMode={flashViewer.isFlashMode || false}
       />
     </Flex>
   );

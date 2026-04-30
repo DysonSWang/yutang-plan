@@ -16,10 +16,22 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+
+    // 签名配置
+    signingConfigs {
+        release {
+            storeFile file('zhuiai-release.keystore')
+            storePassword 'zhuiai2024'
+            keyAlias 'zhuiai'
+            keyPassword 'zhuiai2024'
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
         }
     }
 }

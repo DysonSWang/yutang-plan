@@ -1,7 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Box, Heading, Card, CardBody, SimpleGrid, Badge, Text, VStack, HStack, Flex, Avatar, Button, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure, FormControl, FormLabel, Input, Select, Textarea, useToast, Spinner } from '@chakra-ui/react';
-import { clients } from '../../utils/api';
+import { Box, Heading, Card, CardBody, SimpleGrid, Badge, Text, VStack, HStack, Flex, Avatar, Button, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure, FormControl, FormLabel, Input, Select, Textarea, useToast, Spinner, Icon, Divider } from '@chakra-ui/react';
+import { CrownIcon, CheckIcon } from '../../components/Icons';
+import { clients, membership as membershipApi } from '../../utils/api';
 import RegionSelector from '../../components/RegionSelector';
+import { checkVersion, VERSION } from '../../utils/version';
+import VersionUpdateModal from '../../components/VersionUpdateModal';
+
+const TYPE_LABEL = { monthly: '普惠月付', yearly: '普惠年付', premium: '高端会员' };
+const TYPE_BADGE_COLOR = { monthly: 'green', yearly: 'blue', premium: 'purple' };
+
+const PRICING_DATA = [
+  { type: 'monthly', label: '普惠月付', price: 999, period: '月', perMonth: 999, features: ['全功能AI教练', '约会方案生成', '学习中心', '缘分管理'] },
+  { type: 'yearly', label: '普惠年付', price: 8888, period: '年', perMonth: 741, features: ['全功能AI教练', '约会方案生成', '学习中心', '缘分管理', '年付专属优惠'] },
+  { type: 'premium', label: '高端会员', price: 50000, period: '年', perMonth: 4167, features: ['全功能AI教练', '约会方案生成', '学习中心', '缘分管理', '优先人工顾问', '专属定制服务'] }
+];
 
 const STAGE_COLORS = {
   '背调': 'gray',
@@ -130,11 +142,17 @@ export default function ClientProfile() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editData, setEditData] = useState({});
+  const [memberStatus, setMemberStatus] = useState(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen: isPricingOpen, onOpen: onPricingOpen, onClose: onPricingClose } = useDisclosure();
+  const { isOpen: isVersionOpen, onOpen: onVersionOpen, onClose: onVersionClose } = useDisclosure();
+  const [updateInfo, setUpdateInfo] = useState(null);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
   const toast = useToast();
 
   useEffect(() => {
     loadProfile();
+    loadMembership();
   }, []);
 
   const loadProfile = async () => {
@@ -153,6 +171,13 @@ export default function ClientProfile() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadMembership = async () => {
+    try {
+      const res = await membershipApi.status().catch(() => ({ success: false }));
+      if (res.success) setMemberStatus(res);
+    } catch (e) { console.error(e); }
   };
 
   const handleFieldChange = useCallback((key, val) => {
@@ -187,6 +212,23 @@ export default function ClientProfile() {
     onOpen();
   };
 
+  const handleCheckUpdate = async () => {
+    setCheckingUpdate(true);
+    try {
+      const info = await checkVersion();
+      if (info?.hasUpdate) {
+        setUpdateInfo(info);
+        onVersionOpen();
+      } else {
+        toast({ title: '已是最新版本', description: `V${VERSION}`, status: 'success', duration: 3000 });
+      }
+    } catch (e) {
+      toast({ title: '检查更新失败', status: 'error', duration: 3000 });
+    } finally {
+      setCheckingUpdate(false);
+    }
+  };
+
   if (loading) {
     return (
       <Flex justify="center" align="center" minH="200px">
@@ -203,7 +245,12 @@ export default function ClientProfile() {
     <Box>
       <Flex justify="space-between" align="center" mb={6}>
         <Heading color="white">我的档案</Heading>
-        <Button colorScheme="teal" onClick={openEdit}>编辑档案</Button>
+        <HStack spacing={2}>
+          <Button size="sm" variant="ghost" color="gray.400" onClick={handleCheckUpdate} isLoading={checkingUpdate}>
+            检查更新
+          </Button>
+          <Button colorScheme="teal" onClick={openEdit}>编辑档案</Button>
+        </HStack>
       </Flex>
 
       {/* 基本信息卡片 */}
@@ -218,6 +265,30 @@ export default function ClientProfile() {
               </HStack>
               <Text color="gray.400">{profile.occupation || profile.education || '未填写'}</Text>
             </Box>
+          </HStack>
+        </CardBody>
+      </Card>
+
+      {/* 会员 & 积分状态栏 */}
+      <Card bg="gray.800" mb={4}>
+        <CardBody>
+          <HStack spacing={4} wrap="wrap">
+            {memberStatus?.membership && (
+              <Badge colorScheme={TYPE_BADGE_COLOR[memberStatus.membership.type] || 'brand'} px={3} py={1} borderRadius="md" fontSize="sm">
+                {TYPE_LABEL[memberStatus.membership.type] || '会员'}
+              </Badge>
+            )}
+            {(!memberStatus?.membership) && (
+              <Button size="sm" colorScheme="brand" variant="outline" leftIcon={<Icon as={CrownIcon} />} onClick={onPricingOpen}>
+                开通会员
+              </Button>
+            )}
+            <Badge colorScheme="orange" px={3} py={1} borderRadius="md" fontSize="sm">
+              积分：{memberStatus?.points || 0}
+            </Badge>
+            <Button size="xs" variant="link" color="teal.400" onClick={onPricingOpen}>
+              查看定价方案
+            </Button>
           </HStack>
         </CardBody>
       </Card>
@@ -351,6 +422,22 @@ export default function ClientProfile() {
         </Card>
       )}
 
+      {/* 关于我们 */}
+      <Card bg="gray.800" mt={4}>
+        <CardBody>
+          <Text color="gray.400" fontSize="sm" mb={3}>关于追爱AI</Text>
+          <VStack spacing={2} align="stretch">
+            <HStack justify="space-between">
+              <Text color="gray.500" fontSize="sm">当前版本</Text>
+              <Text color="white" fontSize="sm">V{VERSION}</Text>
+            </HStack>
+            <Button size="sm" variant="outline" colorScheme="teal" onClick={handleCheckUpdate} isLoading={checkingUpdate}>
+              检查更新
+            </Button>
+          </VStack>
+        </CardBody>
+      </Card>
+
       {/* 编辑档案弹窗 */}
       <Modal isOpen={isOpen} onClose={onClose} size="xl">
         <ModalOverlay bg="blackAlpha.700" />
@@ -375,6 +462,95 @@ export default function ClientProfile() {
           </ModalBody>
         </ModalContent>
       </Modal>
+
+      {/* 定价方案弹窗 */}
+      <Modal isOpen={isPricingOpen} onClose={onPricingClose} size="2xl">
+        <ModalOverlay backdropFilter="blur(4px)" />
+        <ModalContent bg="gray.800" color="white" borderRadius="xl">
+          <ModalHeader textAlign="center" pb={2}>
+            <Icon as={CrownIcon} w={6} h={6} color="brand.400" mb={2} />
+            <Text color="white">选择专属方案</Text>
+            <Text color="gray.400" fontSize="sm" fontWeight="normal" mt={1}>联系客服，获取您的专属定制方案</Text>
+          </ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
+              {PRICING_DATA.map(plan => (
+                <Card
+                  key={plan.type}
+                  bg="gray.700"
+                  border="1px solid"
+                  borderColor={plan.type === 'premium' ? 'purple.500' : plan.type === 'yearly' ? 'blue.500' : 'gray.600'}
+                  borderRadius="xl"
+                  position="relative"
+                  overflow="hidden"
+                >
+                  {plan.type === 'premium' && (
+                    <Box position="absolute" top={0} left={0} right={0} bg="purple.600" textAlign="center" py={1} fontSize="xs" fontWeight="bold">
+                      最高端
+                    </Box>
+                  )}
+                  {plan.type === 'yearly' && (
+                    <Box position="absolute" top={0} left={0} right={0} bg="blue.600" textAlign="center" py={1} fontSize="xs" fontWeight="bold">
+                      最受欢迎
+                    </Box>
+                  )}
+                  <CardBody pt={plan.type !== 'monthly' ? 8 : 4}>
+                    <VStack spacing={2} mb={4}>
+                      <Text color="white" fontWeight="bold" fontSize="lg">{plan.label}</Text>
+                      <HStack spacing={1} align="baseline">
+                        <Text color="brand.400" fontSize="3xl" fontWeight="bold">¥{plan.price}</Text>
+                        <Text color="gray.400" fontSize="sm">/{plan.period}</Text>
+                      </HStack>
+                      <Text color="gray.500" fontSize="xs">约¥{plan.perMonth}/月</Text>
+                    </VStack>
+                    <VStack spacing={2} align="stretch">
+                      {plan.features.map((f, i) => (
+                        <HStack key={i} spacing={2}>
+                          <Icon as={CheckIcon} color="teal.400" boxSize={4} />
+                          <Text color="gray.300" fontSize="sm">{f}</Text>
+                        </HStack>
+                      ))}
+                    </VStack>
+                  </CardBody>
+                </Card>
+              ))}
+            </SimpleGrid>
+            <Box mt={4} p={3} bg="gray.750" borderRadius="md">
+              <Text color="gray.400" fontSize="sm" mb={2}>邀请有礼</Text>
+              <SimpleGrid columns={3} spacing={2}>
+                <Box textAlign="center" p={2} bg="gray.600" borderRadius="md">
+                  <Text color="brand.400" fontWeight="600">500</Text>
+                  <Text color="gray.400" fontSize="xs">普惠月付邀请积分</Text>
+                </Box>
+                <Box textAlign="center" p={2} bg="gray.600" borderRadius="md">
+                  <Text color="blue.400" fontWeight="600">4444</Text>
+                  <Text color="gray.400" fontSize="xs">普惠年付邀请积分</Text>
+                </Box>
+                <Box textAlign="center" p={2} bg="gray.600" borderRadius="md">
+                  <Text color="purple.400" fontWeight="600">25000</Text>
+                  <Text color="gray.400" fontSize="xs">高端会员邀请积分</Text>
+                </Box>
+              </SimpleGrid>
+              <Text color="gray.500" fontSize="xs" mt={2}>
+                积分只能用于续费抵扣，无有效期限制。被邀请人首单可享8折优惠
+              </Text>
+            </Box>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+
+      {/* 版本更新弹窗 */}
+      {updateInfo && (
+        <VersionUpdateModal
+          isOpen={isVersionOpen}
+          onClose={onVersionClose}
+          upgradeType={updateInfo.upgradeType}
+          latestVersion={updateInfo.latestVersion}
+          updateDescription={updateInfo.updateDescription}
+          downloadUrl={updateInfo.downloadUrl}
+        />
+      )}
     </Box>
   );
 }

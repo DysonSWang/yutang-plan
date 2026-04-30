@@ -326,7 +326,7 @@ router.post('/dating-plan/generate', authMiddleware, async (req, res) => {
       const data = await response.json();
       const content = data.choices?.[0]?.message?.content || '生成失败，请重试。';
 
-      await prisma.datingPlan.update({
+      const updatedPlan = await prisma.datingPlan.update({
         where: { id: plan.id },
         data: {
           content,
@@ -334,7 +334,7 @@ router.post('/dating-plan/generate', authMiddleware, async (req, res) => {
         }
       });
 
-      res.json({ success: true, plan: { ...plan, content, planStatus: 'generated' } });
+      res.json({ success: true, plan: updatedPlan });
     } catch (err) {
       await prisma.datingPlan.update({
         where: { id: plan.id },

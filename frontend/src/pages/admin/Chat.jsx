@@ -338,6 +338,7 @@ export default function AdminChat() {
     }
     if (msg.type === 'image') {
       const isClickable = msg.isBurnAfterRead && msg.senderRole !== 'operator' && !msg.burnedAt;
+      const imageViewerUrl = msg.mediaUrl.startsWith('http') ? msg.mediaUrl : `${API_BASE}${msg.mediaUrl}`;
       return (
         <Box
           maxW="250px"
@@ -346,12 +347,13 @@ export default function AdminChat() {
           position="relative"
           onClick={() => {
             if (msg.isFlashImage && !msg.burnedAt) {
-              // 闪图：打开满屏查看器
-              setFlashViewer({ isOpen: true, imageUrl: msg.mediaUrl, messageId: msg.id, senderRole: msg.senderRole });
+              // 闪图：打开满屏查看器（带倒计时）
+              setFlashViewer({ isOpen: true, imageUrl: imageViewerUrl, messageId: msg.id, senderRole: msg.senderRole, isFlashMode: true });
             } else if (msg.isBurnAfterRead && msg.senderRole !== 'operator') {
               handleBurnMessage(msg);
             } else {
-              window.open(`${API_BASE}${msg.mediaUrl}`, '_blank');
+              // 普通图片：打开满屏查看器（无倒计时）
+              setFlashViewer({ isOpen: true, imageUrl: imageViewerUrl, messageId: msg.id, senderRole: msg.senderRole, isFlashMode: false });
             }
           }}
         >
@@ -557,49 +559,95 @@ export default function AdminChat() {
               </Box>
 
               <Box flex={1} p={3} overflowY="auto">
-                <VStack spacing={3} align="stretch">
-                  {messages.map(msg => (
-                    <Flex key={msg.id} justify={msg.senderRole === 'operator' ? 'flex-end' : 'flex-start'} _group={{}}>
-                      <Box
-                        maxW="70%"
-                        p={3}
-                        borderRadius="lg"
-                        bg={msg.senderRole === 'operator' ? 'teal.600' : 'gray.700'}
-                        color="white"
-                        position="relative"
-                        role="group"
-                        _hover={{ '.recall-btn': { opacity: 1 } }}
+                <VStack spacing={0} align="stretch">
+                  {messages.map((msg, idx) => {
+                    const prevMsg = idx > 0 ? messages[idx - 1] : null;
+                    const timeGap = prevMsg ? (new Date(msg.createdAt) - new Date(prevMsg.createdAt)) / 1000 / 60 : Infinity;
+                    const showTime = timeGap > 5;
+                    const isOperator = msg.senderRole === 'operator';
+                    return (
+                      <Flex
+                        key={msg.id}
+                        direction="column"
+                        align={isOperator ? 'flex-end' : 'flex-start'}
+                        mb={3}
                       >
-                        {renderMessageContent(msg)}
-                        {msg.isBurnAfterRead && !msg.burnedAt && (
-                          <Text fontSize="xs" display="inline" ml={1} color="orange.300">
-                            🔥{msg.burnAfterSeconds ? `${msg.burnAfterSeconds}s` : '手动'}
+                        {showTime && (
+                          <Text color="gray.500" fontSize="xs" textAlign="center" w="100%" my={2}>
+                            {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </Text>
                         )}
-                      <Text fontSize="xs" color="gray.300" mt={1}>
-                          {new Date(msg.createdAt).toLocaleTimeString()}
-                        </Text>
-                        {!msg.recalledAt && !msg.burnedAt && msg.senderRole === 'operator' && (
-                          <IconButton
-                            className="recall-btn"
-                            icon={<Text fontSize="xs">↩</Text>}
-                            size="xs"
-                            variant="ghost"
-                            color="gray.400"
-                            opacity={0}
-                            position="absolute"
-                            top={1}
-                            right={1}
-                            onClick={() => handleRecallMessage(msg)}
-                            aria-label="撤回"
-                            title="撤回"
-                            minW="20px"
-                            h="20px"
-                          />
-                        )}
-                      </Box>
-                    </Flex>
-                  ))}
+                        <HStack spacing={2} maxW="85%">
+                          {!isOperator && (
+                            <Box
+                              w="28px"
+                              h="28px"
+                              borderRadius="full"
+                              bg="gray.600"
+                              display="flex"
+                              alignItems="center"
+                              justifyContent="center"
+                              flexShrink={0}
+                            >
+                              <Text fontSize="xs">👤</Text>
+                            </Box>
+                          )}
+                          <Box
+                            w="75%"
+                            p={3}
+                            borderRadius="lg"
+                            bg={isOperator ? 'teal.600' : 'gray.700'}
+                            color="white"
+                            position="relative"
+                            role="group"
+                            _hover={{ '.recall-btn': { opacity: 1 } }}
+                          >
+                            {renderMessageContent(msg)}
+                            {msg.isBurnAfterRead && !msg.burnedAt && (
+                              <Text fontSize="xs" display="inline" ml={1} color="orange.300">
+                                🔥{msg.burnAfterSeconds ? `${msg.burnAfterSeconds}s` : '手动'}
+                              </Text>
+                            )}
+                            <Text fontSize="xs" color="gray.300" mt={1}>
+                              {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </Text>
+                            {!msg.recalledAt && !msg.burnedAt && isOperator && (
+                              <IconButton
+                                className="recall-btn"
+                                icon={<Text fontSize="xs">↩</Text>}
+                                size="xs"
+                                variant="ghost"
+                                color="gray.400"
+                                opacity={0}
+                                position="absolute"
+                                top={1}
+                                right={1}
+                                onClick={() => handleRecallMessage(msg)}
+                                aria-label="撤回"
+                                title="撤回"
+                                minW="20px"
+                                h="20px"
+                              />
+                            )}
+                          </Box>
+                          {isOperator && (
+                            <Box
+                              w="28px"
+                              h="28px"
+                              borderRadius="full"
+                              bg="teal.600"
+                              display="flex"
+                              alignItems="center"
+                              justifyContent="center"
+                              flexShrink={0}
+                            >
+                              <Text fontSize="xs">🤖</Text>
+                            </Box>
+                          )}
+                        </HStack>
+                      </Flex>
+                    );
+                  })}
                   <div ref={messagesEndRef} />
                 </VStack>
               </Box>
@@ -816,6 +864,7 @@ export default function AdminChat() {
         imageUrl={flashViewer.imageUrl}
         messageId={flashViewer.messageId}
         senderRole={flashViewer.senderRole}
+        isFlashMode={flashViewer.isFlashMode || false}
       />
     </Box>
   );

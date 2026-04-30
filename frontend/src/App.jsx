@@ -1,12 +1,14 @@
 import { lazy, Suspense, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { ChakraProvider, Spinner, Center } from '@chakra-ui/react';
+import { ChakraProvider, Spinner, Center, useDisclosure } from '@chakra-ui/react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
 import theme from './theme';
 import Login from './pages/Login';
 import ClientLayout from './pages/client/ClientLayout';
 import AdminLayout from './pages/admin/AdminLayout';
+import VersionUpdateModal from './components/VersionUpdateModal';
+import { checkVersion } from './utils/version';
 
 const ClientHome = lazy(() => import('./pages/client/Home'));
 const ClientProfile = lazy(() => import('./pages/client/ClientProfile'));
@@ -114,10 +116,39 @@ export default function App() {
       <BrowserRouter>
         <AuthProvider>
           <SocketProvider>
+            <VersionChecker />
             <AppRoutes />
           </SocketProvider>
         </AuthProvider>
       </BrowserRouter>
     </ChakraProvider>
+  );
+}
+
+function VersionChecker() {
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const [updateInfo, setUpdateInfo] = useState(null);
+
+  useEffect(() => {
+    // 启动时检测版本
+    checkVersion().then(info => {
+      if (info?.hasUpdate) {
+        setUpdateInfo(info);
+        onOpen();
+      }
+    });
+  }, []);
+
+  if (!updateInfo) return null;
+
+  return (
+    <VersionUpdateModal
+      isOpen={isOpen}
+      onClose={onClose}
+      upgradeType={updateInfo.upgradeType}
+      latestVersion={updateInfo.latestVersion}
+      updateDescription={updateInfo.updateDescription}
+      downloadUrl={updateInfo.downloadUrl}
+    />
   );
 }

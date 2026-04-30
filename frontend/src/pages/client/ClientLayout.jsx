@@ -4,10 +4,9 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSocket } from '../../contexts/SocketContext';
 import { notifications as notifApi } from '../../utils/api';
-import { FishIcon, ChatIcon, SparklesIcon, BellIcon, HomeIcon, UserIcon, CalendarIcon, BookIcon, GiftIcon } from '../../components/Icons';
+import { FishIcon, ChatIcon, SparklesIcon, BellIcon, UserIcon, CalendarIcon, BookIcon, GiftIcon } from '../../components/Icons';
 
 const navItems = [
-  { path: '/', label: '首页', icon: HomeIcon },
   { path: '/chat', label: 'Mo哥', icon: ChatIcon },
   { path: '/ai-coach', label: 'AI', icon: SparklesIcon },
   { path: '/my-pond', label: '缘分', icon: FishIcon },
@@ -29,10 +28,20 @@ function DesktopSidebar() {
 
   const loadUnreadCount = async () => {
     try {
+      // 加载通知未读数
       const res = await notifApi.list();
       if (res.success) {
         setUnreadCount(res.unreadCount);
         setNotifications(res.notifications);
+      }
+      // 加载聊天会话未读数
+      const token = localStorage.getItem('zhuiai_token');
+      const chatRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/chat/my-sessions`, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).then(r => r.json());
+      if (chatRes.success && chatRes.sessions.length > 0) {
+        const totalUnread = chatRes.sessions.reduce((sum, s) => sum + (s.unreadCount || 0), 0);
+        setChatUnread(totalUnread);
       }
     } catch (e) {
       console.error(e);
@@ -164,20 +173,13 @@ function DesktopSidebar() {
               position="relative"
             >
               <Icon as={item.icon} />
-              <Text>{item.label}</Text>
-              {/* 聊天未读小红点 */}
-              {item.path === '/chat' && chatUnread > 0 && (
-                <Box
-                  position="absolute"
-                  top="8px"
-                  right="8px"
-                  w="8px"
-                  h="8px"
-                  borderRadius="full"
-                  bg="red.500"
-                />
-              )}
-              {/* 通知未读 */}
+              <HStack spacing={2}>
+                <Text>{item.label}</Text>
+                {item.path === '/chat' && chatUnread > 0 && (
+                  <Box w="12px" h="12px" borderRadius="full" bg="red.500" />
+                )}
+              </HStack>
+              {/* 通知未读小红点 - 始终显示 */}
               {item.path !== '/chat' && unreadCount > 0 && (
                 <Box
                   position="absolute"

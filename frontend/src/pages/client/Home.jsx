@@ -81,28 +81,6 @@ export default function ClientHome() {
         欢迎回来
       </Heading>
 
-      {/* 会员 & 积分状态栏 */}
-      <Box className="stagger-1" mb={6} p={4} bg="rgba(0,212,170,0.06)" border="1px solid rgba(0,212,170,0.15)" borderRadius="xl">
-        <HStack spacing={4} wrap="wrap">
-          {memberStatus?.membership && (
-            <Badge colorScheme={TYPE_BADGE_COLOR[memberStatus.membership.type] || 'brand'} px={3} py={1} borderRadius="md" fontSize="sm">
-              {TYPE_LABEL[memberStatus.membership.type] || '会员'}
-            </Badge>
-          )}
-          {(!memberStatus?.membership) && (
-            <Button size="sm" colorScheme="brand" variant="outline" leftIcon={<Icon as={CrownIcon} />} onClick={onPricingOpen}>
-              开通会员
-            </Button>
-          )}
-          <Badge colorScheme="orange" px={3} py={1} borderRadius="md" fontSize="sm">
-            积分：{memberStatus?.points || 0}
-          </Badge>
-          <Button size="xs" variant="link" color="abyss.400" onClick={onPricingOpen}>
-            查看定价方案
-          </Button>
-        </HStack>
-      </Box>
-
       {/* 进度看板 - 仅高端用户可见 */}
       {memberStatus?.membership?.type === 'premium' && (
         <Box className="stagger-2">
@@ -206,7 +184,7 @@ export default function ClientHome() {
             border="1px solid rgba(255,255,255,0.08)"
             backdropFilter="blur(12px)"
             cursor="pointer"
-            onClick={() => navigate('/dates')}
+            onClick={() => navigate('/dates#calendar')}
             _hover={{ bg: 'rgba(0, 212, 170, 0.06)', borderColor: 'rgba(0, 212, 170, 0.2)', transform: 'translateY(-3px)' }}
             transition="all 0.25s ease"
           >

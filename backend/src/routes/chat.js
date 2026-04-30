@@ -39,28 +39,24 @@ module.exports = function(io) {
   };
 
   // Socket.io 推送消息
-  const emitNewMessage = (session, message, senderUserId) => {
+  const emitNewMessage = (session, message, senderUserId, senderRole) => {
     if (!io) return;
-    // 发送给会话的另一方
-    const isOperator = session.operatorId === message.senderId;
     const clientRoom = `client:${session.clientId}`;
     const operatorRoom = `operator:${session.operatorId}`;
 
-    // 发送给客户端
-    io.to(clientRoom).emit('message:new', message);
-
-    // 发送给操作员（如果不是发送者本人）
-    if (message.senderId !== session.operatorId) {
-      io.to(operatorRoom).emit('message:new', message);
+    // admin 发送的消息只推送给 client，不推送给 operator room
+    // admin 通过 HTTP 响应立即看到自己发的消息
+    if (senderRole === 'admin') {
+      io.to(clientRoom).emit('message:new', message);
+      return;
     }
 
-    // 如果发送者是admin，广播给所有admin房间，确保admin能看到自己发的消息
-    if (senderUserId && message.senderId === senderUserId) {
-      // 找到所有admin用户并发送给他们（通过查询数据库获取admin的user id）
-      // 但这样太复杂了，简单做法是：如果发送者是admin，同时发一份给operator:发送者id
-      if (session.operatorId !== senderUserId) {
-        io.to(`operator:${senderUserId}`).emit('message:new', message);
-      }
+    // 非 admin 发送：推送给客户端
+    io.to(clientRoom).emit('message:new', message);
+
+    // 推送给操作员（如果发送者不是操作员本人）
+    if (message.senderId !== session.operatorId) {
+      io.to(operatorRoom).emit('message:new', message);
     }
 
     console.log('[Chat] Emitting message:', message.id, 'to client:', clientRoom, 'operator:', operatorRoom);
@@ -286,8 +282,8 @@ module.exports = function(io) {
         return res.status(403).json({ error: '无权限' });
       }
 
-      // 确定发送者角色
-      const senderRole = session.operatorId === req.user.id ? 'operator' : 'client';
+      // 确定发送者角色：admin 发送时为 'admin'
+      const senderRole = req.user.role === 'admin' ? 'admin' : (session.operatorId === req.user.id ? 'operator' : 'client');
 
       // 敏感图片：嵌入水印（溯源接收方）→ 重新加密 → 上传新OSS文件
       let finalMediaUrl = mediaUrl;
@@ -379,7 +375,7 @@ module.exports = function(io) {
       });
 
       // 通过 Socket.io 推送消息给另一方
-      emitNewMessage(session, message, req.user.id);
+      emitNewMessage(session, message, req.user.id, senderRole);
 
       res.json({ success: true, message });
     } catch (error) {

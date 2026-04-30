@@ -43,7 +43,9 @@ function toLocalDatetimeString(date) {
 
 function fromLocalDatetimeString(str) {
   if (!str) return null;
-  return new Date(str);
+  // 兼容 "2026-04-2913:00" 格式，转换为 "2026-04-29T13:00"
+  const normalized = str.replace(/^(\d{4}-\d{2}-\d{2})(\d{2}:\d{2})$/, '$1T$2');
+  return new Date(normalized);
 }
 
 export default function ClientCalendar({ clientId, clientNickname, girlList, refreshKey }) {
@@ -63,11 +65,14 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const loadEvents = useCallback(async () => {
-    if (!clientId) return;
+    if (!clientId) {
+      setLoading(false);
+      return;
+    }
     try {
       const res = await eventsApi.batch({ clientId });
       if (res.success) {
-        setEvents(res.events);
+        setEvents(res.events || []);
       }
     } catch (e) {
       console.error(e);
@@ -197,6 +202,11 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
   };
 
   const handleSave = async () => {
+    // 验证必填字段
+    if (!clientId) {
+      toast({ title: '无法创建，请刷新页面重试', status: 'error', duration: 3000 });
+      return;
+    }
     if (!form.title && form.type !== 'date') {
       toast({ title: '请填写标题', status: 'warning', duration: 2000 });
       return;
@@ -222,7 +232,7 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
             onClose();
             loadEvents();
           } else {
-            toast({ title: res.error || '创建失败', status: 'error', duration: 2000 });
+            toast({ title: res.error || '创建失败', status: 'error', duration: 3000 });
           }
         } else {
           // 创建事件
@@ -240,7 +250,7 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
             onClose();
             loadEvents();
           } else {
-            toast({ title: res.error || '创建失败', status: 'error', duration: 2000 });
+            toast({ title: res.error || '创建失败', status: 'error', duration: 3000 });
           }
         }
       } else {
@@ -371,7 +381,7 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
       {loading ? (
         <Flex justify="center" py={8}><Spinner color="teal.400" /></Flex>
       ) : (
-        <Box sx={{
+        <Box minH="500px" sx={{
           '.fc': { fontFamily: 'inherit' },
           '.fc .fc-toolbar-title': { color: 'gray.200', fontSize: 'md !important' },
           '.fc .fc-button': {
@@ -415,6 +425,7 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
             buttonText={{ today: '今天', month: '月', week: '周', day: '日' }}
             editable={false}
             droppable={false}
+            contentHeight={600}
           />
         </Box>
       )}

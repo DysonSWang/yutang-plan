@@ -3,10 +3,11 @@ import {
   Box, Heading, Card, CardBody, Button, Badge, Modal, ModalOverlay, ModalContent,
   ModalHeader, ModalBody, ModalCloseButton, useDisclosure, VStack, HStack, Text,
   SimpleGrid, Flex, Divider, Tag, Wrap, WrapItem, useToast, Textarea, FormControl,
-  FormLabel, Icon, Alert, AlertIcon, AlertDescription, Spinner, Progress, Tabs, TabList, TabPanels, Tab, TabPanel, Input, Select
+  FormLabel, Icon, Alert, AlertIcon, AlertDescription, Spinner, Progress, Tabs, TabList, TabPanels, Tab, TabPanel, Input, Select, Center
 } from '@chakra-ui/react';
 import { CalendarIcon, SparklesIcon, QuestionIcon, CopyIcon } from '../../components/Icons';
-import { dates, membership as membershipApi } from '../../utils/api';
+import ClientCalendar from '../../components/ClientCalendar';
+import { dates, membership as membershipApi, clients } from '../../utils/api';
 
 function parseJSON(val, fallback = null) {
   if (!val) return fallback;
@@ -36,6 +37,10 @@ const STATUS_LABELS = {
 
 export default function ClientDates() {
   const [datesList, setDatesList] = useState([]);
+  const [allDates, setAllDates] = useState([]);
+  const [aiPlans, setAiPlans] = useState([]);
+  const [clientId, setClientId] = useState(null);
+  const [girlList, setGirlList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -48,20 +53,99 @@ export default function ClientDates() {
   const [interviewOpen, setInterviewOpen] = useState(false);
   const [interviewAnswers, setInterviewAnswers] = useState({});
   const [interviewSubmitting, setInterviewSubmitting] = useState(false);
+  const [selectedAiPlan, setSelectedAiPlan] = useState(null);
+  const [generating, setGenerating] = useState(false);
+  const [aiForm, setAiForm] = useState({ title: '', scene: '', budget: '', duration: '' });
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addMode, setAddMode] = useState('ai'); // 'ai' | 'manual'
+  const [manualForm, setManualForm] = useState({ title: '', girlId: '', dateTime: '', location: '', notes: '' });
+  const [girlsList, setGirlsList] = useState([]);
+  const [manualSubmitting, setManualSubmitting] = useState(false);
   const toast = useToast();
+
+  // 加载女生列表
+  useEffect(() => {
+    if (showAddModal && addMode === 'manual') {
+      loadGirls();
+    }
+  }, [showAddModal, addMode]);
+
+  const loadGirls = async () => {
+    try {
+      const res = await fetch('/api/girls/my', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      }).then(r => r.json());
+      if (res.success) setGirlsList(res.girls || []);
+    } catch (e) { console.error(e); }
+  };
+
+  const handleManualSubmit = async () => {
+    if (!manualForm.girlId) {
+      toast({ title: '请选择约会对象', status: 'warning' });
+      return;
+    }
+    setManualSubmitting(true);
+    try {
+      const res = await fetch('/api/dates', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          title: manualForm.title || '新约会',
+          girlId: parseInt(manualForm.girlId),
+          dateTime: manualForm.dateTime || null,
+          location: manualForm.location,
+          notes: manualForm.notes
+        })
+      }).then(r => r.json());
+      if (res.success) {
+        toast({ title: '约会添加成功', status: 'success', duration: 2000 });
+        setShowAddModal(false);
+        setManualForm({ title: '', girlId: '', dateTime: '', location: '', notes: '' });
+        loadAll();
+      } else {
+        toast({ title: res.error || '添加失败', status: 'error' });
+      }
+    } catch (e) {
+      toast({ title: '添加失败', status: 'error' });
+    }
+    setManualSubmitting(false);
+  };
 
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [pendingRes, interviewsRes] = await Promise.all([
+      const [pendingRes, allDatesRes, interviewsRes, aiPlansRes] = await Promise.all([
         dates.getClientPending(),
-        dates.getClientInterviews().catch(() => ({ success: false }))
+        dates.list().catch(() => ({ success: false, dates: [] })),
+        dates.getClientInterviews().catch(() => ({ success: false })),
+        membershipApi.datingPlans().catch(() => ({ success: false }))
       ]);
       if (pendingRes.success) setDatesList(pendingRes.dates || []);
+      if (allDatesRes.success) setAllDates(allDatesRes.dates || []);
       if (interviewsRes?.success) setPendingInterviews(interviewsRes.interviews || []);
+      if (aiPlansRes?.success) setAiPlans(aiPlansRes.plans || []);
     } catch (e) { console.error(e); }
     setLoading(false);
   };
+
+  // 加载客户ID和女生列表
+  useEffect(() => {
+    const loadClientInfo = async () => {
+      try {
+        const res = await clients.me();
+        if (res.client?.id) {
+          setClientId(res.client.id);
+        }
+        if (res.client?.girls) {
+          setGirlList(res.client.girls);
+        }
+      } catch (e) { console.error(e); }
+    };
+    loadClientInfo();
+  }, []);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadAll(); }, []);
@@ -115,6 +199,27 @@ export default function ClientDates() {
       toast({ title: '提交失败', status: 'error', duration: 2500 });
     }
     setSubmitting(false);
+  };
+
+  const generateAiPlan = async () => {
+    if (!aiForm.scene) {
+      toast({ title: '请填写约会场景', status: 'warning' });
+      return;
+    }
+    setGenerating(true);
+    try {
+      const res = await membershipApi.generateDatingPlan(aiForm);
+      if (res.success) {
+        setAiPlans([res.plan, ...aiPlans]);
+        setSelectedAiPlan(res.plan);
+        setAiForm({ title: '', scene: '', budget: '', duration: '' });
+        toast({ title: '方案生成中...', status: 'info', duration: 3000 });
+      }
+    } catch (err) {
+      toast({ title: '生成失败', description: err.message, status: 'error' });
+    } finally {
+      setGenerating(false);
+    }
   };
 
   // 打开访谈问卷
@@ -277,17 +382,21 @@ export default function ClientDates() {
     <Box>
       <Flex justify="space-between" align="center" mb={6}>
         <Heading color="white">约会与方案</Heading>
-        <Button variant="outline" colorScheme="gray" size="sm" onClick={loadAll} isLoading={loading}>刷新</Button>
+        <HStack spacing={2}>
+          <Button variant="outline" colorScheme="gray" size="sm" onClick={loadAll} isLoading={loading}>刷新</Button>
+          <Button colorScheme="brand" leftIcon={<SparklesIcon />} onClick={() => setShowAddModal(true)}>
+            添加约会
+          </Button>
+        </HStack>
       </Flex>
 
-      <Tabs colorScheme="brand" variant="soft-rounded" mb={6}>
+      <Tabs colorScheme="brand" variant="soft-rounded" mb={6} defaultIndex={window.location.hash === '#calendar' ? 1 : 0}>
         <TabList>
           <Tab>约会方案</Tab>
-          <Tab>AI约会方案</Tab>
+          <Tab>我的日历</Tab>
         </TabList>
         <TabPanels>
           <TabPanel px={0}>
-
             {/* 访谈入口 */}
             {pendingInterviews.length > 0 && (
               <Box mb={4}>
@@ -326,30 +435,62 @@ export default function ClientDates() {
               </Box>
             )}
 
+            {/* 约会列表 */}
             {loading ? (
               <Flex justify="center" py={12}><Spinner /></Flex>
-            ) : datesList.length === 0 && pendingInterviews.length === 0 ? (
+            ) : datesList.length === 0 && aiPlans.length === 0 && pendingInterviews.length === 0 ? (
               <Card bg="gray.800">
                 <CardBody>
                   <Flex direction="column" align="center" py={12} gap={3}>
                     <Icon as={CalendarIcon} color="gray.500" boxSize={12} />
-                    <Text color="gray.400">暂无待确认的约会方案</Text>
-                    <Text color="gray.500" fontSize="sm">顾问策划好约会后，会在这里通知您</Text>
+                    <Text color="gray.400">暂无约会方案</Text>
+                    <Text color="gray.500" fontSize="sm">点击右上角"添加约会"开始</Text>
                   </Flex>
                 </CardBody>
               </Card>
             ) : (
               <VStack spacing={4} align="stretch">
+                {/* AI 方案列表 */}
+                {aiPlans.map(plan => (
+                  <Card
+                    key={plan.id}
+                    bg="gray.800"
+                    border="1px solid rgba(0,212,170,0.3)"
+                    cursor="pointer"
+                    _hover={{ borderColor: 'brand.500' }}
+                    onClick={() => setSelectedAiPlan(plan)}
+                  >
+                    <CardBody>
+                      <Flex justify="space-between" align="flex-start" mb={2}>
+                        <Box>
+                          <HStack spacing={2} mb={1}>
+                            <Icon as={SparklesIcon} color="brand.400" />
+                            <Heading size="md" color="white">{plan.title || 'AI 约会方案'}</Heading>
+                            <Badge colorScheme={plan.planStatus === 'generated' ? 'green' : plan.planStatus === 'generating' ? 'blue' : 'gray'}>
+                              {plan.planStatus === 'generated' ? '已生成' : plan.planStatus === 'generating' ? '生成中' : '草稿'}
+                            </Badge>
+                          </HStack>
+                          {plan.scene && <Text color="gray.400" fontSize="sm">{plan.scene}</Text>}
+                          {plan.budget && <Text color="gray.500" fontSize="xs">预算：{plan.budget} · 时长：{plan.duration}</Text>}
+                        </Box>
+                        <Text color="gray.500" fontSize="xs">
+                          {new Date(plan.createdAt).toLocaleDateString('zh-CN')}
+                        </Text>
+                      </Flex>
+                    </CardBody>
+                  </Card>
+                ))}
+                {/* 顾问方案列表 */}
                 {datesList.map(d => {
                   const plan = parseJSON(d.aiPlan);
                   return (
-                    <Card key={d.id} bg="gray.800" border="1px solid" borderColor="purple.600">
+                    <Card key={d.id} bg="gray.800" border="1px solid borderColor.purple.600">
                       <CardBody>
                         <Flex justify="space-between" align="flex-start" mb={3}>
                           <Box>
                             <HStack spacing={2} mb={1}>
                               <Heading size="md" color="white">{d.title || '约会方案'}</Heading>
-                              <Badge colorScheme="purple">待确认</Badge>
+                              <Badge colorScheme="purple">顾问</Badge>
                             </HStack>
                             <HStack spacing={3}>
                               <Text color="gray.400" fontSize="sm">对象：{d.girl?.name}</Text>
@@ -380,102 +521,20 @@ export default function ClientDates() {
             )}
           </TabPanel>
 
+          {/* 日历视图 */}
           <TabPanel px={0}>
-            <AIDatingPlans />
+            {clientId ? (
+              <ClientCalendar
+                clientId={clientId}
+                girlList={girlList}
+                refreshKey={loading}
+              />
+            ) : (
+              <Flex justify="center" py={12}><Spinner /></Flex>
+            )}
           </TabPanel>
         </TabPanels>
       </Tabs>
-
-      {/* 访谈入口 */}
-      {pendingInterviews.length > 0 && (
-        <Box mb={4}>
-          <Alert status="cyan" mb={4} borderRadius="md">
-            <AlertIcon />
-            <AlertDescription fontSize="sm">
-              您有 <strong>{pendingInterviews.length}</strong> 份约会反馈访谈等待填写，顾问需要了解您的约会体验来优化后续方案。
-            </AlertDescription>
-          </Alert>
-          <VStack spacing={3} align="stretch">
-            {pendingInterviews.map((iv, i) => (
-              <Card key={iv.dateId || i} bg="cyan.900" border="1px solid" borderColor="cyan.600">
-                <CardBody>
-                  <Flex justify="space-between" align="center">
-                    <Box>
-                      <HStack spacing={2} mb={1}>
-                        <Icon as={QuestionIcon} color="cyan.300" />
-                        <Text color="cyan.200" fontWeight="bold">{iv.title}</Text>
-                        <Badge colorScheme="cyan">{iv.questions?.length || 0}个问题</Badge>
-                      </HStack>
-                      {iv.interviewOverview && (
-                        <Text color="cyan.300" fontSize="sm" mb={1}>{iv.interviewOverview}</Text>
-                      )}
-                      <Text color="gray.400" fontSize="xs">
-                        约会对象：{iv.girlName} · 推送时间：{iv.pushedAt ? new Date(iv.pushedAt).toLocaleDateString('zh-CN') : '-'}
-                      </Text>
-                    </Box>
-                    <Button colorScheme="cyan" size="sm" onClick={() => openInterview(iv)}>
-                      填写访谈
-                    </Button>
-                  </Flex>
-                </CardBody>
-              </Card>
-            ))}
-          </VStack>
-        </Box>
-      )}
-
-      {loading ? (
-        <Flex justify="center" py={12}><Spinner /></Flex>
-      ) : datesList.length === 0 && pendingInterviews.length === 0 ? (
-        <Card bg="gray.800">
-          <CardBody>
-            <Flex direction="column" align="center" py={12} gap={3}>
-              <Icon as={CalendarIcon} color="gray.500" boxSize={12} />
-              <Text color="gray.400">暂无待确认的约会方案</Text>
-              <Text color="gray.500" fontSize="sm">顾问策划好约会后，会在这里通知您</Text>
-            </Flex>
-          </CardBody>
-        </Card>
-      ) : (
-        <VStack spacing={4} align="stretch">
-          {datesList.map(d => {
-            const plan = parseJSON(d.aiPlan);
-            return (
-              <Card key={d.id} bg="gray.800" border="1px solid" borderColor="purple.600">
-                <CardBody>
-                  <Flex justify="space-between" align="flex-start" mb={3}>
-                    <Box>
-                      <HStack spacing={2} mb={1}>
-                        <Heading size="md" color="white">{d.title || '约会方案'}</Heading>
-                        <Badge colorScheme="purple">待确认</Badge>
-                      </HStack>
-                      <HStack spacing={3}>
-                        <Text color="gray.400" fontSize="sm">对象：{d.girl?.name}</Text>
-                        <Text color="gray.400" fontSize="sm">时间：{d.dateTime ? new Date(d.dateTime).toLocaleString('zh-CN') : '-'}</Text>
-                        {d.location && <Text color="gray.400" fontSize="sm">地点：{d.location}</Text>}
-                      </HStack>
-                    </Box>
-                    <VStack spacing={2} align="flex-end">
-                      <Button colorScheme="purple" onClick={() => openDetail(d)} size="sm">
-                        查看方案
-                      </Button>
-                      <Text color="gray.500" fontSize="xs">
-                        推送时间：{d.pushToClientAt ? new Date(d.pushToClientAt).toLocaleDateString('zh-CN') : '-'}
-                      </Text>
-                    </VStack>
-                  </Flex>
-                  {plan?.venue && (
-                    <Box bg="gray.750" p={3} borderRadius="md">
-                      <Text color="gray.400" fontSize="sm">推荐：{plan.venue.name} · {plan.venue.type}</Text>
-                      {plan.overview && <Text color="gray.300" fontSize="sm" mt={1}>{plan.overview}</Text>}
-                    </Box>
-                  )}
-                </CardBody>
-              </Card>
-            );
-          })}
-        </VStack>
-      )}
 
       {/* 方案详情 */}
       <Modal isOpen={isOpen} onClose={onClose} size="3xl">
@@ -644,208 +703,264 @@ export default function ClientDates() {
           </ModalBody>
         </ModalContent>
       </Modal>
-    </Box>
-  );
-}
 
-// AI约会方案子组件
-function AIDatingPlans() {
-  const toast = useToast();
-  const [plans, setPlans] = useState([]);
-  const [selectedPlan, setSelectedPlan] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
-  const [form, setForm] = useState({ title: '', scene: '', budget: '', duration: '' });
+      {/* AI 方案详情 */}
+      <Modal isOpen={!!selectedAiPlan} onClose={() => setSelectedAiPlan(null)} size="3xl">
+        <ModalOverlay />
+        <ModalContent bg="gray.800" maxH="85vh" overflow="auto">
+          <ModalHeader color="white">
+            {selectedAiPlan?.title || 'AI 约会方案'}
+            <Badge ml={2} colorScheme="brand">AI</Badge>
+          </ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            {selectedAiPlan && (
+              <Box>
+                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} mb={4}>
+                  {selectedAiPlan.scene && (
+                    <Box bg="gray.750" p={3} borderRadius="md">
+                      <Text color="gray.400" fontSize="sm">约会场景</Text>
+                      <Text color="teal.300">{selectedAiPlan.scene}</Text>
+                    </Box>
+                  )}
+                  {selectedAiPlan.budget && (
+                    <Box bg="gray.750" p={3} borderRadius="md">
+                      <Text color="gray.400" fontSize="sm">预算</Text>
+                      <Text color="white">{selectedAiPlan.budget}</Text>
+                    </Box>
+                  )}
+                  {selectedAiPlan.duration && (
+                    <Box bg="gray.750" p={3} borderRadius="md">
+                      <Text color="gray.400" fontSize="sm">时长</Text>
+                      <Text color="white">{selectedAiPlan.duration}</Text>
+                    </Box>
+                  )}
+                  <Box bg="gray.750" p={3} borderRadius="md">
+                    <Text color="gray.400" fontSize="sm">状态</Text>
+                    <Badge colorScheme={selectedAiPlan.planStatus === 'generated' ? 'green' : selectedAiPlan.planStatus === 'generating' ? 'blue' : 'gray'}>
+                      {selectedAiPlan.planStatus === 'generated' ? '已生成' : selectedAiPlan.planStatus === 'generating' ? '生成中' : '草稿'}
+                    </Badge>
+                  </Box>
+                </SimpleGrid>
 
-  useEffect(() => {
-    loadPlans();
-  }, []);
+                {selectedAiPlan.planStatus === 'generating' ? (
+                  <Center py={20}>
+                    <VStack>
+                      <Spinner size="lg" color="brand.500" />
+                      <Text color="gray.400" mt={3}>AI 正在为你策划约会方案...</Text>
+                    </VStack>
+                  </Center>
+                ) : selectedAiPlan.content ? (
+                  <Box
+                    p={6}
+                    bg="rgba(255,255,255,0.02)"
+                    border="1px solid rgba(255,255,255,0.06)"
+                    borderRadius="xl"
+                    color="gray.200"
+                    fontSize="sm"
+                    lineHeight="1.8"
+                    whiteSpace="pre-wrap"
+                  >
+                    {selectedAiPlan.content}
+                  </Box>
+                ) : (
+                  <Text color="gray.400">暂无方案内容</Text>
+                )}
 
-  async function loadPlans() {
-    try {
-      const res = await membershipApi.datingPlans();
-      if (res.success) setPlans(res.plans);
-    } catch (err) {
-      toast({ title: '加载失败', description: err.message, status: 'error' });
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function generatePlan() {
-    if (!form.scene) {
-      toast({ title: '请填写约会场景', status: 'warning' });
-      return;
-    }
-    setGenerating(true);
-    try {
-      const res = await membershipApi.generateDatingPlan(form);
-      if (res.success) {
-        setPlans([res.plan, ...plans]);
-        setSelectedPlan(res.plan);
-        setForm({ title: '', scene: '', budget: '', duration: '' });
-        toast({ title: '方案生成中...', status: 'info', duration: 3000 });
-      }
-    } catch (err) {
-      toast({ title: '生成失败', description: err.message, status: 'error' });
-    } finally {
-      setGenerating(false);
-    }
-  }
-
-  if (selectedPlan) {
-    return (
-      <Box>
-        <Button variant="ghost" colorScheme="gray" mb={4} onClick={() => setSelectedPlan(null)}>
-          ← 返回列表
-        </Button>
-        <HStack justify="space-between" mb={4}>
-          <Box>
-            <Heading size="md" color="white">{selectedPlan.title}</Heading>
-            {selectedPlan.scene && <Text color="gray.400" mt={1}>{selectedPlan.scene}</Text>}
-            {selectedPlan.budget && <Text color="gray.500" fontSize="sm">预算：{selectedPlan.budget} · 时长：{selectedPlan.duration}</Text>}
-          </Box>
-          <Button
-            leftIcon={<CopyIcon />}
-            variant="outline"
-            colorScheme="brand"
-            size="sm"
-            onClick={() => {
-              if (selectedPlan.content) {
-                navigator.clipboard.writeText(selectedPlan.content);
-                toast({ title: '已复制', status: 'success', duration: 2000 });
-              }
-            }}
-          >
-            复制方案
-          </Button>
-        </HStack>
-
-        {selectedPlan.planStatus === 'generating' ? (
-          <Center py={20}>
-            <VStack>
-              <Spinner size="lg" color="brand.500" />
-              <Text color="gray.400" mt={3}>AI 正在为你策划约会方案...</Text>
-            </VStack>
-          </Center>
-        ) : selectedPlan.content ? (
-          <Box
-            p={6}
-            bg="rgba(255,255,255,0.02)"
-            border="1px solid rgba(255,255,255,0.06)"
-            borderRadius="xl"
-            color="gray.200"
-            fontSize="sm"
-            lineHeight="1.8"
-            whiteSpace="pre-wrap"
-          >
-            {selectedPlan.content}
-          </Box>
-        ) : (
-          <Text color="gray.400">暂无方案内容</Text>
-        )}
-      </Box>
-    );
-  }
-
-  return (
-    <Box>
-      {/* 创建新方案 */}
-      <Box mb={6} p={5} bg="rgba(0,212,170,0.05)" border="1px solid rgba(0,212,170,0.15)" borderRadius="xl">
-        <Text color="brand.400" fontWeight="bold" mb={4}>创建新方案</Text>
-        <VStack spacing={3} align="stretch">
-          <Input
-            placeholder="方案标题（选填）"
-            value={form.title}
-            onChange={e => setForm({ ...form, title: e.target.value })}
-            bg="gray.700"
-            borderColor="gray.600"
-            _placeholder={{ color: 'gray.500' }}
-          />
-          <Textarea
-            placeholder="约会场景描述，例如：想和女生去一家有氛围的餐厅吃饭，她是上海人，喜欢粤菜，预算1000元左右"
-            value={form.scene}
-            onChange={e => setForm({ ...form, scene: e.target.value })}
-            bg="gray.700"
-            borderColor="gray.600"
-            _placeholder={{ color: 'gray.500' }}
-            rows={3}
-          />
-          <HStack>
-            <Input
-              placeholder="预算，如：1000元左右"
-              value={form.budget}
-              onChange={e => setForm({ ...form, budget: e.target.value })}
-              bg="gray.700"
-              borderColor="gray.600"
-              _placeholder={{ color: 'gray.500' }}
-            />
-            <Select
-              placeholder="时长"
-              value={form.duration}
-              onChange={e => setForm({ ...form, duration: e.target.value })}
-              bg="gray.700"
-              borderColor="gray.600"
-              w="140px"
-            >
-              <option value="2小时内">2小时内</option>
-              <option value="半天">半天</option>
-              <option value="一天">一天</option>
-              <option value="多天">多天</option>
-            </Select>
-          </HStack>
-          <Button
-            colorScheme="brand"
-            leftIcon={<SparklesIcon />}
-            onClick={generatePlan}
-            isLoading={generating}
-            loadingText="AI 策划中..."
-            alignSelf="flex-end"
-          >
-            生成方案
-          </Button>
-        </VStack>
-      </Box>
-
-      {/* 方案列表 */}
-      {loading ? (
-        <Center py={10}><Spinner /></Center>
-      ) : plans.length === 0 ? (
-        <Center py={10}>
-          <VStack>
-            <SparklesIcon boxSize={10} color="gray.600" />
-            <Text color="gray.400">还没有约会方案，描述场景开始创作吧</Text>
-          </VStack>
-        </Center>
-      ) : (
-        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-          {plans.map(plan => (
-            <Card
-              key={plan.id}
-              bg="gray.800"
-              border="1px solid rgba(255,255,255,0.08)"
-              cursor="pointer"
-              _hover={{ borderColor: 'brand.500' }}
-              onClick={() => setSelectedPlan(plan)}
-              transition="all 0.2s"
-            >
-              <CardBody>
-                <HStack justify="space-between" mb={2}>
-                  <Text color="white" fontWeight="bold">{plan.title}</Text>
-                  <Badge colorScheme={plan.planStatus === 'generated' ? 'green' : plan.planStatus === 'generating' ? 'blue' : 'gray'}>
-                    {plan.planStatus === 'generated' ? '已生成' : plan.planStatus === 'generating' ? '生成中' : '草稿'}
-                  </Badge>
+                <HStack mt={6} justify="flex-end">
+                  <Button
+                    leftIcon={<CopyIcon />}
+                    variant="outline"
+                    colorScheme="brand"
+                    onClick={() => {
+                      if (selectedAiPlan.content) {
+                        navigator.clipboard.writeText(selectedAiPlan.content);
+                        toast({ title: '已复制', status: 'success', duration: 2000 });
+                      }
+                    }}
+                  >
+                    复制方案
+                  </Button>
                 </HStack>
-                {plan.scene && <Text color="gray.400" fontSize="sm">{plan.scene}</Text>}
-                {plan.budget && <Text color="gray.500" fontSize="xs" mt={1}>预算：{plan.budget}</Text>}
-                <Text color="gray.500" fontSize="xs" mt={1}>
-                  {new Date(plan.createdAt).toLocaleDateString('zh-CN')}
-                </Text>
-              </CardBody>
-            </Card>
-          ))}
-        </SimpleGrid>
-      )}
+              </Box>
+            )}
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+
+      {/* 添加约会 Modal */}
+      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} size="lg">
+        <ModalOverlay />
+        <ModalContent bg="gray.800" maxH="85vh" overflow="auto">
+          <ModalHeader color="white">添加约会</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            {/* 模式选择 */}
+            <HStack spacing={4} mb={6}>
+              <Card
+                flex={1}
+                cursor="pointer"
+                bg={addMode === 'ai' ? 'rgba(0,212,170,0.15)' : 'gray.750'}
+                border="2px solid"
+                borderColor={addMode === 'ai' ? 'brand.500' : 'gray.600'}
+                onClick={() => setAddMode('ai')}
+                _hover={{ borderColor: 'brand.400' }}
+              >
+                <CardBody textAlign="center" py={6}>
+                  <Icon as={SparklesIcon} color={addMode === 'ai' ? 'brand.400' : 'gray.400'} boxSize={10} mb={3} />
+                  <Text color={addMode === 'ai' ? 'brand.400' : 'gray.300'} fontWeight="bold">AI 生成</Text>
+                  <Text color="gray.500" fontSize="sm">描述场景，AI 帮你策划</Text>
+                </CardBody>
+              </Card>
+              <Card
+                flex={1}
+                cursor="pointer"
+                bg={addMode === 'manual' ? 'rgba(0,212,170,0.15)' : 'gray.750'}
+                border="2px solid"
+                borderColor={addMode === 'manual' ? 'brand.500' : 'gray.600'}
+                onClick={() => setAddMode('manual')}
+                _hover={{ borderColor: 'brand.400' }}
+              >
+                <CardBody textAlign="center" py={6}>
+                  <Icon as={CalendarIcon} color={addMode === 'manual' ? 'brand.400' : 'gray.400'} boxSize={10} mb={3} />
+                  <Text color={addMode === 'manual' ? 'brand.400' : 'gray.300'} fontWeight="bold">自己填写</Text>
+                  <Text color="gray.500" fontSize="sm">手动输入约会信息</Text>
+                </CardBody>
+              </Card>
+            </HStack>
+
+            {addMode === 'ai' ? (
+              /* AI 生成表单 */
+              <VStack spacing={4} align="stretch">
+                <Input
+                  placeholder="方案标题（选填）"
+                  value={aiForm.title}
+                  onChange={e => setAiForm({ ...aiForm, title: e.target.value })}
+                  bg="gray.700"
+                  borderColor="gray.600"
+                  _placeholder={{ color: 'gray.500' }}
+                />
+                <Textarea
+                  placeholder="约会场景描述，例如：想和女生去一家有氛围的餐厅吃饭，她是上海人，喜欢粤菜，预算1000元左右"
+                  value={aiForm.scene}
+                  onChange={e => setAiForm({ ...aiForm, scene: e.target.value })}
+                  bg="gray.700"
+                  borderColor="gray.600"
+                  _placeholder={{ color: 'gray.500' }}
+                  rows={4}
+                />
+                <HStack>
+                  <Input
+                    placeholder="预算，如：1000元左右"
+                    value={aiForm.budget}
+                    onChange={e => setAiForm({ ...aiForm, budget: e.target.value })}
+                    bg="gray.700"
+                    borderColor="gray.600"
+                    _placeholder={{ color: 'gray.500' }}
+                  />
+                  <Select
+                    placeholder="时长"
+                    value={aiForm.duration}
+                    onChange={e => setAiForm({ ...aiForm, duration: e.target.value })}
+                    bg="gray.700"
+                    borderColor="gray.600"
+                    w="140px"
+                  >
+                    <option value="2小时内">2小时内</option>
+                    <option value="半天">半天</option>
+                    <option value="一天">一天</option>
+                    <option value="多天">多天</option>
+                  </Select>
+                </HStack>
+                <Button
+                  colorScheme="brand"
+                  leftIcon={<SparklesIcon />}
+                  onClick={() => {
+                    if (!aiForm.scene) {
+                      toast({ title: '请填写约会场景', status: 'warning' });
+                      return;
+                    }
+                    setGenerating(true);
+                    setShowAddModal(false);
+                    generateAiPlan();
+                  }}
+                  isLoading={generating}
+                  loadingText="AI 策划中..."
+                >
+                  开始生成
+                </Button>
+              </VStack>
+            ) : (
+              /* 手动填写表单 */
+              <VStack spacing={4} align="stretch">
+                <FormControl>
+                  <FormLabel color="gray.400" fontSize="sm">约会标题</FormLabel>
+                  <Input
+                    placeholder="如：周末约会"
+                    value={manualForm.title}
+                    onChange={e => setManualForm({ ...manualForm, title: e.target.value })}
+                    bg="gray.700"
+                    borderColor="gray.600"
+                  />
+                </FormControl>
+                <FormControl isRequired>
+                  <FormLabel color="gray.400" fontSize="sm">约会对象</FormLabel>
+                  <Select
+                    placeholder="选择女生"
+                    value={manualForm.girlId}
+                    onChange={e => setManualForm({ ...manualForm, girlId: e.target.value })}
+                    bg="gray.700"
+                    borderColor="gray.600"
+                  >
+                    {girlsList.map(g => (
+                      <option key={g.id} value={g.id}>{g.name}</option>
+                    ))}
+                  </Select>
+                </FormControl>
+                <FormControl>
+                  <FormLabel color="gray.400" fontSize="sm">约会时间</FormLabel>
+                  <Input
+                    type="datetime-local"
+                    value={manualForm.dateTime}
+                    onChange={e => setManualForm({ ...manualForm, dateTime: e.target.value })}
+                    bg="gray.700"
+                    borderColor="gray.600"
+                  />
+                </FormControl>
+                <FormControl>
+                  <FormLabel color="gray.400" fontSize="sm">地点</FormLabel>
+                  <Input
+                    placeholder="约会地点"
+                    value={manualForm.location}
+                    onChange={e => setManualForm({ ...manualForm, location: e.target.value })}
+                    bg="gray.700"
+                    borderColor="gray.600"
+                  />
+                </FormControl>
+                <FormControl>
+                  <FormLabel color="gray.400" fontSize="sm">备注</FormLabel>
+                  <Textarea
+                    placeholder="备注信息（选填）"
+                    value={manualForm.notes}
+                    onChange={e => setManualForm({ ...manualForm, notes: e.target.value })}
+                    bg="gray.700"
+                    borderColor="gray.600"
+                    rows={2}
+                  />
+                </FormControl>
+                <Button
+                  colorScheme="brand"
+                  leftIcon={<CalendarIcon />}
+                  onClick={handleManualSubmit}
+                  isLoading={manualSubmitting}
+                >
+                  添加约会
+                </Button>
+              </VStack>
+            )}
+          </ModalBody>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 }

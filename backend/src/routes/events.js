@@ -192,6 +192,39 @@ router.put('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// 更新事件状态（标记完成/取消完成）
+router.patch('/:id/status', authMiddleware, async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!status || !['pending', 'completed', 'cancelled'].includes(status)) {
+      return res.status(400).json({ error: '无效的状态值' });
+    }
+
+    const existing = await prisma.event.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: '事件不存在' });
+
+    // 客户只能修改自己的事件
+    if (req.user.role === 'client' && existing.clientId !== req.user.id) {
+      return res.status(403).json({ error: '无权修改' });
+    }
+    // 客户不能修改约会类型
+    if (req.user.role === 'client' && existing.type === 'date') {
+      return res.status(403).json({ error: '约会由操盘手管理' });
+    }
+
+    const event = await prisma.event.update({
+      where: { id: req.params.id },
+      data: { status },
+      include: { girl: { select: { id: true, name: true, stage: true } } }
+    });
+
+    res.json({ success: true, event });
+  } catch (error) {
+    console.error('[Events] 更新状态失败:', error);
+    res.status(500).json({ error: '更新失败' });
+  }
+});
+
 // 删除事件
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {

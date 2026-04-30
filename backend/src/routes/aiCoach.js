@@ -1780,6 +1780,57 @@ router.get('/coach-profile', authMiddleware, async (req, res) => {
 });
 
 /**
+ * 获取当前用户的聊天历史
+ * GET /api/ai-coach/history
+ */
+router.get('/history', authMiddleware, async (req, res) => {
+  try {
+    if (!['operator', 'admin', 'client'].includes(req.user.role)) {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const { girlId } = req.query;
+    const unifiedCoachId = 'unified';
+
+    // 获取用户的会话
+    const { getOrCreateSession, getConversationHistory, listSessions } = require('../services/memory');
+
+    // 获取所有相关会话
+    const sessions = await listSessions({
+      clientId: req.user.id,
+      coachId: unifiedCoachId,
+      girlId,
+      activeOnly: true,
+      pageSize: 10
+    });
+
+    // 获取每个会话的消息
+    const sessionsWithMessages = await Promise.all(
+      sessions.slice(0, 10).map(async (session) => {
+        const messages = await getConversationHistory(session.id);
+        return {
+          id: session.id,
+          girlId: session.girlId,
+          createdAt: session.createdAt,
+          updatedAt: session.updatedAt,
+          messages: messages.map(m => ({
+            id: m.id,
+            role: m.role,
+            content: m.content,
+            createdAt: m.createdAt
+          }))
+        };
+      })
+    );
+
+    res.json({ success: true, sessions: sessionsWithMessages });
+  } catch (error) {
+    console.error('[AICoach] 获取聊天历史失败:', error);
+    res.status(500).json({ error: '获取聊天历史失败' });
+  }
+});
+
+/**
  * 获取反馈统计（仅 operator/admin）
  * GET /api/ai-coach/feedback-stats
  */
