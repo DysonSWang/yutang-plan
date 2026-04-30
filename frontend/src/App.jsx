@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { ChakraProvider, Spinner, Center, useDisclosure } from '@chakra-ui/react';
+import { ChakraProvider, Spinner, Center, useDisclosure, useToast } from '@chakra-ui/react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -10,6 +10,8 @@ import ClientLayout from './pages/client/ClientLayout';
 import AdminLayout from './pages/admin/AdminLayout';
 import VersionUpdateModal from './components/VersionUpdateModal';
 import { checkVersion } from './utils/version';
+import { api } from './utils/api';
+import { normalizeError, getErrorMessage } from './utils/errorHandler';
 
 const ClientHome = lazy(() => import('./pages/client/Home'));
 const ClientProfile = lazy(() => import('./pages/client/ClientProfile'));
@@ -28,6 +30,7 @@ const AdminWorkbench = lazy(() => import('./pages/admin/Workbench'));
 const AdminProgress = lazy(() => import('./pages/admin/Progress'));
 const AdminDates = lazy(() => import('./pages/admin/Dates'));
 const MembershipManagement = lazy(() => import('./pages/admin/MembershipManagement'));
+const AdminLogs = lazy(() => import('./pages/admin/Logs'));
 
 function PageLoader() {
   return (
@@ -39,7 +42,7 @@ function PageLoader() {
 
 function ProtectedRoute({ children, requireOperator = false }) {
   const { user, loading } = useAuth();
-  if (loading) return null;
+  if (loading) return <PageLoader />;
   if (!user) return <Navigate to="/login" />;
   if (requireOperator && user?.role === 'client') return <Navigate to="/" />;
   if (!requireOperator && (user?.role === 'operator' || user?.role === 'admin')) return <Navigate to="/admin" />;
@@ -105,6 +108,7 @@ function AppRoutes() {
         <Route path="progress" element={<AdminProgress />} />
         <Route path="dates" element={<AdminDates />} />
         <Route path="membership" element={<MembershipManagement />} />
+        <Route path="logs" element={<AdminLogs />} />
       </Route>
     </Routes>
     </Suspense>
@@ -112,6 +116,28 @@ function AppRoutes() {
 }
 
 export default function App() {
+  const toast = useToast();
+
+  // 设置全局 API 错误处理器
+  useEffect(() => {
+    api.setErrorHandler((error) => {
+      const normalized = normalizeError(error);
+      const message = getErrorMessage(normalized);
+
+      // 401 错误不显示 toast（已跳转登录页）
+      if (normalized.type === 'AUTH') return;
+
+      toast({
+        title: '出错了',
+        description: message,
+        status: 'error',
+        duration: 4000,
+        isClosable: true,
+        position: 'top',
+      });
+    });
+  }, [toast]);
+
   return (
     <ChakraProvider theme={theme}>
       <ErrorBoundary>

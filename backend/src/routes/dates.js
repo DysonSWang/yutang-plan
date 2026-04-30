@@ -9,6 +9,8 @@ const jwt = require('jsonwebtoken');
 
 const { JWT_SECRET, getAIConfig } = require('../config');
 const prisma = require('../prisma');
+const AppError = require('../errors/AppError');
+const { ErrorCodes } = require('../errors/errorCodes');
 
 // Auth middleware
 const authMiddleware = async (req, res, next) => {
@@ -32,7 +34,7 @@ const authMiddleware = async (req, res, next) => {
 async function callAI(messages, options = {}) {
   const aiConfig = getAIConfig();
   if (!aiConfig) {
-    throw new Error('AI 未配置，请设置 DASH_SCOPE_API_KEY');
+    throw new AppError(ErrorCodes.AI_SERVICE_UNAVAILABLE);
   }
 
   const body = {
@@ -53,7 +55,7 @@ async function callAI(messages, options = {}) {
 
   if (!response.ok) {
     const err = await response.text();
-    throw new Error(`AI调用失败: ${response.status} - ${err}`);
+    throw new AppError(ErrorCodes.AI_SERVICE_UNAVAILABLE, { devMessage: `AI调用失败: ${response.status} - ${err}` });
   }
 
   const data = await response.json();

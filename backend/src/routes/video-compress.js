@@ -16,6 +16,8 @@ const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../config');
 const { encrypt } = require('../services/encryption');
 const { uploadBuffer } = require('../services/ossClient');
+const AppError = require('../errors/AppError');
+const { ErrorCodes } = require('../errors/errorCodes');
 
 // 上传临时目录（压缩完成后删除）
 const TEMP_DIR = path.join(__dirname, '../../uploads/_temp');
@@ -137,7 +139,7 @@ router.post('/compress-video', authMiddleware, upload.single('file'), async (req
 
     // 检查压缩结果
     if (!fs.existsSync(outputPath)) {
-      throw new Error('FFmpeg 压缩失败，输出文件未生成');
+      throw new AppError(ErrorCodes.OSS_UPLOAD_FAILED, { devMessage: 'FFmpeg 压缩失败，输出文件未生成' });
     }
 
     const compressedSize = fs.statSync(outputPath).size;
