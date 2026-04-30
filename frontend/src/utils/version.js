@@ -1,8 +1,8 @@
 /**
  * 版本检测工具
  */
-const VERSION = '1.0.0';  // 当前 App 版本，需与后端 VERSION_CONFIG.latestVersion 保持一致
-const BUILD = 1;
+const VERSION = '1.0.3';  // 当前 App 版本，需与后端 VERSION_CONFIG.latestVersion 保持一致
+const BUILD = 4;
 
 export { VERSION, BUILD };
 
