@@ -158,7 +158,8 @@ async function getActivityLevel(userId) {
   const fourteenDaysAgo = new Date(now);
   fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
 
-  const isDormantByTime = user.lastActive && user.lastActive < fourteenDaysAgo;
+  // lastActive 为 null 表示从未活跃过，应视为沉睡
+  const isDormantByTime = !user.lastActive || user.lastActive < fourteenDaysAgo;
 
   // 计算本周得分
   const weekStart = getWeekStart(now);
@@ -176,7 +177,7 @@ async function getActivityLevel(userId) {
   else if (score >= 10) level = 'low';
   else level = 'dormant';
 
-  return { level, score, isDormant: isDormantByTime };
+  return { level, score, isDormant: false };
 }
 
 /**
