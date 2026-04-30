@@ -1806,18 +1806,18 @@ router.get('/history', authMiddleware, async (req, res) => {
 
     // 获取每个会话的消息
     const sessionsWithMessages = await Promise.all(
-      sessions.slice(0, 10).map(async (session) => {
+      (sessions.items || []).slice(0, 10).map(async (session) => {
         const messages = await getConversationHistory(session.id);
         return {
           id: session.id,
           girlId: session.girlId,
           createdAt: session.createdAt,
           updatedAt: session.updatedAt,
-          messages: messages.map(m => ({
-            id: m.id,
+          messages: messages.map((m, idx) => ({
+            id: m.id || `msg-${idx}`,
             role: m.role,
             content: m.content,
-            createdAt: m.createdAt
+            createdAt: m.createdAt || session.createdAt
           }))
         };
       })
