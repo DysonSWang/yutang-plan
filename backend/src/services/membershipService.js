@@ -123,8 +123,13 @@ async function activateTrial(userId) {
  * @param {string} feature - 功能标识：date_plan, ai_coach, reply_suggest, chat_optimize, girl_chat
  */
 async function checkTrialLimit(userId, feature) {
+  // 查询所有有效或刚过期的会员（不过滤status，因为可能要重新激活）
   const membership = await prisma.membership.findFirst({
-    where: { userId, status: 'active' }
+    where: {
+      userId,
+      status: { in: ['active', 'expired'] }
+    },
+    orderBy: { createdAt: 'desc' }  // 取最新的
   });
 
   // 无会员跳过（有其他地方检查试用次数）
@@ -132,12 +137,15 @@ async function checkTrialLimit(userId, feature) {
     return true;
   }
 
-  // 检查所有类型会员的到期日期
+  // 已过期的会员直接拒绝
   if (new Date() > membership.endDate) {
-    await prisma.membership.update({
-      where: { id: membership.id },
-      data: { status: 'expired' }
-    });
+    // 如果状态还是 active，更新为 expired
+    if (membership.status === 'active') {
+      await prisma.membership.update({
+        where: { id: membership.id },
+        data: { status: 'expired' }
+      });
+    }
     throw new Error('会员已到期，请续费');
   }
 
