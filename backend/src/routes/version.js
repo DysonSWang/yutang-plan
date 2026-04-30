@@ -5,8 +5,6 @@
 const express = require('express');
 const router = express.Router();
 
-const { success } = require('../utils/response');
-
 // 版本配置（每次发版时更新）
 // upgradeType: 'force' | 'suggest' | 'none'
 const VERSION_CONFIG = {
@@ -17,16 +15,6 @@ const VERSION_CONFIG = {
   buildNumber: 3
 };
 
-// 解析版本号
-function parseVersion(v) {
-  const parts = v.split('.').map(Number);
-  return {
-    major: parts[0] || 0,
-    minor: parts[1] || 0,
-    patch: parts[2] || 0
-  };
-}
-
 router.get('/check', (req, res) => {
   const { version, build } = req.query;
 
@@ -34,12 +22,25 @@ router.get('/check', (req, res) => {
 
   // 如果没有传入版本，默认返回最新版本信息
   if (!version) {
-    return success(res, {
-      hasUpdate: true,
-      upgradeType: 'none',
-      ...VERSION_CONFIG
+    return res.json({
+      code: 0,
+      data: {
+        hasUpdate: true,
+        upgradeType: 'none',
+        ...VERSION_CONFIG
+      }
     });
   }
+
+  // 解析版本号
+  const parseVersion = (v) => {
+    const parts = v.split('.').map(Number);
+    return {
+      major: parts[0] || 0,
+      minor: parts[1] || 0,
+      patch: parts[2] || 0
+    };
+  };
 
   const current = parseVersion(version);
   const latest = parseVersion(VERSION_CONFIG.latestVersion);
@@ -60,14 +61,17 @@ router.get('/check', (req, res) => {
     upgradeType = isForced ? 'force' : 'suggest';
   }
 
-  return success(res, {
-    hasUpdate: isNewer,
-    upgradeType,
-    latestVersion: VERSION_CONFIG.latestVersion,
-    minVersion: VERSION_CONFIG.minVersion,
-    downloadUrl: VERSION_CONFIG.downloadUrl,
-    updateDescription: VERSION_CONFIG.updateDescription,
-    buildNumber: VERSION_CONFIG.buildNumber
+  res.json({
+    code: 0,
+    data: {
+      hasUpdate: isNewer,
+      upgradeType,
+      latestVersion: VERSION_CONFIG.latestVersion,
+      minVersion: VERSION_CONFIG.minVersion,
+      downloadUrl: VERSION_CONFIG.downloadUrl,
+      updateDescription: VERSION_CONFIG.updateDescription,
+      buildNumber: VERSION_CONFIG.buildNumber
+    }
   });
 });
 

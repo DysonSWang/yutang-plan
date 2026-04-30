@@ -15,19 +15,19 @@ const { JWT_SECRET } = require('../config');
 const { encrypt } = require('../services/encryption');
 const { uploadBuffer } = require('../services/ossClient');
 
-const AppError = require('../errors/AppError');
-const { ErrorCodes } = require('../errors/errorCodes');
-const asyncHandler = require('../middleware/asyncHandler');
-const { success } = require('../utils/response');
-
 // Auth middleware
-const authMiddleware = asyncHandler(async (req, res) => {
+const authMiddleware = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   const token = authHeader?.split(' ')[1];
-  if (!token) throw new AppError(ErrorCodes.AUTH_TOKEN_MISSING);
-  const decoded = jwt.verify(token, JWT_SECRET);
-  req.user = decoded;
-});
+  if (!token) return res.status(401).json({ error: '未登录' });
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch {
+    res.status(401).json({ error: 'token无效' });
+  }
+};
 
 // OSS路径生成
 function generateOssPath(subDir, filename, isSensitive) {
@@ -47,37 +47,42 @@ router.post('/image', authMiddleware, multer({
     if (file.mimetype.startsWith('image/')) cb(null, true);
     else cb(new Error('只支持图片文件'));
   }
-}).single('file'), asyncHandler(async (req, res) => {
-  if (!req.file) throw new AppError(ErrorCodes.VALIDATION_ERROR);
+}).single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: '未上传文件' });
 
-  const isBurnAfterRead = req.body.isBurnAfterRead === 'true' || req.body.isBurnAfterRead === true;
-  const isFlashImage = req.body.isFlashImage === 'true' || req.body.isFlashImage === true;
-  const isSensitive = isBurnAfterRead || isFlashImage;
+    const isBurnAfterRead = req.body.isBurnAfterRead === 'true' || req.body.isBurnAfterRead === true;
+    const isFlashImage = req.body.isFlashImage === 'true' || req.body.isFlashImage === true;
+    const isSensitive = isBurnAfterRead || isFlashImage;
 
-  const ossPath = generateOssPath('images', req.file.originalname, isSensitive);
-  let finalBuffer = req.file.buffer;
-  let finalSize = finalBuffer.length;
-  let encryptionIv = null;
+    const ossPath = generateOssPath('images', req.file.originalname, isSensitive);
+    let finalBuffer = req.file.buffer;
+    let finalSize = finalBuffer.length;
+    let encryptionIv = null;
 
-  if (isSensitive) {
-    const encrypted = encrypt(req.file.buffer);
-    finalBuffer = encrypted;
-    finalSize = encrypted.length;
-    // IV内嵌在加密内容头部(前12字节)，提取存储用于解密时引用
-    encryptionIv = encrypted.subarray(0, 12).toString('hex');
+    if (isSensitive) {
+      const encrypted = encrypt(req.file.buffer);
+      finalBuffer = encrypted;
+      finalSize = encrypted.length;
+      // IV内嵌在加密内容头部(前12字节)，提取存储用于解密时引用
+      encryptionIv = encrypted.subarray(0, 12).toString('hex');
+    }
+
+    await uploadBuffer(finalBuffer, ossPath, isSensitive);
+
+    res.json({
+      url: `/${ossPath}`,
+      filename: path.basename(ossPath),
+      size: finalSize,
+      mimetype: req.file.mimetype,
+      isEncrypted: isSensitive,
+      encryptionIv
+    });
+  } catch (err) {
+    console.error('[Upload] image error:', err);
+    res.status(500).json({ error: '上传失败' });
   }
-
-  await uploadBuffer(finalBuffer, ossPath, isSensitive);
-
-  return success(res, {
-    url: `/${ossPath}`,
-    filename: path.basename(ossPath),
-    size: finalSize,
-    mimetype: req.file.mimetype,
-    isEncrypted: isSensitive,
-    encryptionIv
-  });
-}));
+});
 
 // POST /api/upload/video
 router.post('/video', authMiddleware, multer({
@@ -87,36 +92,41 @@ router.post('/video', authMiddleware, multer({
     if (file.mimetype.startsWith('video/')) cb(null, true);
     else cb(new Error('只支持视频文件'));
   }
-}).single('file'), asyncHandler(async (req, res) => {
-  if (!req.file) throw new AppError(ErrorCodes.VALIDATION_ERROR);
+}).single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: '未上传文件' });
 
-  const isBurnAfterRead = req.body.isBurnAfterRead === 'true' || req.body.isBurnAfterRead === true;
-  const isFlashImage = req.body.isFlashImage === 'true' || req.body.isFlashImage === true;
-  const isSensitive = isBurnAfterRead || isFlashImage;
+    const isBurnAfterRead = req.body.isBurnAfterRead === 'true' || req.body.isBurnAfterRead === true;
+    const isFlashImage = req.body.isFlashImage === 'true' || req.body.isFlashImage === true;
+    const isSensitive = isBurnAfterRead || isFlashImage;
 
-  const ossPath = generateOssPath('videos', req.file.originalname, isSensitive);
-  let finalBuffer = req.file.buffer;
-  let finalSize = finalBuffer.length;
-  let encryptionIv = null;
+    const ossPath = generateOssPath('videos', req.file.originalname, isSensitive);
+    let finalBuffer = req.file.buffer;
+    let finalSize = finalBuffer.length;
+    let encryptionIv = null;
 
-  if (isSensitive) {
-    const encrypted = encrypt(req.file.buffer);
-    finalBuffer = encrypted;
-    finalSize = encrypted.length;
-    encryptionIv = encrypted.subarray(0, 12).toString('hex');
+    if (isSensitive) {
+      const encrypted = encrypt(req.file.buffer);
+      finalBuffer = encrypted;
+      finalSize = encrypted.length;
+      encryptionIv = encrypted.subarray(0, 12).toString('hex');
+    }
+
+    await uploadBuffer(finalBuffer, ossPath, isSensitive);
+
+    res.json({
+      url: `/${ossPath}`,
+      filename: path.basename(ossPath),
+      size: finalSize,
+      mimetype: req.file.mimetype,
+      isEncrypted: isSensitive,
+      encryptionIv
+    });
+  } catch (err) {
+    console.error('[Upload] video error:', err);
+    res.status(500).json({ error: '上传失败' });
   }
-
-  await uploadBuffer(finalBuffer, ossPath, isSensitive);
-
-  return success(res, {
-    url: `/${ossPath}`,
-    filename: path.basename(ossPath),
-    size: finalSize,
-    mimetype: req.file.mimetype,
-    isEncrypted: isSensitive,
-    encryptionIv
-  });
-}));
+});
 
 // POST /api/upload/audio
 router.post('/audio', authMiddleware, multer({
@@ -126,29 +136,34 @@ router.post('/audio', authMiddleware, multer({
     if (file.mimetype.startsWith('audio/')) cb(null, true);
     else cb(new Error('只支持音频文件'));
   }
-}).single('file'), asyncHandler(async (req, res) => {
-  if (!req.file) throw new AppError(ErrorCodes.VALIDATION_ERROR);
+}).single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: '未上传文件' });
 
-  // 音频暂不加密（聊天文字记录本身就是明文，音频加密意义不大）
-  const ossPath = generateOssPath('audio', req.file.originalname, false);
-  await uploadBuffer(req.file.buffer, ossPath, false);
+    // 音频暂不加密（聊天文字记录本身就是明文，音频加密意义不大）
+    const ossPath = generateOssPath('audio', req.file.originalname, false);
+    await uploadBuffer(req.file.buffer, ossPath, false);
 
-  return success(res, {
-    url: `/${ossPath}`,
-    filename: path.basename(ossPath),
-    size: req.file.size,
-    mimetype: req.file.mimetype,
-    isEncrypted: false
-  });
-}));
+    res.json({
+      url: `/${ossPath}`,
+      filename: path.basename(ossPath),
+      size: req.file.size,
+      mimetype: req.file.mimetype,
+      isEncrypted: false
+    });
+  } catch (err) {
+    console.error('[Upload] audio error:', err);
+    res.status(500).json({ error: '上传失败' });
+  }
+});
 
 // 错误处理
 router.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
-    throw new AppError(ErrorCodes.UPLOAD_FILE_TOO_LARGE);
+    return res.status(400).json({ error: err.message });
   }
   if (err) {
-    throw new AppError(ErrorCodes.VALIDATION_ERROR);
+    return res.status(400).json({ error: err.message });
   }
   next();
 });

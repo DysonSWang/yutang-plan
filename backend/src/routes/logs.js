@@ -131,4 +131,128 @@ function formatBytes(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
+// 读取日志文件内容
+function readLogLines(date) {
+  const filePath = path.join(LOG_DIR, `app-${date}.json`);
+  if (!fs.existsSync(filePath)) return [];
+  const content = fs.readFileSync(filePath, 'utf-8');
+  return content.trim().split('\n').filter(Boolean).map(line => {
+    try { return JSON.parse(line); } catch { return null; }
+  }).filter(Boolean);
+}
+
+// 慢请求分析
+router.get('/slow-analysis', (req, res) => {
+  const days = parseInt(req.query.days) || 7;
+  const limit = parseInt(req.query.limit) || 10;
+
+  // 收集近N天的慢请求
+  const allSlowLogs = [];
+  const now = new Date();
+
+  for (let i = 0; i < days; i++) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - i);
+    const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
+    const logs = readLogLines(dateStr);
+    logs.forEach(log => {
+      if (log.level === 'slow' || (log.level === 'error' && log.duration > 3000)) {
+        allSlowLogs.push({ ...log, date: dateStr });
+      }
+    });
+  }
+
+  // 按路径聚合
+  const pathStats = {};
+  allSlowLogs.forEach(log => {
+    const key = log.path || 'unknown';
+    if (!pathStats[key]) {
+      pathStats[key] = { path: key, count: 0, totalDuration: 0, maxDuration: 0, minDuration: Infinity, logs: [] };
+    }
+    pathStats[key].count++;
+    pathStats[key].totalDuration += log.duration || 0;
+    pathStats[key].maxDuration = Math.max(pathStats[key].maxDuration, log.duration || 0);
+    pathStats[key].minDuration = Math.min(pathStats[key].minDuration, log.duration || 0);
+    if (pathStats[key].logs.length < 3) {
+      pathStats[key].logs.push({ timestamp: log.timestamp, duration: log.duration, requestId: log.requestId, message: log.message });
+    }
+  });
+
+  // 计算平均耗时并排序
+  const pathList = Object.values(pathStats).map(p => ({
+    path: p.path,
+    count: p.count,
+    avgDuration: Math.round(p.totalDuration / p.count),
+    maxDuration: p.maxDuration,
+    minDuration: p.minDuration === Infinity ? 0 : p.minDuration,
+    logs: p.logs,
+  })).sort((a, b) => b.count - a.count).slice(0, limit);
+
+  // 按小时分布
+  const hourlyDist = {};
+  allSlowLogs.forEach(log => {
+    if (log.timestamp) {
+      const hour = new Date(log.timestamp).getHours();
+      hourlyDist[hour] = (hourlyDist[hour] || 0) + 1;
+    }
+  });
+  const hourlyData = Array.from({ length: 24 }, (_, h) => ({ hour: h, count: hourlyDist[h] || 0 }));
+
+  // 按天分布
+  const dailyDist = {};
+  allSlowLogs.forEach(log => {
+    dailyDist[log.date] = (dailyDist[log.date] || 0) + 1;
+  });
+  const dailyData = Object.entries(dailyDist)
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([date, count]) => ({ date, count }));
+
+  res.json({
+    total: allSlowLogs.length,
+    topPaths: pathList,
+    hourlyDistribution: hourlyData,
+    dailyDistribution: dailyData,
+    timeRange: { from: allSlowLogs[allSlowLogs.length - 1]?.timestamp, to: allSlowLogs[0]?.timestamp },
+  });
+});
+
+// 通过 traceId 查询完整调用链
+router.get('/trace/:traceId', (req, res) => {
+  const { traceId } = req.params;
+  const days = parseInt(req.query.days) || 7;
+  const now = new Date();
+  const traceLogs = [];
+
+  for (let i = 0; i < days; i++) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - i);
+    const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
+    const logs = readLogLines(dateStr);
+    logs.forEach(log => {
+      if (log.requestId && log.requestId.includes(traceId)) {
+        traceLogs.push({ ...log, date: dateStr });
+      }
+    });
+  }
+
+  // 按时间排序
+  traceLogs.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+  res.json({
+    traceId,
+    total: traceLogs.length,
+    logs: traceLogs.map(log => ({
+      timestamp: log.timestamp,
+      level: log.level,
+      message: log.message,
+      path: log.path,
+      method: log.method,
+      duration: log.duration,
+      status: log.status,
+      requestId: log.requestId,
+      ...(log.error && { error: log.error }),
+    })),
+  });
+});
+
 module.exports = router;

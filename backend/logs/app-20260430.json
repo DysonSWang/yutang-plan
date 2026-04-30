@@ -64,3 +64,223 @@
 {"time":"2026-04-30T08:17:51.127Z","level":"info","message":"POST /api/auth/login","requestId":"617b5d8cdcf9b144","method":"POST","path":"/api/auth/login","status":200,"duration":74,"slow":false,"type":"request_end"}
 {"time":"2026-04-30T08:17:51.136Z","level":"debug","message":"[Request] --> POST /api/membership/dating-plan/generate","requestId":"8bec8e8d8edeac3e","method":"POST","path":"/api/membership/dating-plan/generate","ip":"::ffff:127.0.0.1","type":"request_start"}
 {"time":"2026-04-30T08:20:07.069Z","level":"slow","message":"POST /api/membership/dating-plan/generate 慢请求","requestId":"8bec8e8d8edeac3e","method":"POST","path":"/api/membership/dating-plan/generate","status":200,"duration":135933,"slow":true,"type":"request_end"}
+{"time":"2026-04-30T09:05:20.734Z","level":"debug","message":"[Request] --> GET /api/logs/stats","requestId":"541179fb6909bb7d","method":"GET","path":"/api/logs/stats","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T09:05:20.735Z","level":"info","message":"GET /api/logs/stats","requestId":"541179fb6909bb7d","method":"GET","path":"/api/logs/stats","status":200,"duration":1,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T09:05:35.143Z","level":"debug","message":"[Request] --> POST /api/auth/login","requestId":"9d53dfef1a6c55ec","method":"POST","path":"/api/auth/login","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T09:05:35.225Z","level":"info","message":"POST /api/auth/login","requestId":"9d53dfef1a6c55ec","method":"POST","path":"/api/auth/login","status":401,"duration":82,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T09:05:58.235Z","level":"debug","message":"[Request] --> POST /api/auth/login","requestId":"c47f614f2bb95cf9","method":"POST","path":"/api/auth/login","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T09:05:58.310Z","level":"info","message":"POST /api/auth/login","requestId":"c47f614f2bb95cf9","method":"POST","path":"/api/auth/login","status":401,"duration":75,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T09:29:41.126Z","level":"info","message":"[AlertScheduler] 预警定时器已启动（每 6 小时）"}
+{"time":"2026-04-30T09:29:41.126Z","level":"info","message":"[LogTailing] 实时日志推送已启动"}
+{"time":"2026-04-30T09:29:41.127Z","level":"info","message":"🐟 追爱计划后端启动: http://localhost:3005"}
+{"time":"2026-04-30T09:29:46.444Z","level":"debug","message":"[Request] --> GET /api/version","requestId":"ad3d1e7b7f37d9be","method":"GET","path":"/api/version","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T09:29:46.446Z","level":"info","message":"GET /api/version","requestId":"ad3d1e7b7f37d9be","method":"GET","path":"/api/version","status":404,"duration":3,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T09:29:58.463Z","level":"debug","message":"[Request] --> GET /api/restaurants","requestId":"0f538059a7e580ec","method":"GET","path":"/api/restaurants","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T09:29:58.464Z","level":"error","message":"[UnhandledError] jwt malformed","requestId":"0f538059a7e580ec","method":"GET","path":"/api/restaurants","name":"JsonWebTokenError","stack":"JsonWebTokenError: jwt malformed\n    at module.exports [as verify] (/home/admin/zhuiai/backend/node_modules/jsonwebtoken/verify.js:70:17)\n    at /home/admin/zhuiai/backend/src/routes/restaurant.js:19:23\n    at /home/admin/zhuiai/backend/src/middleware/asyncHandler.js:8:21\n    at Layer.handle [as handle_request] (/home/admin/zhuiai/backend/node_modules/express/lib/router/layer.js:95:5)\n    at next (/home/admin/zhuiai/backend/node_modules/express/lib/router/route.js:149:13)\n    at Route.dispatch (/home/admin/zhuiai/backend/node_modules/express/lib/router/route.js:119:3)\n    at Layer.handle [as handle_request] (/home/admin/zhuiai/backend/node_modules/express/lib/router/layer.js:95:5)\n    at /home/admin/zhuiai/backend/node_modules/express/lib/router/index.js:284:15\n    at Function.process_params (/home/admin/zhuiai/backend/node_modules/express/lib/router/index.js:346:12)\n    at next (/home/admin/zhuiai/backend/node_modules/express/lib/router/index.js:280:10)"}
+{"time":"2026-04-30T09:29:58.465Z","level":"info","message":"GET /api/restaurants","requestId":"0f538059a7e580ec","method":"GET","path":"/api/restaurants","status":500,"duration":2,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T09:38:32.274Z","level":"info","message":"[AlertScheduler] 预警定时器已启动（每 6 小时）"}
+{"time":"2026-04-30T09:38:32.274Z","level":"info","message":"[LogTailing] 实时日志推送已启动"}
+{"time":"2026-04-30T09:38:32.275Z","level":"info","message":"🐟 追爱计划后端启动: http://localhost:3005"}
+{"time":"2026-04-30T09:38:45.687Z","level":"debug","message":"[Request] --> GET /api/version","requestId":"b363b793f24aee89","method":"GET","path":"/api/version","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T09:38:45.689Z","level":"info","message":"GET /api/version","requestId":"b363b793f24aee89","method":"GET","path":"/api/version","status":404,"duration":2,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T09:38:48.570Z","level":"debug","message":"[Request] --> GET /api/restaurants","requestId":"c0ec971a672e10c2","method":"GET","path":"/api/restaurants","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T09:38:48.571Z","level":"warn","message":"[AppError] A0101 未提供认证令牌","requestId":"c0ec971a672e10c2","method":"GET","path":"/api/restaurants","code":"A0101","status":401,"metadata":null}
+{"time":"2026-04-30T09:38:48.572Z","level":"info","message":"GET /api/restaurants","requestId":"c0ec971a672e10c2","method":"GET","path":"/api/restaurants","status":401,"duration":2,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:11:13.721Z","level":"info","message":"[AlertScheduler] 预警定时器已启动（每 6 小时）"}
+{"time":"2026-04-30T10:11:13.722Z","level":"info","message":"[LogTailing] 实时日志推送已启动"}
+{"time":"2026-04-30T10:11:13.722Z","level":"info","message":"🐟 追爱计划后端启动: http://localhost:3005"}
+{"time":"2026-04-30T10:11:19.026Z","level":"debug","message":"[Request] --> GET /api/version","requestId":"f9d71f093376effe","method":"GET","path":"/api/version","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:11:19.028Z","level":"info","message":"GET /api/version","requestId":"f9d71f093376effe","method":"GET","path":"/api/version","status":404,"duration":2,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:12:05.327Z","level":"info","message":"[AlertScheduler] 预警定时器已启动（每 6 小时）"}
+{"time":"2026-04-30T10:12:05.327Z","level":"info","message":"[LogTailing] 实时日志推送已启动"}
+{"time":"2026-04-30T10:12:05.328Z","level":"info","message":"🐟 追爱计划后端启动: http://localhost:3005"}
+{"time":"2026-04-30T10:14:57.763Z","level":"info","message":"[AlertScheduler] 预警定时器已启动（每 6 小时）"}
+{"time":"2026-04-30T10:14:57.763Z","level":"info","message":"[LogTailing] 实时日志推送已启动"}
+{"time":"2026-04-30T10:14:57.764Z","level":"info","message":"🐟 追爱计划后端启动: http://localhost:3005"}
+{"time":"2026-04-30T10:29:42.666Z","level":"debug","message":"[Request] --> GET /","requestId":"2bd7336e4d161150","method":"GET","path":"/","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:29:42.667Z","level":"info","message":"GET /","requestId":"2bd7336e4d161150","method":"GET","path":"/","status":404,"duration":1,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:30:07.355Z","level":"debug","message":"[Request] --> POST /api/auth/login","requestId":"d14838c7a7f29985","method":"POST","path":"/api/auth/login","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:30:07.442Z","level":"info","message":"POST /api/auth/login","requestId":"d14838c7a7f29985","method":"POST","path":"/api/auth/login","status":401,"duration":87,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:30:15.983Z","level":"debug","message":"[Request] --> POST /api/auth/login","requestId":"5528f83d7375e490","method":"POST","path":"/api/auth/login","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:30:16.055Z","level":"info","message":"POST /api/auth/login","requestId":"5528f83d7375e490","method":"POST","path":"/api/auth/login","status":401,"duration":72,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:30:18.959Z","level":"debug","message":"[Request] --> POST /api/auth/login","requestId":"cf0bdeaba45156c0","method":"POST","path":"/api/auth/login","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:30:19.030Z","level":"info","message":"POST /api/auth/login","requestId":"cf0bdeaba45156c0","method":"POST","path":"/api/auth/login","status":401,"duration":71,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:30:59.099Z","level":"debug","message":"[Request] --> POST /api/auth/login","requestId":"0cfab0e00c1657a6","method":"POST","path":"/api/auth/login","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:30:59.174Z","level":"info","message":"POST /api/auth/login","requestId":"0cfab0e00c1657a6","method":"POST","path":"/api/auth/login","status":500,"duration":75,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:31:06.596Z","level":"debug","message":"[Request] --> POST /api/auth/login","requestId":"a63110787d8795b1","method":"POST","path":"/api/auth/login","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:31:06.669Z","level":"info","message":"POST /api/auth/login","requestId":"a63110787d8795b1","method":"POST","path":"/api/auth/login","status":500,"duration":73,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:31:25.106Z","level":"debug","message":"[Request] --> POST /api/auth/login","requestId":"968df20327d4dcd3","method":"POST","path":"/api/auth/login","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:31:25.178Z","level":"info","message":"POST /api/auth/login","requestId":"968df20327d4dcd3","method":"POST","path":"/api/auth/login","status":500,"duration":72,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:31:39.862Z","level":"debug","message":"[Request] --> GET /api/logs/stats","requestId":"63abb6e795bf2e05","method":"GET","path":"/api/logs/stats","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:31:39.863Z","level":"info","message":"GET /api/logs/stats","requestId":"63abb6e795bf2e05","method":"GET","path":"/api/logs/stats","status":200,"duration":1,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:31:41.927Z","level":"debug","message":"[Request] --> POST /api/auth/login","requestId":"0b09b8e57856f8e2","method":"POST","path":"/api/auth/login","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:31:41.998Z","level":"info","message":"POST /api/auth/login","requestId":"0b09b8e57856f8e2","method":"POST","path":"/api/auth/login","status":500,"duration":71,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:31:56.947Z","level":"debug","message":"[Request] --> POST /api/auth/login","requestId":"7a9723bc5d9b08a4","method":"POST","path":"/api/auth/login","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:31:57.022Z","level":"info","message":"POST /api/auth/login","requestId":"7a9723bc5d9b08a4","method":"POST","path":"/api/auth/login","status":500,"duration":75,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:32:05.955Z","level":"debug","message":"[Request] --> POST /api/auth/login","requestId":"e215919d80897d0f","method":"POST","path":"/api/auth/login","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:32:06.027Z","level":"info","message":"POST /api/auth/login","requestId":"e215919d80897d0f","method":"POST","path":"/api/auth/login","status":500,"duration":73,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:32:33.083Z","level":"debug","message":"[Request] --> GET /api/logs/files","requestId":"271119469a39af3a","method":"GET","path":"/api/logs/files","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:32:33.084Z","level":"info","message":"GET /api/logs/files","requestId":"271119469a39af3a","method":"GET","path":"/api/logs/files","status":200,"duration":2,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:32:33.188Z","level":"debug","message":"[Request] --> GET /api/logs/stats","requestId":"7261d595dd49b31b","method":"GET","path":"/api/logs/stats","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:32:33.188Z","level":"info","message":"GET /api/logs/stats","requestId":"7261d595dd49b31b","method":"GET","path":"/api/logs/stats","status":200,"duration":0,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:32:35.559Z","level":"debug","message":"[Request] --> GET /api/logs/slow-analysis","requestId":"e76f534433ce4937","method":"GET","path":"/api/logs/slow-analysis","query":{"days":"7","limit":"15"},"ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:32:35.560Z","level":"info","message":"GET /api/logs/slow-analysis","requestId":"e76f534433ce4937","method":"GET","path":"/api/logs/slow-analysis","status":404,"duration":1,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:32:44.087Z","level":"debug","message":"[Request] --> GET /api/logs/slow-analysis","requestId":"e78dc69481d3de40","method":"GET","path":"/api/logs/slow-analysis","query":{"days":"7","limit":"15"},"ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:32:44.087Z","level":"info","message":"GET /api/logs/slow-analysis","requestId":"e78dc69481d3de40","method":"GET","path":"/api/logs/slow-analysis","status":404,"duration":0,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:33:28.431Z","level":"info","message":"[AlertScheduler] 预警定时器已启动（每 6 小时）"}
+{"time":"2026-04-30T10:33:28.431Z","level":"info","message":"[LogTailing] 实时日志推送已启动"}
+{"time":"2026-04-30T10:33:28.432Z","level":"info","message":"🐟 追爱计划后端启动: http://localhost:3005"}
+{"time":"2026-04-30T10:33:33.272Z","level":"debug","message":"[Request] --> GET /api/logs/slow-analysis","requestId":"a9b1233f0a6d4c57","method":"GET","path":"/api/logs/slow-analysis","query":{"days":"7","limit":"15"},"ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:33:33.275Z","level":"info","message":"GET /api/logs/slow-analysis","requestId":"a9b1233f0a6d4c57","method":"GET","path":"/api/logs/slow-analysis","status":200,"duration":3,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:33:36.808Z","level":"debug","message":"[Request] --> GET /api/logs/trace/1ff55fe43bb03223","requestId":"5b7f8d7367d41faa","method":"GET","path":"/api/logs/trace/1ff55fe43bb03223","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:33:36.810Z","level":"info","message":"GET /api/logs/trace/1ff55fe43bb03223","requestId":"5b7f8d7367d41faa","method":"GET","path":"/api/logs/trace/1ff55fe43bb03223","status":200,"duration":1,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:33:45.093Z","level":"debug","message":"[Request] --> POST /api/auth/login","requestId":"ed5f402f5a1a814c","method":"POST","path":"/api/auth/login","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:33:45.178Z","level":"info","message":"POST /api/auth/login","requestId":"ed5f402f5a1a814c","method":"POST","path":"/api/auth/login","status":500,"duration":85,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:34:12.191Z","level":"debug","message":"[Request] --> POST /api/auth/login","requestId":"cca60a4bddcf1189","method":"POST","path":"/api/auth/login","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:34:12.263Z","level":"info","message":"POST /api/auth/login","requestId":"cca60a4bddcf1189","method":"POST","path":"/api/auth/login","status":500,"duration":72,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:34:34.193Z","level":"info","message":"[AlertScheduler] 预警定时器已启动（每 6 小时）"}
+{"time":"2026-04-30T10:34:34.194Z","level":"info","message":"[LogTailing] 实时日志推送已启动"}
+{"time":"2026-04-30T10:34:34.194Z","level":"info","message":"🐟 追爱计划后端启动: http://localhost:3005"}
+{"time":"2026-04-30T10:34:41.764Z","level":"debug","message":"[Request] --> POST /api/auth/login","requestId":"cdda9d5b6e438dc0","method":"POST","path":"/api/auth/login","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:34:41.850Z","level":"info","message":"POST /api/auth/login","requestId":"cdda9d5b6e438dc0","method":"POST","path":"/api/auth/login","status":200,"duration":86,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:35:30.724Z","level":"debug","message":"[Request] --> POST /api/auth/login","requestId":"3641ed9184ff5ea2","method":"POST","path":"/api/auth/login","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:35:30.797Z","level":"info","message":"POST /api/auth/login","requestId":"3641ed9184ff5ea2","method":"POST","path":"/api/auth/login","status":200,"duration":73,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:35:30.819Z","level":"info","message":"[Socket] 客户端连接: 1Y7BarcwLnUj6DGmAAAB"}
+{"time":"2026-04-30T10:35:30.824Z","level":"info","message":"[Socket] 操盘手 9363f0eb-891a-4587-9104-fa9521378003 加入房间"}
+{"time":"2026-04-30T10:35:30.940Z","level":"debug","message":"[Request] --> GET /api/alerts/stats","requestId":"e6e0e6f6b005b38d","method":"GET","path":"/api/alerts/stats","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:35:30.944Z","level":"debug","message":"[Request] --> GET /api/alerts","requestId":"55ab9f6752dfef0f","method":"GET","path":"/api/alerts","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:35:30.947Z","level":"debug","message":"[Request] --> GET /api/dashboard/stats","requestId":"c827d7cbafe40f9b","method":"GET","path":"/api/dashboard/stats","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:35:30.948Z","level":"debug","message":"[Request] --> GET /api/clients","requestId":"3ac561f477b10821","method":"GET","path":"/api/clients","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:35:30.955Z","level":"info","message":"GET /api/alerts/stats","requestId":"e6e0e6f6b005b38d","method":"GET","path":"/api/alerts/stats","status":200,"duration":15,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:35:30.956Z","level":"debug","message":"[Request] --> GET /api/alerts/stats","requestId":"b18834fd403867c2","method":"GET","path":"/api/alerts/stats","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:35:30.958Z","level":"info","message":"GET /api/alerts/stats","requestId":"b18834fd403867c2","method":"GET","path":"/api/alerts/stats","status":304,"duration":2,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:35:30.959Z","level":"info","message":"GET /api/alerts","requestId":"55ab9f6752dfef0f","method":"GET","path":"/api/alerts","status":200,"duration":15,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:35:30.960Z","level":"info","message":"GET /api/clients","requestId":"3ac561f477b10821","method":"GET","path":"/api/clients","status":200,"duration":12,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:35:30.960Z","level":"info","message":"GET /api/dashboard/stats","requestId":"c827d7cbafe40f9b","method":"GET","path":"/api/dashboard/stats","status":200,"duration":13,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:35:30.961Z","level":"debug","message":"[Request] --> GET /api/alerts","requestId":"7c7449e44d320267","method":"GET","path":"/api/alerts","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:35:30.962Z","level":"debug","message":"[Request] --> GET /api/clients","requestId":"8b86b5e267718e53","method":"GET","path":"/api/clients","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:35:30.962Z","level":"debug","message":"[Request] --> GET /api/dashboard/stats","requestId":"4c390346ee43589e","method":"GET","path":"/api/dashboard/stats","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:35:30.964Z","level":"info","message":"GET /api/alerts","requestId":"7c7449e44d320267","method":"GET","path":"/api/alerts","status":304,"duration":3,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:35:30.965Z","level":"info","message":"GET /api/clients","requestId":"8b86b5e267718e53","method":"GET","path":"/api/clients","status":304,"duration":3,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:35:30.966Z","level":"info","message":"GET /api/dashboard/stats","requestId":"4c390346ee43589e","method":"GET","path":"/api/dashboard/stats","status":304,"duration":4,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:35:30.966Z","level":"debug","message":"[Request] --> GET /api/dashboard/stats","requestId":"9bc10ba89ac4a694","method":"GET","path":"/api/dashboard/stats","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:35:30.969Z","level":"info","message":"GET /api/dashboard/stats","requestId":"9bc10ba89ac4a694","method":"GET","path":"/api/dashboard/stats","status":304,"duration":3,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:35:30.970Z","level":"debug","message":"[Request] --> GET /api/dashboard/stats","requestId":"09acdf5abbc1281e","method":"GET","path":"/api/dashboard/stats","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:35:30.972Z","level":"info","message":"GET /api/dashboard/stats","requestId":"09acdf5abbc1281e","method":"GET","path":"/api/dashboard/stats","status":304,"duration":2,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:36:13.963Z","level":"info","message":"[Socket] 客户端断开: 1Y7BarcwLnUj6DGmAAAB"}
+{"time":"2026-04-30T10:36:14.175Z","level":"debug","message":"[Request] --> GET /api/auth/me","requestId":"cac01adff8ab91b6","method":"GET","path":"/api/auth/me","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:36:14.178Z","level":"info","message":"GET /api/auth/me","requestId":"cac01adff8ab91b6","method":"GET","path":"/api/auth/me","status":200,"duration":3,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:36:14.179Z","level":"debug","message":"[Request] --> GET /api/auth/me","requestId":"ebb8034316b2c8e4","method":"GET","path":"/api/auth/me","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:36:14.180Z","level":"info","message":"GET /api/auth/me","requestId":"ebb8034316b2c8e4","method":"GET","path":"/api/auth/me","status":304,"duration":2,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:36:14.268Z","level":"info","message":"[Socket] 客户端连接: BkKK9jMPPcy17i8tAAAD"}
+{"time":"2026-04-30T10:36:14.274Z","level":"info","message":"[Socket] 操盘手 9363f0eb-891a-4587-9104-fa9521378003 加入房间"}
+{"time":"2026-04-30T10:36:14.553Z","level":"debug","message":"[Request] --> GET /api/alerts/stats","requestId":"6cae3f32ce7685fe","method":"GET","path":"/api/alerts/stats","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:36:14.554Z","level":"debug","message":"[Request] --> GET /api/alerts","requestId":"f53d071f299e5e1e","method":"GET","path":"/api/alerts","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:36:14.554Z","level":"debug","message":"[Request] --> GET /api/clients","requestId":"047cf778fe69eb79","method":"GET","path":"/api/clients","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:36:14.555Z","level":"info","message":"GET /api/alerts/stats","requestId":"6cae3f32ce7685fe","method":"GET","path":"/api/alerts/stats","status":304,"duration":2,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:36:14.556Z","level":"debug","message":"[Request] --> GET /api/dashboard/stats","requestId":"d9db7173f772a736","method":"GET","path":"/api/dashboard/stats","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:36:14.556Z","level":"info","message":"GET /api/alerts","requestId":"f53d071f299e5e1e","method":"GET","path":"/api/alerts","status":304,"duration":2,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:36:14.557Z","level":"debug","message":"[Request] --> GET /api/alerts/stats","requestId":"8ab5d0481ebcbf69","method":"GET","path":"/api/alerts/stats","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:36:14.557Z","level":"debug","message":"[Request] --> GET /api/alerts","requestId":"994fa7a62446adc0","method":"GET","path":"/api/alerts","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:36:14.558Z","level":"info","message":"GET /api/clients","requestId":"047cf778fe69eb79","method":"GET","path":"/api/clients","status":304,"duration":4,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:36:14.558Z","level":"info","message":"GET /api/alerts/stats","requestId":"8ab5d0481ebcbf69","method":"GET","path":"/api/alerts/stats","status":304,"duration":1,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:36:14.559Z","level":"info","message":"GET /api/alerts","requestId":"994fa7a62446adc0","method":"GET","path":"/api/alerts","status":304,"duration":2,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:36:14.559Z","level":"debug","message":"[Request] --> GET /api/clients","requestId":"e9a668c63478d1a9","method":"GET","path":"/api/clients","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:36:14.560Z","level":"info","message":"GET /api/dashboard/stats","requestId":"d9db7173f772a736","method":"GET","path":"/api/dashboard/stats","status":304,"duration":4,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:36:14.561Z","level":"debug","message":"[Request] --> GET /api/dashboard/stats","requestId":"defe70af9d350ae8","method":"GET","path":"/api/dashboard/stats","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:36:14.562Z","level":"info","message":"GET /api/clients","requestId":"e9a668c63478d1a9","method":"GET","path":"/api/clients","status":304,"duration":3,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:36:14.563Z","level":"info","message":"GET /api/dashboard/stats","requestId":"defe70af9d350ae8","method":"GET","path":"/api/dashboard/stats","status":304,"duration":2,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:36:14.564Z","level":"debug","message":"[Request] --> GET /api/dashboard/stats","requestId":"1a4ec045307cbdef","method":"GET","path":"/api/dashboard/stats","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:36:14.566Z","level":"info","message":"GET /api/dashboard/stats","requestId":"1a4ec045307cbdef","method":"GET","path":"/api/dashboard/stats","status":304,"duration":2,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:36:14.566Z","level":"debug","message":"[Request] --> GET /api/dashboard/stats","requestId":"1e8ac7993ecc432c","method":"GET","path":"/api/dashboard/stats","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:36:14.569Z","level":"info","message":"GET /api/dashboard/stats","requestId":"1e8ac7993ecc432c","method":"GET","path":"/api/dashboard/stats","status":304,"duration":3,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:36:16.188Z","level":"info","message":"[Socket] 客户端断开: BkKK9jMPPcy17i8tAAAD"}
+{"time":"2026-04-30T10:36:16.389Z","level":"debug","message":"[Request] --> GET /api/auth/me","requestId":"6cef425b24c5565b","method":"GET","path":"/api/auth/me","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:36:16.391Z","level":"info","message":"GET /api/auth/me","requestId":"6cef425b24c5565b","method":"GET","path":"/api/auth/me","status":304,"duration":2,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:36:16.392Z","level":"debug","message":"[Request] --> GET /api/auth/me","requestId":"32bd76500a284dc9","method":"GET","path":"/api/auth/me","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:36:16.393Z","level":"info","message":"GET /api/auth/me","requestId":"32bd76500a284dc9","method":"GET","path":"/api/auth/me","status":304,"duration":1,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:36:16.477Z","level":"info","message":"[Socket] 客户端连接: z6OEhTdq1n49zc0oAAAF"}
+{"time":"2026-04-30T10:36:16.482Z","level":"info","message":"[Socket] 操盘手 9363f0eb-891a-4587-9104-fa9521378003 加入房间"}
+{"time":"2026-04-30T10:36:16.764Z","level":"debug","message":"[Request] --> GET /api/alerts/stats","requestId":"a5b806480cf013e8","method":"GET","path":"/api/alerts/stats","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:36:16.764Z","level":"debug","message":"[Request] --> GET /api/alerts","requestId":"9f771bdc717aabad","method":"GET","path":"/api/alerts","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:36:16.765Z","level":"info","message":"GET /api/alerts/stats","requestId":"a5b806480cf013e8","method":"GET","path":"/api/alerts/stats","status":304,"duration":1,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:36:16.766Z","level":"info","message":"GET /api/alerts","requestId":"9f771bdc717aabad","method":"GET","path":"/api/alerts","status":304,"duration":2,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:36:16.767Z","level":"debug","message":"[Request] --> GET /api/alerts/stats","requestId":"8dcf6e75d0a78e90","method":"GET","path":"/api/alerts/stats","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:36:16.767Z","level":"debug","message":"[Request] --> GET /api/alerts","requestId":"738e913c729e1fa7","method":"GET","path":"/api/alerts","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:36:16.768Z","level":"info","message":"GET /api/alerts/stats","requestId":"8dcf6e75d0a78e90","method":"GET","path":"/api/alerts/stats","status":304,"duration":1,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:36:16.769Z","level":"debug","message":"[Request] --> GET /api/logs/files","requestId":"f1e7c0e7c0ee3c62","method":"GET","path":"/api/logs/files","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:36:16.769Z","level":"info","message":"GET /api/alerts","requestId":"738e913c729e1fa7","method":"GET","path":"/api/alerts","status":304,"duration":2,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:36:16.769Z","level":"debug","message":"[Request] --> GET /api/logs/stats","requestId":"1c25c6969af4c982","method":"GET","path":"/api/logs/stats","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:36:16.770Z","level":"info","message":"GET /api/logs/stats","requestId":"1c25c6969af4c982","method":"GET","path":"/api/logs/stats","status":200,"duration":1,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:36:16.771Z","level":"info","message":"GET /api/logs/files","requestId":"f1e7c0e7c0ee3c62","method":"GET","path":"/api/logs/files","status":200,"duration":2,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:36:16.774Z","level":"debug","message":"[Request] --> GET /api/logs/stats","requestId":"9074791b90a7e193","method":"GET","path":"/api/logs/stats","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:36:16.774Z","level":"info","message":"GET /api/logs/stats","requestId":"9074791b90a7e193","method":"GET","path":"/api/logs/stats","status":200,"duration":0,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:36:16.775Z","level":"debug","message":"[Request] --> GET /api/logs/files","requestId":"ce9a7cdafee50c22","method":"GET","path":"/api/logs/files","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:36:16.775Z","level":"info","message":"GET /api/logs/files","requestId":"ce9a7cdafee50c22","method":"GET","path":"/api/logs/files","status":200,"duration":0,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:36:16.986Z","level":"debug","message":"[Request] --> GET /api/logs/file/20260430","requestId":"afb22b7a6f514573","method":"GET","path":"/api/logs/file/20260430","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:36:16.987Z","level":"info","message":"GET /api/logs/file/20260430","requestId":"afb22b7a6f514573","method":"GET","path":"/api/logs/file/20260430","status":200,"duration":1,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:36:17.171Z","level":"debug","message":"[Request] --> GET /api/logs/stats","requestId":"60a0295adacf17d0","method":"GET","path":"/api/logs/stats","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:36:17.171Z","level":"info","message":"GET /api/logs/stats","requestId":"60a0295adacf17d0","method":"GET","path":"/api/logs/stats","status":200,"duration":0,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:36:35.917Z","level":"debug","message":"[Request] --> GET /api/logs/slow-analysis","requestId":"bdd656e960a43499","method":"GET","path":"/api/logs/slow-analysis","query":{"days":"7","limit":"15"},"ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:36:35.918Z","level":"info","message":"GET /api/logs/slow-analysis","requestId":"bdd656e960a43499","method":"GET","path":"/api/logs/slow-analysis","status":200,"duration":2,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:36:59.148Z","level":"debug","message":"[Request] --> GET /api/logs/trace/1ff55fe43bb03223","requestId":"45494d8f75c7490d","method":"GET","path":"/api/logs/trace/1ff55fe43bb03223","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:36:59.149Z","level":"info","message":"GET /api/logs/trace/1ff55fe43bb03223","requestId":"45494d8f75c7490d","method":"GET","path":"/api/logs/trace/1ff55fe43bb03223","status":200,"duration":1,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:37:48.383Z","level":"info","message":"[Socket] 客户端断开: z6OEhTdq1n49zc0oAAAF"}
+{"time":"2026-04-30T10:37:48.624Z","level":"debug","message":"[Request] --> GET /api/auth/me","requestId":"b9a0d2a58d2789e5","method":"GET","path":"/api/auth/me","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:37:48.627Z","level":"info","message":"GET /api/auth/me","requestId":"b9a0d2a58d2789e5","method":"GET","path":"/api/auth/me","status":304,"duration":3,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:37:48.628Z","level":"debug","message":"[Request] --> GET /api/auth/me","requestId":"6535022726a04415","method":"GET","path":"/api/auth/me","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:37:48.629Z","level":"info","message":"GET /api/auth/me","requestId":"6535022726a04415","method":"GET","path":"/api/auth/me","status":304,"duration":1,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:37:48.748Z","level":"info","message":"[Socket] 客户端连接: Y2DushJ1vuO4x1GsAAAH"}
+{"time":"2026-04-30T10:37:48.770Z","level":"info","message":"[Socket] 操盘手 9363f0eb-891a-4587-9104-fa9521378003 加入房间"}
+{"time":"2026-04-30T10:37:49.028Z","level":"debug","message":"[Request] --> GET /api/alerts/stats","requestId":"49c66594078e309b","method":"GET","path":"/api/alerts/stats","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:37:49.029Z","level":"debug","message":"[Request] --> GET /api/alerts","requestId":"3b99a0b712490df2","method":"GET","path":"/api/alerts","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:37:49.030Z","level":"info","message":"GET /api/alerts/stats","requestId":"49c66594078e309b","method":"GET","path":"/api/alerts/stats","status":304,"duration":2,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:37:49.030Z","level":"debug","message":"[Request] --> GET /api/logs/files","requestId":"2a66d38d74843f90","method":"GET","path":"/api/logs/files","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:37:49.030Z","level":"info","message":"GET /api/logs/files","requestId":"2a66d38d74843f90","method":"GET","path":"/api/logs/files","status":200,"duration":0,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:37:49.031Z","level":"info","message":"GET /api/alerts","requestId":"3b99a0b712490df2","method":"GET","path":"/api/alerts","status":304,"duration":2,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:37:49.031Z","level":"debug","message":"[Request] --> GET /api/logs/stats","requestId":"5278d8ac90b7c541","method":"GET","path":"/api/logs/stats","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:37:49.031Z","level":"info","message":"GET /api/logs/stats","requestId":"5278d8ac90b7c541","method":"GET","path":"/api/logs/stats","status":200,"duration":0,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:37:49.032Z","level":"debug","message":"[Request] --> GET /api/alerts/stats","requestId":"47bda92973606b39","method":"GET","path":"/api/alerts/stats","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:37:49.033Z","level":"debug","message":"[Request] --> GET /api/alerts","requestId":"2d28cb38cfefa828","method":"GET","path":"/api/alerts","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:37:49.033Z","level":"info","message":"GET /api/alerts/stats","requestId":"47bda92973606b39","method":"GET","path":"/api/alerts/stats","status":304,"duration":1,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:37:49.034Z","level":"debug","message":"[Request] --> GET /api/logs/files","requestId":"bdf422d20dc9e540","method":"GET","path":"/api/logs/files","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:37:49.034Z","level":"debug","message":"[Request] --> GET /api/logs/stats","requestId":"71089741d38d477a","method":"GET","path":"/api/logs/stats","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:37:49.035Z","level":"info","message":"GET /api/logs/stats","requestId":"71089741d38d477a","method":"GET","path":"/api/logs/stats","status":200,"duration":1,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:37:49.035Z","level":"info","message":"GET /api/logs/files","requestId":"bdf422d20dc9e540","method":"GET","path":"/api/logs/files","status":200,"duration":1,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:37:49.035Z","level":"info","message":"GET /api/alerts","requestId":"2d28cb38cfefa828","method":"GET","path":"/api/alerts","status":304,"duration":2,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:37:49.232Z","level":"debug","message":"[Request] --> GET /api/logs/file/20260430","requestId":"5ca3aeeb2ada5d44","method":"GET","path":"/api/logs/file/20260430","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:37:49.233Z","level":"info","message":"GET /api/logs/file/20260430","requestId":"5ca3aeeb2ada5d44","method":"GET","path":"/api/logs/file/20260430","status":200,"duration":1,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:37:49.373Z","level":"debug","message":"[Request] --> GET /api/logs/stats","requestId":"916e88484f3ba420","method":"GET","path":"/api/logs/stats","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:37:49.374Z","level":"info","message":"GET /api/logs/stats","requestId":"916e88484f3ba420","method":"GET","path":"/api/logs/stats","status":200,"duration":1,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:38:23.951Z","level":"info","message":"[Socket] 客户端断开: Y2DushJ1vuO4x1GsAAAH"}
+{"time":"2026-04-30T10:38:24.163Z","level":"debug","message":"[Request] --> GET /api/auth/me","requestId":"f8ff8db5ca473c67","method":"GET","path":"/api/auth/me","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:38:24.165Z","level":"info","message":"GET /api/auth/me","requestId":"f8ff8db5ca473c67","method":"GET","path":"/api/auth/me","status":304,"duration":2,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:38:24.166Z","level":"debug","message":"[Request] --> GET /api/auth/me","requestId":"d378906cf7f051c3","method":"GET","path":"/api/auth/me","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:38:24.168Z","level":"info","message":"GET /api/auth/me","requestId":"d378906cf7f051c3","method":"GET","path":"/api/auth/me","status":304,"duration":2,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:38:24.256Z","level":"info","message":"[Socket] 客户端连接: 771qWEam3mtxH2mFAAAJ"}
+{"time":"2026-04-30T10:38:24.261Z","level":"info","message":"[Socket] 操盘手 9363f0eb-891a-4587-9104-fa9521378003 加入房间"}
+{"time":"2026-04-30T10:38:24.544Z","level":"debug","message":"[Request] --> GET /api/alerts/stats","requestId":"fb37d68b4f87f2c9","method":"GET","path":"/api/alerts/stats","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:38:24.545Z","level":"debug","message":"[Request] --> GET /api/alerts","requestId":"4e1d897effe356d3","method":"GET","path":"/api/alerts","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:38:24.545Z","level":"info","message":"GET /api/alerts/stats","requestId":"fb37d68b4f87f2c9","method":"GET","path":"/api/alerts/stats","status":304,"duration":1,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:38:24.546Z","level":"info","message":"GET /api/alerts","requestId":"4e1d897effe356d3","method":"GET","path":"/api/alerts","status":304,"duration":1,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:38:24.546Z","level":"debug","message":"[Request] --> GET /api/logs/files","requestId":"b25c471a0ac8e2ca","method":"GET","path":"/api/logs/files","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:38:24.547Z","level":"info","message":"GET /api/logs/files","requestId":"b25c471a0ac8e2ca","method":"GET","path":"/api/logs/files","status":200,"duration":1,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:38:24.547Z","level":"debug","message":"[Request] --> GET /api/alerts/stats","requestId":"df9076b8d6440bab","method":"GET","path":"/api/alerts/stats","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:38:24.548Z","level":"debug","message":"[Request] --> GET /api/logs/stats","requestId":"249365e0f41cda02","method":"GET","path":"/api/logs/stats","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:38:24.548Z","level":"info","message":"GET /api/logs/stats","requestId":"249365e0f41cda02","method":"GET","path":"/api/logs/stats","status":200,"duration":0,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:38:24.549Z","level":"info","message":"GET /api/alerts/stats","requestId":"df9076b8d6440bab","method":"GET","path":"/api/alerts/stats","status":304,"duration":2,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:38:24.549Z","level":"debug","message":"[Request] --> GET /api/alerts","requestId":"4b873be6cf3ff0b9","method":"GET","path":"/api/alerts","ip":"::1","type":"request_start"}
+{"time":"2026-04-30T10:38:24.550Z","level":"debug","message":"[Request] --> GET /api/logs/files","requestId":"ab9da2632467aa83","method":"GET","path":"/api/logs/files","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:38:24.550Z","level":"info","message":"GET /api/logs/files","requestId":"ab9da2632467aa83","method":"GET","path":"/api/logs/files","status":200,"duration":0,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:38:24.551Z","level":"debug","message":"[Request] --> GET /api/logs/stats","requestId":"b8c7ba02140bc5ff","method":"GET","path":"/api/logs/stats","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:38:24.551Z","level":"info","message":"GET /api/logs/stats","requestId":"b8c7ba02140bc5ff","method":"GET","path":"/api/logs/stats","status":200,"duration":0,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:38:24.552Z","level":"info","message":"GET /api/alerts","requestId":"4b873be6cf3ff0b9","method":"GET","path":"/api/alerts","status":304,"duration":3,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:38:24.772Z","level":"debug","message":"[Request] --> GET /api/logs/file/20260430","requestId":"f3bfbf075e25cb4b","method":"GET","path":"/api/logs/file/20260430","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:38:24.774Z","level":"info","message":"GET /api/logs/file/20260430","requestId":"f3bfbf075e25cb4b","method":"GET","path":"/api/logs/file/20260430","status":200,"duration":2,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:38:24.931Z","level":"debug","message":"[Request] --> GET /api/logs/stats","requestId":"d8019aa71a1afacc","method":"GET","path":"/api/logs/stats","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:38:24.932Z","level":"info","message":"GET /api/logs/stats","requestId":"d8019aa71a1afacc","method":"GET","path":"/api/logs/stats","status":200,"duration":1,"slow":false,"type":"request_end"}
+{"time":"2026-04-30T10:51:38.436Z","level":"info","message":"[AlertScheduler] 预警定时器已启动（每 6 小时）"}
+{"time":"2026-04-30T10:51:38.436Z","level":"info","message":"[LogTailing] 实时日志推送已启动"}
+{"time":"2026-04-30T10:51:38.437Z","level":"info","message":"🐟 追爱计划后端启动: http://localhost:3005"}
+{"time":"2026-04-30T10:51:43.760Z","level":"debug","message":"[Request] --> GET /api/version","requestId":"1c2ee9c4a95be804","method":"GET","path":"/api/version","ip":"::ffff:127.0.0.1","type":"request_start"}
+{"time":"2026-04-30T10:51:43.762Z","level":"info","message":"GET /api/version","requestId":"1c2ee9c4a95be804","method":"GET","path":"/api/version","status":404,"duration":2,"slow":false,"type":"request_end"}

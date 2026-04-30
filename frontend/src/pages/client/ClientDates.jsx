@@ -1261,8 +1261,7 @@ export default function ClientDates() {
                         </HStack>
                       </CardBody>
                     </Card>
-                  )}
-                  ))}
+                  )})}
                 </VStack>
                 <HStack mt={4}>
                   <Button variant="outline" colorScheme="gray" onClick={() => setAddStep(1)}>上一步</Button>
