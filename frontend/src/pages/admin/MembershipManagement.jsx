@@ -4,7 +4,7 @@ import {
   Table, Thead, Tbody, Tr, Th, Td, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody,
   ModalFooter, ModalCloseButton, useDisclosure, FormControl, FormLabel, Input, Select,
   NumberInput, NumberInputField, Textarea, useToast, Spinner, Center, SimpleGrid, Card, CardBody,
-  Flex, Divider, Avatar, Icon, Switch, Form
+  Flex, Divider, Avatar, Icon, Switch
 } from '@chakra-ui/react';
 import { membership as membershipApi } from '../../utils/api';
 import { MembershipIcon, PointsIcon, GiftIcon, BookIcon, CameraIcon } from '../../components/Icons';
