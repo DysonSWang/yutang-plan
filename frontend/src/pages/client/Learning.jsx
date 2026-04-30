@@ -151,6 +151,22 @@ export default function ClientLearning() {
         </Box>
       </HStack>
 
+      {/* 前言区 */}
+      <Box mb={6} p={5} bg="rgba(0,212,170,0.06)" borderRadius="xl" border="1px solid rgba(0,212,170,0.15)">
+        <Text color="brand.300" fontWeight="bold" mb={3} fontSize="lg">写在前面：为什么你需要这本宝典？</Text>
+        <VStack align="stretch" spacing={3}>
+          <Text color="abyss.200" fontSize="sm" lineHeight="1.8">
+            追爱不是终点，长期关系维护才是核心。本书拒绝套路与情感操纵，追求真诚平等的亲密关系。
+          </Text>
+          <HStack gap={3} flexWrap="wrap">
+            <Badge colorScheme="teal" variant="subtle">20章节</Badge>
+            <Badge colorScheme="blue" variant="subtle">5.5万字</Badge>
+            <Badge colorScheme="purple" variant="subtle">126+方法</Badge>
+            <Badge colorScheme="orange" variant="subtle">90+心理学原理</Badge>
+          </HStack>
+        </VStack>
+      </Box>
+
       <Box mb={6} p={4} bg="rgba(0,212,170,0.08)" borderRadius="lg" border="1px solid rgba(0,212,170,0.2)">
         <HStack justify="space-between" mb={2}>
           <Text color="brand.400" fontWeight="bold">学习进度</Text>
