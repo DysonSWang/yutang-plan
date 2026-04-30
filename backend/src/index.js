@@ -39,6 +39,7 @@ const reversalRoutes = require('./routes/reversal');
 const uploadRoutes = require('./routes/upload');
 const videoCompressRoutes = require('./routes/video-compress');
 const membershipRoutes = require('./routes/membership');
+const restaurantRoutes = require('./routes/restaurant');
 const versionRoutes = require('./routes/version');
 
 const app = express();
@@ -104,6 +105,9 @@ app.use('/api/upload', videoCompressRoutes);
 
 // 会员/积分/邀请/学习版块
 app.use('/api/membership', membershipRoutes);
+
+// 精选餐厅库
+app.use('/api/restaurants', restaurantRoutes);
 
 // 版本检测
 app.use('/api/version', versionRoutes);

@@ -55,7 +55,17 @@ export default function ClientDates() {
   const [interviewSubmitting, setInterviewSubmitting] = useState(false);
   const [selectedAiPlan, setSelectedAiPlan] = useState(null);
   const [generating, setGenerating] = useState(false);
-  const [aiForm, setAiForm] = useState({ title: '', scene: '', budget: '', duration: '' });
+  const [aiForm, setAiForm] = useState({
+    title: '',
+    scene: '',
+    budget: '',
+    duration: '半天',
+    dateTime: '',  // 约会时间：中午/下午/傍晚/晚上
+    district: '',  // 约会区域
+    transportMode: '地铁/打车',
+    relationshipStage: '初次见面',
+    specialRequirements: ''
+  });
   const [showAddModal, setShowAddModal] = useState(false);
   const [addMode, setAddMode] = useState('ai'); // 'ai' | 'manual'
   const [addStep, setAddStep] = useState(1); // 分步添加：1=选择模式 2=选择女生 3=填写信息
@@ -71,6 +81,20 @@ export default function ClientDates() {
       loadGirls();
     }
   }, [showAddModal, addMode, addStep]);
+
+  // 加载记忆的偏好设置
+  useEffect(() => {
+    const savedTransport = localStorage.getItem('dating_transportMode');
+    if (savedTransport) {
+      setAiForm(prev => ({ ...prev, transportMode: savedTransport }));
+    }
+  }, []);
+
+  // 记忆出行方式偏好
+  const handleTransportModeChange = (value) => {
+    setAiForm(prev => ({ ...prev, transportMode: value }));
+    localStorage.setItem('dating_transportMode', value);
+  };
 
   // 统计计算
   const stats = {
@@ -135,7 +159,7 @@ export default function ClientDates() {
 
   const loadGirls = async () => {
     try {
-      const res = await fetch('/api/girls/my', {
+      const res = await fetch('/api/girls', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       }).then(r => r.json());
       if (res.success) setGirlsList(res.girls || []);
@@ -194,7 +218,7 @@ export default function ClientDates() {
     setLoading(false);
   };
 
-  // 加载客户ID和女生列表
+  // 加载客户ID、女生列表和偏好设置
   useEffect(() => {
     const loadClientInfo = async () => {
       try {
@@ -204,6 +228,13 @@ export default function ClientDates() {
         }
         if (res.client?.girls) {
           setGirlList(res.client.girls);
+        }
+        // 预填充用户偏好
+        if (res.client) {
+          setAiForm(prev => ({
+            ...prev,
+            transportMode: res.client.preferredTransportMode || prev.transportMode,
+          }));
         }
       } catch (e) { console.error(e); }
     };
@@ -269,13 +300,41 @@ export default function ClientDates() {
       toast({ title: '请填写约会场景', status: 'warning' });
       return;
     }
+    if (!selectedGirlForDate) {
+      toast({ title: '请先选择约会对象', status: 'warning' });
+      return;
+    }
     setGenerating(true);
     try {
-      const res = await membershipApi.generateDatingPlan(aiForm);
+      // 传递女生完整信息给AI
+      const girlInfo = {
+        name: selectedGirlForDate.name,
+        age: selectedGirlForDate.age,
+        occupation: selectedGirlForDate.occupation,
+        education: selectedGirlForDate.education,
+        styleTags: selectedGirlForDate.styleTags,
+        personalityTags: selectedGirlForDate.personalityTags,
+        interests: selectedGirlForDate.interests,
+        appearance: selectedGirlForDate.appearance,
+        hometown: selectedGirlForDate.hometown,
+        residence: selectedGirlForDate.residence,
+      };
+      const res = await membershipApi.generateDatingPlan({
+        title: aiForm.title,
+        scene: aiForm.scene,
+        budget: aiForm.budget,
+        duration: aiForm.duration,
+        dateTime: aiForm.dateTime,
+        district: aiForm.district,
+        transportMode: aiForm.transportMode,
+        relationshipStage: aiForm.relationshipStage,
+        specialRequirements: aiForm.specialRequirements,
+        girl: girlInfo
+      });
       if (res.success) {
         setAiPlans([res.plan, ...aiPlans]);
         setSelectedAiPlan(res.plan);
-        setAiForm({ title: '', scene: '', budget: '', duration: '' });
+        setAiForm({ title: '', scene: '', budget: '', duration: '半天', dateTime: '', district: '', transportMode: localStorage.getItem('dating_transportMode') || '地铁/打车', relationshipStage: '初次见面', specialRequirements: '' });
         toast({ title: '方案生成中...', status: 'info', duration: 3000 });
       }
     } catch (err) {
@@ -1126,14 +1185,52 @@ export default function ClientDates() {
                 <VStack spacing={3} align="stretch" maxH="300px" overflowY="auto">
                   {girlList.length === 0 ? (
                     <Text color="gray.500" textAlign="center" py={8}>暂无比心仪的女生</Text>
-                  ) : girlList.map(girl => (
+                  ) : girlList.map(girl => {
+                    // 关系阶段标签
+                    const stageLabels = {
+                      '陌生': { color: 'gray', text: '陌生' },
+                      '朋友': { color: 'blue', text: '朋友' },
+                      '暧昧': { color: 'pink', text: '暧昧' },
+                      '亲密': { color: 'green', text: '亲密' },
+                      'EXPLORATION': { color: 'gray', text: '探索' },
+                      'FLIRTING': { color: 'pink', text: '暧昧' },
+                      'ADVANCEMENT': { color: 'orange', text: '升温' },
+                      'CONFIRMATION': { color: 'green', text: '确认' },
+                      'STABLE': { color: 'teal', text: '稳定' },
+                    };
+                    const stage = stageLabels[girl.currentStage] || stageLabels[girl.relationshipStage] || { color: 'gray', text: girl.currentStage || '未知' };
+                    return (
                     <Card
                       key={girl.id}
                       cursor="pointer"
                       bg={selectedGirlForDate?.id === girl.id ? 'rgba(0,212,170,0.15)' : 'gray.750'}
                       border="2px solid"
                       borderColor={selectedGirlForDate?.id === girl.id ? 'brand.500' : 'gray.600'}
-                      onClick={() => setSelectedGirlForDate(girl)}
+                      onClick={() => {
+                        setSelectedGirlForDate(girl);
+                        // 自动设置关系阶段
+                        const stageMap = {
+                          '陌生': '初次见面',
+                          '朋友': '已聊过几次',
+                          '暧昧': '暧昧中',
+                          '亲密': '确定关系',
+                          'EXPLORATION': '初次见面',
+                          'FLIRTING': '暧昧中',
+                          'ADVANCEMENT': '暧昧中',
+                          'CONFIRMATION': '确定关系',
+                          'STABLE': '确定关系',
+                        };
+                        setAiForm(prev => ({
+                          ...prev,
+                          relationshipStage: stageMap[girl.currentStage] || stageMap[girl.relationshipStage] || prev.relationshipStage,
+                          // 自动填充饮食偏好
+                          specialRequirements: girl.dietRestrictions
+                            ? `她有饮食限制：${girl.dietRestrictions}`
+                            : girl.dietPreferences
+                            ? `她喜欢：${girl.dietPreferences}`
+                            : prev.specialRequirements
+                        }));
+                      }}
                       _hover={{ borderColor: 'brand.400' }}
                       transition="all 0.2s"
                     >
@@ -1141,11 +1238,22 @@ export default function ClientDates() {
                         <HStack spacing={3}>
                           <Avatar size="md" name={girl.name} src={getAvatar(girl)} />
                           <Box flex={1}>
-                            <Text color="white" fontWeight="bold">{girl.name}</Text>
-                            <HStack spacing={2} mt={1}>
+                            <HStack spacing={2}>
+                              <Text color="white" fontWeight="bold">{girl.name}</Text>
+                              <Badge colorScheme={stage.color} size="sm">{stage.text}</Badge>
+                            </HStack>
+                            <HStack spacing={2} mt={1} flexWrap="wrap">
                               {girl.age && <Text color="gray.400" fontSize="xs">{girl.age}岁</Text>}
                               {girl.occupation && <Text color="gray.500" fontSize="xs">· {girl.occupation}</Text>}
+                              {girl.personalityTags && <Text color="gray.500" fontSize="xs">· {girl.personalityTags}</Text>}
                             </HStack>
+                            {(girl.dietPreferences || girl.dietRestrictions) && (
+                              <HStack spacing={1} mt={1} flexWrap="wrap">
+                                <Text color="gray.500" fontSize="xs">🍽</Text>
+                                {girl.dietRestrictions && <Badge size="sm" colorScheme="red" mr={1}>{girl.dietRestrictions}</Badge>}
+                                {girl.dietPreferences && <Badge size="sm" colorScheme="green">{girl.dietPreferences}</Badge>}
+                              </HStack>
+                            )}
                           </Box>
                           {selectedGirlForDate?.id === girl.id && (
                             <Box color="brand.400" fontSize="20px">✓</Box>
@@ -1153,6 +1261,7 @@ export default function ClientDates() {
                         </HStack>
                       </CardBody>
                     </Card>
+                  )}
                   ))}
                 </VStack>
                 <HStack mt={4}>
@@ -1172,64 +1281,161 @@ export default function ClientDates() {
             {/* Step 3: 填写信息 */}
             {addStep === 3 && (
               <VStack spacing={4} align="stretch">
-                {/* 已选女生提示 */}
+                {/* 已选女生信息卡片 */}
                 {selectedGirlForDate && (
-                  <HStack bg="gray.750" p={3} borderRadius="md">
-                    <Avatar size="sm" name={selectedGirlForDate.name} src={getAvatar(selectedGirlForDate)} />
-                    <Text color="white">与 {selectedGirlForDate.name} 的约会</Text>
-                  </HStack>
+                  <Card bg="gray.750" border="1px solid" borderColor="brand.500">
+                    <CardBody py={3} px={4}>
+                      <Flex align="center" gap={3}>
+                        <Avatar size="md" name={selectedGirlForDate.name} src={getAvatar(selectedGirlForDate)} />
+                        <Box flex={1}>
+                          <Text color="white" fontWeight="bold">{selectedGirlForDate.name}</Text>
+                          <HStack spacing={2} mt={1} flexWrap="wrap">
+                            {selectedGirlForDate.age && <Tag size="sm" colorScheme="purple">{selectedGirlForDate.age}岁</Tag>}
+                            {selectedGirlForDate.occupation && <Tag size="sm" colorScheme="teal">{selectedGirlForDate.occupation}</Tag>}
+                            {selectedGirlForDate.personalityTags && <Tag size="sm" colorScheme="orange">{selectedGirlForDate.personalityTags}</Tag>}
+                            {selectedGirlForDate.interests && <Tag size="sm" colorScheme="pink">{selectedGirlForDate.interests}</Tag>}
+                          </HStack>
+                        </Box>
+                        <Button size="xs" variant="ghost" colorScheme="brand" onClick={() => setAddStep(2)}>修改</Button>
+                      </Flex>
+                    </CardBody>
+                  </Card>
                 )}
 
                 {addMode === 'ai' ? (
                   /* AI 生成表单 */
                   <VStack spacing={4} align="stretch">
-                    <Input
-                      placeholder="方案标题（选填）"
-                      value={aiForm.title}
-                      onChange={e => setAiForm({ ...aiForm, title: e.target.value })}
-                      bg="gray.700"
-                      borderColor="gray.600"
-                      _placeholder={{ color: 'gray.500' }}
-                    />
-                    <Textarea
-                      placeholder="约会场景描述，例如：想和女生去一家有氛围的餐厅吃饭，她喜欢粤菜，预算1000元左右"
-                      value={aiForm.scene}
-                      onChange={e => setAiForm({ ...aiForm, scene: e.target.value })}
-                      bg="gray.700"
-                      borderColor="gray.600"
-                      _placeholder={{ color: 'gray.500' }}
-                      rows={4}
-                    />
-                    <HStack>
+                    <FormControl>
+                      <FormLabel color="gray.400" fontSize="sm">出行方式</FormLabel>
+                      <Select
+                        value={aiForm.transportMode}
+                        onChange={e => handleTransportModeChange(e.target.value)}
+                        bg="gray.700"
+                        borderColor="gray.600"
+                      >
+                        <option value="地铁/打车">地铁/打车</option>
+                        <option value="开车">开车</option>
+                        <option value="步行">步行</option>
+                        <option value="骑车">骑车</option>
+                      </Select>
+                    </FormControl>
+
+                    <FormControl>
+                      <FormLabel color="gray.400" fontSize="sm">当前关系阶段</FormLabel>
+                      <Select
+                        value={aiForm.relationshipStage}
+                        onChange={e => setAiForm({ ...aiForm, relationshipStage: e.target.value })}
+                        bg="gray.700"
+                        borderColor="gray.600"
+                      >
+                        <option value="初次见面">初次见面</option>
+                        <option value="已聊过几次">已聊过几次</option>
+                        <option value="暧昧中">暧昧中</option>
+                        <option value="确定关系">确定关系</option>
+                      </Select>
+                    </FormControl>
+
+                    <FormControl>
+                      <FormLabel color="gray.400" fontSize="sm">特殊要求（选填）</FormLabel>
                       <Input
-                        placeholder="预算，如：1000元左右"
-                        value={aiForm.budget}
-                        onChange={e => setAiForm({ ...aiForm, budget: e.target.value })}
+                        placeholder="如：她吃素/过敏/不吃辣等"
+                        value={aiForm.specialRequirements}
+                        onChange={e => setAiForm({ ...aiForm, specialRequirements: e.target.value })}
                         bg="gray.700"
                         borderColor="gray.600"
                         _placeholder={{ color: 'gray.500' }}
                       />
-                      <Select
-                        placeholder="时长"
-                        value={aiForm.duration}
-                        onChange={e => setAiForm({ ...aiForm, duration: e.target.value })}
+                    </FormControl>
+
+                    <HStack>
+                      <FormControl>
+                        <FormLabel color="gray.400" fontSize="sm">约会时间</FormLabel>
+                        <Select
+                          value={aiForm.dateTime}
+                          onChange={e => setAiForm({ ...aiForm, dateTime: e.target.value })}
+                          bg="gray.700"
+                          borderColor="gray.600"
+                          placeholder="选择时段"
+                        >
+                          <option value="中午 11:30-14:00">中午</option>
+                          <option value="下午 14:00-17:00">下午</option>
+                          <option value="傍晚 17:00-19:00">傍晚</option>
+                          <option value="晚上 19:00-21:00">晚上</option>
+                        </Select>
+                      </FormControl>
+                      <FormControl>
+                        <FormLabel color="gray.400" fontSize="sm">约会区域</FormLabel>
+                        <Select
+                          value={aiForm.district}
+                          onChange={e => setAiForm({ ...aiForm, district: e.target.value })}
+                          bg="gray.700"
+                          borderColor="gray.600"
+                          placeholder="选择区域"
+                        >
+                          <option value="上海市中心">上海市中心</option>
+                          <option value="静安区">静安区</option>
+                          <option value="黄浦区">黄浦区</option>
+                          <option value="徐汇区">徐汇区</option>
+                          <option value="长宁区">长宁区</option>
+                          <option value="普陀区">普陀区</option>
+                          <option value="虹口区">虹口区</option>
+                          <option value="杨浦区">杨浦区</option>
+                          <option value="浦东新区">浦东新区</option>
+                          <option value="就近她的位置">就近她的位置</option>
+                          <option value="就近我的位置">就近我的位置</option>
+                        </Select>
+                      </FormControl>
+                    </HStack>
+
+                    <FormControl>
+                      <FormLabel color="gray.400" fontSize="sm">约会场景描述</FormLabel>
+                      <Textarea
+                        placeholder="描述你的约会想法，例如：想和女生去一家有氛围的餐厅吃饭，她喜欢粤菜"
+                        value={aiForm.scene}
+                        onChange={e => setAiForm({ ...aiForm, scene: e.target.value })}
                         bg="gray.700"
                         borderColor="gray.600"
-                        w="140px"
-                      >
-                        <option value="2小时内">2小时内</option>
-                        <option value="半天">半天</option>
-                        <option value="一天">一天</option>
-                        <option value="多天">多天</option>
-                      </Select>
+                        _placeholder={{ color: 'gray.500' }}
+                        rows={3}
+                      />
+                    </FormControl>
+
+                    <HStack>
+                      <FormControl>
+                        <FormLabel color="gray.400" fontSize="sm">预算</FormLabel>
+                        <Input
+                          placeholder="如：1000元左右"
+                          value={aiForm.budget}
+                          onChange={e => setAiForm({ ...aiForm, budget: e.target.value })}
+                          bg="gray.700"
+                          borderColor="gray.600"
+                          _placeholder={{ color: 'gray.500' }}
+                        />
+                      </FormControl>
+                      <FormControl>
+                        <FormLabel color="gray.400" fontSize="sm">时长</FormLabel>
+                        <Select
+                          value={aiForm.duration}
+                          onChange={e => setAiForm({ ...aiForm, duration: e.target.value })}
+                          bg="gray.700"
+                          borderColor="gray.600"
+                        >
+                          <option value="2小时内">2小时内</option>
+                          <option value="半天">半天</option>
+                          <option value="一天">一天</option>
+                          <option value="多天">多天</option>
+                        </Select>
+                      </FormControl>
                     </HStack>
+
                     <Button
                       colorScheme="brand"
                       leftIcon={<SparklesIcon />}
                       size="lg"
+                      mt={2}
                       onClick={() => {
                         if (!aiForm.scene) {
-                          toast({ title: '请填写约会场景', status: 'warning' });
+                          toast({ title: '请填写约会场景描述', status: 'warning' });
                           return;
                         }
                         setGenerating(true);
@@ -1239,9 +1445,9 @@ export default function ClientDates() {
                         generateAiPlan();
                       }}
                       isLoading={generating}
-                      loadingText="AI 策划中..."
+                      loadingText="大师团策划中..."
                     >
-                      开始生成
+                      生成精细化方案
                     </Button>
                   </VStack>
                 ) : (

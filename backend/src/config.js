@@ -22,6 +22,10 @@ const ZHIPU_API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
 const DASHSCOPE_API_KEY = process.env.DASH_SCOPE_API_KEY;
 const DASHSCOPE_API_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
 
+// DeepSeek
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions';
+
 // 端口
 const PORT = parseInt(process.env.PORT, 10) || 3005;
 
@@ -29,6 +33,14 @@ const PORT = parseInt(process.env.PORT, 10) || 3005;
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 
 function getAIConfig() {
+  // 优先使用 DeepSeek
+  if (DEEPSEEK_API_KEY) {
+    return {
+      url: DEEPSEEK_API_URL,
+      key: DEEPSEEK_API_KEY,
+      model: 'deepseek-v4-pro'
+    };
+  }
   if (AI_PROVIDER === 'dashscope' && DASHSCOPE_API_KEY) {
     // 使用 qwen3.6-flash 收费模型
     return {
@@ -66,6 +78,8 @@ module.exports = {
   ZHIPU_API_URL,
   DASHSCOPE_API_KEY,
   DASHSCOPE_API_URL,
+  DEEPSEEK_API_KEY,
+  DEEPSEEK_API_URL,
   PORT,
   BASE_URL,
   getAIConfig,

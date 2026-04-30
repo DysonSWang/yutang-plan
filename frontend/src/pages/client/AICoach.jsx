@@ -787,7 +787,7 @@ export default function AICoach() {
                     <Flex justify="space-between" align="center" mb={2}>
                       <Badge colorScheme={
                         opt.type === '稳妥型' ? 'blue' :
-                        opt.type === '进攻型' ? 'red' :
+                        opt.type === '推进型' ? 'red' :
                         opt.type === '调侃型' ? 'orange' : 'gray'
                       }>
                         {opt.type}
@@ -802,7 +802,12 @@ export default function AICoach() {
                       </Button>
                     </Flex>
                     <Text color="white" mb={2}>{opt.reply}</Text>
-                    <Text color="gray.500" fontSize="xs" mb={1}>{opt.intention}</Text>
+                    {opt.intention && (
+                      <Text color="gray.500" fontSize="xs" mb={1}>目的：{opt.intention}</Text>
+                    )}
+                    {opt.stageAdvice && (
+                      <Text color="gray.400" fontSize="xs" mb={1}>📍 {opt.stageAdvice}</Text>
+                    )}
                     {opt.riskNote && opt.riskNote !== '无' && (
                       <Text color="orange.400" fontSize="xs">⚠️ {opt.riskNote}</Text>
                     )}
@@ -875,6 +880,9 @@ export default function AICoach() {
                     </Flex>
                     <Text color="white" mb={2}>{opt.text}</Text>
                     <Text color="gray.500" fontSize="xs" mb={1}>{opt.point}</Text>
+                    {opt.stageAdvice && (
+                      <Text color="gray.400" fontSize="xs" mb={1}>📍 {opt.stageAdvice}</Text>
+                    )}
                     {opt.riskLevel && opt.riskLevel !== '低' && (
                       <Badge colorScheme={opt.riskLevel === '高' ? 'red' : 'orange'}>
                         风险: {opt.riskLevel}

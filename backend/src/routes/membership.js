@@ -236,6 +236,28 @@ router.post('/dating-plan/generate', authMiddleware, asyncHandler(async (req, re
   // 异步生成方案内容
   const aiConfig = getAIConfig();
 
+  // 从精选库查询真实餐厅数据
+  const targetDistrict = district || girl?.residence || '上海';
+  const restaurants = await prisma.restaurant.findMany({
+    where: {
+      status: 'active',
+      city: '上海',
+      ...(targetDistrict && targetDistrict !== '上海' ? { district: targetDistrict } : {})
+    },
+    orderBy: [{ rating: 'desc' }, { priceAvg: 'asc' }],
+    take: 20
+  });
+
+  const restaurantContext = restaurants.length > 0 ? `
+【精选餐厅库】（以下均为真实收录餐厅，请从中选择或参考风格，禁止虚构店名）
+
+${restaurants.map(r => `★ ${r.name}${r.brand ? `（${r.brand}）` : ''}
+   区域：${r.district} | 菜系：${r.cuisine} | 人均：${r.priceRange}
+   氛围：${r.atmosphereTags} | 场景：${r.sceneTags}
+   ${r.metroStation ? `地铁：${r.metroStation}${r.metroWalkTime ? ` 步行${r.metroWalkTime}分钟` : ''}` : ''}
+   ${r.reservationNeeded ? '⚠ 需预约' : '✓ 免预约'} ${r.features ? '| 特色：' + r.features : ''}
+`).join('\n')}` : '（精选库暂无数据，AI可根据场景风格推荐类似餐厅）';
+
   // 构建女生画像描述
   const girlProfile = girl ? `
 【女生画像】
@@ -285,6 +307,7 @@ router.post('/dating-plan/generate', authMiddleware, asyncHandler(async (req, re
 
 # 输入信息
 ${girlProfile}
+${restaurantContext}
 【约会需求】
 - 场景需求：${scene || '普通约会'}
 - 预算：${budget || '1000元左右'}
@@ -310,6 +333,7 @@ ${girlProfile}
 5. **今日天气应对策略**（如果下雨/降温/升温，如何调整）
 
 ## 二、地点方案（精细化）
+**重要**：优先从【精选餐厅库】中选择真实餐厅，如库中无合适选项再参考风格推荐类似餐厅（须标注"参考风格推荐"）。
 对每个推荐地点必须包含：
 - **完整店名+连锁品牌（如有）**
 - **精确定位**：地铁站+步行时间/停车指南

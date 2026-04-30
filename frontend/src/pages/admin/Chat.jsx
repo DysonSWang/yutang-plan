@@ -63,7 +63,7 @@ export default function AdminChat() {
   const handleStartNewChat = async () => {
     if (!selectedClientId) return;
     try {
-      const res = await chat.createSession(selectedClientId);
+      const res = await chat.createSessionForClient(selectedClientId);
       if (res.success) {
         onNewChatClose();
         setSelectedClientId('');
@@ -81,7 +81,7 @@ export default function AdminChat() {
 
   const handleStartNewChatWithClient = async (clientId) => {
     try {
-      const res = await chat.createSession(clientId);
+      const res = await chat.createSessionForClient(clientId);
       if (res.success) {
         await loadSessions();
         const newSession = res.session || res;

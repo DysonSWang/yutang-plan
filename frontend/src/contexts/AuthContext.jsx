@@ -12,16 +12,27 @@ export function AuthProvider({ children }) {
   }, []);
 
   const checkAuth = async () => {
+    const token = localStorage.getItem('zhuiai_token');
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
     try {
-      const token = localStorage.getItem('zhuiai_token');
-      if (token) {
-        const result = await auth.me();
-        if (result.success) {
-          setUser(result.user);
-        }
+      // 设置较短超时，避免长时间等待
+      const result = await Promise.race([
+        auth.me(),
+        new Promise((_, reject) => setTimeout(() => reject({ code: 'TIMEOUT' }), 5000))
+      ]);
+      if (result.success) {
+        setUser(result.user);
+      } else {
+        // token无效，清除
+        localStorage.removeItem('zhuiai_token');
       }
-    } catch {
-      localStorage.removeItem('zhuiai_token');
+    } catch (err) {
+      // 超时或网络错误，保留token让用户可以重试
+      console.warn('[Auth] 验证失败:', err);
     } finally {
       setLoading(false);
     }

@@ -81,6 +81,11 @@ model User {
   // ===== 客户类型（Mo哥新增）=====
   clientType String? // 客户类型：执行型/质疑型/自主型
 
+  // ===== 约会偏好 =====
+  preferredTransportMode String? // 出行方式偏好：地铁/打车/开车/步行/骑车
+  preferredDateStyle    String? // 约会风格偏好：安静文艺/热闹活泼/运动户外/电影美食
+  dateBudget           String? // 约会预算：如1000-2000元
+
   // ===== 认知评估（旭哥新增）=====
   selfValuePerception String? // 自我价值认知：认为自己哪方面最强
   cognitiveAccuracy   String? // 认知准确度：准确/高估/低估
@@ -1105,6 +1110,55 @@ model ScreenshotProfile {
   @@index([uploadedBy])
   @@index([status])
   @@map("screenshot_profiles")
+}
+
+// ========== 精选约会餐厅库 ==========
+model Restaurant {
+  id       String @id @default(uuid())
+
+  // 基础信息
+  name     String            // 店名
+  brand    String?           // 连锁品牌（如：鼎泰丰、羲和雅苑）
+  city     String @default("上海") // 城市
+  district String            // 区域（如：陆家嘴、静安寺、新天地）
+  address  String            // 详细地址
+  metroStation String?       // 最近地铁站（如：陆家嘴站3号口）
+  metroWalkTime Int?         // 步行时间（分钟）
+
+  // 菜品/类型
+  cuisine  String            // 菜系（如：江浙菜、意大利菜、日料、西餐）
+  priceRange String          // 人均区间：200-400/400-800/800-1500/1500+
+  priceAvg  Int?              // 人均价格（数值，用于排序）
+
+  // 约会场景标签（逗号分隔）
+  sceneTags   String         // 适合场景：first_date,formal,casual,celebration,romantic
+  // 氛围标签
+  atmosphereTags String      // 氛围：romantic,private_room,view,terrace,quiet,historic,modern,garden
+
+  // 评分
+  rating   Float?            // 评分 3.0-5.0
+
+  // 实用信息
+  reservationNeeded Boolean @default(true) // 是否需要预约
+  phone       String?       // 预订电话
+  openingHours String?      // 营业时间描述
+  dressCode   String?       // 穿着建议（smart casual/business casual）
+
+  // 特色标签（逗号分隔）
+  features   String?        // 私密包间,景观位,露台,花园,米其林,黑珍珠,夜景
+
+  // 状态
+  status    String @default("active") // active/inactive
+
+  // 操作记录
+  createdBy String?         // operatorId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([city, district])
+  @@index([sceneTags])
+  @@index([status])
+  @@map("restaurants")
 }
 
 // ========== AI 约会方案 ==========

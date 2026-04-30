@@ -28,7 +28,7 @@ class Api {
     localStorage.removeItem('zhuiai_token');
   }
 
-  async request(method, path, data = null) {
+  async request(method, path, data = null, timeoutMs = 15000) {
     const token = this.getToken();
     const headers = {
       'Content-Type': 'application/json'
@@ -45,6 +45,12 @@ class Api {
     let response;
     let result;
 
+    // 超时控制器
+    const controller = new AbortController();
+    options.signal = controller.signal;
+
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
     try {
       response = await fetch(`${this.baseUrl}${path}`, options);
       const contentType = response.headers.get('content-type');
@@ -54,11 +60,16 @@ class Api {
         result = {};
       }
     } catch (err) {
+      clearTimeout(timeoutId);
       // 网络错误
+      let errorMsg = '网络连接失败，请检查网络设置';
+      if (err.name === 'AbortError') {
+        errorMsg = '请求超时，请稍后重试';
+      }
       const error = {
         type: ErrorType.NETWORK,
-        code: 'NETWORK_ERROR',
-        message: '网络连接失败，请检查网络设置',
+        code: err.name === 'AbortError' ? 'TIMEOUT' : 'NETWORK_ERROR',
+        message: errorMsg,
       };
       if (this.errorHandler) this.errorHandler(error);
       throw error;
@@ -80,6 +91,7 @@ class Api {
       throw Object.assign(new Error(error.message), error);
     }
 
+    clearTimeout(timeoutId);
     return result;
   }
 
@@ -134,7 +146,10 @@ export const clients = {
 export const chat = {
   sessions: () => api.get('/api/chat/sessions'),
   mySessions: () => api.get('/api/chat/my-sessions'),
-  createSession: (clientId) => api.post('/api/chat/sessions', { clientId }),
+  // 客户端创建会话（自动分配操作员）
+  createSession: () => api.post('/api/chat/my-session'),
+  // 管理端为客户创建会话
+  createSessionForClient: (clientId) => api.post('/api/chat/sessions', { clientId }),
   messages: (sessionId, params) => api.get(`/api/chat/sessions/${sessionId}/messages` + (params ? '?' + new URLSearchParams(params) : '')),
   send: (sessionId, content, type = 'text', mediaUrl, duration, isBurnAfterRead = false, burnAfterSeconds = null, isFlashImage = false) =>
     api.post('/api/chat/messages', { sessionId, content, type, mediaUrl, duration, isBurnAfterRead, burnAfterSeconds, isFlashImage }),
