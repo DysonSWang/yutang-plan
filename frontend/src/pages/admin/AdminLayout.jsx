@@ -7,7 +7,7 @@ import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { alerts as alertsApi } from '../../utils/api';
 import { DashboardIcon, UsersIcon, FemaleIcon, ChatIcon, BrainIcon, ChartIcon, FishIcon, CalendarIcon, MembershipIcon } from '../../components/Icons';
-import { FiBell, FiAlertTriangle, FiInfo, FiCheck, FiX, FiRefreshCw, FiActivity } from 'react-icons/fi';
+import { FiBell, FiAlertTriangle, FiInfo, FiCheck, FiX, FiRefreshCw, FiActivity, FiLogOut } from 'react-icons/fi';
 
 const navItems = [
   { path: '/admin', label: '工作台', icon: DashboardIcon },
@@ -123,7 +123,7 @@ function AlertPanel({ alerts, stats, loading, onRefresh, onAcknowledge, onDismis
 // 桌面端侧边导航
 function DesktopSidebar() {
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [alertStats, setAlertStats] = useState({ p0: 0, p1: 0, p2: 0 });
   const [alerts, setAlerts] = useState([]);
   const [alertLoading, setAlertLoading] = useState(false);
@@ -285,6 +285,17 @@ function DesktopSidebar() {
         <Text color="gray.400" fontSize="sm" mb={1}>操盘手</Text>
         <Text color="white">{user?.nickname}</Text>
         <Badge colorScheme="purple" mt={1}>管理员</Badge>
+        <Button
+          size="sm"
+          variant="ghost"
+          colorScheme="red"
+          leftIcon={<FiLogOut />}
+          mt={2}
+          onClick={logout}
+          w="full"
+        >
+          退出登录
+        </Button>
       </Box>
     </Box>
   );
