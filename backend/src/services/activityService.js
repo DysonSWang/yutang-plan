@@ -373,7 +373,7 @@ async function getDashboardStats() {
   return {
     totalUsers,
     weeklyActive,
-    weeklyNew,
+    weeklyNew: weekNew,
     dormantUsers,
     levelDistribution,
     weeklyFeatureUsage,
