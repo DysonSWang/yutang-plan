@@ -118,7 +118,7 @@ async function activateTrial(userId) {
 }
 
 /**
- * 校验试用次数
+ * 校验会员资格（含试用次数和到期检查）
  * @param {string} userId
  * @param {string} feature - 功能标识：date_plan, ai_coach, reply_suggest, chat_optimize, girl_chat
  */
@@ -127,28 +127,30 @@ async function checkTrialLimit(userId, feature) {
     where: { userId, status: 'active' }
   });
 
-  // 非试用用户跳过
-  if (!membership || membership.type !== 'TRIAL') {
+  // 无会员跳过（有其他地方检查试用次数）
+  if (!membership) {
     return true;
   }
 
-  // 检查是否过期
+  // 检查所有类型会员的到期日期
   if (new Date() > membership.endDate) {
     await prisma.membership.update({
       where: { id: membership.id },
       data: { status: 'expired' }
     });
-    throw new Error('试用已到期，请升级会员');
+    throw new Error('会员已到期，请续费');
   }
 
-  // 获取试用配置
-  const config = await prisma.trialConfig.findUnique({
-    where: { id: 'trial_config' }
-  });
-  const maxUses = config?.maxTrialUses || 2;
+  // 仅试用会员检查试用次数
+  if (membership.type === 'TRIAL') {
+    const config = await prisma.trialConfig.findUnique({
+      where: { id: 'trial_config' }
+    });
+    const maxUses = config?.maxTrialUses || 2;
 
-  if (membership.trialUsed >= maxUses) {
-    throw new Error('试用次数已用完');
+    if (membership.trialUsed >= maxUses) {
+      throw new Error('试用次数已用完');
+    }
   }
 
   return true;
