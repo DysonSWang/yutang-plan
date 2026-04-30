@@ -3,8 +3,9 @@ import {
   Box, Heading, Card, CardBody, Button, Badge, Modal, ModalOverlay, ModalContent,
   ModalHeader, ModalBody, ModalCloseButton, useDisclosure, VStack, HStack, Text,
   SimpleGrid, Flex, Divider, Tag, Wrap, WrapItem, useToast, Textarea, FormControl,
-  FormLabel, Icon, Alert, AlertIcon, AlertDescription, Spinner, Progress, Tabs, TabList, TabPanels, Tab, TabPanel, Input, Select, Center, Avatar
+  FormLabel, Icon, Alert, AlertIcon, AlertDescription, Spinner, Progress, Tabs, TabList, TabPanels, Tab, TabPanel, Input, Select, Center, Avatar, Link, Table
 } from '@chakra-ui/react';
+import ReactMarkdown from 'react-markdown';
 import { CalendarIcon, SparklesIcon, QuestionIcon, CopyIcon, MapPinIcon, ClockIcon, FireIcon } from '../../components/Icons';
 import ClientCalendar from '../../components/ClientCalendar';
 import { dates, membership as membershipApi, clients } from '../../utils/api';
@@ -1070,6 +1071,7 @@ export default function ClientDates() {
                   </Center>
                 ) : selectedAiPlan.content ? (
                   <Box
+                    className="markdown-content"
                     p={6}
                     bg="rgba(255,255,255,0.02)"
                     border="1px solid rgba(255,255,255,0.06)"
@@ -1077,9 +1079,32 @@ export default function ClientDates() {
                     color="gray.200"
                     fontSize="sm"
                     lineHeight="1.8"
-                    whiteSpace="pre-wrap"
                   >
-                    {selectedAiPlan.content}
+                    <ReactMarkdown
+                      components={{
+                        h1: ({ children }) => <Text as="h1" fontSize="2xl" fontWeight="bold" color="brand.400" mb={4} mt={6} pb={2} borderBottom="1px solid" borderColor="gray.600">{children}</Text>,
+                        h2: ({ children }) => <Text as="h2" fontSize="xl" fontWeight="bold" color="teal.300" mb={3} mt={5}>{children}</Text>,
+                        h3: ({ children }) => <Text as="h3" fontSize="lg" fontWeight="bold" color="orange.300" mb={2} mt={4}>{children}</Text>,
+                        p: ({ children }) => <Text mb={3} color="gray.200" lineHeight="1.8">{children}</Text>,
+                        ul: ({ children }) => <Box as="ul" pl={5} mb={3} color="gray.200">{children}</Box>,
+                        ol: ({ children }) => <Box as="ol" pl={5} mb={3} color="gray.200">{children}</Box>,
+                        li: ({ children }) => <Box as="li" mb={1}>{children}</Box>,
+                        strong: ({ children }) => <Text as="strong" fontWeight="bold" color="yellow.300">{children}</Text>,
+                        em: ({ children }) => <Text as="em" fontStyle="italic" color="gray.300">{children}</Text>,
+                        blockquote: ({ children }) => <Box as="blockquote" borderLeft="3px solid" borderColor="teal.400" pl={4} py={2} my={3} bg="rgba(0,212,170,0.05)" color="gray.300" fontStyle="italic">{children}</Box>,
+                        table: ({ children }) => <Box overflowX="auto" my={4}><Table size="sm" variant="simple" colorScheme="teal">{children}</Table></Box>,
+                        thead: ({ children }) => <Box as="thead" bg="gray.700">{children}</Box>,
+                        th: ({ children }) => <Box as="th" color="teal.300" fontWeight="bold" py={2} px={3}>{children}</Box>,
+                        td: ({ children }) => <Box as="td" color="gray.200" py={2} px={3} borderColor="gray.600">{children}</Box>,
+                        tr: ({ children }) => <Box as="tr" borderBottom="1px solid" borderColor="gray.600">{children}</Box>,
+                        code: ({ children }) => <Text as="code" bg="gray.700" color="pink.300" px={1} borderRadius="md" fontSize="xs">{children}</Text>,
+                        pre: ({ children }) => <Box as="pre" bg="gray.800" p={3} borderRadius="md" overflowX="auto" my={3}>{children}</Box>,
+                        hr: () => <Divider my={4} borderColor="gray.600" />,
+                        a: ({ href, children }) => <Link href={href} color="teal.400" isExternal>{children}</Link>,
+                      }}
+                    >
+                      {selectedAiPlan.content}
+                    </ReactMarkdown>
                   </Box>
                 ) : (
                   <Text color="gray.400">暂无方案内容</Text>
