@@ -2,11 +2,12 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Box, VStack, HStack, Input, Button, Text, Card, CardBody, CardHeader,
   Heading, Select, Textarea, Spinner, Flex, Badge, Icon, Tooltip, useToast,
-  Avatar, Wrap, WrapItem
+  Avatar, Wrap, WrapItem, useDisclosure, Modal, ModalOverlay, ModalContent,
+  ModalHeader, ModalBody, ModalFooter, Tabs, TabList, TabPanels, Tab, TabPanel
 } from '@chakra-ui/react';
 import { useAuth } from '../../contexts/AuthContext';
 import { girls as girlsApi } from '../../utils/api';
-import { FireIcon, SnowIcon, SparklesIcon } from '../../components/Icons';
+import { FireIcon, SnowIcon, SparklesIcon, BrainIcon } from '../../components/Icons';
 
 const STAGE_COLORS = {
   '陌生': 'gray',
@@ -150,6 +151,15 @@ export default function AICoach() {
   const [copiedId, setCopiedId] = useState(null);
   const [helpfulId, setHelpfulId] = useState(null);
   const [error, setError] = useState('');
+  // 回复建议状态
+  const [replyInput, setReplyInput] = useState('');
+  const [replySuggestions, setReplySuggestions] = useState(null);
+  const [replyLoading, setReplyLoading] = useState(false);
+  // 话术优化状态
+  const [optimizeInput, setOptimizeInput] = useState('');
+  const [optimizeGoal, setOptimizeGoal] = useState('');
+  const [optimizedReplies, setOptimizedReplies] = useState(null);
+  const [optimizeLoading, setOptimizeLoading] = useState(false);
   const streamingContentRef = useRef('');
   const isStreamingRef = useRef(false);
   const messagesEndRef = useRef(null);
@@ -444,6 +454,80 @@ export default function AICoach() {
     }
   };
 
+  // 获取回复建议
+  const handleGetReplySuggestions = async () => {
+    if (!replyInput.trim()) return;
+    setReplyLoading(true);
+    setReplySuggestions(null);
+
+    const token = localStorage.getItem('zhuiai_token');
+    try {
+      const res = await fetch(`${apiUrl}/api/ai-coach/reply-suggestions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          girlId: selectedGirlId || undefined,
+          lastMessage: replyInput
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setReplySuggestions(data.suggestions);
+      } else {
+        toast({ title: data.error || '获取失败', status: 'error', duration: 3000 });
+      }
+    } catch (e) {
+      toast({ title: '网络错误', status: 'error', duration: 3000 });
+    } finally {
+      setReplyLoading(false);
+    }
+  };
+
+  // 话术优化
+  const handleOptimizeReply = async () => {
+    if (!optimizeInput.trim()) return;
+    setOptimizeLoading(true);
+    setOptimizedReplies(null);
+
+    const token = localStorage.getItem('zhuiai_token');
+    try {
+      const res = await fetch(`${apiUrl}/api/ai-coach/optimize-reply`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          originalReply: optimizeInput,
+          girlId: selectedGirlId || undefined,
+          goal: optimizeGoal || undefined
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setOptimizedReplies(data.optimizations);
+      } else {
+        toast({ title: data.error || '优化失败', status: 'error', duration: 3000 });
+      }
+    } catch (e) {
+      toast({ title: '网络错误', status: 'error', duration: 3000 });
+    } finally {
+      setOptimizeLoading(false);
+    }
+  };
+
+  const copyToClipboard = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ title: '已复制', status: 'success', duration: 1500 });
+    } catch (e) {
+      toast({ title: '复制失败', status: 'error', duration: 1500 });
+    }
+  };
+
   const QUICK_QUESTIONS = [
     '怎么判断她对我有没有意思？',
     '聊天不知道怎么开场怎么办？',
@@ -662,6 +746,146 @@ export default function AICoach() {
           </Text>
         </CardBody>
       </Card>
+
+      {/* AI 工具区 */}
+      <Tabs variant="soft-rounded" colorScheme="teal" mt={6}>
+        <TabList bg="gray.800" borderRadius="md" p={1}>
+          <Tab color="gray.400" _selected={{ color: 'white', bg: 'teal.600' }} fontSize="sm">
+            💡 回复建议
+          </Tab>
+          <Tab color="gray.400" _selected={{ color: 'white', bg: 'teal.600' }} fontSize="sm">
+            ✨ 话术优化
+          </Tab>
+        </TabList>
+
+        <TabPanels>
+          {/* 回复建议 Tab */}
+          <TabPanel px={0}>
+            <Card bg="gray.800">
+              <CardBody>
+                <Text color="gray.400" fontSize="sm" mb={3}>
+                  输入女生最近的消息，获取多种风格的回复建议
+                </Text>
+                <VStack spacing={3} align="stretch">
+                  <Textarea
+                    value={replyInput}
+                    onChange={e => setReplyInput(e.target.value)}
+                    placeholder="粘贴女生最近的消息..."
+                    bg="gray.700"
+                    border="none"
+                    color="white"
+                    rows={3}
+                    _placeholder={{ color: 'gray.400' }}
+                  />
+                  <Button
+                    colorScheme="teal"
+                    onClick={handleGetReplySuggestions}
+                    isLoading={replyLoading}
+                    isDisabled={!replyInput.trim()}
+                    leftIcon={<Icon as={BrainIcon} />}
+                  >
+                    获取回复建议
+                  </Button>
+
+                  {replySuggestions && (
+                    <VStack spacing={3} align="stretch" mt={4}>
+                      {(replySuggestions.options || []).map((opt, idx) => (
+                        <Box key={idx} bg="gray.700" p={4} borderRadius="md">
+                          <Flex justify="space-between" align="center" mb={2}>
+                            <Badge colorScheme={
+                              opt.type === '稳妥型' ? 'blue' :
+                              opt.type === '进攻型' ? 'red' :
+                              opt.type === '调侃型' ? 'orange' : 'gray'
+                            }>
+                              {opt.type}
+                            </Badge>
+                            <Button
+                              size="xs"
+                              variant="ghost"
+                              colorScheme="teal"
+                              onClick={() => copyToClipboard(opt.reply)}
+                            >
+                              复制
+                            </Button>
+                          </Flex>
+                          <Text color="white" mb={2}>{opt.reply}</Text>
+                          <Text color="gray.500" fontSize="xs">{opt.intention}</Text>
+                        </Box>
+                      ))}
+                    </VStack>
+                  )}
+                </VStack>
+              </CardBody>
+            </Card>
+          </TabPanel>
+
+          {/* 话术优化 Tab */}
+          <TabPanel px={0}>
+            <Card bg="gray.800">
+              <CardBody>
+                <Text color="gray.400" fontSize="sm" mb={3}>
+                  输入你想发送的消息，AI 将帮你优化成更有吸引力的表达
+                </Text>
+                <VStack spacing={3} align="stretch">
+                  <Textarea
+                    value={optimizeInput}
+                    onChange={e => setOptimizeInput(e.target.value)}
+                    placeholder="输入你想发送的原始消息..."
+                    bg="gray.700"
+                    border="none"
+                    color="white"
+                    rows={3}
+                    _placeholder={{ color: 'gray.400' }}
+                  />
+                  <Input
+                    value={optimizeGoal}
+                    onChange={e => setOptimizeGoal(e.target.value)}
+                    placeholder="优化目标（可选）：更幽默/更暧昧/更自然..."
+                    bg="gray.700"
+                    border="none"
+                    color="white"
+                    _placeholder={{ color: 'gray.400' }}
+                  />
+                  <Button
+                    colorScheme="teal"
+                    onClick={handleOptimizeReply}
+                    isLoading={optimizeLoading}
+                    isDisabled={!optimizeInput.trim()}
+                    leftIcon={<Icon as={SparklesIcon} />}
+                  >
+                    优化话术
+                  </Button>
+
+                  {optimizedReplies && (
+                    <VStack spacing={3} align="stretch" mt={4}>
+                      <Text color="gray.400" fontSize="sm" mb={2}>
+                        原始：{optimizeInput}
+                      </Text>
+                      {(optimizedReplies || []).map((opt, idx) => (
+                        <Box key={idx} bg="gray.700" p={4} borderRadius="md">
+                          <Flex justify="space-between" align="center" mb={2}>
+                            <Badge colorScheme="teal">{opt.style}</Badge>
+                            <Button
+                              size="xs"
+                              variant="ghost"
+                              colorScheme="teal"
+                              onClick={() => copyToClipboard(opt.text)}
+                            >
+                              复制
+                            </Button>
+                          </Flex>
+                          <Text color="white" mb={2}>{opt.text}</Text>
+                          <Text color="gray.500" fontSize="xs">{opt.point}</Text>
+                        </Box>
+                      ))}
+                    </VStack>
+                  )}
+                </VStack>
+              </CardBody>
+            </Card>
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
     </Box>
   );
 }

@@ -859,7 +859,7 @@ ${clientProfile ? buildPersonaSection(await buildDynamicPersona({ clientProfile,
  */
 router.post('/reply-suggestions', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (!['operator', 'admin', 'client'].includes(req.user.role)) {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -1039,7 +1039,7 @@ ${context ? `【对话背景】\n${context}` : ''}
  */
 router.post('/optimize-reply', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (!['operator', 'admin', 'client'].includes(req.user.role)) {
       return res.status(403).json({ error: '无权限' });
     }
 
