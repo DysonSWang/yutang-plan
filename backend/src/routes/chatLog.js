@@ -30,7 +30,7 @@ const authMiddleware = async (req, res, next) => {
 // 获取女生的代聊记录
 router.get('/girl/:girlId', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -65,7 +65,7 @@ router.get('/girl/:girlId', authMiddleware, async (req, res) => {
 // 更新代聊记录的可见性（推送给客户）
 router.patch('/:id/visibility', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -131,7 +131,7 @@ router.get('/client/me', authMiddleware, async (req, res) => {
 // 创建代聊记录
 router.post('/', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 

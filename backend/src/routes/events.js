@@ -64,7 +64,7 @@ router.get('/', authMiddleware, async (req, res) => {
 // 创建事件
 router.post('/', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin' && req.user.role !== 'client') {
+    if (req.user.role !== 'admin' && req.user.role !== 'client') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -75,7 +75,7 @@ router.post('/', authMiddleware, async (req, res) => {
     }
 
     // 安全：操盘手只能为自己的客户创建事件（客户可为自身创建）
-    if (req.user.role === 'operator' || req.user.role === 'admin') {
+    if (req.user.role === 'admin') {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId }
       });
@@ -128,7 +128,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
     }
 
     // 安全：操盘手只能访问自己负责的客户的事件
-    if (req.user.role === 'operator') {
+    if (req.user.role === 'admin') {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: event.clientId }
       });
@@ -157,7 +157,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: '约会由操盘手管理' });
     }
     // 安全：操盘手只能操作自己负责的客户的事件
-    if (req.user.role === 'operator') {
+    if (req.user.role === 'admin') {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: existing.clientId }
       });
@@ -238,7 +238,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: '约会由操盘手管理' });
     }
     // 安全：操盘手只能操作自己负责的客户的事件
-    if (req.user.role === 'operator') {
+    if (req.user.role === 'admin') {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: existing.clientId }
       });
@@ -265,7 +265,7 @@ router.patch('/:id/status', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: '无权修改' });
     }
     // 安全：操盘手只能操作自己负责的客户的事件
-    if (req.user.role === 'operator') {
+    if (req.user.role === 'admin') {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: existing.clientId }
       });

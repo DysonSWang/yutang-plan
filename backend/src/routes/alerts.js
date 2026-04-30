@@ -34,9 +34,9 @@ module.exports = function(io) {
     }
   };
 
-  // 仅 operator 和 admin 可访问
+  // 仅 admin 可访问
   const operatorOnly = (req, res, next) => {
-    if (!['operator', 'admin'].includes(req.user.role)) {
+    if (!['admin'].includes(req.user.role)) {
       return res.status(403).json({ error: '无权限' });
     }
     next();

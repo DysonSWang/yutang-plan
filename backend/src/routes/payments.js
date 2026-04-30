@@ -61,7 +61,7 @@ router.get('/', authMiddleware, async (req, res) => {
 // 创建付款记录
 router.post('/', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 

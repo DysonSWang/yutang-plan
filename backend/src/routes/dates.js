@@ -382,7 +382,7 @@ router.get('/', authMiddleware, async (req, res) => {
 // 创建约会
 router.post('/', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -562,7 +562,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: '无权访问' });
     }
     // 安全：操盘手只能访问自己负责的客户的约会
-    if (req.user.role === 'operator') {
+    if (req.user.role === 'admin') {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: date.userId }
       });
@@ -581,7 +581,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
 // 更新约会
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -646,7 +646,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
 // 更新检查清单状态
 router.put('/:id/checklist', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
     const existing = await prisma.date.findUnique({ where: { id: req.params.id } });
@@ -677,7 +677,7 @@ router.put('/:id/checklist', authMiddleware, async (req, res) => {
 // AI 生成约会方案
 router.post('/:id/generate-plan', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -692,7 +692,7 @@ router.post('/:id/generate-plan', authMiddleware, async (req, res) => {
     if (!date) return res.status(404).json({ error: '约会不存在' });
 
     // 安全：操盘手只能操作自己负责的客户的约会
-    if (req.user.role === 'operator') {
+    if (req.user.role === 'admin') {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: date.userId }
       });
@@ -779,7 +779,7 @@ router.post('/:id/generate-plan', authMiddleware, async (req, res) => {
 // AI 约会后复盘评价
 router.post('/:id/evaluate', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -792,7 +792,7 @@ router.post('/:id/evaluate', authMiddleware, async (req, res) => {
     });
 
     if (!date) return res.status(404).json({ error: '约会不存在' });
-    if (req.user.role === 'operator') {
+    if (req.user.role === 'admin') {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: date.userId }
       });
@@ -897,7 +897,7 @@ router.post('/:id/evaluate', authMiddleware, async (req, res) => {
 // ========== 操盘手与AI讨论优化方案 ==========
 router.post('/:id/discuss', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -947,7 +947,7 @@ router.post('/:id/discuss', authMiddleware, async (req, res) => {
       }
     });
     if (!date) return res.status(404).json({ error: '约会不存在' });
-    if (req.user.role === 'operator') {
+    if (req.user.role === 'admin') {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: date.userId }
       });
@@ -1000,7 +1000,7 @@ ${JSON.stringify(conditions, null, 2)}
     // 保存讨论记录
     const discussion = date.planDiscussion ? JSON.parse(date.planDiscussion) : [];
     discussion.push(
-      { role: 'operator', content: message, timestamp: new Date().toISOString() },
+      { role: 'admin', content: message, timestamp: new Date().toISOString() },
       { role: 'ai', content: reply, timestamp: new Date().toISOString() }
     );
 
@@ -1035,13 +1035,13 @@ ${JSON.stringify(conditions, null, 2)}
 // ========== 推送方案给客户 ==========
 router.post('/:id/push-to-client', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
     const date = await prisma.date.findUnique({ where: { id: req.params.id } });
     if (!date) return res.status(404).json({ error: '约会不存在' });
-    if (req.user.role === 'operator') {
+    if (req.user.role === 'admin') {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: date.userId }
       });
@@ -1137,7 +1137,7 @@ router.post('/:id/client-confirm', authMiddleware, async (req, res) => {
 // 删除约会
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -1165,7 +1165,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 // ========== 个性化访谈问题生成 ==========
 router.post('/:id/generate-interview', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -1210,7 +1210,7 @@ router.post('/:id/generate-interview', authMiddleware, async (req, res) => {
       }
     });
     if (!date) return res.status(404).json({ error: '约会不存在' });
-    if (req.user.role === 'operator') {
+    if (req.user.role === 'admin') {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: date.userId }
       });
@@ -1324,13 +1324,13 @@ F. 下次约会预期（如：是否愿意再见、下次怎么改进）
 // ========== 推送访谈给客户 ==========
 router.post('/:id/push-interview', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
     const date = await prisma.date.findUnique({ where: { id: req.params.id } });
     if (!date) return res.status(404).json({ error: '约会不存在' });
-    if (req.user.role === 'operator') {
+    if (req.user.role === 'admin') {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: date.userId }
       });
@@ -1460,7 +1460,7 @@ router.post('/:id/submit-interview', authMiddleware, async (req, res) => {
 // ========== AI 提炼访谈回答，生成复盘报告并更新档案 ==========
 router.post('/:id/generate-review-report', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -1505,7 +1505,7 @@ router.post('/:id/generate-review-report', authMiddleware, async (req, res) => {
       }
     });
     if (!date) return res.status(404).json({ error: '约会不存在' });
-    if (req.user.role === 'operator') {
+    if (req.user.role === 'admin') {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: date.userId }
       });

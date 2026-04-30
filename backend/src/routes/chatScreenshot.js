@@ -67,7 +67,7 @@ const authMiddleware = async (req, res, next) => {
 // 获取女生的截图记录列表
 router.get('/girl/:girlId', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -100,7 +100,7 @@ router.get('/girl/:girlId', authMiddleware, async (req, res) => {
 // 上传截图
 router.post('/', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -198,7 +198,7 @@ router.post('/', authMiddleware, async (req, res) => {
 // 确认并应用提取的档案字段
 router.post('/confirm-fields', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -234,7 +234,7 @@ router.post('/confirm-fields', authMiddleware, async (req, res) => {
 // 更新截图备注
 router.patch('/:id/notes', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -266,7 +266,7 @@ router.patch('/:id/notes', authMiddleware, async (req, res) => {
 // AI生成备注（基于截图分析）
 router.post('/:id/ai-notes', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -331,7 +331,7 @@ router.post('/:id/ai-notes', authMiddleware, async (req, res) => {
 // 删除截图
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -417,7 +417,7 @@ router.get('/client/me', authMiddleware, async (req, res) => {
 // 客户截图提取：上传截图并AI分析，返回识别到的客户档案字段
 router.post('/client-extract', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 

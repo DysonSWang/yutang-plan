@@ -22,7 +22,7 @@ const authMiddleware = asyncHandler(async (req, res) => {
 
 // Operator-only middleware
 const operatorOnly = asyncHandler(async (req, res) => {
-  if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+  if (req.user.role !== 'admin') {
     throw new AppError(ErrorCodes.AUTH_PERMISSION_DENIED);
   }
 });

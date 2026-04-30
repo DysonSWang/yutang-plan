@@ -129,7 +129,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
 // 创建女生
 router.post('/', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -247,7 +247,7 @@ router.post('/', authMiddleware, async (req, res) => {
 // 更新女生
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -383,7 +383,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
 // 删除女生
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -415,7 +415,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 // 更新亲密度
 router.post('/:id/intimacy', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -501,7 +501,7 @@ async function checkGirlOwnership(girlId, user) {
   const girl = await prisma.girl.findUnique({ where: { id: girlId } });
   if (!girl) return { error: '女生不存在', girl: null };
   if (user.role === 'client' && girl.clientId !== user.id) return { error: '无权限', girl };
-  if (user.role === 'operator') {
+  if (user.role === 'admin') {
     const session = await prisma.chatSession.findFirst({
       where: { operatorId: user.id, clientId: girl.clientId }
     });
@@ -527,7 +527,7 @@ router.get('/:id/stage-history', authMiddleware, async (req, res) => {
 // AI 评估关系阶段（返回推荐，不自动写入）
 router.post('/:id/evaluate-stage', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
     const { error } = await checkGirlOwnership(req.params.id, req.user);
@@ -548,7 +548,7 @@ router.post('/:id/evaluate-stage', authMiddleware, async (req, res) => {
 // 手动设置关系阶段
 router.put('/:id/relationship-stage', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
     const { error } = await checkGirlOwnership(req.params.id, req.user);

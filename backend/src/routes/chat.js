@@ -65,7 +65,7 @@ module.exports = function(io) {
   // 获取操盘手的所有客户会话列表
   router.get('/sessions', authMiddleware, async (req, res) => {
     try {
-      if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+      if (req.user.role !== 'admin') {
         return res.status(403).json({ error: '无权限' });
       }
 
@@ -127,7 +127,7 @@ module.exports = function(io) {
   // 获取或创建与客户的会话
   router.post('/sessions', authMiddleware, async (req, res) => {
     try {
-      if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+      if (req.user.role !== 'admin') {
         return res.status(403).json({ error: '无权限' });
       }
 
@@ -169,12 +169,20 @@ module.exports = function(io) {
         return res.status(403).json({ error: '无权限' });
       }
 
-      // 查找一个可用的操作员（随机选择一个在线的或第一个）
-      const operators = await prisma.user.findMany({
-        where: { role: 'operator' },
+      // 查找一个可用的操作员，如果没有就用 admin
+      let operators = await prisma.user.findMany({
+        where: { role: 'admin' },
         take: 1,
         orderBy: { createdAt: 'asc' }
       });
+
+      // 没有 operator 时使用 admin
+      if (operators.length === 0) {
+        operators = await prisma.user.findMany({
+          where: { role: 'admin' },
+          take: 1
+        });
+      }
 
       if (operators.length === 0) {
         return res.status(400).json({ error: '暂无可用客服，请稍后再试' });
@@ -598,7 +606,7 @@ module.exports = function(io) {
   // 获取客户档案
   router.get('/profile/:clientId', authMiddleware, async (req, res) => {
     try {
-      if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+      if (req.user.role !== 'admin') {
         return res.status(403).json({ error: '无权限' });
       }
 
@@ -655,7 +663,7 @@ module.exports = function(io) {
   // 分析聊天记录，建议客户档案字段
   router.post('/profile/:clientId/suggest', authMiddleware, async (req, res) => {
     try {
-      if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+      if (req.user.role !== 'admin') {
         return res.status(403).json({ error: '无权限' });
       }
 
@@ -914,7 +922,7 @@ module.exports = function(io) {
   // 批量更新客户档案
   router.patch('/profile/:clientId', authMiddleware, async (req, res) => {
     try {
-      if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+      if (req.user.role !== 'admin') {
         return res.status(403).json({ error: '无权限' });
       }
 

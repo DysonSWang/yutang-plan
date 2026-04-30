@@ -31,7 +31,7 @@ const authMiddleware = async (req, res, next) => {
 // 获取客户列表（操盘手用）
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -112,7 +112,7 @@ router.get('/me', authMiddleware, async (req, res) => {
 // 获取客户详情（操盘手用）
 router.get('/:id', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -178,7 +178,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
 // 创建客户
 router.post('/', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -341,7 +341,7 @@ const CLIENT_EDITABLE_FIELDS = [
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const isSelfUpdate = req.user.role === 'client' && req.user.id === req.params.id;
-    const isOperator = req.user.role === 'operator' || req.user.role === 'admin';
+    const isOperator = req.user.role === 'admin';
 
     if (!isOperator && !isSelfUpdate) {
       return res.status(403).json({ error: '无权限' });
@@ -480,7 +480,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 // 从文本提取客户档案
 router.post('/extract-profile', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -632,7 +632,7 @@ ${text}
 // 从聊天记录提取档案更新（操盘手交流后使用）
 router.post('/:id/extract-from-chat', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -818,7 +818,7 @@ ${chatText}
 // 获取客户的学习记录
 router.get('/:id/learnings', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -838,7 +838,7 @@ router.get('/:id/learnings', authMiddleware, async (req, res) => {
 // 添加学习记录
 router.post('/:id/learnings', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -958,7 +958,7 @@ router.post('/onboarding-complete', authMiddleware, async (req, res) => {
 router.put('/:id/password', authMiddleware, async (req, res) => {
   try {
     // 仅 operator 和 admin 可以修改密码
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 

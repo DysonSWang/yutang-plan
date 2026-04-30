@@ -27,7 +27,7 @@ const authMiddleware = async (req, res, next) => {
 
 // Operator-only middleware
 const operatorOnly = (req, res, next) => {
-  if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+  if (req.user.role !== 'admin') {
     return res.status(403).json({ error: '无权限' });
   }
   next();
@@ -269,6 +269,40 @@ router.put('/learning/progress/:chapterId', authMiddleware, async (req, res) => 
 
 // ==========================================
 // AI 约会方案
+// 百度AI搜索（从scene提取区域）
+async function baiduVenueSearch(location, budget) {
+  const { execFileSync } = require('child_process');
+  const BAIDU_API_KEY = 'bce-v3/ALTAK-OLhmNcBERSUNnAlIXsXa9/80280c210c8682e7c02a2a0883ef257fe36e4692';
+  try {
+    const budgetNum = parseInt((budget || '200').replace(/[^0-9]/g, '')) || 200;
+    const query = `上海${location}适合2人约会的餐厅、咖啡厅推荐，包含具体店名、地址、人均消费，预算人均${budgetNum}元`;
+    const postData = JSON.stringify({
+      messages: [{ content: query, role: 'user' }],
+      model: 'deepseek-v3',
+      search_source: 'baidu_search_v2',
+      resource_type_filter: [{ type: 'web', top_k: 5 }],
+      stream: false,
+      enable_deep_search: false
+    });
+    const env = {
+      ...process.env,
+      https_proxy: 'http://127.0.0.1:7897',
+      http_proxy: 'http://127.0.0.1:7897'
+    };
+    const output = execFileSync('curl', [
+      '-s', '-X', 'POST',
+      'https://qianfan.baidubce.com/v2/ai_search/chat/completions',
+      '-H', 'Authorization: Bearer ' + BAIDU_API_KEY,
+      '-H', 'Content-Type: application/json',
+      '-d', postData
+    ], { timeout: 15000, env });
+    return JSON.parse(output.toString());
+  } catch (e) {
+    console.warn('[Membership] 百度场地搜索失败:', e.message);
+    return { choices: [], references: [] };
+  }
+}
+
 // ==========================================
 
 // 创建/生成约会方案
@@ -276,6 +310,10 @@ router.post('/dating-plan/generate', authMiddleware, async (req, res) => {
   try {
     const { title, scene, budget, duration } = req.body;
     const { getAIConfig } = require('../config');
+
+    // 从scene提取区域关键词（九亭、松江、浦东等）
+    const areaMatch = (scene || '').match(/(九亭|松江|浦东|黄浦|静安|徐汇|长宁|虹口|杨浦|闵行|宝山|嘉定|青浦|奉贤|金山|崇明)/);
+    const area = areaMatch ? areaMatch[1] : '';
 
     // 创建草稿
     const plan = await prisma.datingPlan.create({
@@ -289,21 +327,18 @@ router.post('/dating-plan/generate', authMiddleware, async (req, res) => {
       }
     });
 
-    // 查询精选餐厅库
-    const city = '上海';
-    const where = { status: 'active', city };
-    if (budget) {
-      const budgetNum = parseInt(budget.replace(/[^0-9]/g, '')) || 1000;
-      where.priceAvg = { gte: Math.floor(budgetNum * 0.6), lte: Math.ceil(budgetNum * 1.2) };
+    // 百度AI搜索真实场地（优先按区域搜索）
+    let venueContext = '';
+    if (area) {
+      const searchResult = await baiduVenueSearch(area, budget);
+      const choices = searchResult.choices || [];
+      if (choices.length > 0) {
+        const content = choices[0].message?.content || '';
+        if (content) {
+          venueContext = `\n【百度搜索真实场地】（以下为百度搜索返回的真实餐厅/咖啡厅，请优先选择这些地点，严禁虚构店名）\n${content.slice(0, 1500)}\n`;
+        }
+      }
     }
-    const restaurants = await prisma.restaurant.findMany({
-      where,
-      orderBy: [{ rating: 'desc' }, { priceAvg: 'asc' }],
-      take: 20
-    });
-    const restaurantContext = restaurants.length > 0 ? `
-【精选餐厅库】（以下均为真实收录餐厅，请优先从中选择或参考风格，严禁虚构店名）
-${restaurants.map(r => `★ ${r.name} | ${r.cuisine} | ${r.district} | 人均¥${r.priceAvg} | 标签:${r.sceneTags} | ${r.features || ''}`).join('\n')}` : '';
 
     // 异步生成方案内容
     const aiConfig = getAIConfig();
@@ -311,18 +346,18 @@ ${restaurants.map(r => `★ ${r.name} | ${r.cuisine} | ${r.district} | 人均¥$
 
 场景：${scene || '普通约会'}
 预算：${budget || '1000元左右'}
-时长：${duration || '半天'}${restaurantContext}
+时长：${duration || '半天'}${venueContext}
 
 请以Markdown格式输出，内容包含：
 1. 约会概览（适合人群、整体风格）
-2. 推荐地点（2-3个，**必须从【精选餐厅库】中选择真实餐厅**，标注名称、地址、人均消费）
+2. 推荐地点（2-3个，**必须从【百度搜索真实场地】中选择真实餐厅/咖啡厅**，标注名称、地址、人均消费）
 3. 时间安排（从见面到结束的完整时间线）
 4. 聊天话题（每个阶段推荐聊什么）
 5. 注意事项（雷区和加分项）
 6. 穿着建议
 7. 预算提示
 
-**重要**：推荐地点必须使用【精选餐厅库】中的真实餐厅名称，禁止虚构店名。
+**重要**：推荐地点必须使用【百度搜索真实场地】中的真实餐厅名称，禁止虚构店名。
 只输出Markdown方案内容，不要其他内容。`;
 
     try {

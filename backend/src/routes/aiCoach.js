@@ -307,8 +307,8 @@ const authMiddleware = async (req, res, next) => {
  */
 router.post('/situation', authMiddleware, async (req, res) => {
   try {
-    // 允许 operator、admin、client 访问
-    if (!['operator', 'admin', 'client'].includes(req.user.role)) {
+    // 允许 admin、client 访问
+    if (!['admin', 'client'].includes(req.user.role)) {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -326,7 +326,7 @@ router.post('/situation', authMiddleware, async (req, res) => {
         return res.status(404).json({ error: '女生不存在' });
       }
       // 安全：操盘手只能访问其负责客户的女生
-      if (req.user.role === 'operator') {
+      if (req.user.role === 'admin') {
         const session = await prisma.chatSession.findFirst({
           where: { operatorId: req.user.id, clientId: girl.clientId }
         });
@@ -597,7 +597,7 @@ router.post('/situation', authMiddleware, async (req, res) => {
  */
 router.post('/new-session', authMiddleware, async (req, res) => {
   try {
-    if (!['operator', 'admin', 'client'].includes(req.user.role)) {
+    if (!['admin', 'client'].includes(req.user.role)) {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -610,7 +610,7 @@ router.post('/new-session', authMiddleware, async (req, res) => {
       if (!girl) {
         return res.status(404).json({ error: '女生不存在' });
       }
-      if (req.user.role === 'operator') {
+      if (req.user.role === 'admin') {
         const session = await prisma.chatSession.findFirst({
           where: { operatorId: req.user.id, clientId: girl.clientId }
         });
@@ -650,7 +650,7 @@ router.post('/new-session', authMiddleware, async (req, res) => {
  */
 router.post('/analyze-chat', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -667,7 +667,7 @@ router.post('/analyze-chat', authMiddleware, async (req, res) => {
       if (!girl) {
         return res.status(404).json({ error: '女生不存在' });
       }
-      if (req.user.role === 'operator') {
+      if (req.user.role === 'admin') {
         const session = await prisma.chatSession.findFirst({
           where: { operatorId: req.user.id, clientId: girl.clientId }
         });
@@ -860,7 +860,7 @@ ${clientProfile ? buildPersonaSection(await buildDynamicPersona({ clientProfile,
  */
 router.post('/reply-suggestions', authMiddleware, async (req, res) => {
   try {
-    if (!['operator', 'admin', 'client'].includes(req.user.role)) {
+    if (!['admin', 'client'].includes(req.user.role)) {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -881,7 +881,7 @@ router.post('/reply-suggestions', authMiddleware, async (req, res) => {
       if (!girl) {
         return res.status(404).json({ error: '女生不存在' });
       }
-      if (req.user.role === 'operator') {
+      if (req.user.role === 'admin') {
         const session = await prisma.chatSession.findFirst({
           where: { operatorId: req.user.id, clientId: girl.clientId }
         });
@@ -1047,7 +1047,7 @@ ${context ? `【对话背景】\n${context}` : ''}
  */
 router.post('/optimize-reply', authMiddleware, async (req, res) => {
   try {
-    if (!['operator', 'admin', 'client'].includes(req.user.role)) {
+    if (!['admin', 'client'].includes(req.user.role)) {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -1068,7 +1068,7 @@ router.post('/optimize-reply', authMiddleware, async (req, res) => {
       if (!girl) {
         return res.status(404).json({ error: '女生不存在' });
       }
-      if (req.user.role === 'operator') {
+      if (req.user.role === 'admin') {
         const session = await prisma.chatSession.findFirst({
           where: { operatorId: req.user.id, clientId: girl.clientId }
         });
@@ -1242,7 +1242,7 @@ ${goalHint}
 });
 
 // ============================================================
-// 操盘手监控 API（仅 operator / admin）
+// 管理员监控 API（仅 admin）
 // ============================================================
 
 /**
@@ -1251,7 +1251,7 @@ ${goalHint}
  */
 router.get('/monitoring/stats', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -1269,7 +1269,7 @@ router.get('/monitoring/stats', authMiddleware, async (req, res) => {
  */
 router.get('/monitoring/sessions', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -1284,7 +1284,7 @@ router.get('/monitoring/sessions', authMiddleware, async (req, res) => {
     } = req.query;
 
     // 安全：操盘手只能查询自己负责的客户/女生的会话
-    if (req.user.role === 'operator') {
+    if (req.user.role === 'admin') {
       if (clientId) {
         const session = await prisma.chatSession.findFirst({
           where: { operatorId: req.user.id, clientId }
@@ -1323,14 +1323,14 @@ router.get('/monitoring/sessions', authMiddleware, async (req, res) => {
  */
 router.get('/monitoring/client/:clientId', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
     const { clientId } = req.params;
 
     // 安全：操盘手只能访问自己负责的客户的数据
-    if (req.user.role === 'operator') {
+    if (req.user.role === 'admin') {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId }
       });
@@ -1351,7 +1351,7 @@ router.get('/monitoring/client/:clientId', authMiddleware, async (req, res) => {
  */
 router.get('/monitoring/session/:memoryId', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -1363,7 +1363,7 @@ router.get('/monitoring/session/:memoryId', authMiddleware, async (req, res) => 
     }
 
     // 安全：操盘手只能访问自己负责的客户的会话
-    if (req.user.role === 'operator') {
+    if (req.user.role === 'admin') {
       // 从 MemorySession 找到关联的 clientId
       const memorySession = await prisma.memorySession.findUnique({ where: { id: memoryId } });
       if (!memorySession) return res.status(404).json({ error: '会话不存在' });
@@ -1388,7 +1388,7 @@ router.get('/monitoring/session/:memoryId', authMiddleware, async (req, res) => 
  */
 router.post('/moment', authMiddleware, async (req, res) => {
   try {
-    if (!['operator', 'admin', 'client'].includes(req.user.role)) {
+    if (!['admin', 'client'].includes(req.user.role)) {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -1406,7 +1406,7 @@ router.post('/moment', authMiddleware, async (req, res) => {
       if (!girl) {
         return res.status(404).json({ error: '女生不存在' });
       }
-      if (req.user.role === 'operator') {
+      if (req.user.role === 'admin') {
         const session = await prisma.chatSession.findFirst({
           where: { operatorId: req.user.id, clientId: girl.clientId }
         });
@@ -1701,7 +1701,7 @@ ${clientProfile ? buildPersonaSection(await buildDynamicPersona({ clientProfile,
  */
 router.post('/feedback', authMiddleware, async (req, res) => {
   try {
-    if (!['operator', 'admin', 'client'].includes(req.user.role)) {
+    if (!['admin', 'client'].includes(req.user.role)) {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -1772,7 +1772,7 @@ router.post('/feedback', authMiddleware, async (req, res) => {
  */
 router.get('/coach-profile', authMiddleware, async (req, res) => {
   try {
-    if (!['operator', 'admin', 'client'].includes(req.user.role)) {
+    if (!['admin', 'client'].includes(req.user.role)) {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -1804,7 +1804,7 @@ router.get('/coach-profile', authMiddleware, async (req, res) => {
  */
 router.get('/history', authMiddleware, async (req, res) => {
   try {
-    if (!['operator', 'admin', 'client'].includes(req.user.role)) {
+    if (!['admin', 'client'].includes(req.user.role)) {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -1850,12 +1850,12 @@ router.get('/history', authMiddleware, async (req, res) => {
 });
 
 /**
- * 获取反馈统计（仅 operator/admin）
+ * 获取反馈统计（仅 admin）
  * GET /api/ai-coach/feedback-stats
  */
 router.get('/feedback-stats', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -1876,7 +1876,7 @@ router.get('/feedback-stats', authMiddleware, async (req, res) => {
  */
 router.get('/guardrail-stats', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -1996,7 +1996,7 @@ router.get('/guardrail-stats', authMiddleware, async (req, res) => {
  */
 router.get('/overview', authMiddleware, async (req, res) => {
   try {
-    if (!['operator', 'admin'].includes(req.user.role)) {
+    if (!['admin'].includes(req.user.role)) {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -2199,7 +2199,7 @@ ${girlsSummary}
  */
 router.get('/client-pool/:clientId', authMiddleware, async (req, res) => {
   try {
-    if (!['operator', 'admin'].includes(req.user.role)) {
+    if (!['admin'].includes(req.user.role)) {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -2207,7 +2207,7 @@ router.get('/client-pool/:clientId', authMiddleware, async (req, res) => {
     const { cachedClientHash, mode } = req.query;
 
     // 安全：操盘手只能访问自己负责的客户的数据
-    if (req.user.role === 'operator') {
+    if (req.user.role === 'admin') {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId }
       });
@@ -2422,7 +2422,7 @@ async function setClientPoolCache(operatorId, clientId, data) {
  */
 router.get('/girl-summary/:girlId', authMiddleware, async (req, res) => {
   try {
-    if (!['operator', 'admin', 'client'].includes(req.user.role)) {
+    if (!['admin', 'client'].includes(req.user.role)) {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -2444,7 +2444,7 @@ router.get('/girl-summary/:girlId', authMiddleware, async (req, res) => {
     }
 
     // 安全：操盘手只能访问自己负责的客户的女生
-    if (req.user.role === 'operator') {
+    if (req.user.role === 'admin') {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: girl.clientId }
       });
@@ -2998,7 +2998,7 @@ function getProfileFreshnessInfo(girlInfo) {
  */
 router.post('/agent-chat', authMiddleware, async (req, res) => {
   try {
-    if (!['operator', 'admin', 'client'].includes(req.user.role)) {
+    if (!['admin', 'client'].includes(req.user.role)) {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -3014,7 +3014,7 @@ router.post('/agent-chat', authMiddleware, async (req, res) => {
     if (girlId) {
       const girl = await prisma.girl.findUnique({ where: { id: girlId } });
       if (!girl) return res.status(404).json({ error: '女生不存在' });
-      if (req.user.role === 'operator') {
+      if (req.user.role === 'admin') {
         const session = await prisma.chatSession.findFirst({
           where: { operatorId: req.user.id, clientId: girl.clientId }
         });
@@ -3272,7 +3272,7 @@ async function buildAgentPrompt(routeType, message, context, opts) {
  */
 router.get('/triage-stats', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'operator' && req.user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
     }
 

@@ -33,13 +33,13 @@ const requireRole = (...roles) => (req, res, next) => {
  * GET /api/clients/:clientId/weekly-review
  * 获取本周周报
  */
-router.get('/:clientId/weekly-review', authenticate, requireRole('operator', 'admin'), async (req, res) => {
+router.get('/:clientId/weekly-review', authenticate, requireRole('admin'), async (req, res) => {
   try {
     const { clientId } = req.params;
     const operatorId = req.user.id;
 
     // 操盘手所有权校验
-    if (req.user.role === 'operator') {
+    if (req.user.role === 'admin') {
       const session = await prisma.chatSession.findUnique({
         where: { operatorId_clientId: { operatorId, clientId } }
       });
@@ -60,13 +60,13 @@ router.get('/:clientId/weekly-review', authenticate, requireRole('operator', 'ad
  * GET /api/clients/:clientId/weekly-review/history
  * 获取历史周报列表
  */
-router.get('/:clientId/weekly-review/history', authenticate, requireRole('operator', 'admin'), async (req, res) => {
+router.get('/:clientId/weekly-review/history', authenticate, requireRole('admin'), async (req, res) => {
   try {
     const { clientId } = req.params;
     const { limit = 8 } = req.query;
     const operatorId = req.user.id;
 
-    if (req.user.role === 'operator') {
+    if (req.user.role === 'admin') {
       const session = await prisma.chatSession.findUnique({
         where: { operatorId_clientId: { operatorId, clientId } }
       });
@@ -87,12 +87,12 @@ router.get('/:clientId/weekly-review/history', authenticate, requireRole('operat
  * POST /api/clients/:clientId/weekly-review/generate
  * 手动触发周报生成
  */
-router.post('/:clientId/weekly-review/generate', authenticate, requireRole('operator', 'admin'), async (req, res) => {
+router.post('/:clientId/weekly-review/generate', authenticate, requireRole('admin'), async (req, res) => {
   try {
     const { clientId } = req.params;
     const operatorId = req.user.id;
 
-    if (req.user.role === 'operator') {
+    if (req.user.role === 'admin') {
       const session = await prisma.chatSession.findUnique({
         where: { operatorId_clientId: { operatorId, clientId } }
       });
