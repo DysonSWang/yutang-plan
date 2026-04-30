@@ -316,6 +316,56 @@ router.put('/learning/progress/:chapterId', authMiddleware, async (req, res) => 
 
 // ==========================================
 // AI 约会方案
+
+// 上海区域坐标映射
+const SHANGHAI_AREAS = {
+  '九亭': { lng: 121.345, lat: 31.127 },
+  '松江': { lng: 121.223, lat: 31.022 },
+  '浦东': { lng: 121.544, lat: 31.221 },
+  '黄浦': { lng: 121.481, lat: 31.230 },
+  '静安': { lng: 121.448, lat: 31.229 },
+  '徐汇': { lng: 121.437, lat: 31.183 },
+  '长宁': { lng: 121.424, lat: 31.220 },
+  '虹口': { lng: 121.500, lat: 31.261 },
+  '杨浦': { lng: 121.527, lat: 31.270 },
+  '闵行': { lng: 121.375, lat: 31.112 },
+  '宝山': { lng: 121.489, lat: 31.405 },
+  '嘉定': { lng: 121.265, lat: 31.376 },
+  '青浦': { lng: 121.131, lat: 31.154 },
+  '奉贤': { lng: 121.474, lat: 30.918 },
+  '金山': { lng: 121.341, lat: 30.742 },
+  '崇明': { lng: 121.397, lat: 31.623 },
+};
+
+// 和风天气查询
+async function getWeather(lng, lat) {
+  const { execFileSync } = require('child_process');
+  const host = process.env.QWEATHER_HOST;
+  const key = process.env.QWEATHER_KEY;
+  if (!host || !key) return null;
+  try {
+    const output = execFileSync('curl', [
+      '-s', '--noproxy', '*',
+      `https://${host}/v7/weather/now?location=${lng},${lat}&key=${key}`,
+      '--compressed'
+    ], { timeout: 10000 });
+    const data = JSON.parse(output.toString());
+    if (data.code === '200' && data.now) {
+      return {
+        temp: data.now.temp + '°C',
+        feelsLike: data.now.feelsLike + '°C',
+        text: data.now.text,
+        windDir: data.now.windDir,
+        windScale: data.now.windScale + '级',
+        humidity: data.now.humidity + '%'
+      };
+    }
+  } catch (e) {
+    console.warn('[Membership] 天气查询失败:', e.message);
+  }
+  return null;
+}
+
 // 百度AI搜索（从scene提取区域）
 async function baiduVenueSearch(location, venueTypes, budget) {
   const { execFileSync } = require('child_process');
@@ -449,13 +499,23 @@ router.post('/dating-plan/generate', authMiddleware, async (req, res) => {
       }
     }
 
+    // 查询天气
+    let weatherInfo = '';
+    if (area && SHANGHAI_AREAS[area]) {
+      const coords = SHANGHAI_AREAS[area];
+      const weather = await getWeather(coords.lng, coords.lat);
+      if (weather) {
+        weatherInfo = `\n【今日天气】${weather.text}，气温${weather.temp}（体感${weather.feelsLike}），${weather.windDir}${weather.windScale}，湿度${weather.humidity}。\n`;
+      }
+    }
+
     // 异步生成方案内容
     const aiConfig = getAIConfig();
     const prompt = `你是约会策划专家，根据以下信息为用户设计一次完美的约会方案。
 
 场景：${scene || '普通约会'}
 预算：${budget || '1000元左右'}
-时长：${duration || '半天'}${venueContext}
+时长：${duration || '半天'}${venueContext}${weatherInfo}
 
 请以Markdown格式输出，内容包含：
 1. 约会概览（适合人群、整体风格）
@@ -463,8 +523,9 @@ router.post('/dating-plan/generate', authMiddleware, async (req, res) => {
 3. 时间安排（从见面到结束的完整时间线）
 4. 聊天话题（每个阶段推荐聊什么）
 5. 注意事项（雷区和加分项）
-6. 穿着建议
+6. 穿着建议（根据天气调整）
 7. 预算提示
+8. **天气提示**（根据【今日天气】给出出行建议，如遇雨天建议室内备选方案）
 
 **严格约束**：你只能使用【百度搜索真实场地】中列出的餐厅，禁止额外添加其他餐厅、咖啡厅或娱乐场所。如果搜索结果中的餐厅不足以填满推荐地点，请如实说明"搜索结果有限，建议自行通过大众点评确认"。
 
