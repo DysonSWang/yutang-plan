@@ -618,36 +618,79 @@ export default function ClientProfile() {
         <Heading color="white">我的档案</Heading>
       </Flex>
 
-      {/* 基本信息卡片 */}
-      <Card bg="gray.800" mb={4}>
+      {/* 个人信息 + 会员合并卡片 */}
+      <Card bg="gray.800" mb={4} borderLeft="3px solid" borderColor="teal.400" sx={{ boxShadow: '0 0 20px rgba(0, 212, 170, 0.08)' }}>
         <CardBody>
-          <HStack spacing={4} mb={4}>
-            <Box position="relative">
-              <Avatar size="lg" name={profile.nickname || profile.username} src={profile.avatar} bg="teal.500" />
-              <IconButton
-                aria-label="编辑头像"
-                icon={<Icon as={FiEdit2} />}
-                size="xs"
-                colorScheme="teal"
-                position="absolute"
-                bottom={0}
-                right={0}
-                borderRadius="full"
-                onClick={openAvatarEdit}
-              />
-            </Box>
-            <Box>
-              <HStack>
-                <Text color="white" fontSize="xl" fontWeight="bold">{profile.nickname || profile.username}</Text>
-                <Badge colorScheme={STAGE_COLORS[profile.serviceStage] || 'gray'}>{profile.serviceStage || '未开始'}</Badge>
-              </HStack>
-              <Text color="gray.400">{profile.occupation || profile.education || '未填写'}</Text>
+          {/* 上排：头像 + 基本信息 | 会员信息 */}
+          <HStack spacing={6} align="start" mb={4}>
+            {/* 左侧：头像 + 昵称 */}
+            <HStack spacing={3} minW="0">
+              <Box position="relative" flexShrink={0}>
+                <Avatar size="lg" name={profile.nickname || profile.username} src={profile.avatar} bg="teal.500" />
+                <IconButton
+                  aria-label="编辑头像"
+                  icon={<Icon as={FiEdit2} />}
+                  size="xs"
+                  colorScheme="teal"
+                  position="absolute"
+                  bottom={0}
+                  right={0}
+                  borderRadius="full"
+                  onClick={openAvatarEdit}
+                />
+              </Box>
+              <Box minW="0">
+                <HStack>
+                  <Text color="white" fontSize="lg" fontWeight="bold" noOfLines={1}>{profile.nickname || profile.username}</Text>
+                  <Badge colorScheme={STAGE_COLORS[profile.serviceStage] || 'gray'} fontSize="xs">{profile.serviceStage || '未开始'}</Badge>
+                </HStack>
+                <Text color="gray.400" fontSize="sm">{profile.occupation || profile.education || '未填写'}</Text>
+              </Box>
+            </HStack>
+
+            {/* 右侧：会员信息 */}
+            <Box flex={1} pl={6} borderLeft="1px solid" borderColor="gray.700">
+              {memberStatus?.membership ? (
+                <VStack spacing={1.5} align="stretch">
+                  <HStack justify="space-between">
+                    <Text color="gray.400" fontSize="xs">会员类型</Text>
+                    <Badge colorScheme={TYPE_BADGE_COLOR[memberStatus.membership.type] || 'brand'} px={2} py={0.5} borderRadius="md" fontSize="xs">
+                      {TYPE_LABEL[memberStatus.membership.type] || '会员'}
+                    </Badge>
+                  </HStack>
+                  <HStack justify="space-between">
+                    <Text color="gray.400" fontSize="xs">有效期</Text>
+                    <Text color="white" fontSize="xs">
+                      {formatDate(memberStatus.membership.startDate)} ~ {formatDate(memberStatus.membership.endDate)}
+                    </Text>
+                  </HStack>
+                  <HStack justify="space-between">
+                    <Text color="gray.400" fontSize="xs">积分</Text>
+                    <Badge colorScheme="orange" px={2} py={0.5} borderRadius="md" fontSize="xs">
+                      {memberStatus?.points || 0}
+                    </Badge>
+                  </HStack>
+                </VStack>
+              ) : (
+                <VStack spacing={1.5} align="stretch">
+                  <HStack justify="space-between">
+                    <Text color="gray.400" fontSize="xs">会员状态</Text>
+                    <Badge colorScheme="gray" px={2} py={0.5} borderRadius="md" fontSize="xs">未开通</Badge>
+                  </HStack>
+                  <HStack justify="space-between">
+                    <Text color="gray.400" fontSize="xs">积分</Text>
+                    <Badge colorScheme="orange" px={2} py={0.5} borderRadius="md" fontSize="xs">
+                      {memberStatus?.points || 0}
+                    </Badge>
+                  </HStack>
+                </VStack>
+              )}
             </Box>
           </HStack>
 
           {/* 头像编辑 */}
           {editingAvatar && (
-            <Box mt={2} p={3} bg="gray.700" borderRadius="md">
+            <Box mb={4} p={3} bg="gray.700" borderRadius="md">
               <VStack align="stretch" spacing={2}>
                 <Text color="gray.300" fontSize="sm">上传头像图片</Text>
                 <Input
@@ -684,8 +727,8 @@ export default function ClientProfile() {
             </Box>
           )}
 
-          {/* 档案完整度 */}
-          <Box mt={4}>
+          {/* 档案完整度 + 操作按钮 */}
+          <Box>
             <HStack justify="space-between" mb={1}>
               <Text color="gray.400" fontSize="xs">档案完整度</Text>
               <Text color={completeness >= 80 ? 'green.400' : completeness >= 50 ? 'yellow.400' : 'orange.400'} fontSize="xs" fontWeight="bold">{completeness}%</Text>
@@ -696,67 +739,20 @@ export default function ClientProfile() {
               colorScheme={completeness >= 80 ? 'green' : completeness >= 50 ? 'yellow' : 'orange'}
               borderRadius="full"
               bg="gray.700"
+              mb={2}
             />
-            {completeness < 80 && (
-              <Text color="gray.600" fontSize="xs" mt={1}>完善档案后，AI 教练能为你提供更精准的建议</Text>
-            )}
+            {completeness < 80 ? (
+              <Text color="gray.600" fontSize="xs" mb={2}>完善档案后，AI 教练能为你提供更精准的建议</Text>
+            ) : null}
+            <HStack spacing={2}>
+              {memberStatus?.membership ? (
+                <Button size="xs" colorScheme="teal" onClick={onRenewalOpen}>续费会员</Button>
+              ) : (
+                <Button size="xs" colorScheme="brand" variant="outline" leftIcon={<Icon as={CrownIcon} />} onClick={onRenewalOpen}>开通会员</Button>
+              )}
+              <Button size="xs" variant="link" color="teal.400" onClick={onPricingOpen}>查看定价方案</Button>
+            </HStack>
           </Box>
-
-        </CardBody>
-      </Card>
-
-      {/* 会员信息 */}
-      <Card bg="gray.800" mb={4} borderLeft="3px solid" borderColor="teal.400" sx={{ boxShadow: '0 0 20px rgba(0, 212, 170, 0.08)' }}>
-        <CardBody>
-          {memberStatus?.membership ? (
-            <VStack spacing={3} align="stretch">
-              <HStack justify="space-between" align="center">
-                <Text color="gray.400" fontSize="sm">会员类型</Text>
-                <Badge colorScheme={TYPE_BADGE_COLOR[memberStatus.membership.type] || 'brand'} px={3} py={1} borderRadius="md" fontSize="sm">
-                  {TYPE_LABEL[memberStatus.membership.type] || '会员'}
-                </Badge>
-              </HStack>
-              <HStack justify="space-between">
-                <Text color="gray.400" fontSize="sm">有效期</Text>
-                <Text color="white" fontSize="sm">
-                  {formatDate(memberStatus.membership.startDate)} ~ {formatDate(memberStatus.membership.endDate)}
-                </Text>
-              </HStack>
-              <HStack justify="space-between">
-                <Text color="gray.400" fontSize="sm">积分</Text>
-                <Badge colorScheme="orange" px={3} py={1} borderRadius="md" fontSize="sm">
-                  {memberStatus?.points || 0}
-                </Badge>
-              </HStack>
-              <HStack spacing={2}>
-                <Button size="sm" colorScheme="teal" onClick={onRenewalOpen}>续费会员</Button>
-                <Button size="xs" variant="link" color="teal.400" onClick={onPricingOpen}>
-                  查看定价方案
-                </Button>
-              </HStack>
-            </VStack>
-          ) : (
-            <VStack spacing={3} align="stretch">
-              <HStack justify="space-between" align="center">
-                <Text color="gray.400" fontSize="sm">会员状态</Text>
-                <Badge colorScheme="gray" px={3} py={1} borderRadius="md" fontSize="sm">未开通</Badge>
-              </HStack>
-              <HStack justify="space-between">
-                <Text color="gray.400" fontSize="sm">积分</Text>
-                <Badge colorScheme="orange" px={3} py={1} borderRadius="md" fontSize="sm">
-                  {memberStatus?.points || 0}
-                </Badge>
-              </HStack>
-              <HStack spacing={2}>
-                <Button size="sm" colorScheme="brand" variant="outline" leftIcon={<Icon as={CrownIcon} />} onClick={onRenewalOpen}>
-                  开通会员
-                </Button>
-                <Button size="xs" variant="link" color="teal.400" onClick={onPricingOpen}>
-                  查看定价方案
-                </Button>
-              </HStack>
-            </VStack>
-          )}
         </CardBody>
       </Card>
 
