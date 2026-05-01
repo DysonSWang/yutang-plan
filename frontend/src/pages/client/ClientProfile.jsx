@@ -16,6 +16,12 @@ function formatDate(iso) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+// 空值占位符：引导用户填写而非显示冷冰冰的"-"
+function EmptyValue({ children, ...props }) {
+  if (children) return <Text color="white" {...props}>{children}</Text>;
+  return <Text color="gray.600" fontSize="sm" {...props}>待填写</Text>;
+}
+
 const PRICING_DATA = [
   { type: 'monthly', label: '普惠月付', price: 999, period: '月', perMonth: 999, features: ['全功能AI教练', '约会方案生成', '学习中心', '缘分管理'] },
   { type: 'yearly', label: '普惠年付', price: 8888, period: '年', perMonth: 741, features: ['全功能AI教练', '约会方案生成', '学习中心', '缘分管理', '年付专属优惠'] },
@@ -734,31 +740,31 @@ export default function ClientProfile() {
         {/* 基础信息 */}
         <Card bg="gray.800">
           <CardBody>
-            <Text color="teal.400" fontWeight="bold" mb={3}>基础信息</Text>
+            <Heading as="h3" size="sm" color="teal.400" mb={3}>基础信息</Heading>
             <VStack spacing={2} align="stretch">
               <HStack justify="space-between">
                 <Text color="gray.400" fontSize="sm">年龄</Text>
-                <Text color="white">{profile.age ? `${profile.age}岁` : '-'}</Text>
+                {profile.age ? <Text color="white">{profile.age}岁</Text> : <Text color="gray.600" fontSize="sm">待填写</Text>}
               </HStack>
               <HStack justify="space-between">
                 <Text color="gray.400" fontSize="sm">职业</Text>
-                <Text color="white">{profile.occupation || '-'}</Text>
+                <EmptyValue>{profile.occupation}</EmptyValue>
               </HStack>
               <HStack justify="space-between">
                 <Text color="gray.400" fontSize="sm">学历</Text>
-                <Text color="white">{profile.education || '-'}</Text>
+                <EmptyValue>{profile.education}</EmptyValue>
               </HStack>
               <HStack justify="space-between">
                 <Text color="gray.400" fontSize="sm">收入</Text>
-                <Text color="white">{profile.income || '-'}</Text>
+                <EmptyValue>{profile.income}</EmptyValue>
               </HStack>
               <HStack justify="space-between">
                 <Text color="gray.400" fontSize="sm">所在地</Text>
-                <Text color="white">{profile.residence || '-'}</Text>
+                <EmptyValue>{profile.residence}</EmptyValue>
               </HStack>
               <HStack justify="space-between">
                 <Text color="gray.400" fontSize="sm">籍贯</Text>
-                <Text color="white">{profile.hometown || '-'}</Text>
+                <EmptyValue>{profile.hometown}</EmptyValue>
               </HStack>
             </VStack>
           </CardBody>
@@ -767,23 +773,23 @@ export default function ClientProfile() {
         {/* 外貌资源 */}
         <Card bg="gray.800">
           <CardBody>
-            <Text color="teal.400" fontWeight="bold" mb={3}>外貌特征</Text>
+            <Heading as="h3" size="sm" color="teal.400" mb={3}>外貌特征</Heading>
             <VStack spacing={2} align="stretch">
               <HStack justify="space-between">
                 <Text color="gray.400" fontSize="sm">身高</Text>
-                <Text color="white">{profile.height ? `${profile.height}cm` : '-'}</Text>
+                {profile.height ? <Text color="white">{profile.height}cm</Text> : <Text color="gray.600" fontSize="sm">待填写</Text>}
               </HStack>
               <HStack justify="space-between">
                 <Text color="gray.400" fontSize="sm">体重</Text>
-                <Text color="white">{profile.weight ? `${profile.weight}kg` : '-'}</Text>
+                {profile.weight ? <Text color="white">{profile.weight}kg</Text> : <Text color="gray.600" fontSize="sm">待填写</Text>}
               </HStack>
               <HStack justify="space-between">
                 <Text color="gray.400" fontSize="sm">穿着风格</Text>
-                <Text color="white">{profile.dressingStyle || '-'}</Text>
+                <EmptyValue>{profile.dressingStyle}</EmptyValue>
               </HStack>
               <HStack justify="space-between">
                 <Text color="gray.400" fontSize="sm">外貌描述</Text>
-                <Text color="white" fontSize="sm" maxW="150px" noOfLines={2}>{profile.appearance || '-'}</Text>
+                <EmptyValue maxW="150px" noOfLines={2}>{profile.appearance}</EmptyValue>
               </HStack>
             </VStack>
           </CardBody>
@@ -792,19 +798,19 @@ export default function ClientProfile() {
         {/* 家庭背景 */}
         <Card bg="gray.800">
           <CardBody>
-            <Text color="purple.400" fontWeight="bold" mb={3}>家庭背景</Text>
+            <Heading as="h3" size="sm" color="purple.400" mb={3}>家庭背景</Heading>
             <VStack spacing={2} align="stretch">
               <HStack justify="space-between">
                 <Text color="gray.400" fontSize="sm">家庭背景</Text>
-                <Text color="white">{profile.familyBackground || '-'}</Text>
+                <EmptyValue>{profile.familyBackground}</EmptyValue>
               </HStack>
               <HStack justify="space-between">
                 <Text color="gray.400" fontSize="sm">家庭结构</Text>
-                <Text color="white">{profile.familyStructure || '-'}</Text>
+                <EmptyValue>{profile.familyStructure}</EmptyValue>
               </HStack>
               <HStack justify="space-between">
                 <Text color="gray.400" fontSize="sm">家庭氛围</Text>
-                <Text color="white">{profile.familyAtmosphere || '-'}</Text>
+                <EmptyValue>{profile.familyAtmosphere}</EmptyValue>
               </HStack>
             </VStack>
           </CardBody>
@@ -813,23 +819,23 @@ export default function ClientProfile() {
         {/* 性格画像 */}
         <Card bg="gray.800">
           <CardBody>
-            <Text color="purple.400" fontWeight="bold" mb={3}>性格画像</Text>
+            <Heading as="h3" size="sm" color="purple.400" mb={3}>性格画像</Heading>
             <VStack spacing={2} align="stretch">
               <HStack justify="space-between">
                 <Text color="gray.400" fontSize="sm">性格/MBTI</Text>
-                <Badge colorScheme="cyan">{profile.personality || '-'}</Badge>
+                {profile.personality ? <Badge colorScheme="cyan">{profile.personality}</Badge> : <Text color="gray.600" fontSize="sm">待填写</Text>}
               </HStack>
               <HStack justify="space-between">
                 <Text color="gray.400" fontSize="sm">沟通风格</Text>
-                <Text color="white">{profile.communicationStyle || '-'}</Text>
+                <EmptyValue>{profile.communicationStyle}</EmptyValue>
               </HStack>
               <HStack justify="space-between">
                 <Text color="gray.400" fontSize="sm">社交风格</Text>
-                <Text color="white">{profile.socialStyle || '-'}</Text>
+                <EmptyValue>{profile.socialStyle}</EmptyValue>
               </HStack>
               <HStack justify="space-between">
                 <Text color="gray.400" fontSize="sm">幽默风格</Text>
-                <Text color="white">{profile.humorStyle || '-'}</Text>
+                <EmptyValue>{profile.humorStyle}</EmptyValue>
               </HStack>
             </VStack>
           </CardBody>
@@ -838,15 +844,15 @@ export default function ClientProfile() {
         {/* 个人优势与不足 */}
         <Card bg="gray.800">
           <CardBody>
-            <Text color="purple.400" fontWeight="bold" mb={3}>优势与不足</Text>
+            <Heading as="h3" size="sm" color="purple.400" mb={3}>优势与不足</Heading>
             <VStack spacing={2} align="stretch">
               <HStack justify="space-between" align="start">
                 <Text color="gray.400" fontSize="sm">优势</Text>
-                <Text color="white" fontSize="sm" maxW="180px" textAlign="right">{profile.strengths || '-'}</Text>
+                <EmptyValue maxW="180px" textAlign="right">{profile.strengths}</EmptyValue>
               </HStack>
               <HStack justify="space-between" align="start">
                 <Text color="gray.400" fontSize="sm">不足</Text>
-                <Text color="white" fontSize="sm" maxW="180px" textAlign="right">{profile.weaknesses || '-'}</Text>
+                <EmptyValue maxW="180px" textAlign="right">{profile.weaknesses}</EmptyValue>
               </HStack>
             </VStack>
           </CardBody>
@@ -855,58 +861,64 @@ export default function ClientProfile() {
         {/* 情感状态 */}
         <Card bg="gray.800">
           <CardBody>
-            <Text color="orange.400" fontWeight="bold" mb={3}>情感状态</Text>
+            <Heading as="h3" size="sm" color="orange.400" mb={3}>情感状态</Heading>
             <VStack spacing={2} align="stretch">
               <HStack justify="space-between">
                 <Text color="gray.400" fontSize="sm">婚恋态度</Text>
-                <Text color="white">{profile.relationshipAttitude || '-'}</Text>
+                <EmptyValue>{profile.relationshipAttitude}</EmptyValue>
               </HStack>
               <HStack justify="space-between">
                 <Text color="gray.400" fontSize="sm">关系目标</Text>
-                <Badge colorScheme="green">{profile.relationshipGoal || '-'}</Badge>
+                {profile.relationshipGoal ? <Badge colorScheme="green">{profile.relationshipGoal}</Badge> : <Text color="gray.600" fontSize="sm">待填写</Text>}
               </HStack>
               <HStack justify="space-between">
                 <Text color="gray.400" fontSize="sm">感情诉求</Text>
-                <Text color="white">{profile.emotionalGoal || '-'}</Text>
+                <EmptyValue>{profile.emotionalGoal}</EmptyValue>
               </HStack>
               <HStack justify="space-between">
                 <Text color="gray.400" fontSize="sm">婚史</Text>
-                <Text color="white">{profile.marriageHistory || '-'}</Text>
+                <EmptyValue>{profile.marriageHistory}</EmptyValue>
               </HStack>
             </VStack>
           </CardBody>
         </Card>
 
         {/* 对目标的期望 */}
-        {profile.matchPreferences && (
-          <Card bg="gray.800">
-            <CardBody>
-              <Text color="orange.400" fontWeight="bold" mb={2}>对目标的期望</Text>
+        <Card bg="gray.800">
+          <CardBody>
+            <Heading as="h3" size="sm" color="orange.400" mb={3}>对目标的期望</Heading>
+            {profile.matchPreferences ? (
               <Text color="gray.300" fontSize="sm" whiteSpace="pre-wrap">{profile.matchPreferences}</Text>
-            </CardBody>
-          </Card>
-        )}
+            ) : (
+              <Text color="gray.600" fontSize="sm">待填写</Text>
+            )}
+          </CardBody>
+        </Card>
 
         {/* 禁忌 */}
-        {profile.dateTaboos && (
-          <Card bg="gray.800">
-            <CardBody>
-              <Text color="orange.400" fontWeight="bold" mb={2}>禁忌</Text>
+        <Card bg="gray.800">
+          <CardBody>
+            <Heading as="h3" size="sm" color="orange.400" mb={3}>禁忌</Heading>
+            {profile.dateTaboos ? (
               <Text color="gray.300" fontSize="sm" whiteSpace="pre-wrap">{profile.dateTaboos}</Text>
-            </CardBody>
-          </Card>
-        )}
+            ) : (
+              <Text color="gray.600" fontSize="sm">待填写</Text>
+            )}
+          </CardBody>
+        </Card>
       </SimpleGrid>
 
       {/* 个人签名 */}
-      {profile.profileBio && (
-        <Card bg="gray.800" mt={4}>
-          <CardBody>
-            <Text color="gray.400" fontSize="sm" mb={2}>个人签名</Text>
+      <Card bg="gray.800" mt={4}>
+        <CardBody>
+          <Text color="gray.400" fontSize="sm" mb={2}>个人签名</Text>
+          {profile.profileBio ? (
             <Text color="gray.300">{profile.profileBio}</Text>
-          </CardBody>
-        </Card>
-      )}
+          ) : (
+            <Text color="gray.600" fontSize="sm">待填写</Text>
+          )}
+        </CardBody>
+      </Card>
 
       {/* 关于我们 */}
       <Card bg="gray.800" mt={4}>
