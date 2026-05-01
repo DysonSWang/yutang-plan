@@ -142,8 +142,8 @@ export default function App() {
       const normalized = normalizeError(error);
       const message = getErrorMessage(normalized);
 
-      // 401 错误不显示 toast（已跳转登录页）
-      if (normalized.type === 'AUTH') return;
+      // 401/403 不弹 toast：401 已跳转登录，403 是路由守卫瞬时竞态
+      if (normalized.type === 'AUTH' || normalized.type === 'PERMISSION') return;
 
       toast({
         title: '出错了',
