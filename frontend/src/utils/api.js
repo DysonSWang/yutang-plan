@@ -105,8 +105,8 @@ class Api {
     if (!response.ok) {
       const error = parseErrorResponse(response, result);
 
-      // 401 清除 token 并跳转登录
-      if (error.type === ErrorType.AUTH) {
+      // 401 清除 token 并跳转登录（跳过登录页本身，避免冲掉错误提示）
+      if (error.type === ErrorType.AUTH && window.location.pathname !== '/login') {
         this.removeToken();
         window.location.href = '/login';
       }
@@ -137,7 +137,7 @@ export const auth = {
   verify: () => api.get('/api/auth/verify'),
   me: () => api.get('/api/auth/me'),
   logout: () => { api.removeToken(); },
-  changePassword: (oldPassword, newPassword) => api.post('/api/auth/change-password', { oldPassword, newPassword })
+  changePassword: (oldPassword, newPassword, confirmPassword) => api.post('/api/auth/change-password', { oldPassword, newPassword, confirmPassword })
 };
 
 // 女生资源
@@ -259,6 +259,7 @@ export const dates = {
   get: (id) => api.get(`/api/dates/${id}`),
   update: (id, data) => api.put(`/api/dates/${id}`, data),
   delete: (id) => api.delete(`/api/dates/${id}`),
+  deletePlan: (id) => api.delete(`/api/dates/${id}/plan`),
   generatePlan: (id) => api.post(`/api/dates/${id}/generate-plan`),
   evaluate: (id, data) => api.post(`/api/dates/${id}/evaluate`, data),
   getChecklistTemplate: () => api.get('/api/dates/checklist-template'),
@@ -394,7 +395,7 @@ export const events = {
 // 会员/积分/邀请/学习版块
 export const membership = {
   status: () => api.getCached('/api/membership/status'),
-  purchase: (couponToUse = 0) => api.post('/api/membership/purchase', { couponToUse }).then(r => { api.clearCache(); return r; }),
+  purchase: (type, pointsToUse = 0) => api.post('/api/membership/purchase', { type, pointsToUse }).then(r => { api.clearCache(); return r; }),
   // 试用
   activateTrial: () => api.post('/api/membership/trial/activate'),
   trialConfig: () => api.get('/api/membership/trial/config'),

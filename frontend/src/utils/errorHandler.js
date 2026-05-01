@@ -37,6 +37,15 @@ const FriendlyMessages = {
 export function parseErrorResponse(response, data) {
   if (data?.error) {
     const errDef = data.error;
+    // 兼容后端返回字符串错误（如 { error: '旧密码错误' }）
+    if (typeof errDef === 'string') {
+      return {
+        type: StatusToType[response.status] || ErrorType.UNKNOWN,
+        code: 'UNKNOWN',
+        message: errDef,
+        requestId: data.requestId,
+      };
+    }
     return {
       type: StatusToType[response.status] || ErrorType.UNKNOWN,
       code: errDef.code || 'UNKNOWN',

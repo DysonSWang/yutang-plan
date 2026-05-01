@@ -20,6 +20,8 @@ export default function AdminChat() {
   const [burnMode, setBurnMode] = useState(false);
   const [burnSeconds, setBurnSeconds] = useState(5);
   const [flashMode, setFlashMode] = useState(false); // 闪图模式
+  const burnTimersRef = useRef({});
+  const [countdowns, setCountdowns] = useState({});
   const { isOpen: isModalOpen, onOpen: onModalOpen, onClose: onModalClose } = useDisclosure();
   const { isOpen: isNewChatOpen, onOpen: onNewChatOpen, onClose: onNewChatClose } = useDisclosure();
   const [flashViewer, setFlashViewer] = useState({ isOpen: false, imageUrl: '', messageId: null, senderRole: '' });
@@ -104,16 +106,75 @@ export default function AdminChat() {
     }
   };
 
-  const loadMessages = useCallback(async (sessionId) => {
+  const handleBurnMessage = useCallback(async (msg) => {
+    if (msg.burnedAt || msg.senderRole === 'operator' || msg.senderRole === 'admin') return;
     try {
-      const res = await chat.messages(sessionId);
+      const res = await chat.burn(msg.id);
       if (res.success) {
-        setMessages(res.messages);
+        setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, content: '[消息已销毁]', mediaUrl: null, burnedAt: new Date() } : m));
+        if (burnTimersRef.current[msg.id]) {
+          clearTimeout(burnTimersRef.current[msg.id]);
+          delete burnTimersRef.current[msg.id];
+        }
+        setCountdowns(prev => {
+          const next = { ...prev };
+          delete next[msg.id];
+          return next;
+        });
       }
     } catch (e) {
       console.error(e);
     }
   }, []);
+
+  const startBurnTimer = useCallback((msg) => {
+    if (!msg.burnAfterSeconds || msg.burnedAt) return;
+    if (burnTimersRef.current[msg.id]) return;
+
+    const elapsed = (Date.now() - new Date(msg.createdAt).getTime()) / 1000;
+    let remaining = Math.ceil(msg.burnAfterSeconds - elapsed);
+
+    if (remaining <= 0) {
+      handleBurnMessage(msg);
+      return;
+    }
+
+    setCountdowns(prev => ({ ...prev, [msg.id]: remaining }));
+
+    const tick = () => {
+      remaining -= 1;
+      if (remaining <= 0) {
+        delete burnTimersRef.current[msg.id];
+        setCountdowns(prev => {
+          const next = { ...prev };
+          delete next[msg.id];
+          return next;
+        });
+        handleBurnMessage(msg);
+      } else {
+        setCountdowns(prev => ({ ...prev, [msg.id]: remaining }));
+        burnTimersRef.current[msg.id] = setTimeout(tick, 1000);
+      }
+    };
+
+    burnTimersRef.current[msg.id] = setTimeout(tick, 1000);
+  }, [handleBurnMessage]);
+
+  const loadMessages = useCallback(async (sessionId) => {
+    try {
+      const res = await chat.messages(sessionId);
+      if (res.success) {
+        setMessages(res.messages);
+        res.messages.forEach(msg => {
+          if (msg.isBurnAfterRead && !msg.burnedAt && msg.burnAfterSeconds) {
+            startBurnTimer(msg);
+          }
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, [startBurnTimer]);
 
   useEffect(() => {
     loadSessions();
@@ -136,10 +197,14 @@ export default function AdminChat() {
 
   useEffect(() => {
     const handler = (message) => {
-      if (message.senderRole === 'operator') return;
+      if (message.senderRole === 'operator' || message.senderRole === 'admin') return;
       if (currentSession && message.sessionId === currentSession.id) {
         // 当前会话，直接添加消息
         setMessages(prev => [...prev, message]);
+        // 阅后即焚自动倒计时
+        if (message.isBurnAfterRead && !message.burnedAt && message.burnAfterSeconds) {
+          startBurnTimer(message);
+        }
         // 清空当前会话未读
         setSessions(prev => prev.map(s =>
           s.id === message.sessionId ? { ...s, unreadCount: 0 } : s
@@ -175,7 +240,15 @@ export default function AdminChat() {
       }
     };
     on('message:recalled', recallHandler);
-  }, [currentSession, on]);
+  }, [currentSession, on, addChatUnread, startBurnTimer]);
+
+  // 清理阅后即焚定时器
+  useEffect(() => {
+    const timers = burnTimersRef.current;
+    return () => {
+      Object.values(timers).forEach(t => clearTimeout(t));
+    };
+  }, []);
 
   useEffect(() => {
     if (shouldAutoScrollRef.current) {
@@ -205,28 +278,54 @@ export default function AdminChat() {
     }
   };
 
+  // 图片直接发送（不预览），视频仍需确认
   const handleFileSelect = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const isVideo = file.type.startsWith('video/');
-    const preview = URL.createObjectURL(file);
-    setPreviewFile({ file, preview, type: isVideo ? 'video' : 'image' });
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
     e.target.value = '';
+
+    const imageFiles = files.filter(f => f.type.startsWith('image/'));
+    const videoFiles = files.filter(f => f.type.startsWith('video/'));
+
+    if (videoFiles.length > 0) {
+      const file = videoFiles[0];
+      setPreviewFile({ file, preview: URL.createObjectURL(file), type: 'video' });
+    }
+
+    if (imageFiles.length > 0) {
+      await sendImagesDirectly(imageFiles);
+    }
   };
 
-  const confirmSendMedia = async () => {
-    if (!previewFile) return;
+  const sendImagesDirectly = async (files) => {
+    if (!currentSession || sending) return;
+    setSending(true);
+    try {
+      for (const file of files) {
+        const res = await upload.image(file, burnMode, flashMode);
+        if (res.url) {
+          await sendMediaMessage(res.url, 'image', null);
+        }
+      }
+      setBurnMode(false);
+      setFlashMode(false);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // 视频确认发送
+  const confirmSendVideo = async () => {
+    if (!previewFile || previewFile.type !== 'video') return;
     setUploading(true);
     try {
-      const isBurn = burnMode;
-      const isFlash = flashMode;
-      const res = previewFile.type === 'video'
-        ? await upload.video(previewFile.file, isBurn, isFlash)
-        : await upload.image(previewFile.file, isBurn, isFlash);
+      const res = await upload.video(previewFile.file, burnMode, flashMode);
       if (res.url) {
-        await sendMediaMessage(res.url, previewFile.type, null);
-      } else {
-        console.error('上传失败', res);
+        await sendMediaMessage(res.url, 'video', null);
+        setBurnMode(false);
+        setFlashMode(false);
       }
     } catch (e) {
       console.error(e);
@@ -304,6 +403,10 @@ export default function AdminChat() {
       if (res.success) {
         setMessages(prev => [...prev, res.message]);
         setInput('');
+        setBurnMode(false);
+        if (res.message.isBurnAfterRead && res.message.burnAfterSeconds) {
+          startBurnTimer(res.message);
+        }
         setSessions(prev => prev.map(s => {
           if (s.id === currentSession.id) {
             return { ...s, lastMessage: input.substring(0, 50), lastMessageAt: new Date() };
@@ -318,20 +421,8 @@ export default function AdminChat() {
     }
   };
 
-  const handleBurnMessage = async (msg) => {
-    if (msg.burnedAt || msg.senderRole === 'operator') return;
-    try {
-      const res = await chat.burn(msg.id);
-      if (res.success) {
-        setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, content: '[消息已销毁]', mediaUrl: null, burnedAt: new Date() } : m));
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
   const handleRecallMessage = async (msg) => {
-    if (msg.recalledAt || msg.senderRole !== 'operator') return;
+    if (msg.recalledAt || msg.senderRole !== 'operator' && msg.senderRole !== 'admin') return;
     try {
       const res = await chat.recall(msg.id);
       if (res.success) {
@@ -350,7 +441,7 @@ export default function AdminChat() {
       return <Text color="gray.500" fontStyle="italic">{msg.content}</Text>;
     }
     if (msg.type === 'image') {
-      const isClickable = msg.isBurnAfterRead && msg.senderRole !== 'operator' && !msg.burnedAt;
+      const isClickable = msg.isBurnAfterRead && msg.senderRole !== 'operator' && msg.senderRole !== 'admin' && !msg.burnedAt;
       const imageViewerUrl = msg.mediaUrl.startsWith('http') ? msg.mediaUrl : `${API_BASE}${msg.mediaUrl}`;
       return (
         <Box
@@ -362,7 +453,7 @@ export default function AdminChat() {
             if (msg.isFlashImage && !msg.burnedAt) {
               // 闪图：打开满屏查看器（带倒计时）
               setFlashViewer({ isOpen: true, imageUrl: imageViewerUrl, messageId: msg.id, senderRole: msg.senderRole, isFlashMode: true });
-            } else if (msg.isBurnAfterRead && msg.senderRole !== 'operator') {
+            } else if (msg.isBurnAfterRead && msg.senderRole !== 'operator' && msg.senderRole !== 'admin') {
               handleBurnMessage(msg);
             } else {
               // 普通图片：打开满屏查看器（无倒计时）
@@ -396,7 +487,7 @@ export default function AdminChat() {
     }
     if (msg.type === 'video') {
       return (
-        <Box maxW="250px" cursor={msg.isBurnAfterRead ? 'pointer' : 'default'} onClick={() => msg.isBurnAfterRead && msg.senderRole !== 'operator' && handleBurnMessage(msg)}>
+        <Box maxW="250px" cursor={msg.isBurnAfterRead ? 'pointer' : 'default'} onClick={() => msg.isBurnAfterRead && msg.senderRole !== 'operator' && msg.senderRole !== 'admin' && handleBurnMessage(msg)}>
           <video
             src={`${API_BASE}${msg.mediaUrl}`}
             controls={!msg.isBurnAfterRead}
@@ -407,7 +498,7 @@ export default function AdminChat() {
     }
     if (msg.type === 'audio') {
       return (
-        <HStack bg="blackAlpha.300" px={3} py={2} borderRadius="md" spacing={2} cursor={msg.isBurnAfterRead && msg.senderRole !== 'operator' ? 'pointer' : 'default'} onClick={() => msg.isBurnAfterRead && msg.senderRole !== 'operator' && handleBurnMessage(msg)}>
+        <HStack bg={msg.isBurnAfterRead && !msg.burnedAt ? 'rgba(255,140,0,0.2)' : 'blackAlpha.300'} px={3} py={2} borderRadius="md" spacing={2} cursor={msg.isBurnAfterRead && msg.senderRole !== 'operator' && msg.senderRole !== 'admin' ? 'pointer' : 'default'} onClick={() => msg.isBurnAfterRead && msg.senderRole !== 'operator' && msg.senderRole !== 'admin' && handleBurnMessage(msg)}>
           <Text fontSize="lg">🔊</Text>
           <audio src={`${API_BASE}${msg.mediaUrl}`} style={{ height: '28px' }} controls={!msg.isBurnAfterRead || msg.burnedAt} />
           {msg.duration && (
@@ -627,7 +718,10 @@ export default function AdminChat() {
                             w="75%"
                             p={3}
                             borderRadius="lg"
-                            bg={isOperator ? 'teal.600' : 'gray.700'}
+                            bg={msg.isBurnAfterRead && !msg.burnedAt
+                              ? 'linear-gradient(135deg, rgba(255,140,0,0.3), rgba(255,80,0,0.15))'
+                              : isOperator ? 'teal.600' : 'gray.700'}
+                            border={msg.isBurnAfterRead && !msg.burnedAt ? '1px solid rgba(255,140,0,0.4)' : 'none'}
                             color="white"
                             position="relative"
                             role="group"
@@ -635,9 +729,12 @@ export default function AdminChat() {
                           >
                             {renderMessageContent(msg)}
                             {msg.isBurnAfterRead && !msg.burnedAt && (
-                              <Text fontSize="xs" display="inline" ml={1} color="orange.300">
-                                🔥{msg.burnAfterSeconds ? `${msg.burnAfterSeconds}s` : '手动'}
-                              </Text>
+                              <HStack mt={2} spacing={1} justify="flex-end">
+                                <Text fontSize="xs" color="orange.300">🔥</Text>
+                                <Text fontSize="sm" fontWeight="bold" color="orange.300">
+                                  {countdowns[msg.id] != null ? `${countdowns[msg.id]}s` : (msg.burnAfterSeconds ? `${msg.burnAfterSeconds}s` : '手动')}
+                                </Text>
+                              </HStack>
                             )}
                             <Text fontSize="xs" color="gray.300" mt={1}>
                               {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -683,13 +780,10 @@ export default function AdminChat() {
               </Box>
 
               <Box p={4} borderTop="1px" borderColor="gray.700">
-                {/* 媒体预览 */}
+                {/* 媒体预览（仅视频/语音需要确认） */}
                 {previewFile && (
                   <Box mb={2} p={2} bg="gray.700" borderRadius="md">
                     <HStack>
-                      {previewFile.type === 'image' && (
-                        <Image src={previewFile.preview} alt="预览" maxH="80px" borderRadius="md" />
-                      )}
                       {previewFile.type === 'video' && (
                         <video src={previewFile.preview} style={{ maxHeight: '80px', borderRadius: '4px' }} />
                       )}
@@ -714,7 +808,7 @@ export default function AdminChat() {
                         colorScheme="teal"
                         isLoading={uploading}
                         loadingText={uploading && previewFile.type === 'video' ? '压缩中...' : '发送中'}
-                        onClick={previewFile.type === 'audio' ? confirmSendAudio : confirmSendMedia}
+                        onClick={previewFile.type === 'audio' ? confirmSendAudio : confirmSendVideo}
                       >
                         {!(uploading && previewFile.type === 'video') ? '发送' : ''}
                       </Button>
@@ -734,6 +828,7 @@ export default function AdminChat() {
                   <input
                     type="file"
                     accept="image/*,video/*"
+                    multiple
                     style={{ display: 'none' }}
                     ref={fileInputRef}
                     onChange={handleFileSelect}

@@ -398,7 +398,8 @@ router.post('/situation', authMiddleware, async (req, res) => {
       intimacyLevel: context.girlInfo.intimacyLevel || 1,
       stage: context.girlInfo.stage || '未知',
       personality: context.girlInfo.personality || {},
-      recentSignals: context.recentSignals || []
+      recentSignals: context.recentSignals || [],
+      relationshipStage: context.girlInfo.relationshipStage
     } : null;
 
     // 获取动态路由的多位大师视角（带调试meta，传入客户画像和女生画像用于权重调整）

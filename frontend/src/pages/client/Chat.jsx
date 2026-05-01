@@ -77,7 +77,7 @@ export default function ClientChat() {
   }, []);
 
   const startBurnTimer = useCallback((msg) => {
-    if (!msg.burnAfterSeconds || msg.burnedAt || msg.senderRole === 'client') return;
+    if (!msg.burnAfterSeconds || msg.burnedAt) return;
     if (burnTimersRef.current[msg.id]) return;
 
     const elapsed = (Date.now() - new Date(msg.createdAt).getTime()) / 1000;
@@ -115,7 +115,7 @@ export default function ClientChat() {
       if (res.success) {
         setMessages(res.messages);
         res.messages.forEach(msg => {
-          if (msg.isBurnAfterRead && !msg.burnedAt && msg.burnAfterSeconds && msg.senderRole !== 'client') {
+          if (msg.isBurnAfterRead && !msg.burnedAt && msg.burnAfterSeconds) {
             startBurnTimer(msg);
           }
         });
@@ -193,26 +193,58 @@ export default function ClientChat() {
     }
   };
 
+  // 图片直接发送（不预览），视频仍需确认
   const handleFileSelect = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const isVideo = file.type.startsWith('video/');
-    const preview = URL.createObjectURL(file);
-    setPreviewFile({ file, preview, type: isVideo ? 'video' : 'image' });
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
     e.target.value = '';
+
+    const imageFiles = files.filter(f => f.type.startsWith('image/'));
+    const videoFiles = files.filter(f => f.type.startsWith('video/'));
+
+    // 视频：进入预览确认流程
+    if (videoFiles.length > 0) {
+      const file = videoFiles[0];
+      setPreviewFile({ file, preview: URL.createObjectURL(file), type: 'video' });
+    }
+
+    // 图片：直接上传发送
+    if (imageFiles.length > 0) {
+      await sendImagesDirectly(imageFiles);
+    }
   };
 
-  const confirmSendMedia = async () => {
-    if (!previewFile) return;
+  const sendImagesDirectly = async (files) => {
+    if (!session || sending) return;
+    setSending(true);
+    const isBurn = burnMode;
+    const isFlash = flashMode;
+    try {
+      for (const file of files) {
+        const res = await upload.image(file, isBurn, isFlash);
+        if (res.url) {
+          await sendMediaMessage(res.url, 'image', null, isBurn, isFlash);
+        }
+      }
+      setBurnMode(false);
+      setFlashMode(false);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // 视频确认发送
+  const confirmSendVideo = async () => {
+    if (!previewFile || previewFile.type !== 'video') return;
     setUploading(true);
     try {
       const isBurn = burnMode;
       const isFlash = flashMode;
-      const res = previewFile.type === 'video'
-        ? await upload.video(previewFile.file, isBurn, isFlash)
-        : await upload.image(previewFile.file, isBurn, isFlash);
+      const res = await upload.video(previewFile.file, isBurn, isFlash);
       if (res.url) {
-        await sendMediaMessage(res.url, previewFile.type, null, isBurn, isFlash);
+        await sendMediaMessage(res.url, 'video', null, isBurn, isFlash);
         setBurnMode(false);
         setFlashMode(false);
       }
@@ -306,10 +338,15 @@ export default function ClientChat() {
   const sendMessageAfterSession = async (sessionId, content) => {
     setSending(true);
     try {
-      const res = await chat.send(sessionId, content);
+      const isBurn = burnMode;
+      const res = await chat.send(sessionId, content, 'text', null, null, isBurn, isBurn ? burnSeconds : null);
       if (res.success) {
         setMessages(prev => [...prev, res.message]);
         setInput('');
+        if (isBurn) setBurnMode(false);
+        if (res.message.isBurnAfterRead && res.message.burnAfterSeconds) {
+          startBurnTimer(res.message);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -371,7 +408,7 @@ export default function ClientChat() {
     }
     if (msg.type === 'audio') {
       return (
-        <HStack bg="blackAlpha.300" px={3} py={2} borderRadius="md" spacing={2} cursor={msg.isBurnAfterRead && msg.senderRole !== 'client' ? 'pointer' : 'default'} onClick={() => msg.isBurnAfterRead && msg.senderRole !== 'client' && handleBurnMessage(msg)}>
+        <HStack bg={msg.isBurnAfterRead && !msg.burnedAt ? 'rgba(255,140,0,0.15)' : 'blackAlpha.300'} px={3} py={2} borderRadius="md" spacing={2} cursor={msg.isBurnAfterRead && msg.senderRole !== 'client' ? 'pointer' : 'default'} onClick={() => msg.isBurnAfterRead && msg.senderRole !== 'client' && handleBurnMessage(msg)}>
           <Text fontSize="lg">🔊</Text>
           <audio src={getMediaUrl(msg)} style={{ height: '28px' }} controls={!msg.isBurnAfterRead || msg.burnedAt} />
           {msg.duration && <Text fontSize="xs" color="gray.300">{msg.duration}"</Text>}
@@ -470,16 +507,22 @@ export default function ClientChat() {
                         w="75%"
                         p={3}
                         borderRadius="lg"
-                        bg={isClient ? 'brand.500' : 'rgba(255,255,255,0.08)'}
+                        bg={msg.isBurnAfterRead && !msg.burnedAt
+                          ? 'linear-gradient(135deg, rgba(255,140,0,0.25), rgba(255,80,0,0.15))'
+                          : isClient ? 'brand.500' : 'rgba(255,255,255,0.08)'}
+                        border={msg.isBurnAfterRead && !msg.burnedAt ? '1px solid rgba(255,140,0,0.35)' : 'none'}
                         color="white"
                         role="group"
                         _hover={{ '.recall-btn': { opacity: 1 } }}
                       >
                         {renderMessageContent(msg)}
                         {msg.isBurnAfterRead && !msg.burnedAt && (
-                          <Text fontSize="xs" display="inline" ml={1} color="orange.300">
-                            🔥{countdowns[msg.id] != null ? `${countdowns[msg.id]}s` : (msg.burnAfterSeconds ? `${msg.burnAfterSeconds}s` : '手动')}
-                          </Text>
+                          <HStack mt={2} spacing={1} justify="flex-end">
+                            <Text fontSize="xs" color="orange.300">🔥</Text>
+                            <Text fontSize="sm" fontWeight="bold" color="orange.300">
+                              {countdowns[msg.id] != null ? `${countdowns[msg.id]}s` : (msg.burnAfterSeconds ? `${msg.burnAfterSeconds}s` : '手动')}
+                            </Text>
+                          </HStack>
                         )}
                         <Text fontSize="xs" color="gray.300" mt={1}>
                           {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -526,13 +569,10 @@ export default function ClientChat() {
 
         {/* 输入区域 */}
         <Box p={4} borderTop="1px solid rgba(255,255,255,0.06)">
-          {/* 媒体预览 */}
+          {/* 媒体预览（仅视频/语音需要确认） */}
           {previewFile && (
             <Box mb={2} p={2} bg="rgba(255,255,255,0.05)" borderRadius="md">
               <HStack>
-                {previewFile.type === 'image' && (
-                  <Image src={previewFile.preview} alt="预览" maxH="80px" borderRadius="md" />
-                )}
                 {previewFile.type === 'video' && (
                   <video src={previewFile.preview} style={{ maxHeight: '80px', borderRadius: '4px' }} />
                 )}
@@ -555,7 +595,7 @@ export default function ClientChat() {
                   colorScheme="brand"
                   isLoading={uploading}
                   loadingText={uploading && previewFile.type === 'video' ? '压缩中...' : '发送中'}
-                  onClick={previewFile.type === 'audio' ? confirmSendAudio : confirmSendMedia}
+                  onClick={previewFile.type === 'audio' ? confirmSendAudio : confirmSendVideo}
                 >
                   {!(uploading && previewFile.type === 'video') ? '发送' : ''}
                 </Button>
@@ -575,6 +615,7 @@ export default function ClientChat() {
             <input
               type="file"
               accept="image/*,video/*"
+              multiple
               style={{ display: 'none' }}
               ref={fileInputRef}
               onChange={handleFileSelect}
@@ -626,6 +667,16 @@ export default function ClientChat() {
                 </Box>
               )}
             </Box>
+            <IconButton
+              icon={<Text>⚡{flashMode ? '闪图' : ''}</Text>}
+              variant="ghost"
+              color={flashMode ? 'yellow.400' : 'abyss.400'}
+              aria-label="闪图模式"
+              isDisabled={sending || !!previewFile || burnMode}
+              title={flashMode ? '闪图：查阅后5秒自动销毁' : '闪图模式'}
+              onClick={() => { setFlashMode(f => !f); setBurnMode(false); }}
+              size="sm"
+            />
             <Input
               value={input}
               onChange={e => setInput(e.target.value)}

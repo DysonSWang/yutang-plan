@@ -7,10 +7,10 @@ class AppError extends Error {
   constructor(errorCodeOrMessage, overrides = {}) {
     if (typeof errorCodeOrMessage === 'object') {
       const errDef = errorCodeOrMessage;
-      super(errDef.message);
+      super(overrides.userMessage || errDef.message);
       this.code = errDef.code;
-      this.status = errDef.status;
-      this.userMessage = errDef.message;
+      this.status = overrides.status || errDef.status;
+      this.userMessage = overrides.userMessage || errDef.message;
       this.devMessage = overrides.devMessage || null;
       this.metadata = overrides.metadata || null;
     } else {

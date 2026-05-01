@@ -68,11 +68,14 @@ async function buildMasterPrompt(question, context = {}, options = {}) {
     }
   }
 
+  // 预算感知上下文（信号、待办、观察、摘要等补充信息）
+  const supplementaryContext = context.contextInfo || '';
+
   // 核心：question 必须插入 prompt，否则AI看不到用户的问题
   return `
-你是一个有丰富情感经验的朋友，帮用户分析情感问题。
+你是追爱AI教练，一个有丰富情感经验的朋友，帮用户分析情感问题。你的身份是统一的、唯一的——就是用户信赖的私人情感顾问。
 
-【专业视角】（综合多位教练的经验）
+【内部参考资料】（仅供你参考分析，严禁在回答中引用）
 ${masterSection}
 
 ${fusionHint}
@@ -83,6 +86,7 @@ ${contextSection}
 ${buildClientProfileSection(clientProfile)}
 ${buildGirlProfileSection(girlProfile)}
 ${learningsSection}
+${supplementaryContext ? `\n【补充上下文】\n${supplementaryContext}` : ''}
 
 【历史对话】
 ${historySection}
@@ -96,6 +100,10 @@ ${question}
 - 给出具体可执行的建议
 - 使用正常的中文标点符号（，。！？）
 - 如果信息不够，说清楚还缺什么
+- 你是用户唯一的AI情感顾问，回答中只使用你自己的第一人称视角（"我建议"、"我觉得"）
+- 只要用户没问你是什么 你是谁 不要主动回答名字 严禁在回答中出现任何导师名字（如"王导"、"李导"等）
+- 严禁出现"根据XX导师的建议"、"综合多位教练的经验"等引用性表述
+- 严禁以"多位专家认为"、"框架分析显示"等第三人称口吻回答
 `.trim();
 }
 
@@ -160,9 +168,9 @@ function buildFusionHint(skills, meta = {}) {
   }
 
   return `
-【综合参考原则】${coachLabels}${traceInfo}
-以上 ${skills.length} 个框架可能从不同角度分析，综合判断时：
-- 优先考虑当前关系阶段适用的视角
+【综合参考原则】（内部参考，严禁在回答中引用框架名称）
+以上框架从不同角度提供了分析思路，综合判断时：
+- 优先考虑当前关系阶段适用的角度
 - 如果建议矛盾，给出最稳妥的方案，不要矛盾
 - 女生性格特点优先于通用策略
 `;
@@ -239,18 +247,29 @@ function buildContextSection(girlInfo) {
   const personality = girlInfo.personality || {};
 
   const relStageLabel = girlInfo.relationshipStage ? STAGE_LABELS[girlInfo.relationshipStage] || girlInfo.relationshipStage : null;
+
+  // 基础信息行：年龄、职业、来源等
+  const basics = [];
+  if (girlInfo.age) basics.push(`${girlInfo.age}岁`);
+  if (girlInfo.occupation) basics.push(girlInfo.occupation);
+  if (girlInfo.sourcePlatform) basics.push(`来源: ${girlInfo.sourcePlatform}`);
+
   return `
 【女生上下文】
 - 昵称：${girlInfo.name || '未知'}
+${basics.length > 0 ? `- 基本信息：${basics.join(' | ')}` : ''}
 - 关系阶段：${relStageLabel || '未设置'}
 - 关系热度：${girlInfo.tensionScore || 5}/10
 - 亲密度：${girlInfo.intimacyLevel || 1}
+${girlInfo.lastContact ? `- 最近联系：${girlInfo.lastContact}` : ''}
 
 【性格画像】
 - 沟通风格：${personality.communicationStyle || '未知'}
+${personality.mbti ? `- MBTI：${personality.mbti}` : ''}
 - 情绪触发点：${(personality.emotionalTriggers || []).join('、') || '暂无'}
 - 聊天禁忌：${(personality.thingsToAvoid || []).join('、') || '暂无'}
 - 喜欢话题：${(personality.talkingTopics || []).join('、') || '未知'}
+${girlInfo.notes ? `\n【备注】\n${girlInfo.notes}` : ''}
 `;
 }
 

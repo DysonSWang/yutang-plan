@@ -68,7 +68,7 @@ router.post('/image', authMiddleware, multer({
       encryptionIv = encrypted.subarray(0, 12).toString('hex');
     }
 
-    await uploadBuffer(finalBuffer, ossPath, isSensitive);
+    await uploadBuffer(ossPath, finalBuffer, isSensitive);
 
     res.json({
       url: `/${ossPath}`,
@@ -112,7 +112,7 @@ router.post('/video', authMiddleware, multer({
       encryptionIv = encrypted.subarray(0, 12).toString('hex');
     }
 
-    await uploadBuffer(finalBuffer, ossPath, isSensitive);
+    await uploadBuffer(ossPath, finalBuffer, isSensitive);
 
     res.json({
       url: `/${ossPath}`,
@@ -142,7 +142,7 @@ router.post('/audio', authMiddleware, multer({
 
     // 音频暂不加密（聊天文字记录本身就是明文，音频加密意义不大）
     const ossPath = generateOssPath('audio', req.file.originalname, false);
-    await uploadBuffer(req.file.buffer, ossPath, false);
+    await uploadBuffer(ossPath, req.file.buffer, false);
 
     res.json({
       url: `/${ossPath}`,

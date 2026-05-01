@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import {
   Box, Heading, Card, CardBody, Table, Thead, Tbody, Tr, Th, Td, Button, Badge, Modal, ModalOverlay,
   ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure, SimpleGrid, FormControl,
@@ -329,6 +329,25 @@ export default function AdminDates() {
     }
   };
 
+  const handleDeletePlan = async () => {
+    if (!selectedDate) return;
+    try {
+      const res = await dates.deletePlan(selectedDate.id);
+      if (res.success) {
+        const updated = await dates.get(selectedDate.id);
+        if (updated.success) setSelectedDate(updated.date);
+        toast({ title: '方案已删除', status: 'success', duration: 2000 });
+        loadDates();
+        setRefreshKey(n => n + 1);
+      } else {
+        toast({ title: res.error || '删除失败', status: 'error', duration: 2500 });
+      }
+    } catch (e) {
+      console.error(e);
+      toast({ title: '删除失败', status: 'error', duration: 2500 });
+    }
+  };
+
   const handleGenerateInterview = async () => {
     if (!selectedDate) return;
     setGeneratingInterview(true);
@@ -570,6 +589,29 @@ export default function AdminDates() {
     );
   };
 
+  const stats = useMemo(() => {
+    const now = new Date();
+    const thisMonth = now.getMonth();
+    const thisYear = now.getFullYear();
+    const total = datesList.length;
+    const completed = datesList.filter(d => d.status === 'completed');
+    const rated = completed.filter(d => d.rating);
+    const cancelled = datesList.filter(d => d.status === 'cancelled');
+    const active = datesList.filter(d => d.status !== 'completed' && d.status !== 'cancelled');
+    const thisMonthDates = datesList.filter(d => {
+      const dt = new Date(d.dateTime);
+      return dt.getFullYear() === thisYear && dt.getMonth() === thisMonth;
+    });
+    const totalExpense = datesList.reduce((sum, d) => sum + (d.totalExpense || 0), 0);
+    const avgRating = rated.length > 0
+      ? (rated.reduce((s, d) => s + d.rating, 0) / rated.length).toFixed(1)
+      : '-';
+    const avgExpense = completed.length > 0
+      ? Math.round(totalExpense / completed.length)
+      : 0;
+    return { total, completed: completed.length, rated: rated.length, cancelled: cancelled.length, active: active.length, thisMonth: thisMonthDates.length, totalExpense, avgRating, avgExpense };
+  }, [datesList]);
+
   return (
     <Box>
       <Flex justify="space-between" align="center" mb={6}>
@@ -586,6 +628,48 @@ export default function AdminDates() {
           <Button variant="outline" colorScheme="gray" size="sm" onClick={loadDates}>刷新</Button>
         </HStack>
       </Flex>
+
+      {/* 统计面板 */}
+      <SimpleGrid columns={{ base: 2, md: 5 }} spacing={3} mb={4}>
+        <Card bg="gray.800" variant="filled">
+          <CardBody p={3}>
+            <Text color="gray.400" fontSize="xs">总约会</Text>
+            <Text color="white" fontSize="xl" fontWeight="bold">{stats.total}</Text>
+            <HStack spacing={2} mt={1}>
+              <Text color="teal.400" fontSize="xs">{stats.thisMonth} 本月</Text>
+              <Text color="orange.400" fontSize="xs">{stats.active} 进行中</Text>
+            </HStack>
+          </CardBody>
+        </Card>
+        <Card bg="gray.800" variant="filled">
+          <CardBody p={3}>
+            <Text color="gray.400" fontSize="xs">已完成</Text>
+            <Text color="green.400" fontSize="xl" fontWeight="bold">{stats.completed}</Text>
+            <Text color="gray.500" fontSize="xs">{stats.total > 0 ? Math.round(stats.completed / stats.total * 100) : 0}% 完成率</Text>
+          </CardBody>
+        </Card>
+        <Card bg="gray.800" variant="filled">
+          <CardBody p={3}>
+            <Text color="gray.400" fontSize="xs">平均评分</Text>
+            <Text color="yellow.400" fontSize="xl" fontWeight="bold">{stats.avgRating}</Text>
+            <Text color="gray.500" fontSize="xs">{stats.rated} 条评价</Text>
+          </CardBody>
+        </Card>
+        <Card bg="gray.800" variant="filled">
+          <CardBody p={3}>
+            <Text color="gray.400" fontSize="xs">总花费</Text>
+            <Text color="pink.400" fontSize="xl" fontWeight="bold">¥{stats.totalExpense.toLocaleString()}</Text>
+            <Text color="gray.500" fontSize="xs">均¥{stats.avgExpense.toLocaleString()}/完成</Text>
+          </CardBody>
+        </Card>
+        <Card bg="gray.800" variant="filled">
+          <CardBody p={3}>
+            <Text color="gray.400" fontSize="xs">已取消</Text>
+            <Text color="red.400" fontSize="xl" fontWeight="bold">{stats.cancelled}</Text>
+            <Text color="gray.500" fontSize="xs">{stats.total > 0 ? Math.round(stats.cancelled / stats.total * 100) : 0}% 取消率</Text>
+          </CardBody>
+        </Card>
+      </SimpleGrid>
 
       <Tabs colorScheme="teal" variant="enclosed">
         <TabList bg="gray.750" borderRadius="lg" p={1} mb={4}>
@@ -970,6 +1054,9 @@ export default function AdminDates() {
                             推送客户确认
                           </Button>
                         )}
+                        <Button size="xs" colorScheme="red" variant="ghost" onClick={handleDeletePlan}>
+                          删除方案
+                        </Button>
                       </HStack>
                     </Flex>
                     {renderPlan(selectedDate.aiPlan)}

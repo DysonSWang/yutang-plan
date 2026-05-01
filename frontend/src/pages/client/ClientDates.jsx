@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   Box, Heading, Card, CardBody, Button, Badge, Modal, ModalOverlay, ModalContent,
   ModalHeader, ModalBody, ModalCloseButton, useDisclosure, VStack, HStack, Text,
@@ -90,6 +90,8 @@ export default function ClientDates() {
   const [selectedGirlForDate, setSelectedGirlForDate] = useState(null);
   const [manualForm, setManualForm] = useState({ title: '', girlId: '', dateTime: '', location: '', notes: '' });
   const [manualSubmitting, setManualSubmitting] = useState(false);
+  const [filterGirlId, setFilterGirlId] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
   const toast = useToast();
 
   // 加载记忆的偏好设置
@@ -106,25 +108,50 @@ export default function ClientDates() {
     localStorage.setItem('dating_transportMode', value);
   };
 
-  // 统计计算
-  const stats = {
-    pending: datesList.filter(d => d.status === 'pending_client_confirm' || d.planStatus === 'pending').length,
-    confirmed: datesList.filter(d => d.status === 'confirmed' || d.status === 'planned').length,
-    completed: datesList.filter(d => d.status === 'completed').length,
-    thisWeek: allDates.filter(d => {
-      if (!d.dateTime) return false;
-      const date = new Date(d.dateTime);
-      const now = new Date();
-      const weekEnd = new Date(now);
-      weekEnd.setDate(now.getDate() + 7);
-      return date >= now && date <= weekEnd;
-    }).length
-  };
+  // 统计计算（客户视角：我的进度、待办、活跃度、花费）
+  const stats = useMemo(() => {
+    const now = new Date();
+    const thisMonth = now.getMonth();
+    const thisYear = now.getFullYear();
+    const weekEnd = new Date(now);
+    weekEnd.setDate(now.getDate() + 7);
+    return {
+      pending: allDates.filter(d => d.status === 'pending_client_confirm').length,
+      interviews: pendingInterviews.length,
+      completed: allDates.filter(d => d.status === 'completed').length,
+      thisMonth: allDates.filter(d => {
+        if (!d.dateTime) return false;
+        const dt = new Date(d.dateTime);
+        return dt.getFullYear() === thisYear && dt.getMonth() === thisMonth;
+      }).length,
+      thisWeekExpense: allDates.reduce((sum, d) => {
+        if (!d.dateTime || d.status === 'cancelled') return sum;
+        const dt = new Date(d.dateTime);
+        if (dt >= now && dt <= weekEnd) return sum + (d.totalExpense || 0);
+        return sum;
+      }, 0),
+    };
+  }, [allDates, pendingInterviews]);
 
   // 获取即将到来的约会（最近一个未完成的）
   const upcomingDate = allDates
     .filter(d => d.dateTime && d.status !== 'completed' && d.status !== 'cancelled')
     .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))[0] || null;
+
+  // 过滤后的列表
+  const filteredDates = useMemo(() => {
+    return datesList.filter(d => {
+      if (filterGirlId && d.girlId !== filterGirlId) return false;
+      if (filterStatus && d.status !== filterStatus) return false;
+      return true;
+    });
+  }, [datesList, filterGirlId, filterStatus]);
+
+  const filteredAiPlans = useMemo(() => {
+    // AI方案不绑定女生、没有Date状态，过滤条件激活时隐藏
+    if (filterGirlId || filterStatus) return [];
+    return aiPlans;
+  }, [aiPlans, filterGirlId, filterStatus]);
 
   // 获取头像（优先用自定义头像，其次用照片，最后用名字生成默认头像）
   const getAvatar = (girl) => {
@@ -237,8 +264,8 @@ export default function ClientDates() {
         if (res.client?.id) {
           setClientId(res.client.id);
         }
-        if (res.client?.girls) {
-          setGirlList(res.client.girls);
+        if (res.girls) {
+          setGirlList(res.girls);
         }
         // 预填充用户偏好
         if (res.client) {
@@ -605,16 +632,29 @@ export default function ClientDates() {
               </Box>
             )}
 
-            {/* 统计栏 */}
-            {!loading && (datesList.length > 0 || aiPlans.length > 0) && (
-              <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4} mb={6}>
+            {/* 统计栏 — 客户视角：我的进度、待办、活跃度 */}
+            {!loading && (allDates.length > 0 || aiPlans.length > 0 || pendingInterviews.length > 0) && (
+              <SimpleGrid columns={{ base: 2, md: 5 }} spacing={3} mb={6}>
                 <Card bg="gray.800" border="1px solid" borderColor="yellow.600">
                   <CardBody py={4} px={4}>
                     <Flex align="center" gap={3}>
                       <Box w="40px" h="40px" borderRadius="10px" bg="rgba(234,179,8,0.2)" display="flex" alignItems="center" justifyContent="center" fontSize="20px">⏳</Box>
                       <Box>
                         <Text fontSize="2xl" fontWeight="bold" color="yellow.400">{stats.pending}</Text>
-                        <Text fontSize="xs" color="gray.500">待确认</Text>
+                        <Text fontSize="xs" color="gray.400">待确认</Text>
+                        <Text fontSize="10px" color="gray.600">需你确认</Text>
+                      </Box>
+                    </Flex>
+                  </CardBody>
+                </Card>
+                <Card bg="gray.800" border="1px solid" borderColor="orange.600">
+                  <CardBody py={4} px={4}>
+                    <Flex align="center" gap={3}>
+                      <Box w="40px" h="40px" borderRadius="10px" bg="rgba(249,115,22,0.2)" display="flex" alignItems="center" justifyContent="center" fontSize="20px">📋</Box>
+                      <Box>
+                        <Text fontSize="2xl" fontWeight="bold" color="orange.400">{stats.interviews}</Text>
+                        <Text fontSize="xs" color="gray.400">待访谈</Text>
+                        <Text fontSize="10px" color="gray.600">约会后填写</Text>
                       </Box>
                     </Flex>
                   </CardBody>
@@ -622,10 +662,11 @@ export default function ClientDates() {
                 <Card bg="gray.800" border="1px solid" borderColor="green.600">
                   <CardBody py={4} px={4}>
                     <Flex align="center" gap={3}>
-                      <Box w="40px" h="40px" borderRadius="10px" bg="rgba(34,197,94,0.2)" display="flex" alignItems="center" justifyContent="center" fontSize="20px">✓</Box>
+                      <Box w="40px" h="40px" borderRadius="10px" bg="rgba(34,197,94,0.2)" display="flex" alignItems="center" justifyContent="center" fontSize="20px">🎉</Box>
                       <Box>
-                        <Text fontSize="2xl" fontWeight="bold" color="green.400">{stats.confirmed}</Text>
-                        <Text fontSize="xs" color="gray.500">已确认</Text>
+                        <Text fontSize="2xl" fontWeight="bold" color="green.400">{stats.completed}</Text>
+                        <Text fontSize="xs" color="gray.400">已完成</Text>
+                        <Text fontSize="10px" color="gray.600">累计完成</Text>
                       </Box>
                     </Flex>
                   </CardBody>
@@ -633,21 +674,23 @@ export default function ClientDates() {
                 <Card bg="gray.800" border="1px solid" borderColor="cyan.600">
                   <CardBody py={4} px={4}>
                     <Flex align="center" gap={3}>
-                      <Box w="40px" h="40px" borderRadius="10px" bg="rgba(6,182,212,0.2)" display="flex" alignItems="center" justifyContent="center" fontSize="20px">🎉</Box>
+                      <Box w="40px" h="40px" borderRadius="10px" bg="rgba(6,182,212,0.2)" display="flex" alignItems="center" justifyContent="center" fontSize="20px">📅</Box>
                       <Box>
-                        <Text fontSize="2xl" fontWeight="bold" color="cyan.400">{stats.completed}</Text>
-                        <Text fontSize="xs" color="gray.500">已完成</Text>
+                        <Text fontSize="2xl" fontWeight="bold" color="cyan.400">{stats.thisMonth}</Text>
+                        <Text fontSize="xs" color="gray.400">本月约会</Text>
+                        <Text fontSize="10px" color="gray.600">本月活动</Text>
                       </Box>
                     </Flex>
                   </CardBody>
                 </Card>
-                <Card bg="gray.800" border="1px solid" borderColor="purple.600">
+                <Card bg="gray.800" border="1px solid" borderColor="pink.600">
                   <CardBody py={4} px={4}>
                     <Flex align="center" gap={3}>
-                      <Box w="40px" h="40px" borderRadius="10px" bg="rgba(168,85,247,0.2)" display="flex" alignItems="center" justifyContent="center" fontSize="20px">📅</Box>
+                      <Box w="40px" h="40px" borderRadius="10px" bg="rgba(244,114,182,0.2)" display="flex" alignItems="center" justifyContent="center" fontSize="20px">💳</Box>
                       <Box>
-                        <Text fontSize="2xl" fontWeight="bold" color="purple.400">{stats.thisWeek}</Text>
-                        <Text fontSize="xs" color="gray.500">本周约会</Text>
+                        <Text fontSize="2xl" fontWeight="bold" color="pink.400">¥{stats.thisWeekExpense}</Text>
+                        <Text fontSize="xs" color="gray.400">本周花费</Text>
+                        <Text fontSize="10px" color="gray.600">本周支出</Text>
                       </Box>
                     </Flex>
                   </CardBody>
@@ -720,7 +763,7 @@ export default function ClientDates() {
             {/* 约会列表 */}
             {loading ? (
               <Flex justify="center" py={12}><Spinner /></Flex>
-            ) : datesList.length === 0 && aiPlans.length === 0 && pendingInterviews.length === 0 ? (
+            ) : filteredDates.length === 0 && filteredAiPlans.length === 0 && pendingInterviews.length === 0 ? (
               <Card bg="gray.800">
                 <CardBody>
                   <Flex direction="column" align="center" py={12} gap={3}>
@@ -752,8 +795,53 @@ export default function ClientDates() {
                   </HStack>
                 </HStack>
 
+                {/* 过滤栏 */}
+                <Flex gap={3} wrap="wrap">
+                  <Select
+                    placeholder={`全部女生 (${girlList.length})`}
+                    w="180px"
+                    size="sm"
+                    bg="gray.800"
+                    color="white"
+                    borderColor="gray.600"
+                    value={filterGirlId}
+                    onChange={e => setFilterGirlId(e.target.value)}
+                  >
+                    {girlList.map(g => (
+                      <option key={g.id} value={g.id}>{g.name}{g.stage ? ` · ${g.stage}` : ''}</option>
+                    ))}
+                  </Select>
+                  <Select
+                    placeholder="全部状态"
+                    w="150px"
+                    size="sm"
+                    bg="gray.800"
+                    color="white"
+                    borderColor="gray.600"
+                    value={filterStatus}
+                    onChange={e => setFilterStatus(e.target.value)}
+                  >
+                    <option value="pending_plan">待策划</option>
+                    <option value="planned">已策划</option>
+                    <option value="pending_client_confirm">待确认</option>
+                    <option value="confirmed">已确认</option>
+                    <option value="completed">已完成</option>
+                    <option value="cancelled">已取消</option>
+                  </Select>
+                  {(filterGirlId || filterStatus) && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      color="gray.400"
+                      onClick={() => { setFilterGirlId(''); setFilterStatus(''); }}
+                    >
+                      清除过滤
+                    </Button>
+                  )}
+                </Flex>
+
                 {/* AI 方案列表 - 新卡片设计 */}
-                {aiPlans.map(plan => (
+                {filteredAiPlans.map(plan => (
                   <Card
                     key={plan.id}
                     bg="gray.800"
@@ -805,7 +893,7 @@ export default function ClientDates() {
                   </Card>
                 ))}
                 {/* 顾问方案列表 - 新卡片设计 */}
-                {datesList.map(d => {
+                {filteredDates.map(d => {
                   const plan = parseJSON(d.aiPlan);
                   const progress = getProgress(d);
                   return (

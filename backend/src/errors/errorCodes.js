@@ -16,6 +16,8 @@ const ErrorCodes = {
   AUTH_USER_EXISTS:          { code: 'A0106', status: 409, message: '用户名已存在' },
   AUTH_PASSWORD_TOO_SHORT:   { code: 'A0107', status: 400, message: '密码至少8位' },
   AUTH_PERMISSION_DENIED:    { code: 'A0108', status: 403, message: '无此操作权限' },
+  AUTH_PASSWORD_MISMATCH:    { code: 'A0109', status: 400, message: '两次输入的新密码不一致' },
+  AUTH_OLD_PASSWORD_WRONG:   { code: 'A0110', status: 400, message: '旧密码错误' },
 
   // ========== C02 客户模块 ==========
   CLIENT_NOT_FOUND:          { code: 'C0201', status: 404, message: '客户不存在' },

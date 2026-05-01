@@ -1,10 +1,12 @@
 import { Box, Flex, VStack, Icon, Text, Badge, Popover, PopoverTrigger, PopoverContent, PopoverBody, PopoverHeader, Button, HStack, useToast } from '@chakra-ui/react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSocket } from '../../contexts/SocketContext';
 import { notifications as notifApi } from '../../utils/api';
 import { FishIcon, ChatIcon, SparklesIcon, BellIcon, UserIcon, CalendarIcon, BookIcon, GiftIcon } from '../../components/Icons';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3005';
 
 const navItems = [
   { path: '/chat', label: 'Mo哥', icon: ChatIcon },
@@ -16,76 +18,9 @@ const navItems = [
 ];
 
 // 桌面端侧边导航
-function DesktopSidebar() {
+function DesktopSidebar({ chatUnread, unreadCount, notifications, showNotifications, setShowNotifications, markAllAsRead }) {
   const { user } = useAuth();
-  const toast = useToast();
-  const { on } = useSocket();
   const location = useLocation();
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [chatUnread, setChatUnread] = useState(0);
-  const [notifications, setNotifications] = useState([]);
-  const [showNotifications, setShowNotifications] = useState(false);
-
-  const loadUnreadCount = async () => {
-    try {
-      // 加载通知未读数
-      const res = await notifApi.list();
-      if (res.success) {
-        setUnreadCount(res.unreadCount);
-        setNotifications(res.notifications);
-      }
-      // 加载聊天会话未读数
-      const token = localStorage.getItem('zhuiai_token');
-      const chatRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/chat/my-sessions`, {
-        headers: { Authorization: `Bearer ${token}` }
-      }).then(r => r.json());
-      if (chatRes.success && chatRes.sessions.length > 0) {
-        const totalUnread = chatRes.sessions.reduce((sum, s) => sum + (s.unreadCount || 0), 0);
-        setChatUnread(totalUnread);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  useEffect(() => {
-    loadUnreadCount();
-  }, []);
-
-  useEffect(() => {
-    const handler = (log) => {
-      toast({
-        title: '操盘手发来代聊记录',
-        description: log.content?.slice(0, 30) + (log.content?.length > 30 ? '...' : ''),
-        status: 'info',
-        duration: 5000,
-        isClosable: true,
-        position: 'top',
-      });
-    };
-    on('chat-log:new', handler);
-
-    // 监听聊天消息
-    const chatHandler = (message) => {
-      if (location.pathname !== '/chat') {
-        setChatUnread(prev => prev + 1);
-      }
-    };
-    on('message:new', chatHandler);
-
-    // 监听进入聊天页面事件，清除未读
-    const handleChatEnter = () => setChatUnread(0);
-    window.addEventListener('chat-enter', handleChatEnter);
-  }, [on, toast, location.pathname]);
-
-  const markAllAsRead = async () => {
-    try {
-      await notifApi.readAll();
-      setUnreadCount(0);
-    } catch (e) {
-      console.error(e);
-    }
-  };
 
   return (
     <Box
@@ -176,21 +111,11 @@ function DesktopSidebar() {
               <HStack spacing={2}>
                 <Text>{item.label}</Text>
                 {item.path === '/chat' && chatUnread > 0 && (
-                  <Box w="12px" h="12px" borderRadius="full" bg="red.500" />
+                  <Badge colorScheme="red" borderRadius="full" fontSize="xs" minW="18px" h="18px" display="flex" alignItems="center" justifyContent="center">
+                    {chatUnread > 99 ? '99+' : chatUnread}
+                  </Badge>
                 )}
               </HStack>
-              {/* 通知未读小红点 - 始终显示 */}
-              {item.path !== '/chat' && unreadCount > 0 && (
-                <Box
-                  position="absolute"
-                  top="8px"
-                  right="8px"
-                  w="8px"
-                  h="8px"
-                  borderRadius="full"
-                  bg="red.500"
-                />
-              )}
             </Flex>
           </NavLink>
         ))}
@@ -204,41 +129,8 @@ function DesktopSidebar() {
 }
 
 // 移动端底部 Tab 导航
-function MobileBottomNav() {
+function MobileBottomNav({ chatUnread, unreadCount }) {
   const location = useLocation();
-  const { on } = useSocket();
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [chatUnread, setChatUnread] = useState(0);
-
-  useEffect(() => {
-    const loadUnread = async () => {
-      try {
-        const res = await notifApi.list();
-        if (res.success) {
-          setUnreadCount(res.unreadCount);
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    };
-    loadUnread();
-
-    on('notification:new', () => {
-      setUnreadCount(prev => prev + 1);
-    });
-
-    // 监听聊天消息，增加未读计数
-    on('message:new', (message) => {
-      // 如果当前不在聊天页面，增加未读计数
-      if (location.pathname !== '/chat') {
-        setChatUnread(prev => prev + 1);
-      }
-    });
-
-    // 监听进入聊天页面事件，清除未读
-    const handleChatEnter = () => setChatUnread(0);
-    window.addEventListener('chat-enter', handleChatEnter);
-  }, [on, location.pathname]);
 
   return (
     <Box
@@ -256,6 +148,7 @@ function MobileBottomNav() {
       <HStack spacing={0} justify="space-around" py={2}>
         {navItems.map(item => {
           const isActive = location.pathname === item.path;
+          const isChat = item.path === '/chat';
           return (
             <NavLink key={item.path} to={item.path}>
               <Flex
@@ -272,12 +165,11 @@ function MobileBottomNav() {
               >
                 <Icon as={item.icon} boxSize={5} mb={1} />
                 <Text fontSize="xs">{item.label}</Text>
-                {/* 通知未读 */}
-                {item.path === '/chat' && (unreadCount > 0 || chatUnread > 0) && (
+                {isChat && chatUnread > 0 && (
                   <Badge
                     position="absolute"
-                    top="5px"
-                    right="12px"
+                    top="2px"
+                    right="8px"
                     colorScheme="red"
                     borderRadius="full"
                     fontSize="xs"
@@ -287,15 +179,14 @@ function MobileBottomNav() {
                     alignItems="center"
                     justifyContent="center"
                   >
-                    {unreadCount + chatUnread > 99 ? '99+' : unreadCount + chatUnread}
+                    {chatUnread > 99 ? '99+' : chatUnread}
                   </Badge>
                 )}
-                {/* 通知未读（其他页面） */}
-                {item.path !== '/chat' && unreadCount > 0 && (
+                {!isChat && unreadCount > 0 && (
                   <Badge
                     position="absolute"
-                    top="5px"
-                    right="12px"
+                    top="2px"
+                    right="8px"
                     colorScheme="red"
                     borderRadius="full"
                     fontSize="xs"
@@ -318,12 +209,90 @@ function MobileBottomNav() {
 }
 
 export default function ClientLayout() {
+  const { on } = useSocket();
+  const location = useLocation();
+  const toast = useToast();
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [chatUnread, setChatUnread] = useState(0);
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  // 初始加载通知未读数和聊天未读数
+  const loadInitialData = useCallback(async () => {
+    try {
+      const [notifRes, chatRes] = await Promise.all([
+        notifApi.list(),
+        fetch(`${API_BASE}/api/chat/my-sessions`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('zhuiai_token')}` }
+        }).then(r => r.json()).catch(() => ({ success: false }))
+      ]);
+      if (notifRes.success) {
+        setUnreadCount(notifRes.unreadCount);
+        setNotifications(notifRes.notifications);
+      }
+      if (chatRes.success && chatRes.sessions?.length > 0) {
+        const totalUnread = chatRes.sessions.reduce((sum, s) => sum + (s.unreadCount || 0), 0);
+        setChatUnread(totalUnread);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadInitialData();
+  }, [loadInitialData]);
+
+  // socket 事件（仅在 ClientLayout 注册一次，避免 Desktop/Mobile 竞争）
+  useEffect(() => {
+    on('chat-log:new', (log) => {
+      toast({
+        title: '操盘手发来代聊记录',
+        description: log.content?.slice(0, 30) + (log.content?.length > 30 ? '...' : ''),
+        status: 'info',
+        duration: 5000,
+        isClosable: true,
+        position: 'top',
+      });
+    });
+
+    on('notification:new', () => {
+      setUnreadCount(prev => prev + 1);
+    });
+
+    on('message:new', (message) => {
+      if (message.senderRole === 'client') return;
+      if (location.pathname !== '/chat') {
+        setChatUnread(prev => prev + 1);
+      }
+    });
+
+    const handleChatEnter = () => setChatUnread(0);
+    window.addEventListener('chat-enter', handleChatEnter);
+    return () => {
+      window.removeEventListener('chat-enter', handleChatEnter);
+    };
+  }, [on, toast, location.pathname]);
+
+  const markAllAsRead = async () => {
+    try {
+      await notifApi.readAll();
+      setUnreadCount(0);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   return (
     <Box minH="100vh" bg="abyss.950">
-      {/* 桌面端侧边导航 */}
-      <DesktopSidebar />
-
-      {/* 右侧内容 */}
+      <DesktopSidebar
+        chatUnread={chatUnread}
+        unreadCount={unreadCount}
+        notifications={notifications}
+        showNotifications={showNotifications}
+        setShowNotifications={setShowNotifications}
+        markAllAsRead={markAllAsRead}
+      />
       <Box
         ml={{ base: 0, lg: '200px' }}
         p={{ base: 4, md: 6 }}
@@ -332,9 +301,7 @@ export default function ClientLayout() {
       >
         <Outlet />
       </Box>
-
-      {/* 移动端底部导航 */}
-      <MobileBottomNav />
+      <MobileBottomNav chatUnread={chatUnread} unreadCount={unreadCount} />
     </Box>
   );
 }

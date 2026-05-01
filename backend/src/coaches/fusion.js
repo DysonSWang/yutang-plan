@@ -311,14 +311,13 @@ async function buildStructuredFusion(skills, meta, context = {}) {
   // 构建融合提示文本
   let hint = '';
 
-  // 1. 融合策略说明
-  hint += `\n【融合策略】${result.fusionStrategy === 'single_coach' ? '单一教练' : result.fusionStrategy === 'caution_priority' ? '谨慎优先' : result.fusionStrategy === 'aggressive_priority' ? '进取优先' : result.fusionStrategy === 'balanced_blend' ? '平衡综合' : '多教练融合'}`;
+  // 1. 融合策略说明（内部参考）
+  hint += `\n【融合策略】（内部参考）${result.fusionStrategy === 'single_coach' ? '单一角度' : result.fusionStrategy === 'caution_priority' ? '谨慎优先' : result.fusionStrategy === 'aggressive_priority' ? '进取优先' : result.fusionStrategy === 'balanced_blend' ? '平衡综合' : '多维融合'}`;
   hint += `\n决策原因：${result.decisionReason}`;
 
-  // 2. 优先级教练顺序
+  // 2. 优先级参考（不暴露教练名称）
   if (result.priorityCoaches.length > 1) {
-    const coachNames = result.priorityCoaches.map(c => c.label).join(' > ');
-    hint += `\n教练优先级：${coachNames}`;
+    hint += `\n分析优先级：已按权重排序（共${result.priorityCoaches.length}个维度）`;
   }
 
   // 3. 冲突处理说明
@@ -329,12 +328,12 @@ async function buildStructuredFusion(skills, meta, context = {}) {
   // 4. 问题类型优先级
   hint += `\n当前问题类型：${result.routedType}`;
 
-  // 5. 决策矩阵总结（用于 AI 判断）
+  // 5. 决策参考（仅权重，不暴露教练名称）
   if (result.coachScores && result.coachScores.length > 0) {
     const topCoaches = result.coachScores.slice(0, 3);
-    hint += `\n决策参考：`;
+    hint += `\n决策参考（权重由高到低）：`;
     for (const c of topCoaches) {
-      hint += `\n  - ${c.label}（权重${c.score}）`;
+      hint += `\n  - 维度权重${c.score}`;
     }
   }
 

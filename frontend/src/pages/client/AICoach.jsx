@@ -26,42 +26,6 @@ function getHeatLevel(score) {
   return 'cold';
 }
 
-// 通用Header组件：女生选择 + 模式切换 - 模块级组件
-const CoachHeader = memo(({ girls, selectedGirlId, onGirlChange, selectedGirl, deepMode, onDeepModeToggle }) => (
-  <Card bg="gray.800" mb={4}>
-    <CardBody py={3}>
-      <Flex gap={4} wrap="wrap" align="center" justify="space-between">
-        <Flex gap={4} wrap="wrap" align="center" flex={1}>
-          <Select value={selectedGirlId} onChange={e => onGirlChange(e.target.value)} bg="gray.700" border="none" color="white" flex={1} minW="180px" placeholder="关联女生" size="sm">
-            {(girls || []).map(g => (
-              <option key={g.id} value={g.id}>{g.name} - {g.stage || '未知'}</option>
-            ))}
-          </Select>
-          <Tooltip label={deepMode ? '深度分析：调用工具链，全面分析' : '快速分析：流式输出，快'}>
-            <button type="button" onClick={onDeepModeToggle}
-              style={{ background: deepMode ? '#553c9a' : '#374151', border: deepMode ? '1px solid #805ad5' : 'none', borderRadius: '6px', padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', color: deepMode ? '#d6bcfa' : '#a0aec0' }}>
-              <span style={{ fontSize: '16px' }}><SparklesIcon /></span>
-              <span style={{ fontSize: '12px', fontWeight: 'bold' }}>{deepMode ? '深度' : '快速'}</span>
-            </button>
-          </Tooltip>
-        </Flex>
-        {selectedGirl && (
-          <HStack bg="gray.700" px={3} py={1} borderRadius="md" spacing={3}>
-            <HStack spacing={2}>
-              <Text color="white" fontWeight="bold" fontSize="sm">{selectedGirl.name}</Text>
-              <Badge colorScheme={STAGE_COLORS[selectedGirl.stage] || 'gray'} fontSize="xs">{selectedGirl.stage || '未知'}</Badge>
-            </HStack>
-            <HStack spacing={1}>
-              <Text color="gray.400" fontSize="xs">热度</Text>
-              <Text color={selectedGirl.tensionScore >= 5 ? 'orange.400' : 'blue.400'} fontSize="xs" fontWeight="bold">{selectedGirl.tensionScore?.toFixed(1) || '5.0'}</Text>
-            </HStack>
-            <Icon as={selectedGirl.tensionScore >= 5 ? FireIcon : SnowIcon} color={selectedGirl.tensionScore >= 5 ? 'orange.400' : 'blue.400'} boxSize={4} />
-          </HStack>
-        )}
-      </Flex>
-    </CardBody>
-  </Card>
-));
 
 // 独立的输入区域组件 - 使用完全独立的本地状态
 const InputArea = memo(({ onSubmit, loading, deepMode, onNewConversation }) => {
@@ -178,40 +142,48 @@ const SessionBar = memo(({
   };
 
   return (
-    <Card bg="gray.800" mb={2} variant="outline">
-      <CardBody py={2} px={3}>
-        <Flex align="center" justify="space-between" gap={2}>
-          <Flex align="center" gap={2} flex={1} minW={0}>
-            <Text color="gray.400" fontSize="xs" flexShrink={0}>会话</Text>
-            <Select
-              value={activeSessionId || ''}
-              onChange={e => { if (e.target.value) onSelectSession(e.target.value); }}
-              bg="gray.700" border="none" color="white" size="sm"
-              flex={1} maxW="280px"
-              placeholder={displaySessions.length === 0 ? '暂无历史会话' : '选择历史会话'}
-              isDisabled={loading}
-            >
-              {displaySessions.map(s => (
-                <option key={s.id} value={s.id}>{formatTime(s.createdAt)} · {(s.messages || []).length}条 · {s.active !== false ? '活跃' : '已归档'}</option>
-              ))}
-            </Select>
-            {activeSession && (
-              <Badge colorScheme="teal" variant="subtle" fontSize="xs" flexShrink={0}>
-                {(activeSession.messages || []).length}条
-              </Badge>
-            )}
-          </Flex>
-          <Button size="xs" variant="outline" colorScheme="teal" onClick={onNewSession} isLoading={loading}>
-            + 新建
-          </Button>
-        </Flex>
-      </CardBody>
-    </Card>
+    <Flex align="center" gap={2} mb={1} flexShrink={0} bg="gray.800" px={3} py={1.5} borderRadius="md" border="1px solid" borderColor="whiteAlpha.100">
+      <Text color="gray.500" fontSize="xs" flexShrink={0}>会话</Text>
+      <Select
+        value={activeSessionId || ''}
+        onChange={e => {
+          const val = e.target.value;
+          if (val === '') {
+            // 切换到"新会话"状态（无活跃会话），仅在当前有选中会话时才执行
+            if (activeSessionId) onNewSession();
+          } else {
+            onSelectSession(val);
+          }
+        }}
+        bg="gray.700" border="none" color="white" size="xs"
+        flex={1} maxW="240px"
+        borderRadius="md"
+        isDisabled={loading}
+      >
+        <option value="">🆕 新会话</option>
+        {displaySessions.map(s => (
+          <option key={s.id} value={s.id}>{formatTime(s.createdAt)} · {(s.messages || []).length}条 · {s.active !== false ? '活跃' : '已归档'}</option>
+        ))}
+      </Select>
+      {activeSession && (
+        <Badge colorScheme="teal" variant="subtle" fontSize="xs" flexShrink={0}>
+          {(activeSession.messages || []).length}条
+        </Badge>
+      )}
+      <Button
+        size="xs" variant="ghost" colorScheme="teal"
+        onClick={onNewSession} isLoading={loading}
+        isDisabled={!activeSessionId}
+        flexShrink={0}
+      >
+        + 新建
+      </Button>
+    </Flex>
   );
 });
 
 // ====== 回复建议面板（自包含模块级组件） ======
-const ReplySuggestionsPanel = memo(({ apiUrl, selectedGirlId, toast, headerProps }) => {
+const ReplySuggestionsPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
   const [replyInput, setReplyInput] = useState('');
   const [replyStyle, setReplyStyle] = useState('');
   const [replyStyleCustom, setReplyStyleCustom] = useState('');
@@ -260,7 +232,6 @@ const ReplySuggestionsPanel = memo(({ apiUrl, selectedGirlId, toast, headerProps
 
   return (
     <>
-      <CoachHeader {...headerProps} />
       <Card bg="gray.800">
         <CardBody>
           <VStack spacing={4} align="stretch">
@@ -329,7 +300,7 @@ const ReplySuggestionsPanel = memo(({ apiUrl, selectedGirlId, toast, headerProps
 });
 
 // ====== 话术优化面板（自包含模块级组件） ======
-const OptimizeReplyPanel = memo(({ apiUrl, selectedGirlId, toast, headerProps }) => {
+const OptimizeReplyPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
   const [optimizeInput, setOptimizeInput] = useState('');
   const [optimizeGoal, setOptimizeGoal] = useState('');
   const [optimizeGoalCustom, setOptimizeGoalCustom] = useState('');
@@ -378,7 +349,6 @@ const OptimizeReplyPanel = memo(({ apiUrl, selectedGirlId, toast, headerProps })
 
   return (
     <>
-      <CoachHeader {...headerProps} />
       <Card bg="gray.800">
         <CardBody>
           <VStack spacing={4} align="stretch">
@@ -919,7 +889,7 @@ export default function AICoach() {
   const handleNewConversation = async () => {
     try {
       const token = localStorage.getItem('zhuiai_token');
-      await fetch(`${apiUrl}/api/ai-coach/new-session`, {
+      const res = await fetch(`${apiUrl}/api/ai-coach/new-session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -927,8 +897,17 @@ export default function AICoach() {
         },
         body: JSON.stringify({ girlId: selectedGirlId || undefined })
       });
-      // 重新加载会话列表（旧会话已被结束，不再出现在活跃列表中）
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || '新建会话失败');
+      }
+      // 先刷新会话列表（旧会话标记为已归档）
       await loadHistory();
+      // 清空聊天区域和会话选中状态，进入欢迎界面
+      // 新会话在用户发送下一条消息时由服务端自动创建（getOrCreateSession）
+      setMessages([]);
+      setActiveSessionId(null);
+      setError('');
       toast({
         title: '已开启新对话',
         status: 'info',
@@ -937,6 +916,13 @@ export default function AICoach() {
       });
     } catch (e) {
       console.error('[AICoach] new-session failed:', e);
+      toast({
+        title: '新建会话失败',
+        description: e.message,
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
     }
   };
 
@@ -1125,16 +1111,6 @@ export default function AICoach() {
     '怎么避免成为舔狗？'
   ];
 
-  // 稳定的 CoachHeader props - 必须在 early return 之前（hooks 规则）
-  const coachHeaderProps = useMemo(() => ({
-    girls,
-    selectedGirlId,
-    onGirlChange: handleGirlChange,
-    selectedGirl,
-    deepMode,
-    onDeepModeToggle: handleDeepModeToggle
-  }), [girls, selectedGirlId, selectedGirl, deepMode, handleDeepModeToggle]);
-
   if (loadingHistory) {
     return (
       <Box p={8} textAlign="center">
@@ -1148,15 +1124,6 @@ export default function AICoach() {
   // 注意：不使用 memo，因为需要确保 ref 和状态更新正确同步
   const AICoachPanel = () => (
     <>
-      {/* 固定顶部区域 - 女生选择 */}
-      <CoachHeader
-        girls={girls}
-        selectedGirlId={selectedGirlId}
-        onGirlChange={handleGirlChange}
-        selectedGirl={selectedGirl}
-        deepMode={deepMode}
-        onDeepModeToggle={handleDeepModeToggle}
-      />
       {/* 会话选择栏 */}
       <SessionBar
         sessions={sessions}
@@ -1249,9 +1216,44 @@ export default function AICoach() {
   );
 
   return (
-    <Box display="flex" flexDirection="column" h="calc(100vh - 140px)" overflow="hidden">
-      <Flex justify="space-between" align="center" mb={3} flexShrink={0}>
-        <Heading color="white" size="lg">AI教练</Heading>
+    <Box display="flex" flexDirection="column" h={{ base: 'calc(100vh - 96px)', lg: 'calc(100vh - 48px)' }} overflow="hidden">
+      <Flex justify="space-between" align="center" mb={3} flexShrink={0} gap={3} wrap="wrap">
+        <Heading color="white" size="md" whiteSpace="nowrap">AI教练</Heading>
+        <HStack spacing={2} flexShrink={0}>
+          <Select
+            value={selectedGirlId}
+            onChange={e => handleGirlChange(e.target.value)}
+            bg="gray.700" border="none" color="white" size="sm" maxW="180px" borderRadius="md"
+            placeholder="关联女生"
+          >
+            {(girls || []).map(g => (
+              <option key={g.id} value={g.id}>{g.name}</option>
+            ))}
+          </Select>
+          <Tooltip label={deepMode ? '深度分析：调用工具链，全面分析' : '快速分析：流式输出，快'}>
+            <button type="button" onClick={handleDeepModeToggle}
+              style={{
+                background: deepMode ? '#553c9a' : '#374151',
+                border: deepMode ? '1px solid #805ad5' : '1px solid transparent',
+                borderRadius: '6px', padding: '6px 10px', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: '6px',
+                color: deepMode ? '#d6bcfa' : '#a0aec0', whiteSpace: 'nowrap'
+              }}>
+              <span style={{ fontSize: '14px' }}><SparklesIcon /></span>
+              <span style={{ fontSize: '11px', fontWeight: 'bold' }}>{deepMode ? '深度' : '快速'}</span>
+            </button>
+          </Tooltip>
+          {selectedGirl && (
+            <HStack bg="gray.700" px={2} py={1} borderRadius="md" spacing={2} flexShrink={0}>
+              <Badge colorScheme={STAGE_COLORS[selectedGirl.stage] || 'gray'} fontSize="xs">
+                {selectedGirl.stage || '未知'}
+              </Badge>
+              <Text fontSize="xs" color={selectedGirl.tensionScore >= 5 ? 'orange.400' : 'blue.400'} fontWeight="bold">
+                {selectedGirl.tensionScore?.toFixed(1) || '5.0'}
+              </Text>
+            </HStack>
+          )}
+        </HStack>
       </Flex>
 
       <Tabs variant="soft-rounded" colorScheme="teal" display="flex" flexDirection="column" flex="1" minH="0" overflow="hidden">
@@ -1268,14 +1270,14 @@ export default function AICoach() {
         </TabList>
 
         <TabPanels display="flex" flex="1" minH="0">
-          <TabPanel px={0} py={3} display="flex" flexDirection="column" flex="1" minH="0" overflow="hidden">
+          <TabPanel px={0} py={2} display="flex" flexDirection="column" flex="1" minH="0" overflow="hidden">
             <AICoachPanel />
           </TabPanel>
           <TabPanel px={0} pt={4}>
-            <ReplySuggestionsPanel apiUrl={apiUrl} selectedGirlId={selectedGirlId} toast={toast} headerProps={coachHeaderProps} />
+            <ReplySuggestionsPanel apiUrl={apiUrl} selectedGirlId={selectedGirlId} toast={toast} />
           </TabPanel>
           <TabPanel px={0} pt={4}>
-            <OptimizeReplyPanel apiUrl={apiUrl} selectedGirlId={selectedGirlId} toast={toast} headerProps={coachHeaderProps} />
+            <OptimizeReplyPanel apiUrl={apiUrl} selectedGirlId={selectedGirlId} toast={toast} />
           </TabPanel>
         </TabPanels>
       </Tabs>
