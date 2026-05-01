@@ -1,18 +1,57 @@
 /**
  * 闪图查看器 — 满屏显示图片/视频，支持闪图模式（5秒倒计时）和普通模式
- * 闪图模式：点击查看 → 满屏显示 → 5秒倒计时 → 自动burn
- * 关闭查看器不会停止倒计时，闪图到时间仍会被销毁
+ * 闪图模式：点击查看 → 满屏显示 → 倒计时 → 自动burn
+ * 关闭查看器/切换页面不会停止倒计时，闪图到时间仍会被销毁
  * 普通模式：点击查看 → 满屏显示 → 手动关闭
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Text, Flex, Image, IconButton, Spinner } from '@chakra-ui/react';
 import { chat } from '../utils/api';
 
+// sessionStorage 持久化：刷新页面/切换路由后倒计时不丢失，关标签页自动清除
+const BURN_KEY_PREFIX = 'flash_burn_';
+
+function getBurnEntry(messageId) {
+  if (!messageId) return null;
+  try {
+    const raw = sessionStorage.getItem(BURN_KEY_PREFIX + messageId);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch { return null; }
+}
+
+function setBurnEntry(messageId, entry) {
+  if (!messageId) return;
+  try { sessionStorage.setItem(BURN_KEY_PREFIX + messageId, JSON.stringify(entry)); } catch {}
+}
+
+function delBurnEntry(messageId) {
+  if (!messageId) return;
+  try { sessionStorage.removeItem(BURN_KEY_PREFIX + messageId); } catch {}
+}
+
+function getPendingBurn(messageId) {
+  if (!messageId) return null;
+  const entry = getBurnEntry(messageId);
+  if (!entry) return null;
+  const now = Date.now();
+  if (now >= entry.deadline) {
+    delBurnEntry(messageId);
+    return { expired: true };
+  }
+  return {
+    expired: false,
+    remaining: Math.ceil((entry.deadline - now) / 1000),
+    totalDuration: entry.totalDuration,
+  };
+}
+
 export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId, isFlashMode = false, mediaType = 'image', forceShow }) {
   const [remaining, setRemaining] = useState(5);
   const [totalDuration, setTotalDuration] = useState(5);
   const [hidden, setHidden] = useState(false);
   const [mediaLoaded, setMediaLoaded] = useState(false);
+  const [videoPaused, setVideoPaused] = useState(false);
   const timerRef = useRef(null);
   const burnRef = useRef(false);
   const onCloseRef = useRef(onClose);
@@ -22,39 +61,39 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
   useEffect(() => { messageIdRef.current = messageId; }, [messageId]);
 
-  // 打开/切换时重置
+  // 打开/切换时：检查持久化截止时间，决定重置还是恢复
   useEffect(() => {
     if (!isOpen) return;
-    setRemaining(5);
-    setTotalDuration(5);
+    const pending = getPendingBurn(messageId);
+    if (pending?.expired) {
+      handleBurn();
+      return;
+    }
+    if (pending) {
+      setRemaining(pending.remaining);
+      setTotalDuration(pending.totalDuration);
+    } else {
+      setRemaining(5);
+      setTotalDuration(5);
+    }
     setHidden(false);
     burnRef.current = false;
     setMediaLoaded(false);
-  }, [isOpen, imageUrl]);
+  }, [isOpen, imageUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 再次打开已隐藏的查看器：只恢复可见，不重置倒计时
   useEffect(() => {
     if (forceShow != null && isOpen) {
       setHidden(false);
     }
-  }, [forceShow, isOpen]);
-
-  // 视频加载元数据：根据视频时长设置倒计时（最低3秒）
-  const handleVideoMeta = useCallback((e) => {
-    const dur = Math.max(3, Math.ceil(e.target.duration));
-    setTotalDuration(dur);
-    setRemaining(dur);
-    setMediaLoaded(true);
-    if (videoRef.current) {
-      videoRef.current.play().catch(() => {});
-    }
-  }, []);
+  }, [forceShow, isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleBurn = useCallback(async () => {
     if (burnRef.current) return;
     burnRef.current = true;
     const mid = messageIdRef.current;
     if (!mid) return;
+    delBurnEntry(mid);
     try {
       await chat.burn(mid);
     } catch (e) {
@@ -63,9 +102,31 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
     onCloseRef.current();
   }, []);
 
-  // 媒体加载完成后才开始倒计时
+  // 视频加载元数据：根据视频时长设置倒计时（最低3秒）
+  // 如果有持久化的截止时间，不覆盖
+  const handleVideoMeta = useCallback((e) => {
+    const hasPending = getBurnEntry(messageIdRef.current) !== null;
+    if (!hasPending) {
+      const dur = Math.max(3, Math.ceil(e.target.duration));
+      setTotalDuration(dur);
+      setRemaining(dur);
+    }
+    setMediaLoaded(true);
+    if (videoRef.current) {
+      videoRef.current.play().catch(() => {});
+    }
+  }, []);
+
+  // 媒体加载完成后开始倒计时，同时记录截止时间到模块级 Map
   useEffect(() => {
     if (!isOpen || !isFlashMode || !mediaLoaded) return;
+
+    if (!getBurnEntry(messageId)) {
+      setBurnEntry(messageId, {
+        deadline: Date.now() + remaining * 1000,
+        totalDuration,
+      });
+    }
 
     timerRef.current = setInterval(() => {
       setRemaining(prev => {
@@ -81,7 +142,7 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isOpen, isFlashMode, mediaLoaded, handleBurn]);
+  }, [isOpen, isFlashMode, mediaLoaded, handleBurn, messageId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleClose = () => {
     if (isFlashMode) {
@@ -164,12 +225,36 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
           maxH="85vh"
           borderRadius="lg"
           overflow="hidden"
+          position="relative"
           boxShadow={isFlashMode ? "0 0 60px rgba(255,200,0,0.15)" : "0 4px 30px rgba(0,0,0,0.5)"}
           sx={isFlashMode ? {
             '& video::-webkit-media-controls-enclosure': { display: 'none !important' },
             '& video::-webkit-media-controls': { display: 'none !important' },
           } : {}}
         >
+          {/* 闪图视频暂停时：居中播放按钮 */}
+          {isFlashMode && videoPaused && mediaLoaded && (
+            <Flex
+              position="absolute"
+              inset={0}
+              align="center"
+              justify="center"
+              zIndex={2}
+              pointerEvents="none"
+            >
+              <Flex
+                w="64px"
+                h="64px"
+                borderRadius="full"
+                bg="whiteAlpha.600"
+                align="center"
+                justify="center"
+                backdropFilter="blur(4px)"
+              >
+                <Text fontSize="28px">▶</Text>
+              </Flex>
+            </Flex>
+          )}
           <video
             ref={videoRef}
             src={imageUrl}
@@ -177,17 +262,23 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
             controlsList="nodownload nofullscreen"
             disablePictureInPicture
             autoPlay
+            muted
             playsInline
             onCanPlay={() => {
               if (videoRef.current) {
                 videoRef.current.play().catch(() => {});
               }
             }}
+            onPlay={() => setVideoPaused(false)}
+            onPause={() => setVideoPaused(true)}
             style={{ width: '100%', maxHeight: '85vh', borderRadius: '8px', display: 'block' }}
             onClick={e => {
               e.stopPropagation();
-              if (videoRef.current && videoRef.current.paused) {
+              if (!videoRef.current) return;
+              if (videoRef.current.paused) {
                 videoRef.current.play().catch(() => {});
+              } else {
+                videoRef.current.pause();
               }
             }}
             onContextMenu={e => e.preventDefault()}
