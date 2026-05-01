@@ -33,6 +33,7 @@ const MembershipManagement = lazy(() => import('./pages/admin/MembershipManageme
 const AdminLogs = lazy(() => import('./pages/admin/Logs'));
 const ActivityBoard = lazy(() => import('./pages/admin/ActivityBoard'));
 const ChapterManagement = lazy(() => import('./pages/admin/ChapterManagement'));
+const ChapterEditor = lazy(() => import('./pages/admin/ChapterEditor'));
 
 function PageLoader() {
   return (
@@ -123,6 +124,8 @@ function AppRoutes() {
         <Route path="membership" element={<MembershipManagement />} />
         <Route path="logs" element={<AdminLogs />} />
         <Route path="activity" element={<ActivityBoard />} />
+        <Route path="chapters/new" element={<ChapterEditor />} />
+        <Route path="chapters/:chapterId/edit" element={<ChapterEditor />} />
         <Route path="chapters" element={<ChapterManagement />} />
       </Route>
     </Routes>

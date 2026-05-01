@@ -1,125 +1,91 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Box, Heading, HStack, Button, Badge, Table, Thead, Tbody, Tr, Th, Td,
-  Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter,
-  ModalCloseButton, useDisclosure, FormControl, FormLabel, Input,
-  NumberInput, NumberInputField, Textarea, useToast, Spinner, Center,
+  Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton,
+  useDisclosure, useToast, Spinner, Center,
   VStack, Text, AlertDialog, AlertDialogOverlay, AlertDialogContent,
-  AlertDialogHeader, AlertDialogBody, AlertDialogFooter
+  AlertDialogHeader, AlertDialogBody, AlertDialogFooter, Tooltip, Icon
 } from '@chakra-ui/react';
-import { FiEdit2, FiTrash2, FiPlus } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
+import { FiEdit2, FiTrash2, FiPlus, FiEye, FiEyeOff, FiGlobe, FiMenu } from 'react-icons/fi';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { membership as membershipApi } from '../../utils/api';
 
-// 章节编辑 Modal（新建/编辑复用）
-function ChapterModal({ isOpen, onClose, chapter, onSaved }) {
+// 预览 Modal（Markdown 渲染）
+function PreviewModal({ isOpen, onClose, chapterId, chapter }) {
   const toast = useToast();
-  const [title, setTitle] = useState('');
-  const [subtitle, setSubtitle] = useState('');
-  const [orderIndex, setOrderIndex] = useState(1);
-  const [content, setContent] = useState('');
-  const [saving, setSaving] = useState(false);
-  const isEdit = !!chapter;
+  const [detail, setDetail] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (isOpen) {
-      if (chapter) {
-        setTitle(chapter.title || '');
-        setSubtitle(chapter.subtitle || '');
-        setOrderIndex(chapter.orderIndex || 1);
-        setContent(chapter.content || '');
-      } else {
-        setTitle('');
-        setSubtitle('');
-        setOrderIndex(1);
-        setContent('');
-      }
+    if (isOpen && chapterId) {
+      setLoading(true);
+      membershipApi.adminGetChapter(chapterId)
+        .then(res => {
+          if (res.success) setDetail(res.chapter);
+          else toast({ title: '加载失败', status: 'error', duration: 2000 });
+        })
+        .catch(err => toast({ title: '加载失败', description: err.message, status: 'error', duration: 3000 }))
+        .finally(() => setLoading(false));
     }
-  }, [isOpen, chapter]);
-
-  async function handleSave() {
-    if (!title.trim()) {
-      toast({ title: '标题不能为空', status: 'warning', duration: 2000 });
-      return;
-    }
-    setSaving(true);
-    try {
-      const data = { title: title.trim(), subtitle: subtitle.trim(), orderIndex, content };
-      const res = isEdit
-        ? await membershipApi.adminUpdateChapter(chapter.chapterId, data)
-        : await membershipApi.adminCreateChapter(data);
-      if (res.success) {
-        toast({ title: isEdit ? '章节已更新' : '章节已创建', status: 'success', duration: 2000 });
-        onSaved();
-        onClose();
-      }
-    } catch (err) {
-      toast({ title: '操作失败', description: err.message, status: 'error', duration: 3000 });
-    } finally {
-      setSaving(false);
-    }
-  }
+  }, [isOpen, chapterId, toast]);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="xl">
+    <Modal isOpen={isOpen} onClose={onClose} size="2xl" scrollBehavior="inside">
       <ModalOverlay />
-      <ModalContent bg="gray.800" color="white">
-        <ModalHeader>{isEdit ? '编辑章节' : '新建章节'}</ModalHeader>
+      <ModalContent bg="gray.800" color="white" maxH="85vh">
+        <ModalHeader>
+          <HStack>
+            <Text>{chapter?.title || detail?.title || '预览'}</Text>
+            {detail && (
+              <Badge colorScheme={detail.status === 'published' ? 'green' : 'gray'}>
+                {detail.status === 'published' ? '已上架' : '已下架'}
+              </Badge>
+            )}
+          </HStack>
+        </ModalHeader>
         <ModalCloseButton />
-        <ModalBody>
-          <VStack spacing={4}>
-            <FormControl isRequired>
-              <FormLabel>标题</FormLabel>
-              <Input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="章节标题"
-                bg="gray.700"
-                border="none"
-              />
-            </FormControl>
-            <FormControl>
-              <FormLabel>副标题</FormLabel>
-              <Input
-                value={subtitle}
-                onChange={(e) => setSubtitle(e.target.value)}
-                placeholder="副标题（可选）"
-                bg="gray.700"
-                border="none"
-              />
-            </FormControl>
-            <FormControl isRequired>
-              <FormLabel>排序序号</FormLabel>
-              <NumberInput
-                value={orderIndex}
-                onChange={(_, n) => setOrderIndex(n)}
-                min={0}
-                bg="gray.700"
-                border="none"
-              >
-                <NumberInputField />
-              </NumberInput>
-            </FormControl>
-            <FormControl>
-              <FormLabel>正文（Markdown）</FormLabel>
-              <Textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="Markdown 格式正文（可选）"
-                rows={12}
-                bg="gray.700"
-                border="none"
-                fontFamily="monospace"
+        <ModalBody pb={6}>
+          {loading ? (
+            <Center py={12}><Spinner color="teal.400" /></Center>
+          ) : detail ? (
+            <Box>
+              {detail.subtitle && (
+                <Text color="gray.400" fontSize="sm" mb={4}>{detail.subtitle}</Text>
+              )}
+              <Box
+                className="markdown-body"
+                color="gray.200"
                 fontSize="sm"
-              />
-            </FormControl>
-          </VStack>
+                sx={{
+                  'h1,h2,h3': { color: 'teal.300', mt: 5, mb: 2, fontWeight: 'bold' },
+                  h1: { fontSize: 'xl', borderBottom: '1px solid', borderColor: 'gray.700', pb: 2 },
+                  h2: { fontSize: 'lg' },
+                  h3: { fontSize: 'md' },
+                  p: { mb: 3, lineHeight: '1.8' },
+                  'ul,ol': { pl: 5, mb: 3 },
+                  li: { mb: 1 },
+                  code: { bg: 'gray.700', px: 1.5, py: 0.5, borderRadius: 'sm', fontSize: 'xs' },
+                  pre: { bg: 'gray.900', p: 3, borderRadius: 'md', overflowX: 'auto', mb: 3 },
+                  blockquote: { borderLeft: '3px solid', borderColor: 'teal.500', pl: 3, color: 'gray.400', mb: 3 },
+                  table: { w: '100%', mb: 3 },
+                  th: { bg: 'gray.700', p: 2, textAlign: 'left', fontWeight: 'bold' },
+                  td: { p: 2, borderBottom: '1px solid', borderColor: 'gray.700' },
+                  strong: { color: 'white' },
+                  a: { color: 'teal.300' },
+                  hr: { borderColor: 'gray.700', my: 4 }
+                }}
+              >
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {detail.content || '*暂无正文*'}
+                </ReactMarkdown>
+              </Box>
+            </Box>
+          ) : (
+            <Text color="gray.500" textAlign="center" py={8}>加载失败</Text>
+          )}
         </ModalBody>
-        <ModalFooter>
-          <Button variant="ghost" mr={3} onClick={onClose}>取消</Button>
-          <Button colorScheme="teal" onClick={handleSave} isLoading={saving}>
-            {isEdit ? '保存' : '创建'}
-          </Button>
-        </ModalFooter>
       </ModalContent>
     </Modal>
   );
@@ -168,13 +134,18 @@ function DeleteDialog({ isOpen, onClose, chapter, onDeleted }) {
 
 // 主页面
 export default function ChapterManagement() {
+  const navigate = useNavigate();
   const toast = useToast();
   const [chapters, setChapters] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
-  const { isOpen: isModalOpen, onOpen: openModal, onClose: closeModal } = useDisclosure();
+  const [previewing, setPreviewing] = useState(null);
+  const [toggling, setToggling] = useState({});
+  const [dragId, setDragId] = useState(null);
+  const [dragOverId, setDragOverId] = useState(null);
+  const [reordering, setReordering] = useState(false);
   const { isOpen: isDeleteOpen, onOpen: openDelete, onClose: closeDelete } = useDisclosure();
+  const { isOpen: isPreviewOpen, onOpen: openPreview, onClose: closePreview } = useDisclosure();
 
   const loadChapters = useCallback(async () => {
     setLoading(true);
@@ -191,18 +162,98 @@ export default function ChapterManagement() {
   useEffect(() => { loadChapters(); }, [loadChapters]);
 
   function handleCreate() {
-    setEditing(null);
-    openModal();
+    navigate('/admin/chapters/new');
   }
 
   function handleEdit(chapter) {
-    setEditing(chapter);
-    openModal();
+    navigate(`/admin/chapters/${chapter.chapterId}/edit`);
   }
 
   function handleDeleteClick(chapter) {
     setDeleting(chapter);
     openDelete();
+  }
+
+  function handlePreview(chapter) {
+    setPreviewing(chapter);
+    openPreview();
+  }
+
+  async function handleToggle(chapter) {
+    const newStatus = chapter.status === 'published' ? 'draft' : 'published';
+    setToggling(prev => ({ ...prev, [chapter.chapterId]: true }));
+    try {
+      const res = await membershipApi.adminPublishChapter(chapter.chapterId, newStatus);
+      if (res.success) {
+        toast({
+          title: newStatus === 'published' ? '已上架' : '已下架',
+          status: 'success',
+          duration: 1500
+        });
+        loadChapters();
+      }
+    } catch (err) {
+      toast({ title: '操作失败', description: err.message, status: 'error', duration: 3000 });
+    } finally {
+      setToggling(prev => ({ ...prev, [chapter.chapterId]: false }));
+    }
+  }
+
+  // 拖拽排序
+  function handleDragStart(e, chapterId) {
+    setDragId(chapterId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', chapterId);
+  }
+
+  function handleDragOver(e, chapterId) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (chapterId !== dragId) {
+      setDragOverId(chapterId);
+    }
+  }
+
+  function handleDragLeave() {
+    setDragOverId(null);
+  }
+
+  async function handleDrop(e, targetId) {
+    e.preventDefault();
+    setDragOverId(null);
+    setDragId(null);
+
+    if (!dragId || dragId === targetId) return;
+
+    const newChapters = [...chapters];
+    const dragIndex = newChapters.findIndex(c => c.chapterId === dragId);
+    const targetIndex = newChapters.findIndex(c => c.chapterId === targetId);
+    if (dragIndex === -1 || targetIndex === -1) return;
+
+    const [removed] = newChapters.splice(dragIndex, 1);
+    newChapters.splice(targetIndex, 0, removed);
+
+    setChapters(newChapters);
+    setReordering(true);
+
+    try {
+      const orderedIds = newChapters.map(c => c.chapterId);
+      const res = await membershipApi.adminReorderChapters(orderedIds);
+      if (!res.success) {
+        toast({ title: '排序失败', status: 'error', duration: 2000 });
+        loadChapters();
+      }
+    } catch (err) {
+      toast({ title: '排序失败', description: err.message, status: 'error', duration: 3000 });
+      loadChapters();
+    } finally {
+      setReordering(false);
+    }
+  }
+
+  function handleDragEnd() {
+    setDragId(null);
+    setDragOverId(null);
   }
 
   if (loading) {
@@ -245,16 +296,40 @@ export default function ChapterManagement() {
           <Table variant="simple" size="sm">
             <Thead>
               <Tr bg="gray.800">
+                <Th color="gray.400" border="none" w="36px" />
                 <Th color="gray.400" border="none" w="60px">ID</Th>
                 <Th color="gray.400" border="none">标题</Th>
                 <Th color="gray.400" border="none" display={{ base: 'none', md: 'table-cell' }}>副标题</Th>
-                <Th color="gray.400" border="none" w="60px" isNumeric>排序</Th>
-                <Th color="gray.400" border="none" w="160px">操作</Th>
+                <Th color="gray.400" border="none" w="80px" textAlign="center">状态</Th>
+                <Th color="gray.400" border="none" w="200px">操作</Th>
               </Tr>
             </Thead>
             <Tbody>
               {chapters.map((ch) => (
-                <Tr key={ch.chapterId} _hover={{ bg: 'gray.800' }} borderBottom="1px" borderColor="gray.700">
+                <Tr
+                  key={ch.chapterId}
+                  _hover={{ bg: 'gray.800' }}
+                  borderBottom="1px"
+                  borderColor="gray.700"
+                  bg={dragOverId === ch.chapterId ? 'teal.900' : 'transparent'}
+                  transition="background 0.15s"
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, ch.chapterId)}
+                  onDragOver={(e) => handleDragOver(e, ch.chapterId)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, ch.chapterId)}
+                  onDragEnd={handleDragEnd}
+                  cursor={dragId === ch.chapterId ? 'grabbing' : 'default'}
+                  opacity={dragId === ch.chapterId ? 0.5 : 1}
+                >
+                  <Td border="none" p={2}>
+                    <Icon
+                      as={FiMenu}
+                      color="gray.500"
+                      cursor="grab"
+                      _hover={{ color: 'teal.300' }}
+                    />
+                  </Td>
                   <Td color="gray.400" border="none">
                     <Badge colorScheme="teal" variant="subtle">{ch.chapterId}</Badge>
                   </Td>
@@ -262,9 +337,34 @@ export default function ChapterManagement() {
                   <Td color="gray.400" border="none" display={{ base: 'none', md: 'table-cell' }}>
                     {ch.subtitle || '—'}
                   </Td>
-                  <Td color="gray.400" border="none" isNumeric>{ch.orderIndex}</Td>
+                  <Td border="none" textAlign="center">
+                    <Badge colorScheme={ch.status === 'published' ? 'green' : 'gray'} variant="subtle">
+                      {ch.status === 'published' ? '已上架' : '已下架'}
+                    </Badge>
+                  </Td>
                   <Td border="none">
                     <HStack spacing={1}>
+                      <Tooltip label="预览" openDelay={500}>
+                        <Button
+                          size="xs"
+                          variant="ghost"
+                          colorScheme="cyan"
+                          onClick={() => handlePreview(ch)}
+                        >
+                          <FiEye />
+                        </Button>
+                      </Tooltip>
+                      <Tooltip label={ch.status === 'published' ? '下架' : '上架'} openDelay={500}>
+                        <Button
+                          size="xs"
+                          variant="ghost"
+                          colorScheme={ch.status === 'published' ? 'orange' : 'green'}
+                          onClick={() => handleToggle(ch)}
+                          isLoading={toggling[ch.chapterId]}
+                        >
+                          {ch.status === 'published' ? <FiEyeOff /> : <FiGlobe />}
+                        </Button>
+                      </Tooltip>
                       <Button
                         size="xs"
                         variant="ghost"
@@ -292,18 +392,18 @@ export default function ChapterManagement() {
         </Box>
       )}
 
-      <ChapterModal
-        isOpen={isModalOpen}
-        onClose={closeModal}
-        chapter={editing}
-        onSaved={loadChapters}
-      />
-
       <DeleteDialog
         isOpen={isDeleteOpen}
         onClose={closeDelete}
         chapter={deleting}
         onDeleted={loadChapters}
+      />
+
+      <PreviewModal
+        isOpen={isPreviewOpen}
+        onClose={closePreview}
+        chapterId={previewing?.chapterId}
+        chapter={previewing}
       />
     </Box>
   );
