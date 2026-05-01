@@ -123,8 +123,8 @@ class Api {
   }
 
   get(path) { return this.request('GET', path); }
-  post(path, data) { return this.request('POST', path, data); }
-  put(path, data) { return this.request('PUT', path, data); }
+  post(path, data, timeoutMs) { return this.request('POST', path, data, timeoutMs); }
+  put(path, data, timeoutMs) { return this.request('PUT', path, data, timeoutMs); }
   delete(path) { return this.request('DELETE', path); }
 }
 
@@ -165,17 +165,24 @@ export const clients = {
   me: () => api.getCached('/api/clients/me'),
   update: (id, data) => api.put(`/api/clients/${id}`, data).then(r => { api.clearCache(); return r; }),
   create: (data) => api.post('/api/clients', data).then(r => { api.clearCache(); return r; }),
-  extractProfile: (text) => api.post('/api/clients/extract-profile', { text }),
+  extractProfile: (text) => api.post('/api/clients/extract-profile', { text }, 60000),
   extractFromScreenshot: async (file) => {
     const token = api.getToken();
     const formData = new FormData();
     formData.append('image', file);
-    const res = await fetch(`${api.baseUrl}/api/clients/extract-from-screenshot`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` },
-      body: formData
-    });
-    return res.json();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    try {
+      const res = await fetch(`${api.baseUrl}/api/clients/extract-from-screenshot`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData,
+        signal: controller.signal
+      });
+      return res.json();
+    } finally {
+      clearTimeout(timeoutId);
+    }
   },
   extractFromChat: (clientId, messageCount) => api.post(`/api/clients/${clientId}/extract-from-chat`, { messageCount }),
   // M007 S05: 入职完成
@@ -429,13 +436,23 @@ export const membership = {
   chapters: () => api.get('/api/membership/learning/chapters'),
   learningProgress: () => api.get('/api/membership/learning/progress'),
   updateLearningProgress: (chapterId, status) => api.put(`/api/membership/learning/progress/${chapterId}`, { status }),
+  // 个性化学习
+  getPersonalizedChapter: (chapterId) => api.get(`/api/membership/learning/${chapterId}?version=personalized`),
+  personalizedStatus: () => api.get('/api/membership/learning/personalized-status'),
+  generateAll: () => api.post('/api/membership/learning/generate-all'),
+  generateStatus: (batchId) => api.get(`/api/membership/learning/generate-status/${batchId}`),
+  regenerate: () => api.post('/api/membership/learning/regenerate'),
+  regenerateChapter: (chapterId) => api.post(`/api/membership/learning/regenerate/${chapterId}`),
   // 管理员 - 学习版块
   adminListChapters: () => api.get('/api/membership/admin/learning/chapters'),
+  adminGetChapter: (chapterId) => api.get(`/api/membership/admin/learning/chapters/${chapterId}`),
   adminCreateChapter: (data) => api.post('/api/membership/admin/learning/chapters', data),
   adminUpdateChapter: (chapterId, data) => api.put(`/api/membership/admin/learning/chapters/${chapterId}`, data),
   adminDeleteChapter: (chapterId) => api.delete(`/api/membership/admin/learning/chapters/${chapterId}`),
+  adminPublishChapter: (chapterId, status) => api.put(`/api/membership/admin/learning/chapters/${chapterId}/publish`, { status }),
+  adminReorderChapters: (orderedIds) => api.put('/api/membership/admin/learning/chapters/reorder', { orderedIds }),
   // AI约会方案
-  generateDatingPlan: (data) => api.post('/api/membership/dating-plan/generate', data),
+  generateDatingPlan: (data) => api.post('/api/membership/dating-plan/generate', data, 120000),
   datingPlans: () => api.get('/api/membership/dating-plan'),
   getDatingPlan: (id) => api.get(`/api/membership/dating-plan/${id}`),
   // 截图识别档案
@@ -458,6 +475,6 @@ export const membership = {
     clientDetail: (id, days = 30) => api.get(`/api/admin/activity/clients/${id}?days=${days}`),
     dormantUsers: () => api.get('/api/admin/activity/dormant-users'),
     trend: (days = 30) => api.get('/api/admin/activity/trend?days=' + days),
-    sendRemind: (id) => api.post(`/api/admin/activity/dormant-users/${id}/remind`),
+    growth: (days = 90) => api.get('/api/admin/activity/growth?days=' + days),
   },
 };

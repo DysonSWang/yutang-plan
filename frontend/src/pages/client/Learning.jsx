@@ -6,12 +6,16 @@ import { BookIcon, CheckIcon } from '../../components/Icons';
 import { FiChevronDown, FiChevronUp } from 'react-icons/fi';
 
 // Chapter card component
-function ChapterCard({ chapter, progress, onUpdate }) {
+function ChapterCard({ chapter, progress, personalizationStatus, onUpdate }) {
   const navigate = useNavigate();
   const p = progress.find(p => p.chapterId === chapter.chapterId);
   // 状态：已学习(studied) vs 未学习(not_studied)
   const isStudied = p?.status === 'completed' || p?.status === 'in_progress';
   const statusColor = isStudied ? 'green' : 'gray';
+  // 个性化状态
+  const perCh = personalizationStatus?.find(c => c.chapterId === chapter.chapterId);
+  const perBadge = perCh?.status === 'completed' ? { label: '已定制', color: 'purple' }
+    : perCh?.status === 'generating' ? { label: '生成中', color: 'blue' } : null;
 
   return (
     <Box
@@ -48,9 +52,14 @@ function ChapterCard({ chapter, progress, onUpdate }) {
             )}
           </Box>
         </HStack>
-        <Badge colorScheme={statusColor} variant="subtle">
-          {isStudied ? '已学习' : '未学习'}
-        </Badge>
+        <HStack gap={1}>
+          {perBadge && (
+            <Badge colorScheme={perBadge.color} variant="subtle">{perBadge.label}</Badge>
+          )}
+          <Badge colorScheme={statusColor} variant="subtle">
+            {isStudied ? '已学习' : '未学习'}
+          </Badge>
+        </HStack>
       </HStack>
 
       <HStack mt={4} gap={2}>
@@ -82,6 +91,7 @@ export default function ClientLearning() {
   const toast = useToast();
   const [chapters, setChapters] = useState([]);
   const [progress, setProgress] = useState([]);
+  const [personalizationStatus, setPersonalizationStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showPreface, setShowPreface] = useState(false);
 
@@ -91,12 +101,14 @@ export default function ClientLearning() {
 
   async function load() {
     try {
-      const [chRes, progRes] = await Promise.all([
+      const [chRes, progRes, perRes] = await Promise.all([
         membershipApi.chapters(),
-        membershipApi.learningProgress()
+        membershipApi.learningProgress(),
+        membershipApi.personalizedStatus().catch(() => null)
       ]);
       if (chRes.success) setChapters(chRes.chapters);
       if (progRes.success) setProgress(progRes.progress);
+      if (perRes?.success) setPersonalizationStatus(perRes.chapters);
     } catch (err) {
       toast({ title: '加载失败', description: err.message, status: 'error' });
     } finally {
@@ -205,6 +217,7 @@ export default function ClientLearning() {
             key={chapter.chapterId}
             chapter={chapter}
             progress={progress}
+            personalizationStatus={personalizationStatus}
             onUpdate={updateProgress}
           />
         ))}

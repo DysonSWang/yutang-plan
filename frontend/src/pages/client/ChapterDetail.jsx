@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { membership as membershipApi } from '../../utils/api';
 import { ArrowLeftIcon, CheckIcon, BookIcon } from '../../components/Icons';
+import PersonalizationBanner from '../../components/PersonalizationBanner';
 
 // 解析 Markdown 粗体 **text**
 function parseBold(text) {
@@ -32,6 +33,9 @@ export default function ChapterDetail() {
   const [allChapters, setAllChapters] = useState([]);
   const [progress, setProgress] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [version, setVersion] = useState('personalized'); // 'standard' | 'personalized'
+  const [personalizedContent, setPersonalizedContent] = useState(null);
+  const [personalizedStale, setPersonalizedStale] = useState(false);
   const [headerVisible, setHeaderVisible] = useState(true);
   const lastScrollY = useRef(0);
   const contentRef = useRef(null);
@@ -56,12 +60,13 @@ export default function ChapterDetail() {
 
   async function load() {
     try {
-      const [chRes, progRes] = await Promise.all([
+      const [chRes, progRes, perRes] = await Promise.all([
         membershipApi.chapters(),
-        membershipApi.learningProgress()
+        membershipApi.learningProgress(),
+        membershipApi.getPersonalizedChapter(chapterId).catch(() => null),
       ]);
       if (chRes.success) {
-        const sorted = [...chRes.chapters].sort((a, b) => a.chapterId.localeCompare(b.chapterId, undefined, { numeric: true }));
+        const sorted = chRes.chapters;
         setAllChapters(sorted);
         const ch = sorted.find(c => c.chapterId === chapterId);
         setChapter(ch);
@@ -69,6 +74,13 @@ export default function ChapterDetail() {
       if (progRes.success) {
         const prog = progRes.progress.find(p => p.chapterId === chapterId);
         setProgress(prog);
+      }
+      if (perRes?.success && perRes.personalized) {
+        setPersonalizedContent(perRes.personalized.content);
+        setPersonalizedStale(perRes.personalized.isStale);
+        setVersion('personalized');
+      } else {
+        setVersion('standard');
       }
     } catch (err) {
       toast({ title: '加载失败', description: err.message, status: 'error' });
@@ -198,6 +210,12 @@ export default function ChapterDetail() {
             mx="auto"
             pb={12}
           >
+            {/* 个性化 Banner */}
+            <PersonalizationBanner
+              currentVersion={version}
+              onSwitchVersion={(v) => setVersion(v)}
+            />
+
             {/* 章节引导信息 */}
             <Box mb={8} pb={6} borderBottom="1px solid" borderColor="abyss.800">
               <HStack gap={3} mb={4}>
@@ -234,7 +252,10 @@ export default function ChapterDetail() {
               fontFamily="'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif"
             >
               {(() => {
-                const lines = chapter.content.split('\n');
+                const displayContent = version === 'personalized' && personalizedContent
+                  ? personalizedContent
+                  : chapter.content;
+                const lines = displayContent.split('\n');
                 const usedIndices = new Set();
                 const elements = [];
 

@@ -59,13 +59,13 @@ export function SocketProvider({ children }) {
     };
   }, [user]);
 
-  // 注册监听器（自动处理去重）
+  // 注册监听器（支持多个组件监听同一事件，返回清理函数）
   const on = useCallback((event, handler) => {
-    if (!socketRef.current) return;
-    // 移除旧监听器避免重复
-    socketRef.current.off(event, listenersRef.current[event]);
+    if (!socketRef.current) return () => {};
     socketRef.current.on(event, handler);
-    listenersRef.current[event] = handler;
+    return () => {
+      socketRef.current?.off(event, handler);
+    };
   }, []);
 
   // 发送消息

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Box, Heading, Card, CardBody, SimpleGrid, Badge, Text, VStack, HStack, Flex, Avatar, Button, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton, useDisclosure, FormControl, FormLabel, Input, Select, Textarea, useToast, Spinner, Icon, InputGroup, InputRightElement, IconButton, Image } from '@chakra-ui/react';
 import { CrownIcon, CheckIcon } from '../../components/Icons';
 import { FiEdit2 } from 'react-icons/fi';
-import { clients, membership as membershipApi, auth, upload } from '../../utils/api';
+import { api, clients, membership as membershipApi, auth, upload } from '../../utils/api';
 import RegionSelector from '../../components/RegionSelector';
 import { checkVersion, VERSION } from '../../utils/version';
 import VersionUpdateModal from '../../components/VersionUpdateModal';
@@ -35,26 +35,30 @@ const CLIENT_EDITABLE_FIELDS = [
   { key: 'nickname', label: '昵称', type: 'input' },
   { key: 'phone', label: '电话', type: 'input' },
   { key: 'age', label: '年龄', type: 'input' },
-  { key: 'occupation', label: '职业', type: 'input' },
+  { key: 'occupation', label: '职业', type: 'select', options: ['企业主', '企业高管', '公务员', '医生', '律师', '教师', '工程师', '程序员', '销售', '金融从业者', '自由职业', '退休', '其他'] },
   { key: 'education', label: '学历', type: 'select', options: ['小学', '初中', '中专', '高中', '大专', '本科', '硕士', '博士'] },
-  { key: 'income', label: '收入水平', type: 'select', options: ['10万以下', '10-30万', '30-50万', '50-100万', '100万以上'] },
+  { key: 'income', label: '收入水平', type: 'select', options: ['10万以下', '10-30万', '30-50万', '50-100万', '100-300万', '300万以上', '其他'] },
   { key: 'height', label: '身高(cm)', type: 'input' },
-  { key: 'residence', label: '所在地', type: 'region' },
-  { key: 'hometown', label: '籍贯', type: 'region' },
+  { key: 'weight', label: '体重(kg)', type: 'input' },
+  { key: 'residence', label: '所在地', type: 'input' },
+  { key: 'hometown', label: '籍贯', type: 'input' },
   { key: 'appearance', label: '外貌描述', type: 'input' },
-  { key: 'dressingStyle', label: '穿着风格', type: 'select', options: ['商务正装', '商务休闲', '休闲', '运动', '时尚', '简约'] },
+  { key: 'dressingStyle', label: '穿着风格', type: 'select', options: ['商务正装', '商务休闲', '休闲', '运动', '时尚', '简约', '其他'] },
   { key: 'familyBackground', label: '家庭背景', type: 'select', options: ['农村', '城市', '经商', '公务员', '其他'] },
   { key: 'familyStructure', label: '家庭结构', type: 'select', options: ['双亲', '单亲', '离异', '其他'] },
   { key: 'familyAtmosphere', label: '家庭氛围', type: 'select', options: ['和睦', '一般', '冷淡', '争吵', '离异'] },
-  { key: 'personality', label: '性格/MBTI', type: 'input' },
+  { key: 'personality', label: '性格/MBTI', type: 'select', options: ['INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP', 'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 'ISTP', 'ISFP', 'ESTP', 'ESFP', '其他'] },
   { key: 'communicationStyle', label: '沟通风格', type: 'select', options: ['直接', '含蓄', '话多', '话少', '幽默'] },
-  { key: 'socialStyle', label: '社交风格', type: 'select', options: ['主动', '被动', '社交达人'] },
+  { key: 'socialStyle', label: '社交风格', type: 'select', options: ['主动', '被动', '社交达人', '其他'] },
   { key: 'relationshipAttitude', label: '婚恋态度', type: 'select', options: ['认真', '随便', '急切'] },
-  { key: 'marriageHistory', label: '婚史', type: 'select', options: ['未婚', '离异无子', '离异有子', '丧偶'] },
-  { key: 'emotionalGoal', label: '感情诉求', type: 'select', options: ['认真找对象', '随便玩玩', '家里催婚', '空虚寂寞'] },
+  { key: 'marriageHistory', label: '婚史', type: 'select', options: ['未婚', '离异无子', '离异有子', '丧偶', '其他'] },
+  { key: 'emotionalGoal', label: '感情诉求', type: 'select', options: ['认真找对象', '随便玩玩', '家里催婚', '空虚寂寞', '其他'] },
   { key: 'relationshipGoal', label: '关系目标', type: 'select', options: ['短期', '长期', '不确定'] },
+  { key: 'humorStyle', label: '幽默风格', type: 'select', options: ['冷幽默', '自嘲', '调侃', '正经'] },
+  { key: 'strengths', label: '个人优势', type: 'textarea' },
+  { key: 'weaknesses', label: '个人不足', type: 'textarea' },
+  { key: 'matchPreferences', label: '对目标的期望', type: 'textarea' },
   { key: 'profileBio', label: '个人签名', type: 'textarea' },
-  { key: 'avatar', label: '头像URL', type: 'input' },
 ];
 
 // 不显示给客户的字段（操盘手内部使用）
@@ -81,6 +85,37 @@ const HIDDEN_FIELDS = [
   'kinkIdentity', 'kinkBoundaries', 'kinkInterests', 'kinkExperience', 'kinkNotes'
 ];
 
+// 所有字段的中文标签映射（client可编辑 + 操盘手内部字段），AI提取结果展示用
+const ALL_FIELD_LABELS = {};
+CLIENT_EDITABLE_FIELDS.forEach(f => { ALL_FIELD_LABELS[f.key] = f.label; });
+Object.assign(ALL_FIELD_LABELS, {
+  emotionalStable: '情绪稳定性', eqLevel: '情商', emotionalMaturity: '情感成熟度',
+  emotionalMaturityLevel: '情感成熟度等级', learningAbility: '学习能力',
+  coachCooperation: '教练配合度', coachCooperationLevel: '教练配合等级',
+  attachmentStyle: '依恋类型', loveStyle: '恋爱类型', moneyDatingPattern: '约会付款模式',
+  humorStyle: '幽默风格', selfEsteemLevel: '自信水平', pacePreference: '节奏偏好',
+  assetsLevel: '资产等级', clientType: '客户类型', empathy: '共情能力',
+  communication: '沟通表达能力', conflictRes: '冲突处理能力',
+  appearanceSelfAssessment: '自我颜值评价', appearanceSelfRequirement: '对对方颜值要求',
+  strengths: '优势', weaknesses: '不足', dateTaboos: '约会禁忌', notes: '备注',
+  trustLevel: '信任度', interactionHeat: '互动热度', feedbackQuality: '反馈质量',
+  budgetRange: '预算范围', timeInvestment: '时间投入', balance: '余额', source: '来源',
+  selfValuePerception: '自我价值感知', cognitiveAccuracy: '认知准确性',
+  matchPreferences: '匹配偏好', dealbreakers: '底线',
+  preferredPlatforms: '偏好平台', openingTemplates: '开场模板', petPhrases: '口头禅',
+  chatTaboos: '聊天禁忌', currentStage: '当前阶段', stageProgress: '阶段进展',
+  lastMilestone: '上次里程碑', antiFrustrationLevel: '抗挫折水平',
+  investmentWillingness: '投资意愿', comfortZone: '舒适区',
+  familyMembers: '家庭成员', familyBurden: '家庭负担',
+  pastRelationshipSummary: '过往感情总结', emotionalWounds: '情感创伤',
+  exPartnerTaboos: '前任禁忌', commitmentWillingness: '承诺意愿',
+  serviceStage: '服务阶段', selfAwareness: '自我认知', relationship: '人际关系',
+  isKinkOriented: 'Kink导向', kinkIdentity: 'Kink身份', kinkBoundaries: 'Kink边界',
+  kinkInterests: 'Kink兴趣', kinkExperience: 'Kink经验', kinkNotes: 'Kink备注',
+  weight: '体重(kg)',
+  matchPreferences: '对目标的期望',
+});
+
 // 单个字段组件（避免整体重渲染）
 function ProfileField({ field, value, onChange }) {
   if (field.type === 'input') {
@@ -98,12 +133,15 @@ function ProfileField({ field, value, onChange }) {
     );
   }
   if (field.type === 'select') {
+    const hasOther = field.options.includes('其他');
+    const isCustom = hasOther && value && !field.options.includes(value);
+    const showCustomInput = hasOther && (value === '其他' || isCustom);
     return (
       <FormControl key={field.key}>
         <FormLabel color="gray.400" fontSize="sm">{field.label}</FormLabel>
         <Select
-          value={value || ''}
-          onChange={e => onChange(field.key, e.target.value)}
+          value={isCustom ? '其他' : (value || '')}
+          onChange={e => onChange(field.key, e.target.value === '其他' ? '' : e.target.value)}
           bg="gray.700" color="white" border="1px solid" borderColor="gray.600"
           _hover={{ borderColor: 'gray.500' }}
           _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }}
@@ -113,6 +151,17 @@ function ProfileField({ field, value, onChange }) {
             <option key={opt} value={opt}>{opt}</option>
           ))}
         </Select>
+        {showCustomInput && (
+          <Input
+            mt={2}
+            value={isCustom ? value : ''}
+            placeholder="请输入自定义内容"
+            onChange={e => onChange(field.key, e.target.value)}
+            bg="gray.700" color="white" border="1px solid" borderColor="gray.600"
+            _hover={{ borderColor: 'gray.500' }}
+            _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }}
+          />
+        )}
       </FormControl>
     );
   }
@@ -177,11 +226,14 @@ export default function ClientProfile() {
   const [aiTab, setAiTab] = useState('text'); // 'text' | 'screenshot'
   const [aiText, setAiText] = useState('');
   const [aiExtracting, setAiExtracting] = useState(false);
+  const [aiStreamText, setAiStreamText] = useState('');
   const [aiExtractedFields, setAiExtractedFields] = useState(null);
   const [aiScreenshotFile, setAiScreenshotFile] = useState(null);
   const [aiScreenshotPreview, setAiScreenshotPreview] = useState('');
   const fileInputRef = useRef(null);
   const screenshotInputRef = useRef(null);
+  const aiStreamRef = useRef('');
+  const aiStreamRafRef = useRef(null);
   const toast = useToast();
 
   useEffect(() => {
@@ -226,6 +278,19 @@ export default function ClientProfile() {
         toast({ title: '保存成功', status: 'success' });
         setProfile(res.client);
         onClose();
+        // 档案更新后检查是否需要重新生成个性化内容
+        try {
+          const perRes = await membershipApi.personalizedStatus();
+          if (perRes?.success && perRes.chapters?.some(c => c.status === 'completed')) {
+            toast({
+              title: '档案已更新',
+              description: '你的专属学习版本可能需要重新生成以匹配新档案。前往学习中心重新生成。',
+              status: 'info',
+              duration: 5000,
+              isClosable: true,
+            });
+          }
+        } catch {}
       } else {
         toast({ title: '保存失败', status: 'error' });
       }
@@ -245,6 +310,7 @@ export default function ClientProfile() {
     setEditData(data);
     setAiMode('manual');
     setAiText('');
+    setAiStreamText('');
     setAiExtractedFields(null);
     setAiScreenshotFile(null);
     setAiScreenshotPreview('');
@@ -259,18 +325,90 @@ export default function ClientProfile() {
     }
     setAiExtracting(true);
     setAiExtractedFields(null);
+    setAiStreamText('');
+    aiStreamRef.current = '';
+
+    const token = api.getToken();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 90000);
+
     try {
-      const res = await clients.extractProfile(aiText);
-      if (res.success && res.profile) {
-        setAiExtractedFields(res.profile);
-        toast({ title: 'AI 分析完成', description: `识别到 ${Object.keys(res.profile).filter(k => res.profile[k]).length} 个字段`, status: 'success' });
-      } else {
-        toast({ title: 'AI 分析失败', description: res.error || '请重试', status: 'error' });
+      const res = await fetch(`${api.baseUrl}/api/clients/extract-profile`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ text: aiText }),
+        signal: controller.signal
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'AI服务请求失败');
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        // 按空行分割 SSE 事件
+        const events = buffer.split('\n\n');
+        buffer = events.pop() || '';
+
+        for (const eventBlock of events) {
+          if (!eventBlock.trim()) continue;
+          const eventType = (eventBlock.match(/event:\s*(\w+)/) || [])[1];
+          const dataMatch = eventBlock.match(/data:\s*(.+)/);
+          const dataStr = dataMatch ? dataMatch[1].trim() : '';
+
+          if (eventType === 'progress') {
+            try {
+              const parsed = JSON.parse(dataStr);
+              if (parsed.text) {
+                aiStreamRef.current += parsed.text;
+                if (!aiStreamRafRef.current) {
+                  aiStreamRafRef.current = requestAnimationFrame(() => {
+                    setAiStreamText(aiStreamRef.current);
+                    aiStreamRafRef.current = null;
+                  });
+                }
+              }
+            } catch {}
+          } else if (eventType === 'done') {
+            try {
+              const parsed = JSON.parse(dataStr);
+              if (parsed.success && parsed.profile) {
+                setAiExtractedFields(parsed.profile);
+                toast({ title: 'AI 分析完成', description: `识别到 ${Object.keys(parsed.profile).filter(k => parsed.profile[k]).length} 个字段`, status: 'success' });
+              }
+            } catch {}
+          } else if (eventType === 'error') {
+            try {
+              const parsed = JSON.parse(dataStr);
+              throw new Error(parsed.error || 'AI分析失败');
+            } catch (e) { throw e; }
+          }
+        }
       }
     } catch (e) {
       console.error(e);
-      toast({ title: 'AI 分析失败', status: 'error' });
+      if (e.name === 'AbortError') {
+        toast({ title: 'AI 分析超时', description: '请稍后重试', status: 'error' });
+      } else {
+        toast({ title: 'AI 分析失败', description: e.message || '请重试', status: 'error' });
+      }
     } finally {
+      clearTimeout(timeoutId);
+      if (aiStreamRafRef.current) {
+        cancelAnimationFrame(aiStreamRafRef.current);
+        aiStreamRafRef.current = null;
+      }
       setAiExtracting(false);
     }
   };
@@ -294,7 +432,7 @@ export default function ClientProfile() {
       }
     } catch (e) {
       console.error(e);
-      toast({ title: '截图分析失败', status: 'error' });
+      toast({ title: '截图分析失败', description: e.message || '请重试', status: 'error' });
     } finally {
       setAiExtracting(false);
     }
@@ -610,6 +748,10 @@ export default function ClientProfile() {
                 <Text color="white">{profile.education || '-'}</Text>
               </HStack>
               <HStack justify="space-between">
+                <Text color="gray.400" fontSize="sm">收入</Text>
+                <Text color="white">{profile.income || '-'}</Text>
+              </HStack>
+              <HStack justify="space-between">
                 <Text color="gray.400" fontSize="sm">所在地</Text>
                 <Text color="white">{profile.residence || '-'}</Text>
               </HStack>
@@ -629,6 +771,10 @@ export default function ClientProfile() {
               <HStack justify="space-between">
                 <Text color="gray.400" fontSize="sm">身高</Text>
                 <Text color="white">{profile.height ? `${profile.height}cm` : '-'}</Text>
+              </HStack>
+              <HStack justify="space-between">
+                <Text color="gray.400" fontSize="sm">体重</Text>
+                <Text color="white">{profile.weight ? `${profile.weight}kg` : '-'}</Text>
               </HStack>
               <HStack justify="space-between">
                 <Text color="gray.400" fontSize="sm">穿着风格</Text>
@@ -680,6 +826,27 @@ export default function ClientProfile() {
                 <Text color="gray.400" fontSize="sm">社交风格</Text>
                 <Text color="white">{profile.socialStyle || '-'}</Text>
               </HStack>
+              <HStack justify="space-between">
+                <Text color="gray.400" fontSize="sm">幽默风格</Text>
+                <Text color="white">{profile.humorStyle || '-'}</Text>
+              </HStack>
+            </VStack>
+          </CardBody>
+        </Card>
+
+        {/* 个人优势与不足 */}
+        <Card bg="gray.800">
+          <CardBody>
+            <Text color="yellow.400" fontWeight="bold" mb={3}>优势与不足</Text>
+            <VStack spacing={2} align="stretch">
+              <HStack justify="space-between" align="start">
+                <Text color="gray.400" fontSize="sm">优势</Text>
+                <Text color="white" fontSize="sm" maxW="180px" textAlign="right">{profile.strengths || '-'}</Text>
+              </HStack>
+              <HStack justify="space-between" align="start">
+                <Text color="gray.400" fontSize="sm">不足</Text>
+                <Text color="white" fontSize="sm" maxW="180px" textAlign="right">{profile.weaknesses || '-'}</Text>
+              </HStack>
             </VStack>
           </CardBody>
         </Card>
@@ -708,6 +875,16 @@ export default function ClientProfile() {
             </VStack>
           </CardBody>
         </Card>
+
+        {/* 对目标的期望 */}
+        {profile.matchPreferences && (
+          <Card bg="gray.800">
+            <CardBody>
+              <Text color="pink.400" fontWeight="bold" mb={2}>对目标的期望</Text>
+              <Text color="gray.300" fontSize="sm" whiteSpace="pre-wrap">{profile.matchPreferences}</Text>
+            </CardBody>
+          </Card>
+        )}
       </SimpleGrid>
 
       {/* 个人签名 */}
@@ -827,6 +1004,18 @@ export default function ClientProfile() {
                       loadingText="AI 分析中..."
                       isDisabled={aiText.trim().length < 20}
                     >智能分析</Button>
+
+                    {/* 流式分析进度 */}
+                    {aiExtracting && aiStreamText && (
+                      <Card bg="gray.750" border="1px solid" borderColor="blue.700">
+                        <CardBody py={3}>
+                          <Text color="blue.300" fontWeight="bold" fontSize="sm" mb={2}>AI 正在分析...</Text>
+                          <Text color="gray.300" fontSize="sm" whiteSpace="pre-wrap" maxH="200px" overflowY="auto">
+                            {aiStreamText}
+                          </Text>
+                        </CardBody>
+                      </Card>
+                    )}
                   </VStack>
                 )}
 
@@ -886,8 +1075,7 @@ export default function ClientProfile() {
                       <SimpleGrid columns={2} spacing={2}>
                         {Object.entries(aiExtractedFields).map(([key, value]) => {
                           if (!value) return null;
-                          const field = CLIENT_EDITABLE_FIELDS.find(f => f.key === key);
-                          const label = field?.label || key;
+                          const label = ALL_FIELD_LABELS[key] || key;
                           return (
                             <HStack key={key} justify="space-between" bg="gray.800" px={3} py={1.5} borderRadius="md">
                               <Text color="gray.400" fontSize="sm">{label}</Text>

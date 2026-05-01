@@ -167,6 +167,10 @@ app.use(notFoundHandler);
 // 错误处理
 app.use(errorHandler);
 
+// 恢复未完成的个性化生成任务
+const { resumeAbandonedBatches } = require('./services/personalizationEngine');
+resumeAbandonedBatches(prisma, io);
+
 server.listen(PORT, () => {
   logger.info(`🐟 追爱计划后端启动: http://localhost:${PORT}`);
 });
