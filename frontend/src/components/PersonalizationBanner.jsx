@@ -73,8 +73,8 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
     const cleanup2 = on('personalization:complete', () => {
       loadStatus();
       toast({
-        title: '个性化版本已全部生成',
-        description: '已自动切换到专属版本',
+        title: 'Your version is ready',
+        description: 'Every chapter has been rebuilt for you.',
         status: 'success',
         duration: 3000,
       });
@@ -92,7 +92,7 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
         setBatchProgress({ completed: 0, failed: 0, total: 21 });
       }
     } catch (err) {
-      toast({ title: '生成失败', description: err.message, status: 'error' });
+      toast({ title: 'Generation failed', description: err.message, status: 'error' });
     }
   }
 
@@ -103,10 +103,10 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
         setBatchId(res.batchId);
         setStatus('generating');
         setBatchProgress({ completed: 0, failed: 0, total: 21 });
-        toast({ title: '已开始重新生成', status: 'info', duration: 2000 });
+        toast({ title: 'Rebuilding your version...', status: 'info', duration: 2000 });
       }
     } catch (err) {
-      toast({ title: '重新生成失败', description: err.message, status: 'error' });
+      toast({ title: 'Rebuild failed', description: err.message, status: 'error' });
     }
   }
 
@@ -123,19 +123,30 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
           <HStack>
             <Badge colorScheme="orange" variant="subtle" fontSize="sm" px={2} py={0.5}>因材施教</Badge>
             <Text color="abyss.300" fontSize="sm">
-              档案完善度 {completeness?.percentage || 0}%，需达到 70% 才能解锁专属版本
+              档案完善度 {completeness?.percentage || 0}%，达到 70% 解锁专属版本
             </Text>
           </HStack>
+
           <Box>
-            <Text color="white" fontSize="md" fontWeight="bold" mb={2}>
-              每个人都是独特的，你的学习内容为什么不是？
+            <Text color="white" fontSize="md" fontWeight="bold" mb={3}>
+              Most advice is written for nobody. So it works for nobody.
             </Text>
-            <Text color="abyss.300" fontSize="sm" lineHeight="1.8">
-              完善个人档案后，系统会根据你的性格特质、沟通风格、感情目标和所处阶段，
-              将标准版宝典中的案例场景、话术示例、行动方案全部重写——
-              让同一套方法论，在不同的人身上发挥最大效果。
+            <Text color="abyss.300" fontSize="sm" lineHeight="1.9">
+              Generic content assumes a generic person.
+            </Text>
+            <Text color="abyss.300" fontSize="sm" lineHeight="1.9">
+              You are not that person.
+            </Text>
+            <Text color="abyss.400" fontSize="sm" lineHeight="1.9" mt={3}>
+              Fill out your profile. The system reads who you are.
+              Every chapter — the cases, the scripts, the moves — rebuilds itself around your personality,
+              your communication style, your stage.
+            </Text>
+            <Text color="brand.300" fontSize="sm" fontWeight="medium" mt={2}>
+              Same method. Your version.
             </Text>
           </Box>
+
           <Button
             size="md"
             colorScheme="brand"
@@ -144,7 +155,7 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
             onClick={() => window.location.href = '/profile'}
             px={6}
           >
-            去完善档案，解锁专属版本
+            Build Your Foundation
           </Button>
         </VStack>
       )}
@@ -162,24 +173,31 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
           </HStack>
 
           <Box>
-            <Text color="white" fontSize="md" fontWeight="bold" mb={2}>
-              同样的宝典体系，只属于你的版本
+            <Text color="white" fontSize="md" fontWeight="bold" mb={3}>
+              You read the advice. It made sense. It didn't work.
             </Text>
-            <Text color="abyss.300" fontSize="sm" lineHeight="1.8">
-              标准版是一套通用方法论——但我们都知道，内向者和外向者的沟通方式不同，
-              程序员和销售的社交场景不同，想认真找对象和还在犹豫的人需要的建议也不同。
+            <Text color="abyss.300" fontSize="sm" lineHeight="1.9">
+              The problem isn't the method. It's the match.
             </Text>
-            <Text color="abyss.300" fontSize="sm" lineHeight="1.8" mt={2}>
-              系统会读取你的性格、沟通风格、感情目标和过往经历，将每一章的
-              <Text as="span" color="brand.300" fontWeight="medium">案例场景</Text>、
-              <Text as="span" color="brand.300" fontWeight="medium">话术示例</Text>、
-              <Text as="span" color="brand.300" fontWeight="medium">行动方案</Text>
-              ——从底层重写，匹配你这个人。不是换几个词，是换一种打法。
+            <Text color="abyss.300" fontSize="sm" lineHeight="1.9">
+              An introvert and an extrovert shouldn't run the same script.
+              A man chasing marriage and a man still exploring shouldn't follow the same playbook.
+            </Text>
+            <Text color="abyss.300" fontSize="sm" lineHeight="1.9" mt={3}>
+              So we don't give you the standard version.
+            </Text>
+            <Text color="abyss.300" fontSize="sm" lineHeight="1.9">
+              The system takes your profile — your personality, your communication style,
+              your goals, your history — and rebuilds every chapter from the ground up.
+            </Text>
+            <Text color="brand.300" fontSize="sm" fontWeight="medium" mt={2}>
+              Not edited. Rewritten. The cases become your cases. The voice sounds like you.
+              The moves fit your stage. One coherent system, built for one person.
             </Text>
           </Box>
 
           <HStack gap={2} flexWrap="wrap">
-            {['案例因人而异', '策略匹配性格', '行动贴合阶段', '沟通调性一致'].map(tag => (
+            {['Your Scenarios', 'Your Voice', 'Your Stage', 'Your System'].map(tag => (
               <Badge key={tag} colorScheme="brand" variant="subtle" fontSize="xs">{tag}</Badge>
             ))}
           </HStack>
@@ -191,7 +209,7 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
             onClick={handleGenerate}
             px={6}
           >
-            生成我的专属版本 · 预计 3-5 分钟
+            Build My Version · 3-5 min
           </Button>
         </VStack>
       )}
@@ -202,7 +220,7 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
           <HStack>
             <Badge colorScheme="blue" variant="subtle" fontSize="sm" px={2} py={0.5}>因材施教</Badge>
             <Text color="abyss.300" fontSize="sm">
-              正在逐章生成你的专属版本——案例、话术、行动方案全部因人而异
+              Building your version. Chapter by chapter.
             </Text>
           </HStack>
           {batchProgress && (
@@ -221,7 +239,7 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
             </>
           )}
           <Text color="abyss.500" fontSize="xs">
-            生成完成后将自动通知，可继续阅读标准版
+            You can keep reading the standard version. We'll notify you when it's done.
           </Text>
         </VStack>
       )}
@@ -232,7 +250,7 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
           <HStack justify="space-between">
             <HStack>
               <Badge colorScheme="green" variant="subtle" fontSize="sm" px={2} py={0.5}>因材施教</Badge>
-              <Text color="abyss.300" fontSize="sm">专属版本已就绪 · 为你量身打造</Text>
+              <Text color="abyss.300" fontSize="sm">Your version is ready. Every chapter, rebuilt for you.</Text>
             </HStack>
             {onSwitchVersion && (
               <HStack gap={2}>
@@ -256,7 +274,7 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
             )}
           </HStack>
           <Text color="abyss.500" fontSize="xs">
-            档案更新后，可重新生成以获得最新匹配
+            Profile changed? Rebuild to keep everything in sync.
             <Button
               size="xs"
               variant="link"
@@ -264,7 +282,7 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
               ml={2}
               onClick={handleRegenerate}
             >
-              重新生成
+              Rebuild
             </Button>
           </Text>
         </VStack>
@@ -274,9 +292,9 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
       {status === 'completed_stale' && (
         <VStack align="stretch" spacing={3}>
           <HStack>
-            <Badge colorScheme="orange" variant="subtle">可能过时</Badge>
+            <Badge colorScheme="orange" variant="subtle">Outdated</Badge>
             <Text color="abyss.300" fontSize="sm">
-              档案已更新，专属版本可能已过时
+              Your profile has changed. Your version no longer matches who you are now.
             </Text>
           </HStack>
           <Button
@@ -286,7 +304,7 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
             alignSelf="flex-start"
             onClick={handleRegenerate}
           >
-            重新生成
+            Rebuild My Version
           </Button>
         </VStack>
       )}
