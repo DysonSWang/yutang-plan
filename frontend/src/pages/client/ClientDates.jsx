@@ -110,9 +110,12 @@ export default function ClientDates() {
     .filter(d => d.dateTime && d.status !== 'completed' && d.status !== 'cancelled')
     .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))[0] || null;
 
-  // 获取头像（基于名字生成固定头像，不随机）
+  // 获取头像（优先用自定义头像，其次用照片，最后用名字生成默认头像）
   const getAvatar = (girl) => {
     if (!girl) return null;
+    // 优先使用用户自定义头像
+    if (girl.avatar) return girl.avatar;
+    // 其次使用第一张照片
     if (girl.photos) {
       try {
         const photos = typeof girl.photos === 'string' ? JSON.parse(girl.photos) : girl.photos;
