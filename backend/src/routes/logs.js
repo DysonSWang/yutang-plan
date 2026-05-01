@@ -11,6 +11,7 @@ const router = express.Router();
 const AppError = require('../errors/AppError');
 const { ErrorCodes } = require('../errors/errorCodes');
 const { success } = require('../utils/response');
+const logger = require('../utils/logger');
 
 const LOG_DIR = path.join(__dirname, '../../logs');
 
@@ -78,6 +79,12 @@ router.get('/file/:date', (req, res) => {
     if (req.query.error === 'true' && log.level !== 'error') return false;
     // 只看特定路径
     if (req.query.path && !log.path?.includes(req.query.path)) return false;
+    // 按来源过滤：前端有 source='frontend'，后端无 source 字段
+    if (req.query.source === 'frontend') {
+      if (log.source !== 'frontend') return false;
+    } else if (req.query.source === 'backend') {
+      if (log.source === 'frontend') return false;
+    }
     return true;
   });
 
@@ -92,10 +99,10 @@ router.get('/file/:date', (req, res) => {
 
 // 获取统计信息
 router.get('/stats', (req, res) => {
-  const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const filePath = path.join(LOG_DIR, `app-${today}.json`);
+  const dateStr = req.query.date || logger.beijingDateStr();
+  const filePath = path.join(LOG_DIR, `app-${dateStr}.json`);
 
-  const stats = { today: { errors: 0, slow: 0, total: 0, errorRate: 0, slowRate: 0 } };
+  const stats = { today: { errors: 0, slow: 0, total: 0, errorRate: 0, slowRate: 0, frontendErrors: 0 } };
 
   if (!fs.existsSync(filePath)) {
     return res.json(stats);
@@ -109,8 +116,9 @@ router.get('/stats', (req, res) => {
   lines.forEach(line => {
     try {
       const log = JSON.parse(line);
-      if (log.level === 'error') stats.today.errors++;
+      if (log.level === 'error' || log.level === 'warn') stats.today.errors++;
       if (log.level === 'slow') stats.today.slow++;
+      if (log.source === 'frontend') stats.today.frontendErrors++;
     } catch {}
   });
 
@@ -153,7 +161,7 @@ router.get('/slow-analysis', (req, res) => {
   for (let i = 0; i < days; i++) {
     const date = new Date(now);
     date.setDate(date.getDate() - i);
-    const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
+    const dateStr = logger.beijingDateStr(date);
     const logs = readLogLines(dateStr);
     logs.forEach(log => {
       if (log.level === 'slow' || (log.level === 'error' && log.duration > 3000)) {
@@ -226,7 +234,7 @@ router.get('/trace/:traceId', (req, res) => {
   for (let i = 0; i < days; i++) {
     const date = new Date(now);
     date.setDate(date.getDate() - i);
-    const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
+    const dateStr = logger.beijingDateStr(date);
     const logs = readLogLines(dateStr);
     logs.forEach(log => {
       if (log.requestId && log.requestId.includes(traceId)) {
@@ -252,6 +260,36 @@ router.get('/trace/:traceId', (req, res) => {
       requestId: log.requestId,
       ...(log.error && { error: log.error }),
     })),
+  });
+});
+
+// 接收前端错误上报
+router.post('/frontend-error', (req, res) => {
+  const { message, stack, type, url, userAgent, metadata, errorId } = req.body;
+
+  const entry = {
+    time: new Date().toISOString(),
+    level: 'error',
+    source: 'frontend',
+    errorId: errorId || '',
+    message: message || '未知前端错误',
+    stack: stack || '',
+    type: type || 'unknown',
+    url: url || '',
+    userAgent: userAgent || '',
+    ...(metadata && { metadata }),
+  };
+
+  // 写入今日日志文件
+  const dateStr = logger.beijingDateStr();
+  const filePath = path.join(LOG_DIR, `app-${dateStr}.json`);
+  const line = JSON.stringify(entry) + '\n';
+
+  fs.appendFile(filePath, line, (err) => {
+    if (err) {
+      return res.status(500).json({ error: '写入日志失败' });
+    }
+    res.json({ success: true });
   });
 });
 

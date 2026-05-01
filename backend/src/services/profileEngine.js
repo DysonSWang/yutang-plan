@@ -95,26 +95,37 @@ function repairJSON(raw) {
  */
 async function callTextModel(prompt, modelConfig) {
   const config = modelConfig || getAIConfig();
-  const response = await fetch(config.url, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${config.key}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model: config.model,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.7,
-      max_tokens: 1200
-    })
-  });
+  if (!config) throw new Error('AI 配置未设置');
 
-  if (!response.ok) {
-    throw new Error(`AI 调用失败: ${response.status}`);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 120000);
+
+  try {
+    const response = await fetch(config.url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${config.key}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: config.model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.7,
+        max_tokens: 1200
+      }),
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      const errText = await response.text().catch(() => '');
+      throw new Error(`AI 调用失败: ${response.status} ${errText.substring(0, 200)}`);
+    }
+
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || '';
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content || '';
 }
 
 /**
@@ -142,27 +153,35 @@ async function callVisionModel(messages, vlConfig) {
     return msg;
   });
 
-  const response = await fetch(config.url, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${config.key}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model: config.model,
-      messages: resolvedMessages,
-      temperature: 0.7,
-      max_tokens: 1500
-    })
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 120000);
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`VL 模型调用失败: ${response.status} ${errorText.substring(0, 300)}`);
+  try {
+    const response = await fetch(config.url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${config.key}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: config.model,
+        messages: resolvedMessages,
+        temperature: 0.7,
+        max_tokens: 1500
+      }),
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`VL 模型调用失败: ${response.status} ${errorText.substring(0, 300)}`);
+    }
+
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || '';
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content || '';
 }
 
 // ============================================================================

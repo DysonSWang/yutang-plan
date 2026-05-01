@@ -161,53 +161,70 @@ export const girls = {
   // AI 文字提取 (SSE 流式)
   extractText: async (id, text, { onProgress, onDone, onError } = {}) => {
     const token = api.getToken();
-    const response = await fetch(`${API_BASE}/api/girls/${id}/extract-text`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: token ? `Bearer ${token}` : ''
-      },
-      body: JSON.stringify({ text })
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
 
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({ error: '请求失败' }));
-      throw new Error(err.error || '请求失败');
-    }
+    try {
+      const response = await fetch(`${API_BASE}/api/girls/${id}/extract-text`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({ text }),
+        signal: controller.signal
+      });
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: '请求失败' }));
+        throw new Error(err.error || '请求失败');
+      }
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      for (const line of lines) {
-        if (line.startsWith('event: ')) {
-          const eventType = line.slice(7).trim();
-          continue;
-        }
-        if (line.startsWith('data: ')) {
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() || '';
+
+        for (const part of parts) {
+          if (!part.trim()) continue;
+          const eventMatch = part.match(/^event:\s*(\w+)$/m);
+          const dataMatch = part.match(/^data:\s*(.+)$/m);
+          if (!dataMatch) continue;
+
           try {
-            const data = JSON.parse(line.slice(6));
-            if (data.success && onDone) onDone(data);
-            else if (data.error && onError) onError(data.error);
+            const payload = JSON.parse(dataMatch[1].trim());
+            const eventType = eventMatch ? eventMatch[1] : '';
+
+            if (eventType === 'progress' && onProgress) {
+              onProgress(payload);
+            } else if (eventType === 'done' && onDone) {
+              onDone(payload);
+            } else if (eventType === 'error' && onError) {
+              onError(payload.error || 'AI分析失败');
+            }
           } catch { /* ignore parse errors */ }
         }
       }
-    }
-    // 处理剩余 buffer
-    if (buffer.startsWith('data: ')) {
-      try {
-        const data = JSON.parse(buffer.slice(6));
-        if (data.success && onDone) onDone(data);
-        else if (data.error && onError) onError(data.error);
-      } catch { /* ignore */ }
+      // 处理剩余 buffer
+      if (buffer.trim()) {
+        const dataMatch = buffer.match(/^data:\s*(.+)$/m);
+        if (dataMatch) {
+          try {
+            const payload = JSON.parse(dataMatch[1].trim());
+            if (payload.success && onDone) onDone(payload);
+            else if (payload.error && onError) onError(payload.error);
+          } catch { /* ignore */ }
+        }
+      }
+    } finally {
+      clearTimeout(timeoutId);
     }
   },
   // 截图上传 + AI 提取
@@ -216,20 +233,28 @@ export const girls = {
     const formData = new FormData();
     formData.append('image', file);
 
-    const response = await fetch(`${API_BASE}/api/girls/${id}/extract-screenshot`, {
-      method: 'POST',
-      headers: {
-        Authorization: token ? `Bearer ${token}` : ''
-      },
-      body: formData
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
 
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({ error: '上传失败' }));
-      throw new Error(err.error || '上传失败');
+    try {
+      const response = await fetch(`${API_BASE}/api/girls/${id}/extract-screenshot`, {
+        method: 'POST',
+        headers: {
+          Authorization: token ? `Bearer ${token}` : ''
+        },
+        body: formData,
+        signal: controller.signal
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: '上传失败' }));
+        throw new Error(err.error || '上传失败');
+      }
+
+      return response.json();
+    } finally {
+      clearTimeout(timeoutId);
     }
-
-    return response.json();
   },
   // 获取女生关联数据
   getRelated: (id) => api.get(`/api/girls/${id}/related`),
@@ -355,7 +380,63 @@ export const dates = {
   update: (id, data) => api.put(`/api/dates/${id}`, data),
   delete: (id) => api.delete(`/api/dates/${id}`),
   deletePlan: (id) => api.delete(`/api/dates/${id}/plan`),
-  generatePlan: (id) => api.post(`/api/dates/${id}/generate-plan`),
+  generatePlan: (id) => api.post(`/api/dates/${id}/generate-plan`, null, 120000),
+  // SSE 流式生成方案，实时显示 AI 思考过程
+  generatePlanStream: async (id, callbacks) => {
+    const token = localStorage.getItem('zhuiai_token');
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3005';
+    const { onStatus, onReasoning, onContent, onDone, onError } = callbacks;
+
+    try {
+      const response = await fetch(`${baseUrl}/api/dates/${id}/generate-plan`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const err = await response.text().catch(() => '');
+        let msg = `请求失败 (${response.status})`;
+        try { const j = JSON.parse(err); msg = j.error || msg; } catch {}
+        onError?.(msg);
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith('data: ')) continue;
+
+          const jsonStr = trimmed.slice(6);
+          if (!jsonStr.startsWith('{')) continue;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            if (parsed.status) onStatus?.(parsed.status);
+            if (parsed.reasoning) onReasoning?.(parsed.reasoning);
+            if (parsed.content) onContent?.(parsed.content);
+            if (parsed.done) onDone?.(parsed.plan, parsed.date);
+            if (parsed.error) onError?.(parsed.error);
+          } catch { /* skip parse errors */ }
+        }
+      }
+    } catch (err) {
+      onError?.(err.message || '网络异常，请稍后重试');
+    }
+  },
   evaluate: (id, data) => api.post(`/api/dates/${id}/evaluate`, data),
   getChecklistTemplate: () => api.get('/api/dates/checklist-template'),
   updateChecklist: (id, checklist) => api.put(`/api/dates/${id}/checklist`, { checklist }),

@@ -25,10 +25,18 @@ if (!fs.existsSync(LOG_FILE_DIR)) {
   fs.mkdirSync(LOG_FILE_DIR, { recursive: true });
 }
 
+// 获取北京时间日期字符串 YYYYMMDD
+function beijingDateStr(d = new Date()) {
+  const bj = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Shanghai' }));
+  const y = bj.getFullYear();
+  const m = String(bj.getMonth() + 1).padStart(2, '0');
+  const day = String(bj.getDate()).padStart(2, '0');
+  return `${y}${m}${day}`;
+}
+
 // 获取今日日志文件路径
 function getLogFile() {
-  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  return path.join(LOG_FILE_DIR, `app-${date}.json`);
+  return path.join(LOG_FILE_DIR, `app-${beijingDateStr()}.json`);
 }
 
 // 写入日志到文件
@@ -173,6 +181,9 @@ const logger = {
   getSlowThreshold() {
     return SLOW_THRESHOLD;
   },
+
+  // 北京时间日期字符串
+  beijingDateStr,
 };
 
 module.exports = logger;

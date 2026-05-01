@@ -5,11 +5,50 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
 
 const { JWT_SECRET } = require('../config');
 const prisma = require('../prisma');
 const activityService = require('../services/activityService');
 const { evaluateRelationshipStage, setRelationshipStage, getStageHistory, VALID_STAGES, STAGE_LABELS } = require('../services/relationshipStage');
+const { analyzeGirlText, analyzeGirlImage } = require('../services/profileEngine');
+
+// ---- 截图上传 multer 配置 ----
+const GIRL_SCREENSHOT_DIR = path.join(__dirname, '../../uploads/girl-screenshots');
+if (!fs.existsSync(GIRL_SCREENSHOT_DIR)) {
+  fs.mkdirSync(GIRL_SCREENSHOT_DIR, { recursive: true });
+}
+const girlScreenshotUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, GIRL_SCREENSHOT_DIR),
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = /jpeg|jpg|png|gif|webp/;
+    const ext = allowed.test(path.extname(file.originalname).toLowerCase());
+    const mime = allowed.test(file.mimetype);
+    if (ext && mime) cb(null, true);
+    else cb(new Error('仅支持图片格式：jpeg, jpg, png, gif, webp'));
+  }
+});
+
+// 客户可编辑的女生档案字段（不含系统分析/AI生成字段）
+const GIRL_CLIENT_EDITABLE_FIELDS = new Set([
+  'name', 'age', 'occupation', 'education', 'major', 'hometown', 'residence', 'workplace',
+  'appearance', 'height', 'bodyType', 'styleTags', 'photos', 'avatar', 'homepageUrl', 'videos',
+  'familyBackground', 'familyAtmosphere', 'familyBurden', 'familyComments',
+  'workSchedule', 'socialActivity', 'financialHabits',
+  'interests', 'dietPreferences', 'dietRestrictions', 'hobbiesDetail',
+  'relationshipAttitude', 'pastRelationshipSummary', 'emotionalWounds', 'attachmentStyle', 'dealbreakers',
+  'isKinkOriented', 'kinkIdentity', 'kinkBoundaries', 'kinkInterests', 'kinkExperience', 'kinkNotes',
+  'sourcePlatform', 'sourceUrl', 'notes', 'momentPhotos'
+]);
 
 // Auth middleware
 const authMiddleware = async (req, res, next) => {
@@ -606,6 +645,269 @@ router.put('/:id/relationship-stage', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('[Girls] 设置关系阶段失败:', error);
     res.status(500).json({ error: error.message || '设置失败' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// 客户端编辑女生档案
+// ---------------------------------------------------------------------------
+router.put('/:id/client-update', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'client') {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const girl = await prisma.girl.findUnique({ where: { id: req.params.id } });
+    if (!girl) return res.status(404).json({ error: '女生不存在' });
+    if (girl.clientId !== req.user.id) return res.status(403).json({ error: '无权限' });
+
+    const data = req.body;
+    const updateData = {};
+
+    const stringFields = ['name', 'occupation', 'education', 'major', 'hometown', 'residence', 'workplace',
+      'appearance', 'bodyType', 'styleTags', 'avatar', 'homepageUrl',
+      'familyBackground', 'familyAtmosphere', 'familyBurden', 'familyComments',
+      'workSchedule', 'socialActivity', 'financialHabits',
+      'interests', 'dietPreferences', 'dietRestrictions', 'hobbiesDetail',
+      'relationshipAttitude', 'pastRelationshipSummary', 'emotionalWounds', 'attachmentStyle', 'dealbreakers',
+      'kinkIdentity', 'kinkBoundaries', 'kinkInterests', 'kinkExperience', 'kinkNotes',
+      'sourcePlatform', 'sourceUrl', 'notes'];
+    const intFields = ['age', 'height'];
+    const jsonFields = ['photos', 'videos', 'momentPhotos'];
+    const boolFields = ['isKinkOriented'];
+
+    for (const key of stringFields) {
+      if (data[key] !== undefined && GIRL_CLIENT_EDITABLE_FIELDS.has(key)) {
+        updateData[key] = data[key] === '' ? null : data[key];
+      }
+    }
+    for (const key of intFields) {
+      if (data[key] !== undefined && GIRL_CLIENT_EDITABLE_FIELDS.has(key)) {
+        updateData[key] = data[key] ? parseInt(data[key]) : null;
+      }
+    }
+    for (const key of jsonFields) {
+      if (data[key] !== undefined && GIRL_CLIENT_EDITABLE_FIELDS.has(key)) {
+        updateData[key] = data[key] ? JSON.stringify(data[key]) : null;
+      }
+    }
+    for (const key of boolFields) {
+      if (data[key] !== undefined && GIRL_CLIENT_EDITABLE_FIELDS.has(key)) {
+        updateData[key] = !!data[key];
+      }
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ error: '没有可更新的字段' });
+    }
+
+    const updated = await prisma.girl.update({
+      where: { id: girl.id },
+      data: updateData
+    });
+
+    res.json({ success: true, girl: updated });
+  } catch (error) {
+    console.error('[Girls] 客户端更新失败:', error);
+    res.status(500).json({ error: '更新失败' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// AI 文字提取女生档案 (SSE 流式)
+// ---------------------------------------------------------------------------
+router.post('/:id/extract-text', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'client') {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const girl = await prisma.girl.findUnique({ where: { id: req.params.id } });
+    if (!girl) return res.status(404).json({ error: '女生不存在' });
+    if (girl.clientId !== req.user.id) return res.status(403).json({ error: '无权限' });
+
+    const { text } = req.body;
+    if (!text || text.trim().length < 10) {
+      return res.status(400).json({ error: '请至少输入10个字的描述' });
+    }
+
+    // SSE headers
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no'
+    });
+
+    const girlProfile = {
+      name: girl.name,
+      age: girl.age,
+      occupation: girl.occupation,
+      education: girl.education,
+      major: girl.major,
+      hometown: girl.hometown,
+      residence: girl.residence,
+      workplace: girl.workplace,
+      stage: girl.stage,
+      tensionScore: girl.tensionScore,
+      recentSignals: girl.signals ? JSON.parse(girl.signals) : []
+    };
+
+    try {
+      const result = await analyzeGirlText(girlProfile, text.trim());
+      if (result) {
+        // 从 profileUpdates 嵌套字段中提取（AI 返回的结构含 profileUpdates 子对象）
+        const updates = result.profileUpdates || result;
+        const pendingFields = {};
+        const skipKeys = ['signals', 'pendingActions', 'observations', 'tensionScore', 'stage'];
+        const { GIRL_FIELD_LABELS } = require('../services/profileEngine');
+
+        for (const [key, value] of Object.entries(updates)) {
+          if (skipKeys.includes(key)) continue;
+          if (value === null || value === undefined || value === '') continue;
+          if (typeof value === 'object') continue;
+          const strValue = String(value).trim();
+          if (!strValue || strValue === '未知' || strValue === '空' || strValue === '无' || strValue === '暂无') continue;
+          const label = GIRL_FIELD_LABELS[key];
+          if (!label) continue;
+          if (!GIRL_CLIENT_EDITABLE_FIELDS.has(key)) continue;
+          const currentValue = girl[key];
+          if (currentValue !== null && currentValue !== undefined && currentValue !== '') continue;
+          pendingFields[key] = { label, value: strValue };
+        }
+
+        res.write(`event: done\ndata: ${JSON.stringify({ success: true, pendingFields })}\n\n`);
+      } else {
+        res.write(`event: error\ndata: ${JSON.stringify({ error: 'AI未能识别出有效信息，请尝试更详细的描述' })}\n\n`);
+      }
+    } catch (aiError) {
+      console.error('[Girls] AI提取失败:', aiError);
+      res.write(`event: error\ndata: ${JSON.stringify({ error: aiError.message || 'AI分析失败' })}\n\n`);
+    }
+
+    res.end();
+  } catch (error) {
+    console.error('[Girls] 文字提取失败:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: '提取失败' });
+    } else {
+      res.write(`event: error\ndata: ${JSON.stringify({ error: error.message })}\n\n`);
+      res.end();
+    }
+  }
+});
+
+// ---------------------------------------------------------------------------
+// 截图上传 + AI 提取女生档案
+// ---------------------------------------------------------------------------
+router.post('/:id/extract-screenshot', authMiddleware, (req, res) => {
+  girlScreenshotUpload.single('image')(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({ error: err.message || '上传失败' });
+    }
+
+    try {
+      if (req.user.role !== 'client') {
+        return res.status(403).json({ error: '无权限' });
+      }
+
+      const girl = await prisma.girl.findUnique({ where: { id: req.params.id } });
+      if (!girl) return res.status(404).json({ error: '女生不存在' });
+      if (girl.clientId !== req.user.id) return res.status(403).json({ error: '无权限' });
+
+      if (!req.file) {
+        return res.status(400).json({ error: '请上传图片' });
+      }
+
+      const imageUrl = `/uploads/girl-screenshots/${req.file.filename}`;
+
+      const girlProfile = {
+        name: girl.name,
+        age: girl.age,
+        occupation: girl.occupation,
+        education: girl.education,
+        major: girl.major,
+        hometown: girl.hometown,
+        residence: girl.residence,
+        workplace: girl.workplace,
+        stage: girl.stage,
+        tensionScore: girl.tensionScore,
+        recentSignals: girl.signals ? JSON.parse(girl.signals) : []
+      };
+
+      const result = await analyzeGirlImage(girlProfile, imageUrl);
+
+      if (result) {
+        const updates = result.profileUpdates || result;
+        const pendingFields = {};
+        const skipKeys = ['signals', 'pendingActions', 'observations', 'tensionScore', 'stage'];
+        const { GIRL_FIELD_LABELS } = require('../services/profileEngine');
+
+        for (const [key, value] of Object.entries(updates)) {
+          if (skipKeys.includes(key)) continue;
+          if (value === null || value === undefined || value === '') continue;
+          if (typeof value === 'object') continue;
+          const strValue = String(value).trim();
+          if (!strValue || strValue === '未知' || strValue === '空' || strValue === '无' || strValue === '暂无') continue;
+          const label = GIRL_FIELD_LABELS[key];
+          if (!label) continue;
+          if (!GIRL_CLIENT_EDITABLE_FIELDS.has(key)) continue;
+          const currentValue = girl[key];
+          if (currentValue !== null && currentValue !== undefined && currentValue !== '') continue;
+          pendingFields[key] = { label, value: strValue };
+        }
+
+        res.json({ success: true, pendingFields, imageUrl });
+      } else {
+        res.json({ success: true, pendingFields: {}, imageUrl, message: 'AI未能识别出有效信息' });
+      }
+    } catch (error) {
+      console.error('[Girls] 截图提取失败:', error);
+      res.status(500).json({ error: error.message || '分析失败' });
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 获取女生关联数据（约会 + 阶段历史 + 信号/待办/观察）
+// ---------------------------------------------------------------------------
+router.get('/:id/related', authMiddleware, async (req, res) => {
+  try {
+    const girl = await prisma.girl.findUnique({ where: { id: req.params.id } });
+    if (!girl) return res.status(404).json({ error: '女生不存在' });
+    if (req.user.role === 'client' && girl.clientId !== req.user.id) {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const [dates, stageHistory] = await Promise.all([
+      prisma.date.findMany({
+        where: { girlId: req.params.id },
+        orderBy: { dateTime: 'desc' },
+        take: 10
+      }),
+      prisma.relationshipStageHistory.findMany({
+        where: { girlId: req.params.id },
+        orderBy: { createdAt: 'desc' },
+        take: 20
+      })
+    ]);
+
+    const signals = girl.signals ? JSON.parse(girl.signals) : [];
+    const pendingActions = girl.pendingActions ? JSON.parse(girl.pendingActions) : [];
+    const observations = girl.observations ? JSON.parse(girl.observations) : [];
+
+    res.json({
+      success: true,
+      dates,
+      stageHistory,
+      signals,
+      pendingActions,
+      observations,
+      conversationSummary: girl.conversationSummary
+    });
+  } catch (error) {
+    console.error('[Girls] 获取关联数据失败:', error);
+    res.status(500).json({ error: '获取失败' });
   }
 });
 

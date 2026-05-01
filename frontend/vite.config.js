@@ -8,7 +8,8 @@ export default defineConfig({
   base: './',
   plugins: [
     react(),
-    VitePWA({
+    // 开发模式下禁用 PWA service worker，避免缓存导致代码更新不可见
+    ...(isProduction ? [VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons/*.png', 'logo.png'],
       manifest: {
@@ -81,6 +82,7 @@ export default defineConfig({
         ],
       },
     }),
+  ] : []),
   ],
   define: {
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),

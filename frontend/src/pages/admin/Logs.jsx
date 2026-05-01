@@ -12,11 +12,142 @@ import {
 } from '@chakra-ui/react';
 import { useSocket } from '../../contexts/SocketContext';
 
+function beijingDateStr() {
+  const bj = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Shanghai' }));
+  return `${bj.getFullYear()}${String(bj.getMonth() + 1).padStart(2, '0')}${String(bj.getDate()).padStart(2, '0')}`;
+}
+
+// 前端错误详情
+function FrontendDetail({ log }) {
+  return (
+    <VStack spacing={3} align="stretch" fontFamily="mono" fontSize="sm">
+      <Box>
+        <Text color="gray.400" fontSize="xs" mb={1}>errorId</Text>
+        <Text color="cyan.300">{log.errorId || '-'}</Text>
+      </Box>
+      <Box>
+        <Text color="gray.400" fontSize="xs" mb={1}>错误信息</Text>
+        <Text color="red.300" fontWeight="bold">{log.message}</Text>
+      </Box>
+      <Box>
+        <Text color="gray.400" fontSize="xs" mb={1}>错误类型</Text>
+        <Badge colorScheme="orange">{log.type}</Badge>
+      </Box>
+      <Box>
+        <Text color="gray.400" fontSize="xs" mb={1}>发生页面</Text>
+        <Text color="yellow.300" wordBreak="break-all">{log.url}</Text>
+      </Box>
+      {log.metadata?.lineno != null && (
+        <Box>
+          <Text color="gray.400" fontSize="xs" mb={1}>出错位置</Text>
+          <Text>第 {log.metadata.lineno} 行，第 {log.metadata.colno} 列</Text>
+        </Box>
+      )}
+      {log.metadata?.componentStack && (
+        <Box>
+          <Text color="gray.400" fontSize="xs" mb={1}>React 组件栈</Text>
+          <Box bg="gray.900" p={3} borderRadius="md" maxH="150px" overflowY="auto" fontSize="xs">
+            <Text whiteSpace="pre-wrap" color="gray.300">{log.metadata.componentStack}</Text>
+          </Box>
+        </Box>
+      )}
+      <Box>
+        <Text color="gray.400" fontSize="xs" mb={1}>堆栈追踪</Text>
+        <Box bg="gray.900" p={3} borderRadius="md" maxH="250px" overflowY="auto" fontSize="xs">
+          <Text whiteSpace="pre-wrap" color="gray.300">{log.stack || '无堆栈信息'}</Text>
+        </Box>
+      </Box>
+      <Box>
+        <Text color="gray.400" fontSize="xs" mb={1}>浏览器</Text>
+        <Text color="gray.400" fontSize="xs" wordBreak="break-all">{log.userAgent}</Text>
+      </Box>
+      <Box>
+        <Text color="gray.400" fontSize="xs" mb={1}>发生时间</Text>
+        <Text>{log.time ? new Date(log.time).toLocaleString('zh-CN') : '-'}</Text>
+      </Box>
+    </VStack>
+  );
+}
+
+// 后端错误/警告详情
+function BackendDetail({ log }) {
+  return (
+    <VStack spacing={3} align="stretch" fontFamily="mono" fontSize="sm">
+      <Box>
+        <Text color="gray.400" fontSize="xs" mb={1}>日志级别</Text>
+        <Badge colorScheme={log.level === 'error' ? 'red' : 'orange'}>{log.level}</Badge>
+      </Box>
+      <Box>
+        <Text color="gray.400" fontSize="xs" mb={1}>消息</Text>
+        <Text color="red.300" fontWeight="bold">{log.message}</Text>
+      </Box>
+      {log.code && (
+        <Box>
+          <Text color="gray.400" fontSize="xs" mb={1}>错误码</Text>
+          <Text color="yellow.300">{log.code}</Text>
+        </Box>
+      )}
+      {log.requestId && (
+        <Box>
+          <Text color="gray.400" fontSize="xs" mb={1}>请求ID (requestId)</Text>
+          <Text color="cyan.300">{log.requestId}</Text>
+        </Box>
+      )}
+      <HStack spacing={6}>
+        {log.method && (
+          <Box>
+            <Text color="gray.400" fontSize="xs" mb={1}>请求方法</Text>
+            <Text color="green.300">{log.method}</Text>
+          </Box>
+        )}
+        {log.status && (
+          <Box>
+            <Text color="gray.400" fontSize="xs" mb={1}>状态码</Text>
+            <Text color={log.status >= 400 ? 'red.300' : 'green.300'}>{log.status}</Text>
+          </Box>
+        )}
+        {log.duration != null && (
+          <Box>
+            <Text color="gray.400" fontSize="xs" mb={1}>耗时</Text>
+            <Text color={log.duration > 3000 ? 'orange.300' : 'gray.300'}>{log.duration}ms</Text>
+          </Box>
+        )}
+      </HStack>
+      {log.path && (
+        <Box>
+          <Text color="gray.400" fontSize="xs" mb={1}>请求路径</Text>
+          <Text color="yellow.300" wordBreak="break-all">{log.path}</Text>
+        </Box>
+      )}
+      {log.metadata && (
+        <Box>
+          <Text color="gray.400" fontSize="xs" mb={1}>附加信息 (metadata)</Text>
+          <Box bg="gray.900" p={3} borderRadius="md" maxH="200px" overflowY="auto" fontSize="xs">
+            <Text whiteSpace="pre-wrap" color="gray.300">{JSON.stringify(log.metadata, null, 2)}</Text>
+          </Box>
+        </Box>
+      )}
+      {log.stack && (
+        <Box>
+          <Text color="gray.400" fontSize="xs" mb={1}>堆栈追踪</Text>
+          <Box bg="gray.900" p={3} borderRadius="md" maxH="200px" overflowY="auto" fontSize="xs">
+            <Text whiteSpace="pre-wrap" color="gray.300">{log.stack}</Text>
+          </Box>
+        </Box>
+      )}
+      <Box>
+        <Text color="gray.400" fontSize="xs" mb={1}>发生时间</Text>
+        <Text>{log.time ? new Date(log.time).toLocaleString('zh-CN') : '-'}</Text>
+      </Box>
+    </VStack>
+  );
+}
+
 export default function Logs() {
   const [logs, setLogs] = useState([]);
-  const [stats, setStats] = useState({ errors: 0, slow: 0, total: 0, errorRate: '0', slowRate: '0' });
+  const [stats, setStats] = useState({ errors: 0, slow: 0, total: 0, errorRate: '0', slowRate: '0', frontendErrors: 0 });
   const [files, setFiles] = useState([]);
-  const [filter, setFilter] = useState({ date: '', level: '', search: '' });
+  const [filter, setFilter] = useState({ date: '', level: '', source: '', search: '' });
   const [loading, setLoading] = useState(false);
   const [isAlerting, setIsAlerting] = useState(false);
   const [slowAnalysis, setSlowAnalysis] = useState(null);
@@ -25,6 +156,13 @@ export default function Logs() {
   const [traceId, setTraceId] = useState('');
   const [traceResult, setTraceResult] = useState(null);
   const [traceLoading, setTraceLoading] = useState(false);
+  const [logDetail, setLogDetail] = useState(null);
+  const { isOpen: isDetailOpen, onOpen: onDetailOpen, onClose: onDetailClose } = useDisclosure();
+
+  const openLogDetail = (log) => {
+    setLogDetail(log);
+    onDetailOpen();
+  };
   const logContainerRef = useRef(null);
   const toast = useToast();
   const { socket } = useSocket();
@@ -44,7 +182,8 @@ export default function Logs() {
 
   // 加载统计数据
   useEffect(() => {
-    fetch('/api/logs/stats')
+    const dateParam = filter.date ? `?date=${filter.date}` : '';
+    fetch(`/api/logs/stats${dateParam}`)
       .then(r => r.json())
       .then(d => {
         if (d.today) {
@@ -55,14 +194,15 @@ export default function Logs() {
         }
       })
       .catch(() => {});
-  }, [logs]);
+  }, [filter.date]);
 
   // 加载日志
   const loadLogs = () => {
     setLoading(true);
-    const date = filter.date || new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const date = filter.date || beijingDateStr();
     const params = new URLSearchParams();
     if (filter.level) params.set('level', filter.level);
+    if (filter.source) params.set('source', filter.source);
     if (filter.search) params.set('search', filter.search);
 
     fetch(`/api/logs/file/${date}?${params}`)
@@ -78,7 +218,7 @@ export default function Logs() {
     if (filter.date) {
       loadLogs();
     }
-  }, [filter.date, filter.level, filter.search]);
+  }, [filter.date, filter.level, filter.source, filter.search]);
 
   // 加载慢请求分析
   const loadSlowAnalysis = () => {
@@ -164,7 +304,7 @@ export default function Logs() {
   const levelBg = { error: 'red.900', slow: 'purple.900', warn: 'orange.900', info: 'gray.800', debug: 'gray.800' };
 
   const handleClearFilter = () => {
-    setFilter({ date: filter.date, level: '', search: '' });
+    setFilter({ date: filter.date, level: '', source: '', search: '' });
   };
 
   const formatDuration = (ms) => {
@@ -389,6 +529,15 @@ export default function Logs() {
             </Stat>
           </CardBody>
         </Card>
+        <Card flex={1}>
+          <CardBody>
+            <Stat>
+              <StatLabel>前端错误</StatLabel>
+              <StatNumber color="orange.500">{stats.frontendErrors}</StatNumber>
+              <StatHelpText>浏览器端上报</StatHelpText>
+            </Stat>
+          </CardBody>
+        </Card>
       </HStack>
 
       {/* Tab切换 */}
@@ -415,34 +564,44 @@ export default function Logs() {
                 ))}
               </Select>
               <Select
-                placeholder="日志级别"
+                value={filter.source}
+                onChange={e => setFilter(f => ({ ...f, source: e.target.value }))}
+                maxW="110px"
+              >
+                <option value="">全部来源</option>
+                <option value="backend">后端</option>
+                <option value="frontend">前端</option>
+              </Select>
+              <Select
                 value={filter.level}
                 onChange={e => setFilter(f => ({ ...f, level: e.target.value }))}
-                maxW="120px"
+                maxW="110px"
               >
-                <option value="">全部</option>
+                <option value="">全部级别</option>
                 <option value="error">错误</option>
-                <option value="slow">慢请求</option>
                 <option value="warn">警告</option>
+                <option value="slow">慢请求</option>
                 <option value="info">信息</option>
+                <option value="debug">调试</option>
               </Select>
               <Input
                 placeholder="搜索 trace-id / 关键词"
                 value={filter.search}
                 onChange={e => setFilter(f => ({ ...f, search: e.target.value }))}
-                maxW="250px"
+                maxW="220px"
               />
-              <Button onClick={loadLogs} isLoading={loading} colorScheme="blue">刷新</Button>
-              {(filter.level || filter.search) && (
-                <Button onClick={handleClearFilter} variant="ghost">清除筛选</Button>
+              <Button onClick={loadLogs} isLoading={loading} colorScheme="blue" size="sm">刷新</Button>
+              {(filter.level || filter.source || filter.search) && (
+                <Button onClick={handleClearFilter} variant="ghost" size="sm">清除筛选</Button>
               )}
             </HStack>
 
             {/* 快捷过滤 */}
             <HStack mb={4} spacing={2}>
-              <Button size="sm" colorScheme="red" variant="outline" onClick={() => setFilter(f => ({ ...f, level: 'error' }))}>只看错误</Button>
-              <Button size="sm" colorScheme="purple" variant="outline" onClick={() => setFilter(f => ({ ...f, level: 'slow' }))}>只看慢请求</Button>
-              <Button size="sm" variant="outline" onClick={() => setFilter(f => ({ ...f, level: '' }))}>显示全部</Button>
+              <Button size="sm" colorScheme="red" variant="outline" onClick={() => setFilter({ ...filter, level: 'error', source: '' })}>只看错误</Button>
+              <Button size="sm" colorScheme="purple" variant="outline" onClick={() => setFilter({ ...filter, level: 'slow', source: '' })}>只看慢请求</Button>
+              <Button size="sm" colorScheme="orange" variant="outline" onClick={() => setFilter({ ...filter, source: 'frontend', level: '' })}>只看前端</Button>
+              <Button size="sm" variant="outline" onClick={handleClearFilter}>清除筛选</Button>
             </HStack>
 
             {/* 日志流 */}
@@ -466,14 +625,31 @@ export default function Logs() {
                     <HStack spacing={2} mb={1}>
                       <Text color="gray.400" fontSize="xs">{log.time?.slice(11, 23)}</Text>
                       <Badge colorScheme={levelColor[log.level]} fontSize="0.6rem" textTransform="uppercase">{log.level}</Badge>
-                      <Text fontWeight="bold">{log.message}</Text>
+                      {log.source === 'frontend' && <Badge colorScheme="orange" fontSize="0.6rem" variant="outline">前端</Badge>}
+                      {(log.level === 'error' || log.level === 'warn') ? (
+                        <Text fontWeight="bold" cursor="pointer" _hover={{ textDecoration: 'underline' }} onClick={() => openLogDetail(log)}>{log.message}</Text>
+                      ) : (
+                        <Text fontWeight="bold">{log.message}</Text>
+                      )}
                     </HStack>
                     <HStack spacing={4} fontSize="0.75rem" color="gray.400" flexWrap="wrap">
-                      {log.requestId && <Text>trace: <Text as="span" color="cyan.300" cursor="pointer" textDecoration="underline" _hover={{ color: 'cyan.100' }} onClick={() => handleTraceClick(log.requestId)}>{log.requestId}</Text></Text>}
-                      {log.method && <Text>method: <Text as="span" color="green.300">{log.method}</Text></Text>}
-                      {log.path && <Text>path: <Text as="span" color="yellow.300">{log.path}</Text></Text>}
-                      {log.status && <Text>status: <Text as="span" color={log.status >= 400 ? 'red.300' : 'green.300'}>{log.status}</Text></Text>}
-                      {log.duration && <Text>duration: <Text as="span" color={log.duration > 3000 ? 'orange.300' : 'gray.300'}>{log.duration}ms</Text></Text>}
+                      {log.source === 'frontend' ? (
+                        <>
+                          {log.errorId && <Text>errorId: <Text as="span" color="cyan.300" cursor="pointer" textDecoration="underline" _hover={{ color: 'cyan.100' }} onClick={() => openLogDetail(log)}>{log.errorId}</Text></Text>}
+                          {log.type && <Text>type: <Text as="span" color="orange.300">{log.type}</Text></Text>}
+                          {log.url && <Text>url: <Text as="span" color="yellow.300" maxW="300px" isTruncated display="inline-block" verticalAlign="bottom">{log.url}</Text></Text>}
+                          {log.metadata?.lineno != null && <Text>位置: <Text as="span" color="gray.300">{log.metadata.lineno}:{log.metadata.colno}</Text></Text>}
+                          {log.stack && <Text>stack: <Text as="span" color="gray.400" maxW="300px" isTruncated display="inline-block" verticalAlign="bottom">{log.stack.slice(0, 100)}</Text></Text>}
+                        </>
+                      ) : (
+                        <>
+                          {log.requestId && <Text>trace: <Text as="span" color="cyan.300" cursor="pointer" textDecoration="underline" _hover={{ color: 'cyan.100' }} onClick={() => handleTraceClick(log.requestId)}>{log.requestId}</Text></Text>}
+                          {log.method && <Text>method: <Text as="span" color="green.300">{log.method}</Text></Text>}
+                          {log.path && <Text>path: <Text as="span" color="yellow.300">{log.path}</Text></Text>}
+                          {log.status && <Text>status: <Text as="span" color={log.status >= 400 ? 'red.300' : 'green.300'}>{log.status}</Text></Text>}
+                          {log.duration && <Text>duration: <Text as="span" color={log.duration > 3000 ? 'orange.300' : 'gray.300'}>{log.duration}ms</Text></Text>}
+                        </>
+                      )}
                     </HStack>
                   </Box>
                 ))
@@ -493,6 +669,22 @@ export default function Logs() {
           </TabPanel>
         </TabPanels>
       </Tabs>
+
+      {/* 日志详情弹窗（前后端通用） */}
+      <Modal isOpen={isDetailOpen} onClose={onDetailClose} size="xl">
+        <ModalOverlay />
+        <ModalContent bg="gray.800" color="gray.100">
+          <ModalHeader>
+            {logDetail?.source === 'frontend' ? '前端错误详情' : '后端日志详情'}
+          </ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            {logDetail && (
+              logDetail.source === 'frontend' ? <FrontendDetail log={logDetail} /> : <BackendDetail log={logDetail} />
+            )}
+          </ModalBody>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 }

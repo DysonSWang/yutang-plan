@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, memo, useMemo } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, memo, useMemo } from 'react';
 import {
   Box, VStack, HStack, Input, Button, Text, Card, CardBody, CardHeader,
   Heading, Select, Textarea, Spinner, Flex, Badge, Icon, Tooltip, useToast,
@@ -10,6 +10,54 @@ import { girls as girlsApi } from '../../utils/api';
 import { FireIcon, SnowIcon, SparklesIcon, BrainIcon } from '../../components/Icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+
+/**
+ * 修正 AI 产出的不规范 Markdown 格式
+ * DeepSeek 经常输出缺少空格的 markdown 语法，这里统一规范化
+ */
+function fixMarkdown(text) {
+  if (!text || typeof text !== 'string') return text;
+  let fixed = text;
+
+  // ---- 第一步：修复行首格式（#####text → ##### text 等）----
+  // 标题：###text → ### text（保留原有 # 数量）
+  fixed = fixed.replace(/^(#{1,4})([^\s#\n])/gm, '$1 $2');
+
+  // 引用：>text → > text
+  fixed = fixed.replace(/^(>{1,2})([^\s>\n])/gm, '$1 $2');
+
+  // 无序列表：-text → - text（但不匹配分隔线 ---）
+  fixed = fixed.replace(/^-(?=[^\s-])([^\s\n])/gm, '- $1');
+
+  // 有序列表：1.text → 1. text
+  fixed = fixed.replace(/^(\d+\.)([^\s\n])/gm, '$1 $2');
+
+  // ---- 第二步：修复行内 Markdown（非行首的 ###/--- 需要加换行）----
+  // 行内 ###：text###heading → text\n\n### heading（DeepSeek 常见问题）
+  // 匹配：非换行符 + ### + 非空格/换行（确保是标题语法而非普通文本）
+  fixed = fixed.replace(/([^\n#])(#{1,3})([^\s#\n])/gm, '$1\n\n$2 $3');
+
+  // 行内 ---（分隔线）：text---text → text\n\n---\n\ntext
+  fixed = fixed.replace(/([^\n-])(---)([^\n-])/g, '$1\n\n$2\n\n$3');
+  fixed = fixed.replace(/([^\n-])(---)$/gm, '$1\n\n$2');
+
+  // 清理多余空行（最多保留两个连续换行）
+  fixed = fixed.replace(/\n{3,}/g, '\n\n');
+
+  // ---- 第三步：修复粗体格式 ----
+  // **粗体** 两侧多余空格：** text ** → **text**
+  fixed = fixed.replace(/\*\*\s+([^*]+?)\s+\*\*/g, '**$1**');
+
+  // __粗体__ 两侧多余空格
+  fixed = fixed.replace(/__\s+([^_]+?)\s+__/g, '__$1__');
+
+  // ---- 第四步：确保块级元素前后有空行 ----
+  // 标题前后
+  fixed = fixed.replace(/([^\n])\n(#{1,4}\s)/g, '$1\n\n$2');
+  fixed = fixed.replace(/(#{1,4}\s[^\n]+)\n([^\n#])/g, '$1\n\n$2');
+
+  return fixed;
+}
 
 const STAGE_COLORS = {
   '陌生': 'gray',
@@ -417,8 +465,10 @@ const OptimizeReplyPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
 });
 
 // 消息气泡组件
-function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, copiedId, helpfulId }) {
+function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, copiedId, helpfulId, reasoning, reasoningLoading }) {
   const isUser = message.role === 'user';
+  const [reasoningOpen, setReasoningOpen] = useState(true);
+  const hasReasoning = !isUser && reasoning;
 
   return (
     <Flex justify={isUser ? 'flex-end' : 'flex-start'} mb={4}>
@@ -436,41 +486,111 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
         maxW="75%"
         bg={isUser ? 'teal.600' : 'gray.700'}
         color={isUser ? 'white' : 'gray.100'}
-        px={4}
-        py={3}
+        px={hasReasoning ? 0 : 4}
+        py={hasReasoning ? 0 : 3}
         borderRadius="2xl"
         borderBottomRightRadius={isUser ? 'sm' : '2xl'}
         borderBottomLeftRadius={isUser ? '2xl' : 'sm'}
         position="relative"
+        overflow="hidden"
       >
-        {isUser ? (
-          <Text whiteSpace="pre-wrap">{message.content}</Text>
-        ) : (
-          <Box className="ai-coach-markdown" fontSize="14px" lineHeight="1.8" color="gray.100">
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                h1: ({ children }) => <Text as="h1" color="white" fontWeight="bold" fontSize="md" mt={3} mb={1}>{children}</Text>,
-                h2: ({ children }) => <Text as="h2" color="white" fontWeight="bold" fontSize="md" mt={3} mb={1}>{children}</Text>,
-                h3: ({ children }) => <Text as="h3" color="white" fontWeight="bold" fontSize="md" mt={3} mb={1}>{children}</Text>,
-                p: ({ children }) => <Text mb={2}>{children}</Text>,
-                strong: ({ children }) => <Text as="strong" color="teal.200" fontWeight="bold">{children}</Text>,
-                ul: ({ children }) => <Text as="ul" pl={4} mb={2}>{children}</Text>,
-                ol: ({ children }) => <Text as="ol" pl={4} mb={2}>{children}</Text>,
-                li: ({ children }) => <Text as="li" mb={1}>{children}</Text>,
-                blockquote: ({ children }) => <Box borderLeft="3px solid" borderColor="whiteAlpha.400" pl={3} py={1} color="gray.300">{children}</Box>,
-                hr: () => <Box borderTop="1px solid" borderColor="whiteAlpha.300" my={2} />,
-                code: ({ children }) => <Text as="code" bg="whiteAlpha.200" px={1} py={0.5} borderRadius="sm" fontSize="0.9em">{children}</Text>,
-              }}
+        {/* 思考过程 — 内嵌在气泡顶部 */}
+        {hasReasoning && (
+          <>
+            <Flex
+              as="button"
+              onClick={() => setReasoningOpen(!reasoningOpen)}
+              w="100%" px={4} py={2} align="center" gap={2}
+              _hover={{ bg: 'whiteAlpha.50' }}
             >
-              {message.content}
-            </ReactMarkdown>
-          </Box>
+              <Text fontSize="xs" color="yellow.300">
+                {reasoningOpen ? '▼' : '▶'} 思考过程{reasoningLoading ? ' · 生成中...' : ''}
+              </Text>
+              {reasoningLoading && (
+                <Box w="6px" h="6px" bg="yellow.400" borderRadius="full"
+                  animation="pulse 1s infinite"
+                  sx={{ '@keyframes pulse': { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.3 } } }}
+                />
+              )}
+            </Flex>
+            {reasoningOpen && (
+              <Box px={4} py={3} maxH="260px" overflowY="auto" borderBottom="1px solid" borderColor="whiteAlpha.200">
+                <Text fontSize="13px" color="gray.300" lineHeight="1.8" whiteSpace="pre-wrap">{reasoning}</Text>
+              </Box>
+            )}
+            {/* 正式回复内容 */}
+            <Box px={4} py={3}>
+              {message.content ? (
+                <Box className="ai-coach-markdown" fontSize="14px" lineHeight="1.8" color="gray.100">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      h1: ({ children }) => <Text as="h1" color="white" fontWeight="bold" fontSize="md" mt={3} mb={1}>{children}</Text>,
+                      h2: ({ children }) => <Text as="h2" color="white" fontWeight="bold" fontSize="md" mt={3} mb={1}>{children}</Text>,
+                      h3: ({ children }) => <Text as="h3" color="white" fontWeight="bold" fontSize="md" mt={3} mb={1}>{children}</Text>,
+                      p: ({ children }) => <Text mb={2}>{children}</Text>,
+                      strong: ({ children }) => <Text as="strong" color="teal.200" fontWeight="bold">{children}</Text>,
+                      ul: ({ children }) => <Text as="ul" pl={4} mb={2}>{children}</Text>,
+                      ol: ({ children }) => <Text as="ol" pl={4} mb={2}>{children}</Text>,
+                      li: ({ children }) => <Text as="li" mb={1}>{children}</Text>,
+                      blockquote: ({ children }) => <Box borderLeft="3px solid" borderColor="whiteAlpha.400" pl={3} py={1} color="gray.300">{children}</Box>,
+                      hr: () => <Box borderTop="1px solid" borderColor="whiteAlpha.300" my={2} />,
+                      code: ({ children }) => <Text as="code" bg="whiteAlpha.200" px={1} py={0.5} borderRadius="sm" fontSize="0.9em">{children}</Text>,
+                    }}
+                  >
+                    {fixMarkdown(message.content)}
+                  </ReactMarkdown>
+                </Box>
+              ) : (
+                reasoningLoading && (
+                  <HStack spacing={2}>
+                    {[0, 150, 300].map((delay) => (
+                      <Box key={delay} w="8px" h="8px" bg="teal.400" borderRadius="full"
+                        animation={`bounce 1.4s infinite ease-in-out ${delay}ms`}
+                        sx={{ '@keyframes bounce': { '0%,80%,100%': { transform: 'scale(0)' }, '40%': { transform: 'scale(1)' } } }}
+                      />
+                    ))}
+                    <Text color="gray.400" fontSize="sm">思考中...</Text>
+                  </HStack>
+                )
+              )}
+            </Box>
+          </>
+        )}
+
+        {/* 无思考过程时的普通用户/助手消息 */}
+        {!hasReasoning && (
+          <>
+            {isUser ? (
+              <Text whiteSpace="pre-wrap">{message.content}</Text>
+            ) : (
+              <Box className="ai-coach-markdown" fontSize="14px" lineHeight="1.8" color="gray.100">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    h1: ({ children }) => <Text as="h1" color="white" fontWeight="bold" fontSize="md" mt={3} mb={1}>{children}</Text>,
+                    h2: ({ children }) => <Text as="h2" color="white" fontWeight="bold" fontSize="md" mt={3} mb={1}>{children}</Text>,
+                    h3: ({ children }) => <Text as="h3" color="white" fontWeight="bold" fontSize="md" mt={3} mb={1}>{children}</Text>,
+                    p: ({ children }) => <Text mb={2}>{children}</Text>,
+                    strong: ({ children }) => <Text as="strong" color="teal.200" fontWeight="bold">{children}</Text>,
+                    ul: ({ children }) => <Text as="ul" pl={4} mb={2}>{children}</Text>,
+                    ol: ({ children }) => <Text as="ol" pl={4} mb={2}>{children}</Text>,
+                    li: ({ children }) => <Text as="li" mb={1}>{children}</Text>,
+                    blockquote: ({ children }) => <Box borderLeft="3px solid" borderColor="whiteAlpha.400" pl={3} py={1} color="gray.300">{children}</Box>,
+                    hr: () => <Box borderTop="1px solid" borderColor="whiteAlpha.300" my={2} />,
+                    code: ({ children }) => <Text as="code" bg="whiteAlpha.200" px={1} py={0.5} borderRadius="sm" fontSize="0.9em">{children}</Text>,
+                  }}
+                >
+                  {fixMarkdown(message.content)}
+                </ReactMarkdown>
+              </Box>
+            )}
+          </>
         )}
 
         {/* 助手消息底部操作栏 */}
-        {!isUser && !isStreaming && (
-          <Flex mt={2} pt={2} borderTop="1px solid" borderColor="whiteAlpha.200" gap={3}>
+        {!isUser && !isStreaming && message.content && (
+          <Flex mt={2} pt={2} borderTop="1px solid" borderColor="whiteAlpha.200" gap={3} px={hasReasoning ? 4 : 0}>
             <Tooltip label="复制" placement="top">
               <Button
                 size="xs"
@@ -487,6 +607,7 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
                 size="xs"
                 variant="ghost"
                 color="gray.400"
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => onRegenerate(message.content)}
                 _hover={{ color: 'teal.400' }}
               >
@@ -684,40 +805,6 @@ const SuggestionGroup = memo(({
         </Text>
       )}
     </Box>
-  );
-});
-
-// DeepSeek 思考过程 - 可折叠展示
-const ReasoningDisclosure = memo(({ content, isLoading }) => {
-  const [isOpen, setIsOpen] = useState(true);
-  if (!content) return null;
-
-  return (
-    <Flex justify="flex-start" mb={3}>
-      <Box bg="gray.750" borderRadius="lg" border="1px solid" borderColor="yellow.700" maxW="90%" overflow="hidden">
-        <Flex
-          as="button"
-          onClick={() => setIsOpen(!isOpen)}
-          w="100%" px={3} py={2} align="center" gap={2}
-          _hover={{ bg: 'whiteAlpha.50' }}
-        >
-          <Text fontSize="xs" color="yellow.300">
-            {isOpen ? '▼' : '▶'} 思考过程{isLoading ? ' · 生成中...' : ''}
-          </Text>
-          {isLoading && (
-            <Box w="6px" h="6px" bg="yellow.400" borderRadius="full"
-              animation="pulse 1s infinite"
-              sx={{ '@keyframes pulse': { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.3 } } }}
-            />
-          )}
-        </Flex>
-        {isOpen && (
-          <Box px={3} pb={3} maxH="300px" overflowY="auto">
-            <Text fontSize="12px" color="gray.300" lineHeight="1.7" whiteSpace="pre-wrap">{content}</Text>
-          </Box>
-        )}
-      </Box>
-    </Flex>
   );
 });
 
@@ -1006,17 +1093,37 @@ export default function AICoach() {
   }, [deepMode]);
 
   // 监听消息变化，自动滚动到底部
-  // 这是一个备份机制，确保在消息更新后滚动
+  // 用最后一条消息的 id + 内容长度作为依赖，覆盖：
+  // 1. 重新生成（id 变化）2. 流式输出内容增长（content length 变化）
+  // useLayoutEffect 在浏览器绘制前同步执行，避免用户看到滚动跳动
+  const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+  const lastMessageId = lastMessage?.id || null;
+  const lastContentLen = lastMessage?.content?.length || 0;
+  const reasoningLen = reasoningContent?.length || 0;
+  useLayoutEffect(() => {
+    const c = document.getElementById('chat-scroll-container');
+    if (c) c.scrollTop = c.scrollHeight;
+  }, [lastMessageId, lastContentLen, reasoningLen]);
+
+  // loading 结束后确保在底部（兜底）
+  useLayoutEffect(() => {
+    if (!loading) {
+      const c = document.getElementById('chat-scroll-container');
+      if (c) c.scrollTop = c.scrollHeight;
+    }
+  }, [loading]);
+
+  // 页面初始加载：DOM 就绪后滚动到底部
   useEffect(() => {
-    // 消息变化时，等待 DOM 更新完成后滚动
-    const timer = setTimeout(() => {
-      const container = document.getElementById('chat-scroll-container');
-      if (container) {
-        container.scrollTop = container.scrollHeight;
-      }
-    }, 100);
-    return () => clearTimeout(timer);
-  }, [messages.length]);
+    const scrollNow = () => {
+      const c = document.getElementById('chat-scroll-container');
+      if (c) c.scrollTop = c.scrollHeight;
+    };
+    const t1 = setTimeout(scrollNow, 100);
+    const t2 = setTimeout(scrollNow, 300);
+    const t3 = setTimeout(scrollNow, 800);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, []);
 
   // 滚动到底部 - 使用 document.getElementById 确保获取正确的容器
   const scrollToBottom = useCallback(() => {
@@ -1142,13 +1249,11 @@ export default function AICoach() {
     const token = localStorage.getItem('zhuiai_token');
     const userMessage = lastUserMsg.content;
 
-    // 移除最后一条助手消息（不是用户消息）
-    setMessages(prev => prev.slice(0, -1));
-
-    // 添加新的助手消息占位
     const assistantId = `asst-${Date.now()}`;
+
+    // 一次性替换最后一条助手消息为新的空消息（避免两次 setMessages 造成的布局跳动）
     setMessages(prev => [
-      ...prev,
+      ...prev.slice(0, -1),
       {
         id: assistantId,
         role: 'assistant',
@@ -1157,13 +1262,15 @@ export default function AICoach() {
       }
     ]);
 
-    // 延迟滚动到底部，等待 DOM 更新完成
-    setTimeout(() => {
-      const container = document.getElementById('chat-scroll-container');
-      if (container) {
-        container.scrollTop = container.scrollHeight;
-      }
-    }, 50);
+    // 等待 React 提交 DOM 后滚动到底部
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const container = document.getElementById('chat-scroll-container');
+        if (container) {
+          container.scrollTop = container.scrollHeight;
+        }
+      });
+    });
 
     setLoading(true);
     setError('');
@@ -1241,7 +1348,15 @@ export default function AICoach() {
               if (!jsonStr.startsWith('{')) continue;
               try {
                 const parsed = JSON.parse(jsonStr);
+                if (parsed.meta?.routedType) {
+                  setThinkingLabel(`正在从「${parsed.meta.routedType}」视角分析...`);
+                }
+                if (parsed.reasoning) {
+                  reasoningContentRef.current += parsed.reasoning;
+                  setReasoningContent(reasoningContentRef.current);
+                }
                 if (parsed.content) {
+                  setThinkingLabel(null);
                   streamingContentRef.current += parsed.content;
                   flushUpdate(streamingContentRef.current);
                 }
@@ -1253,7 +1368,13 @@ export default function AICoach() {
         if (buffer.trim()) {
           try {
             const parsed = JSON.parse(buffer.trim());
-            if (parsed.content) streamingContentRef.current += parsed.content;
+            if (parsed.reasoning) {
+              reasoningContentRef.current += parsed.reasoning;
+              setReasoningContent(reasoningContentRef.current);
+            }
+            if (parsed.content) {
+              streamingContentRef.current += parsed.content;
+            }
           } catch { /* ignore */ }
         }
 
@@ -1751,11 +1872,11 @@ export default function AICoach() {
   if (hasGirl) {
     const currentCombatHistory = combatHistories[selectedGirlId] || [];
 
-    // AI教练 with girl — 内联聊天面板
-    const GirlCoachChatPanel = () => (
+    // AI教练 with girl — 聊天面板（内联 JSX，避免每次渲染重置 DOM）
+    const girlCoachChatContent = (
       <>
         <Box flex="1" minH="0" display="flex" flexDirection="column" bg="gray.800" borderRadius="md" mb={2} overflow="hidden">
-          <Box id="chat-scroll-container" flex="1" overflowY="auto" p={4} ref={scrollContainerRef}>
+          <Box id="chat-scroll-container" flex="1" overflowY="auto" p={4} ref={scrollContainerRef} overflowAnchor="none">
             {/* 女生分析内容 */}
             {girlAnalysisLoading ? (
               <Flex justify="flex-start" mb={4}>
@@ -1783,7 +1904,7 @@ export default function AICoach() {
                           ul: ({ children }) => <Text as="ul" pl={4} mb={2}>{children}</Text>,
                           li: ({ children }) => <Text as="li" mb={1}>{children}</Text>,
                         }}
-                      >{girlAnalysisContent}</ReactMarkdown>
+                      >{fixMarkdown(girlAnalysisContent)}</ReactMarkdown>
                     </Box>
                   </Box>
                 </HStack>
@@ -1806,39 +1927,27 @@ export default function AICoach() {
               </VStack>
             )}
 
-            {/* 思考过程（在回答之前） */}
-            {reasoningContent && (
-              <ReasoningDisclosure
-                content={reasoningContent}
-                isLoading={loading && !messages[messages.length - 1]?.content}
-              />
-            )}
-            {/* 后续对话消息（在分析之后） */}
-            {messages.length > 0 && messages.map((message) => (
-              <MessageBubble
-                key={message.id}
-                message={message}
-                onCopy={handleCopy}
-                onRegenerate={handleRegenerate}
-                onHelpful={handleHelpful}
-                isStreaming={loading && message.id === messages[messages.length - 1]?.id && !message.content}
-                copiedId={copiedId}
-                helpfulId={helpfulId}
-              />
-            ))}
-            {loading && messages.length > 0 && messages[messages.length - 1]?.role === 'user' && (
-              <Flex justify="flex-start" mb={4}>
-                <HStack bg="gray.700" px={4} py={3} borderRadius="2xl" spacing={2}>
-                  {[0, 150, 300].map((delay) => (
-                    <Box key={delay} w="8px" h="8px" bg="teal.400" borderRadius="full"
-                      animation={`bounce 1.4s infinite ease-in-out ${delay}ms`}
-                      sx={{ '@keyframes bounce': { '0%,80%,100%': { transform: 'scale(0)' }, '40%': { transform: 'scale(1)' } } }}
-                    />
-                  ))}
-                  <Text color="gray.400" fontSize="sm">{thinkingLabel || 'AI 教练分析中...'}</Text>
-                </HStack>
-              </Flex>
-            )}
+            {/* 对话消息 */}
+            {messages.length > 0 && messages.map((message, index) => {
+              const isLastMessage = index === messages.length - 1;
+              const prevIsUser = index > 0 && messages[index - 1]?.role === 'user';
+              const isFirstAssistantAfterUser = message.role === 'assistant' && prevIsUser;
+              const showReasoning = isFirstAssistantAfterUser && reasoningContent && isLastMessage;
+              return (
+                <MessageBubble
+                  key={message.id}
+                  message={message}
+                  onCopy={handleCopy}
+                  onRegenerate={handleRegenerate}
+                  onHelpful={handleHelpful}
+                  isStreaming={loading && isLastMessage && !message.content}
+                  copiedId={copiedId}
+                  helpfulId={helpfulId}
+                  reasoning={showReasoning ? reasoningContent : null}
+                  reasoningLoading={showReasoning && loading && !message.content}
+                />
+              );
+            })}
             {error && (
               <Box mt={4} p={3} bg="red.900" borderRadius="md">
                 <Text color="red.200">{error}</Text>
@@ -1921,7 +2030,7 @@ export default function AICoach() {
               <TabPanels sx={{ display: 'flex', flex: 1, minH: 0 }}>
                 <TabPanel px={0} py={2} sx={{ display: 'flex', flexDirection: 'column', flex: 1, minH: 0, overflow: 'hidden' }}>
                   <Box flex="1" minH="0" display="flex" flexDirection="column" overflow="hidden">
-                    <GirlCoachChatPanel />
+                    {girlCoachChatContent}
                   </Box>
                 </TabPanel>
                 <TabPanel px={0} py={2} sx={{ display: 'flex', flexDirection: 'column', flex: 1, minH: 0, overflow: 'hidden' }}>
@@ -1962,8 +2071,8 @@ export default function AICoach() {
 
   // ====== State 1: 通用咨询 — 3 Tab 布局（保持现有行为）======
 
-  // Tab 1: AI教练（多轮对话）
-  const AICoachPanel = () => (
+  // Tab 1: AI教练（多轮对话）— 内联 JSX，避免每次渲染重置 DOM
+  const aiCoachContent = (
     <>
       {/* 会话选择栏 */}
       <SessionBar
@@ -1977,7 +2086,7 @@ export default function AICoach() {
       {/* 固定高度的消息容器，flex布局 */}
       <Box flex="1" minH="0" display="flex" flexDirection="column" bg="gray.800" borderRadius="md" mb={2} overflow="hidden">
         {/* 消息列表区域 - 可滚动 */}
-        <Box id="chat-scroll-container" flex="1" overflowY="auto" p={4} ref={scrollContainerRef}>
+        <Box id="chat-scroll-container" flex="1" overflowY="auto" p={4} ref={scrollContainerRef} overflowAnchor="none">
           {messages.length === 0 ? (
             <VStack spacing={4} py={8} justify="center" minH="200px">
               <Text color="gray.400" textAlign="center">
@@ -2001,48 +2110,27 @@ export default function AICoach() {
             </VStack>
           ) : (
             <>
-              {/* 思考过程（在回答之前） */}
-              {reasoningContent && (
-                <ReasoningDisclosure
-                  content={reasoningContent}
-                  isLoading={loading && !messages[messages.length - 1]?.content}
-                />
-              )}
-              {messages.map((message) => (
-                <MessageBubble
-                  key={message.id}
-                  message={message}
-                  onCopy={handleCopy}
-                  onRegenerate={handleRegenerate}
-                  onHelpful={handleHelpful}
-                  isStreaming={loading && message.id === messages[messages.length - 1]?.id && !message.content}
-                  copiedId={copiedId}
-                  helpfulId={helpfulId}
-                />
-              ))}
-              {loading && messages[messages.length - 1]?.role === 'user' && (
-                <Flex justify="flex-start" mb={4}>
-                  <HStack bg="gray.700" px={4} py={3} borderRadius="2xl" spacing={2}>
-                    {[0, 150, 300].map((delay) => (
-                      <Box
-                        key={delay}
-                        w="8px"
-                        h="8px"
-                        bg="teal.400"
-                        borderRadius="full"
-                        animation={`bounce 1.4s infinite ease-in-out ${delay}ms`}
-                        sx={{
-                          '@keyframes bounce': {
-                            '0%, 80%, 100%': { transform: 'scale(0)' },
-                            '40%': { transform: 'scale(1)' }
-                          }
-                        }}
-                      />
-                    ))}
-                    <Text color="gray.400" fontSize="sm">{thinkingLabel || 'AI 教练分析中...'}</Text>
-                  </HStack>
-                </Flex>
-              )}
+              {/* 对话消息 */}
+              {messages.map((message, index) => {
+                const isLastMessage = index === messages.length - 1;
+                const prevIsUser = index > 0 && messages[index - 1]?.role === 'user';
+                const isFirstAssistantAfterUser = message.role === 'assistant' && prevIsUser;
+                const showReasoning = isFirstAssistantAfterUser && reasoningContent && isLastMessage;
+                return (
+                  <MessageBubble
+                    key={message.id}
+                    message={message}
+                    onCopy={handleCopy}
+                    onRegenerate={handleRegenerate}
+                    onHelpful={handleHelpful}
+                    isStreaming={loading && isLastMessage && !message.content}
+                    copiedId={copiedId}
+                    helpfulId={helpfulId}
+                    reasoning={showReasoning ? reasoningContent : null}
+                    reasoningLoading={showReasoning && loading && !message.content}
+                  />
+                );
+              })}
               <div ref={messagesEndRef} style={{ height: 1 }} />
             </>
           )}
@@ -2120,7 +2208,7 @@ export default function AICoach() {
         <TabPanels sx={{ display: 'flex', flex: 1, minH: 0 }}>
           <TabPanel px={0} py={2} sx={{ display: 'flex', flexDirection: 'column', flex: 1, minH: 0, overflow: 'hidden' }}>
             <Box flex="1" minH="0" display="flex" flexDirection="column" overflow="hidden">
-              <AICoachPanel />
+              {aiCoachContent}
             </Box>
           </TabPanel>
           <TabPanel px={0} pt={4} overflowY="auto">

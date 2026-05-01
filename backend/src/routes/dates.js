@@ -70,6 +70,85 @@ async function callAI(messages, options = {}) {
   return data.choices?.[0]?.message?.content || '';
 }
 
+// 流式 AI 调用，支持思考过程回调
+async function callAIStream(messages, options, callbacks) {
+  const aiConfig = getAIConfig();
+  if (!aiConfig) {
+    callbacks.onError?.('AI 服务不可用');
+    return;
+  }
+
+  const body = {
+    model: aiConfig.model,
+    messages,
+    temperature: options.temperature ?? 0.7,
+    max_tokens: options.maxTokens ?? 3000,
+    stream: true
+  };
+
+  if (aiConfig.model === 'deepseek-v4-pro') {
+    body.thinking = { type: 'enabled' };
+  }
+
+  try {
+    const response = await fetch(aiConfig.url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${aiConfig.key}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      callbacks.onError?.(`AI调用失败: ${response.status}`);
+      return;
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          if (data === '[DONE]') {
+            callbacks.onDone?.();
+            return;
+          }
+          try {
+            const parsed = JSON.parse(data);
+            const delta = parsed.choices?.[0]?.delta || {};
+
+            const reasoning = delta.reasoning_content || '';
+            if (reasoning) {
+              callbacks.onReasoning?.(reasoning);
+              continue;
+            }
+
+            const content = delta.content || '';
+            if (content) {
+              callbacks.onChunk?.(content);
+            }
+          } catch { /* skip parse errors */ }
+        }
+      }
+    }
+    callbacks.onDone?.();
+  } catch (err) {
+    callbacks.onError?.(err.message);
+  }
+}
+
 /**
  * 约会场地搜索 - 使用百度AI搜索
  * 百度搜索覆盖中文内容更全面，返回智能总结
@@ -742,20 +821,18 @@ router.put('/:id/checklist', authMiddleware, async (req, res) => {
   }
 });
 
-// AI 生成约会方案
+// AI 生成约会方案（SSE 流式）
 router.post('/:id/generate-plan', authMiddleware, async (req, res) => {
+  let date;
   try {
-    const date = await prisma.date.findUnique({
+    date = await prisma.date.findUnique({
       where: { id: req.params.id },
-      include: {
-        user: true,
-        girl: true
-      }
+      include: { user: true, girl: true }
     });
 
     if (!date) return res.status(404).json({ error: '约会不存在' });
 
-    // 安全：操盘手可操作所有客户的约会，客户只能操作自己的
+    // 安全校验
     if (req.user.role === 'admin') {
       const ok = await verifyIsClient(date.userId);
       if (!ok) return res.status(403).json({ error: '无权操作此约会' });
@@ -766,7 +843,24 @@ router.post('/:id/generate-plan', authMiddleware, async (req, res) => {
     } else {
       return res.status(403).json({ error: '无权限' });
     }
+  } catch (error) {
+    console.error('[Dates] 校验失败:', error);
+    return res.status(500).json({ error: '校验失败' });
+  }
 
+  // 设置 SSE 响应头
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.setHeader('Content-Encoding', 'identity');
+  res.flushHeaders();
+
+  const send = (data) => {
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+  };
+
+  try {
     // 更新状态为生成中
     await prisma.date.update({
       where: { id: req.params.id },
@@ -775,7 +869,8 @@ router.post('/:id/generate-plan', authMiddleware, async (req, res) => {
 
     const conditions = date.conditions ? JSON.parse(date.conditions) : {};
 
-    // 用 Brave Search 搜索真实场地
+    // 搜索真实场地
+    send({ status: '正在搜索周边场地...' });
     let venueSearchResults = null;
     try {
       venueSearchResults = await searchVenues({
@@ -803,46 +898,62 @@ router.post('/:id/generate-plan', authMiddleware, async (req, res) => {
       date
     });
 
-    let planText;
-    try {
-      planText = await callAI([
-        { role: 'user', content: prompt }
-      ], { temperature: 0.8, maxTokens: 3000 });
-    } catch (err) {
-      console.error('[Dates] AI策划失败:', err);
-      await prisma.date.update({
-        where: { id: req.params.id },
-        data: { planStatus: 'pending' }
-      });
-      return res.status(500).json({ error: `AI调用失败: ${err.message}` });
-    }
+    send({ status: 'AI 正在分析策划方案...' });
 
-    // 提取JSON
-    let plan = null;
-    const jsonMatch = planText.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      try {
-        plan = JSON.parse(jsonMatch[0]);
-      } catch {
-        plan = { overview: planText };
+    let planText = '';
+
+    await callAIStream(
+      [{ role: 'user', content: prompt }],
+      { temperature: 0.8, maxTokens: 3000 },
+      {
+        onReasoning: (reasoning) => {
+          send({ reasoning });
+        },
+        onChunk: (content) => {
+          planText += content;
+          send({ content });
+        },
+        onDone: async () => {
+          // 提取JSON
+          let plan = null;
+          const jsonMatch = planText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            try { plan = JSON.parse(jsonMatch[0]); } catch { plan = { overview: planText }; }
+          } else {
+            plan = { overview: planText };
+          }
+
+          try {
+            const updated = await prisma.date.update({
+              where: { id: req.params.id },
+              data: {
+                aiPlan: JSON.stringify(plan),
+                planStatus: 'generated',
+                status: 'planned'
+              }
+            });
+            send({ done: true, plan, date: updated });
+          } catch (dbErr) {
+            console.error('[Dates] 保存方案失败:', dbErr);
+            send({ error: '保存方案失败' });
+          }
+          res.end();
+        },
+        onError: async (msg) => {
+          console.error('[Dates] AI策划失败:', msg);
+          await prisma.date.update({
+            where: { id: req.params.id },
+            data: { planStatus: 'pending' }
+          }).catch(() => {});
+          send({ error: msg });
+          res.end();
+        }
       }
-    } else {
-      plan = { overview: planText };
-    }
-
-    const updated = await prisma.date.update({
-      where: { id: req.params.id },
-      data: {
-        aiPlan: JSON.stringify(plan),
-        planStatus: 'generated',
-        status: 'planned'
-      }
-    });
-
-    res.json({ success: true, plan, date: updated });
+    );
   } catch (error) {
     console.error('[Dates] AI策划失败:', error);
-    res.status(500).json({ error: '策划失败' });
+    try { send({ error: '策划失败' }); } catch {}
+    res.end();
   }
 });
 

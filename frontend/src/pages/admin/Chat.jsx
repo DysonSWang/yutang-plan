@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Box, Flex, VStack, HStack, Input, Button, Text, Heading, IconButton, Image, Spinner, useDisclosure, Menu, MenuButton, MenuList, MenuItem, Badge, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton, Select, List, ListItem } from '@chakra-ui/react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { api, chat, upload, clients } from '../../utils/api';
@@ -8,6 +9,8 @@ import FlashImageViewer from '../../components/FlashImageViewer';
 import EmojiPanel from '../../components/EmojiPanel';
 
 export default function AdminChat() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const { on, addChatUnread, clearChatUnread } = useSocket();
   const [sessions, setSessions] = useState([]);
   const [currentSession, setCurrentSession] = useState(null);
@@ -218,6 +221,20 @@ export default function AdminChat() {
   useEffect(() => {
     loadSessions();
   }, [loadSessions]);
+
+  // 从客户列表跳转过来时自动发起聊天
+  useEffect(() => {
+    const clientId = location.state?.clientId;
+    if (!clientId || sessions.length === 0) return;
+    const existing = sessions.find(s => s.clientId === clientId);
+    if (existing) {
+      setCurrentSession(existing);
+      navigate('.', { replace: true, state: {} });
+    } else {
+      handleStartNewChatWithClient(clientId);
+      navigate('.', { replace: true, state: {} });
+    }
+  }, [location.state?.clientId, sessions]);
 
   useEffect(() => {
     if (!currentSession) return;

@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box, Heading, Card, CardBody, Table, Thead, Tbody, Tr, Th, Td, Button, Badge, Modal, ModalOverlay,
   ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton, useDisclosure, SimpleGrid,
@@ -259,6 +260,7 @@ function getInitialFormData() {
 }
 
 export default function AdminClients() {
+  const navigate = useNavigate();
   const [clientList, setClientList] = useState([]);
   const [selectedClient, setSelectedClient] = useState(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -889,6 +891,9 @@ export default function AdminClients() {
                           aria-label="日历"
                         />
                       </Tooltip>
+                      <Button size="sm" colorScheme="blue" variant="ghost" onClick={(e) => { e.stopPropagation(); navigate('/admin/chat', { state: { clientId: client.id, clientName: client.nickname || client.username } }); }}>
+                        交流
+                      </Button>
                       <Button size="sm" colorScheme="teal" variant="ghost" onClick={(e) => { e.stopPropagation(); viewClient(client); }}>
                         查看
                       </Button>

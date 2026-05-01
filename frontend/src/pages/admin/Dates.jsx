@@ -40,6 +40,19 @@ function parseJSON(val, fallback = null) {
   try { return JSON.parse(val); } catch { return fallback; }
 }
 
+function cleanStreamText(text) {
+  if (!text) return '';
+  return text
+    .replace(/^[\s]*[\[\{][\s]*/gm, '')
+    .replace(/[\s]*[\]\}][\s]*[,]?[\s]*$/gm, '')
+    .replace(/"[^"]*"\s*:\s*/g, '')
+    .replace(/^\s*"|"\s*[,]?\s*$/gm, '')
+    .replace(/\\n/g, '\n')
+    .replace(/\\"/g, '"')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 export default function AdminDates() {
   const [datesList, setDatesList] = useState([]);
   const [clientList, setClientList] = useState([]);
@@ -64,6 +77,9 @@ export default function AdminDates() {
   const [expenses, setExpenses] = useState([{ item: '', amount: '' }]);
   // AI生成中
   const [generating, setGenerating] = useState(false);
+  const [streamStatus, setStreamStatus] = useState('');
+  const [streamReasoning, setStreamReasoning] = useState('');
+  const [streamContent, setStreamContent] = useState('');
   const [evaluating, setEvaluating] = useState(false);
   // 约会前检查清单
   const [checklist, setChecklist] = useState([]);
@@ -265,18 +281,31 @@ export default function AdminDates() {
   const handleGeneratePlan = async () => {
     if (!selectedDate) return;
     setGenerating(true);
-    try {
-      const res = await dates.generatePlan(selectedDate.id);
-      if (res.success) {
-        setSelectedDate(res.date);
-        setDiscussion([]);
-        setShowDiscussion(false);
+    setStreamStatus('正在连接...');
+    setStreamReasoning('');
+    setStreamContent('');
+
+    await dates.generatePlanStream(selectedDate.id, {
+      onStatus: (text) => { setStreamStatus(text); },
+      onReasoning: (text) => { setStreamReasoning(prev => prev + text); },
+      onContent: (text) => { setStreamContent(prev => prev + text); setStreamStatus('AI 正在生成方案...'); },
+      onDone: (plan, updatedDate) => {
+        if (plan && updatedDate) {
+          setSelectedDate(updatedDate);
+          setDiscussion([]);
+          setShowDiscussion(false);
+        }
         toast({ title: 'AI约会方案生成成功', status: 'success', duration: 3000 });
-      } else {
-        toast({ title: res.error || '生成失败', status: 'error', duration: 3000 });
+        setGenerating(false);
+        setStreamStatus('');
+        setStreamContent('');
+      },
+      onError: (msg) => {
+        toast({ title: msg || '生成失败', status: 'error', duration: 3000 });
+        setGenerating(false);
+        setStreamStatus('');
       }
-    } catch (e) { console.error(e); toast({ title: '生成失败', status: 'error', duration: 3000 }); }
-    setGenerating(false);
+    });
   };
 
   const handleDiscuss = async () => {
@@ -1021,15 +1050,37 @@ export default function AdminDates() {
                 )}
 
                 {/* 约会方案 */}
-                {selectedDate.planStatus === 'generating' ? (
-                  <Card bg="gray.750" mb={4}>
-                    <CardBody>
-                      <Flex align="center" gap={3}>
-                        <Spinner color="teal.400" />
-                        <Text color="gray.300">AI 正在生成约会方案，请稍候...</Text>
-                      </Flex>
-                    </CardBody>
-                  </Card>
+                {generating ? (
+                  <Box mb={4}>
+                    <Card bg="gray.750" mb={streamReasoning || streamContent ? 2 : 0}>
+                      <CardBody>
+                        <Flex align="center" gap={3}>
+                          <Spinner color="teal.400" />
+                          <Text color="gray.300">{streamStatus || 'AI 正在生成约会方案，请稍候...'}</Text>
+                          <Progress size="xs" isIndeterminate colorScheme="teal" w="100px" borderRadius="full" />
+                        </Flex>
+                      </CardBody>
+                    </Card>
+                    {streamReasoning && (
+                      <Card bg="gray.900" mb={2}>
+                        <CardBody p={3}>
+                          <Text color="purple.400" fontSize="xs" mb={1} fontWeight="bold">AI 思考过程</Text>
+                          <Text color="gray.400" fontSize="xs" whiteSpace="pre-wrap" lineHeight="1.6" maxH="150px" overflow="auto">
+                            {streamReasoning}
+                          </Text>
+                        </CardBody>
+                      </Card>
+                    )}
+                    {streamContent && (
+                      <Card bg="gray.750">
+                        <CardBody p={4}>
+                          <Text color="gray.300" fontSize="sm" whiteSpace="pre-wrap" lineHeight="1.8" maxH="300px" overflow="auto">
+                            {cleanStreamText(streamContent)}
+                          </Text>
+                        </CardBody>
+                      </Card>
+                    )}
+                  </Box>
                 ) : selectedDate.aiPlan ? (
                   <Box mb={4}>
                     <Flex justify="space-between" align="center" mb={2}>

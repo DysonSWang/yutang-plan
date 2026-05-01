@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import {
   Box, Heading, Card, CardBody, Button, Badge, Modal, ModalOverlay, ModalContent,
   ModalHeader, ModalBody, ModalCloseButton, useDisclosure, VStack, HStack, Text,
@@ -43,6 +43,41 @@ function unwrapMarkdown(content) {
   return text.trim();
 }
 
+// 流式输出时清除 JSON 结构符号，只保留可读文本
+function cleanStreamText(text) {
+  if (!text) return '';
+  return text
+    .replace(/^[\s]*[\[\{][\s]*/gm, '')       // 行首的 { 或 [
+    .replace(/[\s]*[\]\}][\s]*[,]?[\s]*$/gm, '') // 行尾的 } 或 ] 及逗号
+    .replace(/"[^"]*"\s*:\s*/g, '')            // "key":
+    .replace(/^\s*"|"\s*[,]?\s*$/gm, '')       // 行首尾的引号
+    .replace(/\\n/g, '\n')                      // 转义换行
+    .replace(/\\"/g, '"')                       // 转义引号
+    .replace(/\n{3,}/g, '\n\n')                 // 合并多余空行
+    .trim();
+}
+
+// 过滤思考过程中的业务无关元指令
+function filterReasoning(text) {
+  if (!text) return '';
+  return text
+    .split(/[。\n]/)
+    .filter(s => {
+      const t = s.trim();
+      if (!t) return false;
+      // 包含 JSON 的句子全部去掉
+      if (/json/i.test(t)) return false;
+      // 包含字段名枚举的去掉
+      if (/overview.*venue.*schedule|包含.*字段|字段.*包含/.test(t)) return false;
+      // 元指令类去掉
+      if (/我们被要求|需要生成|注意.*格式|按照.*格式|确保.*输出|返回.*格式|根据.*要求.*生成/.test(t)) return false;
+      return true;
+    })
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 // 访谈状态标签映射
 const STATUS_COLORS = {
   plan_pending: 'orange',
@@ -83,8 +118,6 @@ export default function ClientDates() {
   const [interviewSubmitting, setInterviewSubmitting] = useState(false);
   const [selectedAiPlan, setSelectedAiPlan] = useState(null);
   const [generating, setGenerating] = useState(false);
-  const aiModalContentRef = useRef(null);
-  const aiScrollSaveRef = useRef(0);
   const [showAddModal, setShowAddModal] = useState(false);
   const [addStep, setAddStep] = useState(1); // 1=选择女生 2=填写信息
   const [selectedGirlForDate, setSelectedGirlForDate] = useState(null);
@@ -290,6 +323,26 @@ export default function ClientDates() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadAll(); }, []);
 
+  // 关闭方案详情弹窗时清理流式状态
+  useEffect(() => {
+    if (!isOpen) {
+      isStreamingRef.current = false;
+      reoptimizingRef.current = false;
+      setReoptimizing(false);
+      setStreamStatus('');
+      setStreamReasoning('');
+      setStreamContent('');
+    }
+  }, [isOpen]);
+
+  // 组件卸载时确保清理
+  useEffect(() => {
+    return () => {
+      isStreamingRef.current = false;
+      reoptimizingRef.current = false;
+    };
+  }, []);
+
   const openDetail = async (d) => {
     setSelected(d);
     setFeedbackText('');
@@ -342,22 +395,81 @@ export default function ClientDates() {
   };
 
   const [reoptimizing, setReoptimizing] = useState(false);
+  const reoptimizingRef = useRef(false);
+  const modalContentRef = useRef(null);
+  const reasoningEndRef = useRef(null);
+  const streamContentEndRef = useRef(null);
+
+  // SSE 流式生成状态
+  const [streamStatus, setStreamStatus] = useState('');
+  const [streamReasoning, setStreamReasoning] = useState('');
+  const [streamContent, setStreamContent] = useState('');
+  const [showReasoning, setShowReasoning] = useState(false);
+  const isStreamingRef = useRef(false);
+
   const handleReoptimizeDate = async () => {
-    if (!selected) return;
+    if (!selected || reoptimizingRef.current) return;
+    reoptimizingRef.current = true;
     setReoptimizing(true);
-    try {
-      const res = await dates.generatePlan(selected.id);
-      if (res.success) {
-        toast({ title: 'AI 正在重新生成方案，请稍后刷新查看', status: 'success', duration: 3000 });
-        onClose();
-        loadAll();
-      } else {
-        toast({ title: res.error || '重新生成失败', status: 'error' });
-      }
-    } catch (e) {
-      toast({ title: '重新生成失败', status: 'error' });
+    setStreamStatus('正在连接...');
+    setStreamReasoning('');
+    setStreamContent('');
+    setShowReasoning(false);
+    isStreamingRef.current = true;
+
+    // 滚动到弹窗顶部
+    if (modalContentRef.current) {
+      modalContentRef.current.scrollTop = 0;
     }
-    setReoptimizing(false);
+
+    await dates.generatePlanStream(selected.id, {
+      onStatus: (text) => {
+        if (!isStreamingRef.current) return;
+        setStreamStatus(text);
+      },
+      onReasoning: (text) => {
+        if (!isStreamingRef.current) return;
+        setStreamReasoning(prev => prev + text);
+        setShowReasoning(true);
+        setTimeout(() => {
+          reasoningEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }, 50);
+      },
+      onContent: (text) => {
+        if (!isStreamingRef.current) return;
+        setStreamContent(prev => prev + text);
+        setStreamStatus('AI 正在生成方案...');
+        setTimeout(() => {
+          streamContentEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }, 50);
+      },
+      onDone: (plan, updatedDate) => {
+        if (!isStreamingRef.current) return;
+        // 用新方案更新 selected，保持 modal 打开
+        if (plan) {
+          setSelected(prev => prev ? {
+            ...prev,
+            aiPlan: plan,
+            planStatus: 'generated',
+            status: updatedDate?.status || 'planned'
+          } : prev);
+        }
+        toast({ title: '方案已重新生成', status: 'success', duration: 3000 });
+        reoptimizingRef.current = false;
+        setReoptimizing(false);
+        isStreamingRef.current = false;
+        setStreamStatus('');
+        setStreamContent('');
+        loadAll();
+      },
+      onError: (msg) => {
+        toast({ title: msg || '重新生成失败', status: 'error' });
+        reoptimizingRef.current = false;
+        setReoptimizing(false);
+        isStreamingRef.current = false;
+        setStreamStatus('');
+      }
+    });
   };
 
   const [deleting, setDeleting] = useState(false);
@@ -387,27 +499,11 @@ export default function ClientDates() {
   };
 
   const [reoptimizingAi, setReoptimizingAi] = useState(false);
-
-  // 当方案内容更新时（AI 重新生成完成）强制滚到底部
-  // 使用多重 rAF + setTimeout 确保在 FocusLock/DOM 稳定后执行
-  useLayoutEffect(() => {
-    const el = aiModalContentRef.current;
-    if (!el || aiScrollSaveRef.current <= 0) return;
-    const scrollToBottom = () => {
-      el.scrollTo({ top: el.scrollHeight, behavior: 'instant' });
-    };
-    // 第一轮：useLayoutEffect 同步执行（在浏览器 paint 前）
-    scrollToBottom();
-    // 第二轮：一个 rAF 后（浏览器 paint 前）
-    requestAnimationFrame(scrollToBottom);
-    // 第三轮：setTimeout 作为最后的兜底
-    const timer = setTimeout(scrollToBottom, 100);
-    return () => clearTimeout(timer);
-  }, [selectedAiPlan?.content]);
+  const reoptimizingAiRef = useRef(false);
 
   const handleReoptimizeAiPlan = async () => {
-    if (!selectedAiPlan || reoptimizingAi) return;
-    aiScrollSaveRef.current = aiModalContentRef.current?.scrollTop || 0;
+    if (!selectedAiPlan || reoptimizingAiRef.current) return;
+    reoptimizingAiRef.current = true;
     setReoptimizingAi(true);
     try {
       const res = await membershipApi.generateDatingPlan({
@@ -427,10 +523,12 @@ export default function ClientDates() {
         pollPlanStatus(res.plan.id, true);
       } else {
         toast({ title: '重新优化失败', status: 'error' });
+        reoptimizingAiRef.current = false;
         setReoptimizingAi(false);
       }
     } catch (e) {
       toast({ title: '重新优化失败', status: 'error' });
+      reoptimizingAiRef.current = false;
       setReoptimizingAi(false);
     }
   };
@@ -507,13 +605,8 @@ export default function ClientDates() {
           if (res.plan.planStatus === 'generated') {
             setSelectedAiPlan(res.plan);
             setGenerating(false);
+            reoptimizingAiRef.current = false;
             setReoptimizingAi(false);
-            // 延迟滚到底部，确保 DOM 更新完成
-            setTimeout(() => {
-              if (aiModalContentRef.current) {
-                aiModalContentRef.current.scrollTo({ top: aiModalContentRef.current.scrollHeight, behavior: 'instant' });
-              }
-            }, 150);
             toast({ title: '✨ 方案已生成', status: 'success', duration: 3000 });
             return;
           }
@@ -521,6 +614,9 @@ export default function ClientDates() {
           // 非 keepContent 模式才实时更新显示内容
           if (!keepContent) {
             setSelectedAiPlan(res.plan);
+          } else {
+            // keepContent 模式：仅同步 planStatus，顶部状态条需要它来显示生成进度
+            setSelectedAiPlan(prev => prev ? { ...prev, planStatus: res.plan.planStatus } : prev);
           }
         }
       } catch (err) {
@@ -1112,10 +1208,10 @@ export default function ClientDates() {
         </TabPanels>
       </Tabs>
 
-      {/* 方案详情 */}
-      <Modal isOpen={isOpen} onClose={onClose} size="3xl">
+      {/* 方案详情 — trapFocus=false 防止方案更新时 FocusLock 自动聚焦导致滚回顶部 */}
+      <Modal isOpen={isOpen} onClose={onClose} size="3xl" trapFocus={false}>
         <ModalOverlay />
-        <ModalContent bg="gray.800" maxH="85vh" overflow="auto">
+        <ModalContent bg="gray.800" maxH="85vh" overflow="auto" ref={modalContentRef}>
           <ModalHeader color="white">
             {selected?.title || '约会方案'}
             <Badge ml={2} colorScheme={selected?.status === 'confirmed' ? 'green' : selected?.status === 'pending_client_confirm' ? 'purple' : selected?.status === 'planned' ? 'teal' : 'orange'}>
@@ -1128,6 +1224,53 @@ export default function ClientDates() {
           </ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={6}>
+            {/* AI 流式生成状态 — 显示思考过程和实时内容 */}
+            {reoptimizing && (
+              <Box mb={4}>
+                {/* 状态条 */}
+                <Box p={3} bg="teal.900" border="1px solid" borderColor="teal.600" borderRadius="md" mb={streamReasoning ? 2 : 0}>
+                  <HStack spacing={3} justify="center">
+                    <Spinner size="sm" color="teal.300" />
+                    <Text color="teal.200" fontWeight="bold" fontSize="md">{streamStatus || 'AI 正在重新生成方案...'}</Text>
+                    <Progress size="xs" isIndeterminate colorScheme="teal" w="100px" borderRadius="full" />
+                  </HStack>
+                </Box>
+
+                {/* AI 思考过程 — 可折叠面板，自动跟随滚动 */}
+                {streamReasoning && (
+                  <Box bg="gray.900" border="1px solid" borderColor="gray.600" borderRadius="md" overflow="hidden">
+                    <Button
+                      variant="ghost" size="sm" w="100%" borderRadius={0}
+                      onClick={() => setShowReasoning(!showReasoning)}
+                      color="gray.400" _hover={{ bg: 'gray.800' }}
+                      rightIcon={<Text fontSize="xs">{showReasoning ? '▲' : '▼'}</Text>}
+                    >
+                      <HStack spacing={2}>
+                        <Spinner size="xs" color="purple.400" />
+                        <Text color="purple.300" fontSize="sm">AI 思考过程</Text>
+                      </HStack>
+                    </Button>
+                    {showReasoning && (
+                      <Box p={3} maxH="250px" overflow="auto" bg="gray.850" borderTop="1px solid" borderColor="gray.600">
+                        <Text color="gray.400" fontSize="xs" whiteSpace="pre-wrap" lineHeight="1.6">{filterReasoning(streamReasoning)}</Text>
+                        <Box ref={reasoningEndRef} />
+                      </Box>
+                    )}
+                  </Box>
+                )}
+
+                {/* 方案内容流式输出（过滤 JSON 符号） */}
+                {streamContent && (
+                  <Box mt={2} p={4} bg="gray.750" borderRadius="md" border="1px solid" borderColor="gray.600" maxH="450px" overflow="auto">
+                    <Text color="gray.300" fontSize="sm" whiteSpace="pre-wrap" lineHeight="1.8">
+                      {cleanStreamText(streamContent)}
+                    </Text>
+                    <Box ref={streamContentEndRef} />
+                  </Box>
+                )}
+              </Box>
+            )}
+
             {selected && (
               <Box>
                 <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4} mb={4}>
@@ -1149,7 +1292,16 @@ export default function ClientDates() {
 
                 <Divider borderColor="gray.600" mb={4} />
 
-                {renderPlan(selected.aiPlan)}
+                {reoptimizing ? (
+                  streamContent ? null : (
+                    <Flex justify="center" py={8}>
+                      <VStack spacing={3}>
+                        <Spinner size="lg" color="teal.400" />
+                        <Text color="gray.400" fontSize="sm">方案生成中，请稍候...</Text>
+                      </VStack>
+                    </Flex>
+                  )
+                ) : renderPlan(selected.aiPlan)}
 
                 <Divider borderColor="gray.600" my={4} />
 
@@ -1160,7 +1312,7 @@ export default function ClientDates() {
                       <AlertIcon />
                       <AlertDescription fontSize="sm">这是您自己创建的约会。如需优化方案，可让 AI 重新生成。</AlertDescription>
                     </Alert>
-                    <Button colorScheme="teal" leftIcon={<SparklesIcon />} onClick={handleReoptimizeDate} isLoading={reoptimizing}>
+                    <Button colorScheme="teal" leftIcon={<SparklesIcon />} onClick={handleReoptimizeDate} >
                       AI 重新生成
                     </Button>
                   </VStack>
@@ -1184,7 +1336,7 @@ export default function ClientDates() {
                         <Button colorScheme="purple" variant="outline" flex={1} onClick={handleFeedback} isLoading={submitting} isDisabled={!feedbackText.trim() || submitting}>
                           提交调整建议
                         </Button>
-                        <Button colorScheme="teal" variant="outline" flex={1} leftIcon={<SparklesIcon />} onClick={handleReoptimizeDate} isLoading={reoptimizing}>
+                        <Button colorScheme="teal" variant="outline" flex={1} leftIcon={<SparklesIcon />} onClick={handleReoptimizeDate} >
                           AI 重新生成
                         </Button>
                         <Button colorScheme="green" flex={1} onClick={handleConfirm} isLoading={confirming}>
@@ -1208,7 +1360,7 @@ export default function ClientDates() {
                       <Button colorScheme="purple" variant="outline" flex={1} onClick={handleFeedback} isLoading={submitting} isDisabled={!feedbackText.trim() || submitting}>
                         提交调整建议
                       </Button>
-                      <Button colorScheme="teal" flex={1} leftIcon={<SparklesIcon />} onClick={handleReoptimizeDate} isLoading={reoptimizing}>
+                      <Button colorScheme="teal" flex={1} leftIcon={<SparklesIcon />} onClick={handleReoptimizeDate} >
                         AI 重新生成
                       </Button>
                     </HStack>
@@ -1228,7 +1380,7 @@ export default function ClientDates() {
                       <Button colorScheme="purple" variant="outline" flex={1} onClick={handleFeedback} isLoading={submitting} isDisabled={!feedbackText.trim() || submitting}>
                         提交调整建议
                       </Button>
-                      <Button colorScheme="teal" flex={1} leftIcon={<SparklesIcon />} onClick={handleReoptimizeDate} isLoading={reoptimizing}>
+                      <Button colorScheme="teal" flex={1} leftIcon={<SparklesIcon />} onClick={handleReoptimizeDate} >
                         AI 重新生成
                       </Button>
                     </HStack>
@@ -1324,15 +1476,28 @@ export default function ClientDates() {
       </Modal>
 
       {/* AI 方案详情 — trapFocus=false 防止方案更新时 FocusLock 自动聚焦关闭按钮导致滚回顶部 */}
-      <Modal isOpen={!!selectedAiPlan} onClose={() => { aiScrollSaveRef.current = 0; setSelectedAiPlan(null); }} size="3xl" trapFocus={false}>
+      <Modal isOpen={!!selectedAiPlan} onClose={() => { setSelectedAiPlan(null); }} size="3xl" trapFocus={false}>
         <ModalOverlay />
-        <ModalContent bg="gray.800" maxH="85vh" overflow="auto" ref={aiModalContentRef}>
+        <ModalContent bg="gray.800" maxH="85vh" overflow="auto">
           <ModalHeader color="white">
             {selectedAiPlan?.title || 'AI 约会方案'}
             <Badge ml={2} colorScheme="brand">AI</Badge>
           </ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={6}>
+            {/* 顶部生成状态提示 */}
+            {(reoptimizingAi || selectedAiPlan?.planStatus === 'generating') && (
+              <Box mb={4} p={4} bg="teal.900" border="1px solid" borderColor="teal.600" borderRadius="md">
+                <HStack spacing={3} justify="center">
+                  <Spinner size="sm" color="teal.300" />
+                  <Text color="teal.200" fontWeight="bold" fontSize="md">
+                    {reoptimizingAi ? 'AI 正在重新优化方案...' : 'AI 正在生成方案...'}
+                  </Text>
+                  <Progress size="xs" isIndeterminate colorScheme="teal" w="100px" borderRadius="full" />
+                </HStack>
+              </Box>
+            )}
+
             {selectedAiPlan && (
               <Box>
                 <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} mb={4}>
@@ -1443,13 +1608,11 @@ export default function ClientDates() {
 
                 <HStack mt={6} justify="flex-end" spacing={3}>
                   <Button
-                    leftIcon={reoptimizingAi ? <Spinner size="sm" /> : <SparklesIcon />}
+                    leftIcon={<SparklesIcon />}
                     colorScheme="teal"
                     onClick={handleReoptimizeAiPlan}
-                    isDisabled={selectedAiPlan?.planStatus === 'generating'}
-                    style={reoptimizingAi ? { pointerEvents: 'none', opacity: 0.7 } : undefined}
                   >
-                    {reoptimizingAi ? '正在优化...' : 'AI 再次优化'}
+                    AI 再次优化
                   </Button>
                   <Button
                     leftIcon={<CopyIcon />}

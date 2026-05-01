@@ -15,7 +15,7 @@ function errorHandler(err, req, res, next) {
   };
 
   if (err instanceof AppError) {
-    logger.warn(`[AppError] ${err.code} ${err.message}`, {
+    logger.error(`[AppError] ${err.code} ${err.message}`, {
       ...logContext,
       code: err.code,
       status: err.status,

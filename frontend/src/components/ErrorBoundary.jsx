@@ -15,6 +15,10 @@ export default class ErrorBoundary extends Component {
     if (import.meta.env.PROD) {
       console.error('[ErrorBoundary]', error, errorInfo);
     }
+    // 上报到后端日志系统
+    import('../utils/frontendErrorCapture').then(({ captureError }) => {
+      captureError(error, { type: 'reactBoundary', componentStack: errorInfo?.componentStack });
+    }).catch(() => {});
   }
 
   handleReset = () => {

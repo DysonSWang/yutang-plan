@@ -18,6 +18,7 @@ const ClientProfile = lazy(() => import('./pages/client/ClientProfile'));
 const ClientChat = lazy(() => import('./pages/client/Chat'));
 const AICoach = lazy(() => import('./pages/client/AICoach'));
 const MyPond = lazy(() => import('./pages/client/MyPond'));
+const GirlDetail = lazy(() => import('./pages/client/GirlDetail'));
 const ClientDates = lazy(() => import('./pages/client/ClientDates'));
 const Onboarding = lazy(() => import('./pages/client/Onboarding'));
 const ClientLearning = lazy(() => import('./pages/client/Learning'));
@@ -109,6 +110,7 @@ function AppRoutes() {
         <Route path="chat" element={<ClientChat />} />
         <Route path="ai-coach" element={<AICoach />} />
         <Route path="my-pond" element={<MyPond />} />
+        <Route path="my-pond/:girlId" element={<GirlDetail />} />
         <Route path="dates" element={<ClientDates />} />
         <Route path="learning" element={<ClientLearning />} />
         <Route path="learning/:chapterId" element={<ChapterDetail />} />
