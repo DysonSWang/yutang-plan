@@ -13,6 +13,7 @@ const { JWT_SECRET } = require('../config');
 const prisma = require('../prisma');
 const membershipService = require('../services/membershipService');
 const activityService = require('../services/activityService');
+const AppError = require('../errors/AppError');
 
 // 百度地图 Geocoding（地址转坐标，支持全国）
 async function geocode(address) {
@@ -87,7 +88,10 @@ router.post('/purchase', authMiddleware, async (req, res) => {
     );
     res.json({ success: true, membership });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    if (err instanceof AppError) {
+      return res.status(err.status).json({ success: false, error: err.toJSON() });
+    }
+    res.status(400).json({ success: false, error: { code: 'S0801', message: err.message } });
   }
 });
 
@@ -344,6 +348,125 @@ router.put('/learning/progress/:chapterId', authMiddleware, async (req, res) => 
 });
 
 // ==========================================
+// 管理员 - 学习版块
+// ==========================================
+
+// 管理员获取全部章节（不含 content，避免传输 800KB）
+router.get('/admin/learning/chapters', authMiddleware, operatorOnly, async (req, res) => {
+  try {
+    const chapters = await prisma.learningChapter.findMany({
+      orderBy: { orderIndex: 'asc' },
+      select: {
+        chapterId: true,
+        title: true,
+        subtitle: true,
+        orderIndex: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+    res.json({ success: true, chapters });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 管理员创建章节（chapterId 在事务中自动生成）
+router.post('/admin/learning/chapters', authMiddleware, operatorOnly, async (req, res) => {
+  try {
+    const { title, subtitle, content, orderIndex } = req.body;
+
+    // 验证
+    if (!title || typeof title !== 'string' || title.trim() === '') {
+      return res.status(400).json({ error: '标题不能为空' });
+    }
+    if (orderIndex === undefined || !Number.isInteger(orderIndex)) {
+      return res.status(400).json({ error: '排序序号必须为整数' });
+    }
+
+    const chapter = await prisma.$transaction(async (tx) => {
+      // 在事务中查询最大 chapterId，避免竞态
+      const last = await tx.learningChapter.findFirst({
+        orderBy: { orderIndex: 'desc' },
+        select: { chapterId: true }
+      });
+      let nextNum = 1;
+      if (last && last.chapterId) {
+        const parsed = parseInt(last.chapterId, 10);
+        if (!isNaN(parsed)) nextNum = parsed + 1;
+      }
+      const chapterId = String(nextNum).padStart(2, '0');
+
+      return tx.learningChapter.create({
+        data: {
+          chapterId,
+          title: title.trim(),
+          subtitle: subtitle || null,
+          content: content || null,
+          orderIndex
+        }
+      });
+    });
+
+    res.status(201).json({ success: true, chapter });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 管理员更新章节（忽略 body 中的 chapterId，防止孤立 progress）
+router.put('/admin/learning/chapters/:chapterId', authMiddleware, operatorOnly, async (req, res) => {
+  try {
+    const { chapterId } = req.params;
+    const { title, subtitle, content, orderIndex } = req.body;
+
+    // 验证
+    if (!title || typeof title !== 'string' || title.trim() === '') {
+      return res.status(400).json({ error: '标题不能为空' });
+    }
+    if (orderIndex === undefined || !Number.isInteger(orderIndex)) {
+      return res.status(400).json({ error: '排序序号必须为整数' });
+    }
+
+    const existing = await prisma.learningChapter.findUnique({ where: { chapterId } });
+    if (!existing) return res.status(404).json({ error: '章节不存在' });
+
+    const chapter = await prisma.learningChapter.update({
+      where: { chapterId },
+      data: {
+        title: title.trim(),
+        subtitle: subtitle || null,
+        content: content || null,
+        orderIndex
+      }
+    });
+
+    res.json({ success: true, chapter });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 管理员删除章节（事务中先清 progress 再删 chapter）
+router.delete('/admin/learning/chapters/:chapterId', authMiddleware, operatorOnly, async (req, res) => {
+  try {
+    const { chapterId } = req.params;
+
+    const existing = await prisma.learningChapter.findUnique({ where: { chapterId } });
+    if (!existing) return res.status(404).json({ error: '章节不存在' });
+
+    await prisma.$transaction([
+      prisma.learningProgress.deleteMany({ where: { chapterId } }),
+      prisma.learningChapter.delete({ where: { chapterId } })
+    ]);
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==========================================
 // AI 约会方案
 
 // 和风天气查询（支持按时段）
@@ -463,7 +586,9 @@ async function baiduVenueSearch(location, venueTypes, budget) {
   try {
     const budgetNum = parseInt((budget || '200').replace(/[^0-9]/g, '')) || 200;
     const venueTypeStr = venueTypes.join('、');
-    const query = `在${location}附近搜索真实存在的${venueTypeStr}，适合2人约会，人均约${budgetNum}元。从百度搜索结果中提取信息。要求：
+    const isSpecific = /[餐厅火锅烧烤酒楼饭店馆吧厅店堂轩坊阁院村屯]$/.test(location);
+    const searchScope = isSpecific ? `搜索关于"${location}"的详细信息` : `在${location}附近搜索真实存在的${venueTypeStr}`;
+    const query = `${searchScope}，适合2人约会，人均约${budgetNum}元。从百度搜索结果中提取信息。要求：
 1. 只选搜索结果中真实存在的场所，地址真实即可，不强制门牌号
 2. 没有确切地址的场所不要推荐，宁可少推也不要编造
 3. 价格从搜索结果原文摘取，搜不到就写"未知"
@@ -510,7 +635,7 @@ router.post('/dating-plan/generate', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: e.message });
     }
 
-    const { title, scene, budget, duration } = req.body;
+    const { title, scene, budget, duration, location } = req.body;
     const { getAIConfig } = require('../config');
 
     // 从scene提取场所类型关键词
@@ -536,9 +661,12 @@ router.post('/dating-plan/generate', authMiddleware, async (req, res) => {
       }
     });
 
-    // 提取地址关键词用于 Geocoding（取第一个连续的中文地址片段）
-    const addressMatch = (scene || '').match(/[一-龥]{2,10}(?:区|县|路|街|道|镇|城|广场|商圈|中心)/);
-    const addressKeyword = addressMatch ? addressMatch[0] : (scene || '').trim().split(/\s+/)[0];
+    // 地址关键词：优先使用用户指定的地点，其次从 scene 提取
+    let addressKeyword = (location || '').trim();
+    if (!addressKeyword) {
+      const addressMatch = (scene || '').match(/[一-龥]{2,10}(?:区|县|路|街|道|镇|城|广场|商圈|中心)/);
+      addressKeyword = addressMatch ? addressMatch[0] : (scene || '').trim().split(/\s+/)[0];
+    }
     console.log('[Dating] 地址关键词:', addressKeyword);
 
     // 百度AI搜索真实场地（使用提取的地址）
@@ -848,3 +976,4 @@ router.post('/screenshot/profile/:id/confirm', authMiddleware, operatorOnly, asy
 });
 
 module.exports = router;
+module.exports.baiduVenueSearch = baiduVenueSearch;
