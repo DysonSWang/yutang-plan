@@ -27,21 +27,35 @@ const CHAPTERS = [
   { chapterId: '20', title: '防骗指南', subtitle: '酒托饭托 · 仙人跳 · 杀猪盘识别', orderIndex: 20 }
 ];
 
+const force = process.argv.includes('--force');
+
 async function seedChapters() {
-  console.log('开始初始化学习章节...');
+  console.log(force ? '开始强制更新学习章节...' : '开始初始化学习章节...');
+  let created = 0, updated = 0;
   for (const chapter of CHAPTERS) {
     const existing = await prisma.learningChapter.findUnique({
       where: { chapterId: chapter.chapterId }
     });
 
-    if (existing) {
-      console.log(`  章节 ${chapter.chapterId} 已存在，跳过`);
-    } else {
+    if (!existing) {
       await prisma.learningChapter.create({ data: chapter });
-      console.log(`  创建章节: ${chapter.chapterId} - ${chapter.title}`);
+      console.log(`  [创建] ${chapter.chapterId} - ${chapter.title}`);
+      created++;
+    } else if (force) {
+      await prisma.learningChapter.update({
+        where: { chapterId: chapter.chapterId },
+        data: { title: chapter.title, subtitle: chapter.subtitle, orderIndex: chapter.orderIndex }
+      });
+      console.log(`  [更新] ${chapter.chapterId} - ${chapter.title}`);
+      updated++;
+    } else {
+      console.log(`  [跳过] ${chapter.chapterId} 已存在`);
     }
   }
-  console.log('学习章节初始化完成！');
+  const summary = force
+    ? `完成：新建 ${created}，更新 ${updated}`
+    : `完成：新建 ${created}，跳过 ${CHAPTERS.length - created}（已存在）`;
+  console.log(summary);
 }
 
 seedChapters()
