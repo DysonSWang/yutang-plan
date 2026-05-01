@@ -190,7 +190,7 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
               然后从底层重写每一章。
             </Text>
             <Text color="brand.300" fontSize="sm" fontWeight="medium" mt={2}>
-              不是润色。是重写。案例变成你的案例。语气像你在说话。
+              不是润色。是重写。案例变成适合你的案例。语气像在跟你说话。
               行动匹配你当前的阶段。一个完整的体系，为一个人建造。
             </Text>
           </Box>
