@@ -767,7 +767,7 @@ export default function ClientProfile() {
         {/* 外貌资源 */}
         <Card bg="gray.800">
           <CardBody>
-            <Text color="orange.400" fontWeight="bold" mb={3}>外貌特征</Text>
+            <Text color="teal.400" fontWeight="bold" mb={3}>外貌特征</Text>
             <VStack spacing={2} align="stretch">
               <HStack justify="space-between">
                 <Text color="gray.400" fontSize="sm">身高</Text>
@@ -813,7 +813,7 @@ export default function ClientProfile() {
         {/* 性格画像 */}
         <Card bg="gray.800">
           <CardBody>
-            <Text color="cyan.400" fontWeight="bold" mb={3}>性格画像</Text>
+            <Text color="purple.400" fontWeight="bold" mb={3}>性格画像</Text>
             <VStack spacing={2} align="stretch">
               <HStack justify="space-between">
                 <Text color="gray.400" fontSize="sm">性格/MBTI</Text>
@@ -838,7 +838,7 @@ export default function ClientProfile() {
         {/* 个人优势与不足 */}
         <Card bg="gray.800">
           <CardBody>
-            <Text color="yellow.400" fontWeight="bold" mb={3}>优势与不足</Text>
+            <Text color="purple.400" fontWeight="bold" mb={3}>优势与不足</Text>
             <VStack spacing={2} align="stretch">
               <HStack justify="space-between" align="start">
                 <Text color="gray.400" fontSize="sm">优势</Text>
@@ -855,7 +855,7 @@ export default function ClientProfile() {
         {/* 情感状态 */}
         <Card bg="gray.800">
           <CardBody>
-            <Text color="red.400" fontWeight="bold" mb={3}>情感状态</Text>
+            <Text color="orange.400" fontWeight="bold" mb={3}>情感状态</Text>
             <VStack spacing={2} align="stretch">
               <HStack justify="space-between">
                 <Text color="gray.400" fontSize="sm">婚恋态度</Text>
@@ -881,7 +881,7 @@ export default function ClientProfile() {
         {profile.matchPreferences && (
           <Card bg="gray.800">
             <CardBody>
-              <Text color="pink.400" fontWeight="bold" mb={2}>对目标的期望</Text>
+              <Text color="orange.400" fontWeight="bold" mb={2}>对目标的期望</Text>
               <Text color="gray.300" fontSize="sm" whiteSpace="pre-wrap">{profile.matchPreferences}</Text>
             </CardBody>
           </Card>
@@ -891,7 +891,7 @@ export default function ClientProfile() {
         {profile.dateTaboos && (
           <Card bg="gray.800">
             <CardBody>
-              <Text color="red.400" fontWeight="bold" mb={2}>禁忌</Text>
+              <Text color="orange.400" fontWeight="bold" mb={2}>禁忌</Text>
               <Text color="gray.300" fontSize="sm" whiteSpace="pre-wrap">{profile.dateTaboos}</Text>
             </CardBody>
           </Card>
