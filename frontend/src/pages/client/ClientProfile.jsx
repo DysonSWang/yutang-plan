@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Box, Heading, Card, CardBody, SimpleGrid, Badge, Text, VStack, HStack, Flex, Avatar, Button, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton, useDisclosure, FormControl, FormLabel, Input, Select, Textarea, useToast, Spinner, Icon, InputGroup, InputRightElement, IconButton, Image } from '@chakra-ui/react';
+import { Box, Heading, Card, CardBody, SimpleGrid, Badge, Text, VStack, HStack, Flex, Avatar, Button, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton, useDisclosure, FormControl, FormLabel, Input, Select, Textarea, useToast, Spinner, Icon, InputGroup, InputRightElement, IconButton, Image, Progress } from '@chakra-ui/react';
 import { CrownIcon, CheckIcon } from '../../components/Icons';
-import { FiEdit2 } from 'react-icons/fi';
+import { FiEdit2, FiEye, FiEyeOff } from 'react-icons/fi';
 import { api, clients, membership as membershipApi, auth, upload } from '../../utils/api';
 import RegionSelector from '../../components/RegionSelector';
 import { checkVersion, VERSION } from '../../utils/version';
@@ -601,6 +601,17 @@ export default function ClientProfile() {
     return <Box color="white">无法加载档案</Box>;
   }
 
+  // 档案完整度计算
+  const PROFILE_FIELDS = ['age', 'occupation', 'education', 'income', 'residence', 'hometown',
+    'height', 'weight', 'dressingStyle', 'appearance',
+    'familyBackground', 'familyStructure', 'familyAtmosphere',
+    'personality', 'communicationStyle', 'socialStyle', 'humorStyle',
+    'strengths', 'weaknesses',
+    'relationshipAttitude', 'relationshipGoal', 'emotionalGoal', 'marriageHistory',
+    'matchPreferences', 'dateTaboos', 'profileBio'];
+  const filledCount = PROFILE_FIELDS.filter(f => profile[f]).length;
+  const completeness = Math.round((filledCount / PROFILE_FIELDS.length) * 100);
+
   return (
     <Box>
       <Flex justify="space-between" align="center" mb={6}>
@@ -673,11 +684,29 @@ export default function ClientProfile() {
             </Box>
           )}
 
+          {/* 档案完整度 */}
+          <Box mt={4}>
+            <HStack justify="space-between" mb={1}>
+              <Text color="gray.400" fontSize="xs">档案完整度</Text>
+              <Text color={completeness >= 80 ? 'green.400' : completeness >= 50 ? 'yellow.400' : 'orange.400'} fontSize="xs" fontWeight="bold">{completeness}%</Text>
+            </HStack>
+            <Progress
+              value={completeness}
+              size="xs"
+              colorScheme={completeness >= 80 ? 'green' : completeness >= 50 ? 'yellow' : 'orange'}
+              borderRadius="full"
+              bg="gray.700"
+            />
+            {completeness < 80 && (
+              <Text color="gray.600" fontSize="xs" mt={1}>完善档案后，AI 教练能为你提供更精准的建议</Text>
+            )}
+          </Box>
+
         </CardBody>
       </Card>
 
       {/* 会员信息 */}
-      <Card bg="gray.800" mb={4}>
+      <Card bg="gray.800" mb={4} borderLeft="3px solid" borderColor="teal.400" sx={{ boxShadow: '0 0 20px rgba(0, 212, 170, 0.08)' }}>
         <CardBody>
           {memberStatus?.membership ? (
             <VStack spacing={3} align="stretch">
@@ -921,9 +950,10 @@ export default function ClientProfile() {
       </Card>
 
       {/* 关于我们 */}
-      <Card bg="gray.800" mt={4}>
-        <CardBody>
-          <Text color="gray.400" fontSize="sm" mb={3}>关于追爱AI</Text>
+      <Box mt={8} pt={4} borderTop="1px solid" borderColor="gray.700">
+        <Text color="gray.600" fontSize="xs" mb={3}>设置</Text>
+        <Card bg="gray.800">
+          <CardBody>
           <VStack spacing={2} align="stretch">
             <HStack justify="space-between">
               <Text color="gray.500" fontSize="sm">当前版本</Text>
@@ -940,6 +970,7 @@ export default function ClientProfile() {
           </VStack>
         </CardBody>
       </Card>
+      </Box>
 
       {/* 编辑档案弹窗 */}
       <Modal isOpen={isOpen} onClose={onClose} size="xl">
@@ -1327,7 +1358,7 @@ export default function ClientProfile() {
                   <InputRightElement>
                     <IconButton
                       aria-label={showOld ? '隐藏密码' : '显示密码'}
-                      icon={<Text fontSize="sm">{showOld ? '🙈' : '👁'}</Text>}
+                      icon={<Icon as={showOld ? FiEyeOff : FiEye} />}
                       variant="ghost" size="sm" onClick={() => setShowOld(!showOld)}
                     />
                   </InputRightElement>
@@ -1346,7 +1377,7 @@ export default function ClientProfile() {
                   <InputRightElement>
                     <IconButton
                       aria-label={showNew ? '隐藏密码' : '显示密码'}
-                      icon={<Text fontSize="sm">{showNew ? '🙈' : '👁'}</Text>}
+                      icon={<Icon as={showNew ? FiEyeOff : FiEye} />}
                       variant="ghost" size="sm" onClick={() => setShowNew(!showNew)}
                     />
                   </InputRightElement>
@@ -1365,7 +1396,7 @@ export default function ClientProfile() {
                   <InputRightElement>
                     <IconButton
                       aria-label={showConfirm ? '隐藏密码' : '显示密码'}
-                      icon={<Text fontSize="sm">{showConfirm ? '🙈' : '👁'}</Text>}
+                      icon={<Icon as={showConfirm ? FiEyeOff : FiEye} />}
                       variant="ghost" size="sm" onClick={() => setShowConfirm(!showConfirm)}
                     />
                   </InputRightElement>
