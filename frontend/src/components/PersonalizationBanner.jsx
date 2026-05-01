@@ -39,6 +39,11 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
           });
         } else if (hasGenerating) {
           setStatus('generating');
+          // 从所有章节状态推导进度（含已完成、失败、生成中）
+          const completed = res.chapters.filter(c => c.status === 'completed').length;
+          const failed = res.chapters.filter(c => c.status === 'failed').length;
+          const inProgress = res.chapters.filter(c => c.status === 'generating').length;
+          setBatchProgress({ completed, failed, total: completed + failed + inProgress });
         } else if (res.completeness.percentage < 70) {
           setStatus('profile_incomplete');
         } else if (hasCompleted) {
@@ -58,15 +63,30 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
     loadStatus();
   }, [loadStatus]);
 
+  // 生成状态下定时轮询，防止 WebSocket 事件丢失导致卡住
+  useEffect(() => {
+    if (status !== 'generating') return;
+    const timer = setInterval(() => {
+      if (batchProgress && batchProgress.completed + batchProgress.failed >= batchProgress.total) {
+        loadStatus();
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [status, batchProgress, loadStatus]);
+
   // 监听 WebSocket 进度推送
   useEffect(() => {
     const cleanup1 = on('personalization:progress', (data) => {
       setGeneratingChapterId(data.chapterId);
       if (data.batchProgress) {
         setBatchProgress(data.batchProgress);
+      } else if (data.status === 'completed') {
+        setBatchProgress(prev => prev ? { ...prev, completed: prev.completed + 1 } : { completed: 1, failed: 0, total: 1 });
+      } else if (data.status === 'failed') {
+        setBatchProgress(prev => prev ? { ...prev, failed: prev.failed + 1 } : { completed: 0, failed: 1, total: 1 });
       }
       if (data.status === 'completed' || data.status === 'failed') {
-        loadStatus();
+        setTimeout(() => loadStatus(), 600);
       }
     });
 
@@ -222,7 +242,7 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
               正在逐章建造你的版本。
             </Text>
           </HStack>
-          {batchProgress && (
+          {batchProgress ? (
             <>
               <Progress
                 value={((batchProgress.completed + batchProgress.failed) / batchProgress.total) * 100}
@@ -232,8 +252,22 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
                 bg="abyss.800"
               />
               <Text color="abyss.400" fontSize="xs">
-                第 {batchProgress.completed + batchProgress.failed + 1}/{batchProgress.total} 章
-                {generatingChapterId && ` · 当前：第 ${generatingChapterId} 章`}
+                第 {Math.min(batchProgress.completed + batchProgress.failed + 1, batchProgress.total)}/{batchProgress.total} 章
+                {generatingChapterId && batchProgress.completed + batchProgress.failed < batchProgress.total && ` · 当前：第 ${generatingChapterId} 章`}
+              </Text>
+            </>
+          ) : (
+            <>
+              <Progress
+                isIndeterminate
+                size="sm"
+                colorScheme="brand"
+                borderRadius="full"
+                bg="abyss.800"
+              />
+              <Text color="abyss.400" fontSize="xs">
+                正在重写中...
+                {generatingChapterId && ` 当前：第 ${generatingChapterId} 章`}
               </Text>
             </>
           )}
