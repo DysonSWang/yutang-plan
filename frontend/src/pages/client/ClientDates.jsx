@@ -8,6 +8,7 @@ import {
 import ReactMarkdown from 'react-markdown';
 import { CalendarIcon, SparklesIcon, QuestionIcon, CopyIcon, MapPinIcon, ClockIcon, FireIcon } from '../../components/Icons';
 import ClientCalendar from '../../components/ClientCalendar';
+import RegionSelector from '../../components/RegionSelector';
 import { dates, membership as membershipApi, clients } from '../../utils/api';
 
 function parseJSON(val, fallback = null) {
@@ -109,7 +110,7 @@ export default function ClientDates() {
     .filter(d => d.dateTime && d.status !== 'completed' && d.status !== 'cancelled')
     .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))[0] || null;
 
-  // 获取头像
+  // 获取头像（基于名字生成固定头像，不随机）
   const getAvatar = (girl) => {
     if (!girl) return null;
     if (girl.photos) {
@@ -118,7 +119,14 @@ export default function ClientDates() {
         if (Array.isArray(photos) && photos[0]) return photos[0];
       } catch {}
     }
-    return `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70)}`;
+    // 用名字生成固定头像索引
+    const name = girl.name || '';
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = ((hash << 5) - hash) + name.charCodeAt(i);
+      hash = hash & hash;
+    }
+    return `https://i.pravatar.cc/150?img=${Math.abs(hash) % 70}`;
   };
 
   // 格式化日期显示
@@ -318,8 +326,9 @@ export default function ClientDates() {
       if (res.success) {
         setAiPlans([res.plan, ...aiPlans]);
         setSelectedAiPlan(res.plan);
+        setShowAddModal(false);
         setAiForm({ title: '', scene: '', budget: '', duration: '半天', dateTime: '', district: '', transportMode: localStorage.getItem('dating_transportMode') || '地铁/打车', relationshipStage: '初次见面', specialRequirements: '' });
-        toast({ title: '方案生成中...', status: 'info', duration: 3000 });
+        toast({ title: '方案已生成', status: 'success', duration: 3000 });
       }
     } catch (err) {
       toast({ title: '生成失败', description: err.message, status: 'error' });
@@ -1372,25 +1381,10 @@ export default function ClientDates() {
                       </FormControl>
                       <FormControl>
                         <FormLabel color="gray.400" fontSize="sm">约会区域</FormLabel>
-                        <Select
+                        <RegionSelector
                           value={aiForm.district}
-                          onChange={e => setAiForm({ ...aiForm, district: e.target.value })}
-                          bg="gray.700"
-                          borderColor="gray.600"
-                          placeholder="选择区域"
-                        >
-                          <option value="上海市中心">上海市中心</option>
-                          <option value="静安区">静安区</option>
-                          <option value="黄浦区">黄浦区</option>
-                          <option value="徐汇区">徐汇区</option>
-                          <option value="长宁区">长宁区</option>
-                          <option value="普陀区">普陀区</option>
-                          <option value="虹口区">虹口区</option>
-                          <option value="杨浦区">杨浦区</option>
-                          <option value="浦东新区">浦东新区</option>
-                          <option value="就近她的位置">就近她的位置</option>
-                          <option value="就近我的位置">就近我的位置</option>
-                        </Select>
+                          onChange={val => setAiForm({ ...aiForm, district: val })}
+                        />
                       </FormControl>
                     </HStack>
 
@@ -1446,7 +1440,6 @@ export default function ClientDates() {
                           return;
                         }
                         setGenerating(true);
-                        setShowAddModal(false);
                         setAddStep(1);
                         setSelectedGirlForDate(null);
                         generateAiPlan();

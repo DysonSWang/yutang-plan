@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Flex, VStack, HStack, Input, Button, Text, Heading, IconButton, Image, Spinner, useDisclosure, Menu, MenuButton, MenuList, MenuItem, Badge, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton, Select, List, ListItem } from '@chakra-ui/react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { chat, upload, clients } from '../../utils/api';
 import { useSocket } from '../../contexts/SocketContext';
 import ProfileSuggestModal from './ProfileSuggestModal';
@@ -26,12 +27,21 @@ export default function AdminChat() {
   const [selectedClientId, setSelectedClientId] = useState('');
   const [clientSearch, setClientSearch] = useState('');
   const [showChat, setShowChat] = useState(false); // 移动端：是否显示聊天区域
-  const messagesEndRef = useRef();
+  const scrollRef = useRef();
+  const shouldAutoScrollRef = useRef(true);
   const fileInputRef = useRef();
   const mediaRecorderRef = useRef();
   const audioChunksRef = useRef([]);
   const recordTimerRef = useRef();
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3005';
+
+  const virtualizer = useVirtualizer({
+    count: messages.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 120,
+    measureElement: (el) => Math.max(el.getBoundingClientRect().height, 60),
+    overscan: 5,
+  });
 
   const loadSessions = useCallback(async () => {
     try {
@@ -167,8 +177,10 @@ export default function AdminChat() {
   }, [currentSession, on]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (shouldAutoScrollRef.current) {
+      virtualizer.scrollToIndex(messages.length - 1, { align: 'end' });
+    }
+  }, [messages, virtualizer]);
 
   const sendMediaMessage = async (url, type, duration) => {
     if (!currentSession || sending) return;
@@ -558,19 +570,35 @@ export default function AdminChat() {
                 </HStack>
               </Box>
 
-              <Box flex={1} p={3} overflowY="auto">
-                <VStack spacing={0} align="stretch">
-                  {messages.map((msg, idx) => {
-                    const prevMsg = idx > 0 ? messages[idx - 1] : null;
+              <Box
+                ref={scrollRef}
+                flex={1}
+                p={3}
+                overflowY="auto"
+                onScroll={() => {
+                  if (!scrollRef.current) return;
+                  const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+                  shouldAutoScrollRef.current = scrollHeight - scrollTop - clientHeight < 120;
+                }}
+              >
+                <Box position="relative" height={virtualizer.getTotalSize()} w="100%">
+                  {virtualizer.getVirtualItems().map(virtualRow => {
+                    const msg = messages[virtualRow.index];
+                    const prevMsg = virtualRow.index > 0 ? messages[virtualRow.index - 1] : null;
                     const timeGap = prevMsg ? (new Date(msg.createdAt) - new Date(prevMsg.createdAt)) / 1000 / 60 : Infinity;
                     const showTime = timeGap > 5;
                     const isOperator = msg.senderRole === 'operator' || msg.senderRole === 'admin';
                     return (
                       <Flex
-                        key={msg.id}
+                        key={virtualRow.key}
+                        data-index={virtualRow.index}
+                        ref={virtualizer.measureElement}
                         direction="column"
                         align={isOperator ? 'flex-end' : 'flex-start'}
-                        mb={3}
+                        position="absolute"
+                        top={0}
+                        transform={`translateY(${virtualRow.start}px)`}
+                        pb={3}
                       >
                         {showTime && (
                           <Text color="gray.500" fontSize="xs" textAlign="center" w="100%" my={2}>
@@ -648,8 +676,7 @@ export default function AdminChat() {
                       </Flex>
                     );
                   })}
-                  <div ref={messagesEndRef} />
-                </VStack>
+                </Box>
               </Box>
 
               <Box p={4} borderTop="1px" borderColor="gray.700">

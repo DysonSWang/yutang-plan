@@ -24,6 +24,43 @@ function getHeatLevel(score) {
   return 'cold';
 }
 
+// 通用Header组件：女生选择 + 模式切换 - 模块级组件
+const CoachHeader = memo(({ girls, selectedGirlId, onGirlChange, selectedGirl, deepMode, onDeepModeToggle }) => (
+  <Card bg="gray.800" mb={4}>
+    <CardBody py={3}>
+      <Flex gap={4} wrap="wrap" align="center" justify="space-between">
+        <Flex gap={4} wrap="wrap" align="center" flex={1}>
+          <Select value={selectedGirlId} onChange={e => onGirlChange(e.target.value)} bg="gray.700" border="none" color="white" flex={1} minW="180px" placeholder="关联女生" size="sm">
+            {(girls || []).map(g => (
+              <option key={g.id} value={g.id}>{g.name} - {g.stage || '未知'}</option>
+            ))}
+          </Select>
+          <Tooltip label={deepMode ? '深度分析：调用工具链，全面分析' : '快速分析：流式输出，快'}>
+            <button type="button" onClick={onDeepModeToggle}
+              style={{ background: deepMode ? '#553c9a' : '#374151', border: deepMode ? '1px solid #805ad5' : 'none', borderRadius: '6px', padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', color: deepMode ? '#d6bcfa' : '#a0aec0' }}>
+              <span style={{ fontSize: '16px' }}><SparklesIcon /></span>
+              <span style={{ fontSize: '12px', fontWeight: 'bold' }}>{deepMode ? '深度' : '快速'}</span>
+            </button>
+          </Tooltip>
+        </Flex>
+        {selectedGirl && (
+          <HStack bg="gray.700" px={3} py={1} borderRadius="md" spacing={3}>
+            <HStack spacing={2}>
+              <Text color="white" fontWeight="bold" fontSize="sm">{selectedGirl.name}</Text>
+              <Badge colorScheme={STAGE_COLORS[selectedGirl.stage] || 'gray'} fontSize="xs">{selectedGirl.stage || '未知'}</Badge>
+            </HStack>
+            <HStack spacing={1}>
+              <Text color="gray.400" fontSize="xs">热度</Text>
+              <Text color={selectedGirl.tensionScore >= 5 ? 'orange.400' : 'blue.400'} fontSize="xs" fontWeight="bold">{selectedGirl.tensionScore?.toFixed(1) || '5.0'}</Text>
+            </HStack>
+            <Icon as={selectedGirl.tensionScore >= 5 ? FireIcon : SnowIcon} color={selectedGirl.tensionScore >= 5 ? 'orange.400' : 'blue.400'} boxSize={4} />
+          </HStack>
+        )}
+      </Flex>
+    </CardBody>
+  </Card>
+));
+
 // 独立的输入区域组件 - 使用完全独立的本地状态
 const InputArea = memo(({ onSubmit, loading, deepMode }) => {
   const [input, setInput] = useState('');
@@ -110,6 +147,240 @@ const InputArea = memo(({ onSubmit, loading, deepMode }) => {
         </Button>
       </Flex>
     </Box>
+  );
+});
+
+// ====== 回复建议面板（自包含模块级组件） ======
+const ReplySuggestionsPanel = memo(({ apiUrl, selectedGirlId, toast, headerProps }) => {
+  const [replyInput, setReplyInput] = useState('');
+  const [replyStyle, setReplyStyle] = useState('');
+  const [replyStyleCustom, setReplyStyleCustom] = useState('');
+  const [replySuggestions, setReplySuggestions] = useState(null);
+  const [replyLoading, setReplyLoading] = useState(false);
+  const textareaRef = useRef(null);
+
+  const handleTextareaChange = useCallback((e) => {
+    setReplyInput(e.target.value);
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 100) + 'px';
+    }
+  }, []);
+
+  const handleGetReplySuggestions = useCallback(async () => {
+    if (!replyInput.trim()) return;
+    setReplyLoading(true);
+    setReplySuggestions(null);
+    const token = localStorage.getItem('zhuiai_token');
+    const style = replyStyleCustom || replyStyle;
+    try {
+      const res = await fetch(`${apiUrl}/api/ai-coach/reply-suggestions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ girlId: selectedGirlId || undefined, lastMessage: replyInput, style: style || undefined })
+      });
+      const data = await res.json();
+      if (data.success) setReplySuggestions(data.suggestions);
+      else toast({ title: data.error || '获取失败', status: 'error', duration: 3000 });
+    } catch (e) {
+      toast({ title: '网络错误', status: 'error', duration: 3000 });
+    } finally {
+      setReplyLoading(false);
+    }
+  }, [replyInput, replyStyle, replyStyleCustom, apiUrl, selectedGirlId, toast]);
+
+  const copyToClipboard = useCallback(async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ title: '已复制', status: 'success', duration: 1500 });
+    } catch (e) {
+      toast({ title: '复制失败', status: 'error', duration: 1500 });
+    }
+  }, [toast]);
+
+  return (
+    <>
+      <CoachHeader {...headerProps} />
+      <Card bg="gray.800">
+        <CardBody>
+          <VStack spacing={4} align="stretch">
+            <Box>
+              <Text color="gray.300" fontSize="sm" mb={2}>女生最后一条消息</Text>
+              <textarea
+                ref={textareaRef}
+                value={replyInput}
+                onChange={handleTextareaChange}
+                placeholder="粘贴女生最近的消息..."
+                disabled={replyLoading}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck="false"
+                style={{
+                  backgroundColor: '#374151', border: 'none', borderRadius: '6px', color: 'white',
+                  width: '100%', height: '72px', minHeight: '72px', maxHeight: '100px',
+                  padding: '8px 12px', resize: 'none', overflowY: 'hidden', outline: 'none',
+                  fontSize: '14px', fontFamily: 'inherit', lineHeight: '1.4', boxSizing: 'border-box'
+                }}
+              />
+            </Box>
+            <HStack spacing={3}>
+              <Box flex={1}>
+                <Text color="gray.300" fontSize="sm" mb={2}>回复风格（可选）</Text>
+                <Select value={replyStyle} onChange={e => { setReplyStyle(e.target.value); setReplyStyleCustom(''); }} bg="gray.700" border="none" color="white" placeholder="不选则返回多种风格">
+                  <option value="稳妥型">稳妥型</option>
+                  <option value="推进型">推进型</option>
+                  <option value="调侃型">调侃型</option>
+                </Select>
+              </Box>
+              <Box flex={1}>
+                <Text color="gray.300" fontSize="sm" mb={2}>或自定义风格</Text>
+                <Input value={replyStyleCustom} onChange={e => { setReplyStyleCustom(e.target.value); setReplyStyle(''); }} placeholder="如：更幽默、更直接" bg="gray.700" border="none" color="white" />
+              </Box>
+            </HStack>
+            <Button colorScheme="teal" onClick={handleGetReplySuggestions} isLoading={replyLoading} isDisabled={!replyInput.trim()} leftIcon={<Icon as={BrainIcon} />}>
+              获取回复建议
+            </Button>
+            {replySuggestions && (
+              <VStack spacing={3} align="stretch" mt={2}>
+                <Flex justify="space-between" align="center">
+                  <Text color="gray.400" fontSize="sm">生成 {replySuggestions.options?.length || 0} 个回复方案</Text>
+                  {replySuggestions.relationshipStageLabel && <Badge colorScheme="teal">{replySuggestions.relationshipStageLabel}</Badge>}
+                </Flex>
+                {(replySuggestions.options || []).map((opt, idx) => (
+                  <Box key={idx} bg="gray.700" p={4} borderRadius="md">
+                    <Flex justify="space-between" align="center" mb={2}>
+                      <Badge colorScheme={opt.type === '稳妥型' ? 'blue' : opt.type === '推进型' ? 'red' : opt.type === '调侃型' ? 'orange' : 'gray'}>{opt.type}</Badge>
+                      <Button size="xs" variant="ghost" colorScheme="teal" onClick={() => copyToClipboard(opt.reply)}>复制</Button>
+                    </Flex>
+                    <Text color="white" mb={2}>{opt.reply}</Text>
+                    {opt.intention && <Text color="gray.500" fontSize="xs" mb={1}>目的：{opt.intention}</Text>}
+                    {opt.stageAdvice && <Text color="gray.400" fontSize="xs" mb={1}>📍 {opt.stageAdvice}</Text>}
+                    {opt.riskNote && opt.riskNote !== '无' && <Text color="orange.400" fontSize="xs">⚠️ {opt.riskNote}</Text>}
+                  </Box>
+                ))}
+              </VStack>
+            )}
+          </VStack>
+        </CardBody>
+      </Card>
+    </>
+  );
+});
+
+// ====== 话术优化面板（自包含模块级组件） ======
+const OptimizeReplyPanel = memo(({ apiUrl, selectedGirlId, toast, headerProps }) => {
+  const [optimizeInput, setOptimizeInput] = useState('');
+  const [optimizeGoal, setOptimizeGoal] = useState('');
+  const [optimizeGoalCustom, setOptimizeGoalCustom] = useState('');
+  const [optimizedReplies, setOptimizedReplies] = useState(null);
+  const [optimizeLoading, setOptimizeLoading] = useState(false);
+  const textareaRef = useRef(null);
+
+  const handleTextareaChange = useCallback((e) => {
+    setOptimizeInput(e.target.value);
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 100) + 'px';
+    }
+  }, []);
+
+  const handleOptimizeReply = useCallback(async () => {
+    if (!optimizeInput.trim()) return;
+    setOptimizeLoading(true);
+    setOptimizedReplies(null);
+    const token = localStorage.getItem('zhuiai_token');
+    const goal = optimizeGoalCustom || optimizeGoal;
+    try {
+      const res = await fetch(`${apiUrl}/api/ai-coach/optimize-reply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ originalReply: optimizeInput, girlId: selectedGirlId || undefined, goal: goal || undefined })
+      });
+      const data = await res.json();
+      if (data.success) setOptimizedReplies(data.optimizations);
+      else toast({ title: data.error || '优化失败', status: 'error', duration: 3000 });
+    } catch (e) {
+      toast({ title: '网络错误', status: 'error', duration: 3000 });
+    } finally {
+      setOptimizeLoading(false);
+    }
+  }, [optimizeInput, optimizeGoal, optimizeGoalCustom, apiUrl, selectedGirlId, toast]);
+
+  const copyToClipboard = useCallback(async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ title: '已复制', status: 'success', duration: 1500 });
+    } catch (e) {
+      toast({ title: '复制失败', status: 'error', duration: 1500 });
+    }
+  }, [toast]);
+
+  return (
+    <>
+      <CoachHeader {...headerProps} />
+      <Card bg="gray.800">
+        <CardBody>
+          <VStack spacing={4} align="stretch">
+            <Box>
+              <Text color="gray.300" fontSize="sm" mb={2}>你想说的话</Text>
+              <textarea
+                ref={textareaRef}
+                value={optimizeInput}
+                onChange={handleTextareaChange}
+                placeholder="输入你想发送的原始消息..."
+                disabled={optimizeLoading}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck="false"
+                style={{
+                  backgroundColor: '#374151', border: 'none', borderRadius: '6px', color: 'white',
+                  width: '100%', height: '72px', minHeight: '72px', maxHeight: '100px',
+                  padding: '8px 12px', resize: 'none', overflowY: 'hidden', outline: 'none',
+                  fontSize: '14px', fontFamily: 'inherit', lineHeight: '1.4', boxSizing: 'border-box'
+                }}
+              />
+            </Box>
+            <HStack spacing={3}>
+              <Box flex={1}>
+                <Text color="gray.300" fontSize="sm" mb={2}>优化方向（可选）</Text>
+                <Select value={optimizeGoal} onChange={e => { setOptimizeGoal(e.target.value); setOptimizeGoalCustom(''); }} bg="gray.700" border="none" color="white" placeholder="不选则自动优化">
+                  <option value="更幽默">更幽默</option>
+                  <option value="更暧昧">更暧昧</option>
+                  <option value="更自然">更自然</option>
+                  <option value="更真诚">更真诚</option>
+                </Select>
+              </Box>
+              <Box flex={1}>
+                <Text color="gray.300" fontSize="sm" mb={2}>或自定义方向</Text>
+                <Input value={optimizeGoalCustom} onChange={e => { setOptimizeGoalCustom(e.target.value); setOptimizeGoal(''); }} placeholder="如：更俏皮、更温柔" bg="gray.700" border="none" color="white" />
+              </Box>
+            </HStack>
+            <Button colorScheme="teal" onClick={handleOptimizeReply} isLoading={optimizeLoading} isDisabled={!optimizeInput.trim()} leftIcon={<Icon as={SparklesIcon} />}>
+              优化话术
+            </Button>
+            {optimizedReplies && (
+              <VStack spacing={3} align="stretch" mt={2}>
+                <Text color="gray.400" fontSize="sm">原始：<Text as="span" color="gray.300">{optimizeInput}</Text></Text>
+                {(optimizedReplies || []).map((opt, idx) => (
+                  <Box key={idx} bg="gray.700" p={4} borderRadius="md">
+                    <Flex justify="space-between" align="center" mb={2}>
+                      <Badge colorScheme="teal">{opt.style}</Badge>
+                      <Button size="xs" variant="ghost" colorScheme="teal" onClick={() => copyToClipboard(opt.text)}>复制</Button>
+                    </Flex>
+                    <Text color="white" mb={2}>{opt.text}</Text>
+                    <Text color="gray.500" fontSize="xs" mb={1}>{opt.point}</Text>
+                    {opt.stageAdvice && <Text color="gray.400" fontSize="xs" mb={1}>📍 {opt.stageAdvice}</Text>}
+                    {opt.riskLevel && opt.riskLevel !== '低' && <Badge colorScheme={opt.riskLevel === '高' ? 'red' : 'orange'}>风险: {opt.riskLevel}</Badge>}
+                  </Box>
+                ))}
+              </VStack>
+            )}
+          </VStack>
+        </CardBody>
+      </Card>
+    </>
   );
 });
 
@@ -240,18 +511,6 @@ export default function AICoach() {
   const [copiedId, setCopiedId] = useState(null);
   const [helpfulId, setHelpfulId] = useState(null);
   const [error, setError] = useState('');
-  // 回复建议状态
-  const [replyInput, setReplyInput] = useState('');
-  const [replySuggestions, setReplySuggestions] = useState(null);
-  const [replyLoading, setReplyLoading] = useState(false);
-  const [replyStyle, setReplyStyle] = useState(''); // 回复风格（可选）
-  const [replyStyleCustom, setReplyStyleCustom] = useState(''); // 自定义风格（可选）
-  // 话术优化状态
-  const [optimizeInput, setOptimizeInput] = useState('');
-  const [optimizeGoal, setOptimizeGoal] = useState(''); // 选定的优化方向
-  const [optimizeGoalCustom, setOptimizeGoalCustom] = useState(''); // 自定义优化方向
-  const [optimizedReplies, setOptimizedReplies] = useState(null);
-  const [optimizeLoading, setOptimizeLoading] = useState(false);
   const streamingContentRef = useRef('');
   const isStreamingRef = useRef(false);
   const messagesEndRef = useRef(null);
@@ -746,74 +1005,6 @@ export default function AICoach() {
     }
   };
 
-  // 获取回复建议
-  const handleGetReplySuggestions = async () => {
-    if (!replyInput.trim()) return;
-    setReplyLoading(true);
-    setReplySuggestions(null);
-
-    const token = localStorage.getItem('zhuiai_token');
-    const style = replyStyleCustom || replyStyle; // 优先使用自定义，其次是选定的
-    try {
-      const res = await fetch(`${apiUrl}/api/ai-coach/reply-suggestions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          girlId: selectedGirlId || undefined,
-          lastMessage: replyInput,
-          style: style || undefined // 可选，不传则返回多种风格
-        })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setReplySuggestions(data.suggestions);
-      } else {
-        toast({ title: data.error || '获取失败', status: 'error', duration: 3000 });
-      }
-    } catch (e) {
-      toast({ title: '网络错误', status: 'error', duration: 3000 });
-    } finally {
-      setReplyLoading(false);
-    }
-  };
-
-  // 话术优化
-  const handleOptimizeReply = async () => {
-    if (!optimizeInput.trim()) return;
-    setOptimizeLoading(true);
-    setOptimizedReplies(null);
-
-    const token = localStorage.getItem('zhuiai_token');
-    const goal = optimizeGoalCustom || optimizeGoal; // 优先使用自定义，其次是选定的
-    try {
-      const res = await fetch(`${apiUrl}/api/ai-coach/optimize-reply`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          originalReply: optimizeInput,
-          girlId: selectedGirlId || undefined,
-          goal: goal || undefined // 可选，不传则自动优化
-        })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setOptimizedReplies(data.optimizations);
-      } else {
-        toast({ title: data.error || '优化失败', status: 'error', duration: 3000 });
-      }
-    } catch (e) {
-      toast({ title: '网络错误', status: 'error', duration: 3000 });
-    } finally {
-      setOptimizeLoading(false);
-    }
-  };
-
   const copyToClipboard = async (text) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -830,6 +1021,16 @@ export default function AICoach() {
     '怎么避免成为舔狗？'
   ];
 
+  // 稳定的 CoachHeader props - 必须在 early return 之前（hooks 规则）
+  const coachHeaderProps = useMemo(() => ({
+    girls,
+    selectedGirlId,
+    onGirlChange: setSelectedGirlId,
+    selectedGirl,
+    deepMode,
+    onDeepModeToggle: handleDeepModeToggle
+  }), [girls, selectedGirlId, selectedGirl, deepMode, handleDeepModeToggle]);
+
   if (loadingHistory) {
     return (
       <Box p={8} textAlign="center">
@@ -838,97 +1039,6 @@ export default function AICoach() {
       </Box>
     );
   }
-
-  // 通用Header组件：女生选择 + 模式切换 - 使用memo减少重渲染
-  const CoachHeader = memo(({
-    girls,
-    selectedGirlId,
-    onGirlChange,
-    selectedGirl,
-    deepMode,
-    onDeepModeToggle
-  }) => (
-    <Card bg="gray.800" mb={4}>
-      <CardBody py={3}>
-        <Flex gap={4} wrap="wrap" align="center" justify="space-between">
-          <Flex gap={4} wrap="wrap" align="center" flex={1}>
-            <Select
-              value={selectedGirlId}
-              onChange={e => onGirlChange(e.target.value)}
-              bg="gray.700"
-              border="none"
-              color="white"
-              flex={1}
-              minW="180px"
-              placeholder="关联女生"
-              size="sm"
-            >
-              {(girls || []).map(g => (
-                <option key={g.id} value={g.id}>
-                  {g.name} - {g.stage || '未知'}
-                </option>
-              ))}
-            </Select>
-
-            {/* 深度/快速模式切换 */}
-            <Tooltip label={deepMode ? '深度分析：调用工具链，全面分析' : '快速分析：流式输出，快'}>
-              <button
-                type="button"
-                onClick={onDeepModeToggle}
-                style={{
-                  background: deepMode ? '#553c9a' : '#374151',
-                  border: deepMode ? '1px solid #805ad5' : 'none',
-                  borderRadius: '6px',
-                  padding: '8px 12px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  color: deepMode ? '#d6bcfa' : '#a0aec0'
-                }}
-              >
-                <span style={{ fontSize: '16px' }}>
-                  <SparklesIcon />
-                </span>
-                <span style={{ fontSize: '12px', fontWeight: 'bold' }}>
-                  {deepMode ? '深度' : '快速'}
-                </span>
-              </button>
-            </Tooltip>
-          </Flex>
-
-          {/* 选中女生信息 */}
-          {selectedGirl && (
-            <HStack
-              bg="gray.700"
-              px={3}
-              py={1}
-              borderRadius="md"
-              spacing={3}
-            >
-              <HStack spacing={2}>
-                <Text color="white" fontWeight="bold" fontSize="sm">{selectedGirl.name}</Text>
-                <Badge colorScheme={STAGE_COLORS[selectedGirl.stage] || 'gray'} fontSize="xs">
-                  {selectedGirl.stage || '未知'}
-                </Badge>
-              </HStack>
-              <HStack spacing={1}>
-                <Text color="gray.400" fontSize="xs">热度</Text>
-                <Text color={selectedGirl.tensionScore >= 5 ? 'orange.400' : 'blue.400'} fontSize="xs" fontWeight="bold">
-                  {selectedGirl.tensionScore?.toFixed(1) || '5.0'}
-                </Text>
-              </HStack>
-              <Icon
-                as={selectedGirl.tensionScore >= 5 ? FireIcon : SnowIcon}
-                color={selectedGirl.tensionScore >= 5 ? 'orange.400' : 'blue.400'}
-                boxSize={4}
-              />
-            </HStack>
-          )}
-        </Flex>
-      </CardBody>
-    </Card>
-  ));
 
   // Tab 1: AI教练（多轮对话）
   // 注意：不使用 memo，因为需要确保 ref 和状态更新正确同步
@@ -1024,224 +1134,6 @@ export default function AICoach() {
     </>
   );
 
-  // Tab 2: 回复建议
-  const ReplySuggestionsPanel = () => (
-    <>
-      <CoachHeader />
-      <Card bg="gray.800">
-        <CardBody>
-          <VStack spacing={4} align="stretch">
-            <Box>
-              <Text color="gray.300" fontSize="sm" mb={2}>女生最后一条消息</Text>
-              <Textarea
-                value={replyInput}
-                onChange={e => setReplyInput(e.target.value)}
-                placeholder="粘贴女生最近的消息..."
-                bg="gray.700"
-                border="none"
-                color="white"
-                rows={3}
-                _placeholder={{ color: 'gray.400' }}
-              />
-            </Box>
-            {/* 风格选择 */}
-            <HStack spacing={3}>
-              <Box flex={1}>
-                <Text color="gray.300" fontSize="sm" mb={2}>回复风格（可选）</Text>
-                <Select
-                  value={replyStyle}
-                  onChange={e => {
-                    setReplyStyle(e.target.value);
-                    setReplyStyleCustom(''); // 清除自定义输入
-                  }}
-                  bg="gray.700"
-                  border="none"
-                  color="white"
-                  placeholder="不选则返回多种风格"
-                >
-                  <option value="稳妥型">稳妥型</option>
-                  <option value="推进型">推进型</option>
-                  <option value="调侃型">调侃型</option>
-                </Select>
-              </Box>
-              <Box flex={1}>
-                <Text color="gray.300" fontSize="sm" mb={2}>或自定义风格</Text>
-                <Input
-                  value={replyStyleCustom}
-                  onChange={e => {
-                    setReplyStyleCustom(e.target.value);
-                    setReplyStyle(''); // 清除选择
-                  }}
-                  placeholder="如：更幽默、更直接"
-                  bg="gray.700"
-                  border="none"
-                  color="white"
-                />
-              </Box>
-            </HStack>
-            <Button
-              colorScheme="teal"
-              onClick={handleGetReplySuggestions}
-              isLoading={replyLoading}
-              isDisabled={!replyInput.trim()}
-              leftIcon={<Icon as={BrainIcon} />}
-            >
-              获取回复建议
-            </Button>
-
-            {replySuggestions && (
-              <VStack spacing={3} align="stretch" mt={2}>
-                <Flex justify="space-between" align="center">
-                  <Text color="gray.400" fontSize="sm">
-                    生成 {replySuggestions.options?.length || 0} 个回复方案
-                  </Text>
-                  {replySuggestions.relationshipStageLabel && (
-                    <Badge colorScheme="teal">{replySuggestions.relationshipStageLabel}</Badge>
-                  )}
-                </Flex>
-                {(replySuggestions.options || []).map((opt, idx) => (
-                  <Box key={idx} bg="gray.700" p={4} borderRadius="md">
-                    <Flex justify="space-between" align="center" mb={2}>
-                      <Badge colorScheme={
-                        opt.type === '稳妥型' ? 'blue' :
-                        opt.type === '推进型' ? 'red' :
-                        opt.type === '调侃型' ? 'orange' : 'gray'
-                      }>
-                        {opt.type}
-                      </Badge>
-                      <Button
-                        size="xs"
-                        variant="ghost"
-                        colorScheme="teal"
-                        onClick={() => copyToClipboard(opt.reply)}
-                      >
-                        复制
-                      </Button>
-                    </Flex>
-                    <Text color="white" mb={2}>{opt.reply}</Text>
-                    {opt.intention && (
-                      <Text color="gray.500" fontSize="xs" mb={1}>目的：{opt.intention}</Text>
-                    )}
-                    {opt.stageAdvice && (
-                      <Text color="gray.400" fontSize="xs" mb={1}>📍 {opt.stageAdvice}</Text>
-                    )}
-                    {opt.riskNote && opt.riskNote !== '无' && (
-                      <Text color="orange.400" fontSize="xs">⚠️ {opt.riskNote}</Text>
-                    )}
-                  </Box>
-                ))}
-              </VStack>
-            )}
-          </VStack>
-        </CardBody>
-      </Card>
-    </>
-  );
-
-  // Tab 3: 话术优化
-  const OptimizeReplyPanel = () => (
-    <>
-      <CoachHeader />
-      <Card bg="gray.800">
-        <CardBody>
-          <VStack spacing={4} align="stretch">
-            <Box>
-              <Text color="gray.300" fontSize="sm" mb={2}>你想说的话</Text>
-              <Textarea
-                value={optimizeInput}
-                onChange={e => setOptimizeInput(e.target.value)}
-                placeholder="输入你想发送的原始消息..."
-                bg="gray.700"
-                border="none"
-                color="white"
-                rows={3}
-                _placeholder={{ color: 'gray.400' }}
-              />
-            </Box>
-            {/* 优化方向选择 */}
-            <HStack spacing={3}>
-              <Box flex={1}>
-                <Text color="gray.300" fontSize="sm" mb={2}>优化方向（可选）</Text>
-                <Select
-                  value={optimizeGoal}
-                  onChange={e => {
-                    setOptimizeGoal(e.target.value);
-                    setOptimizeGoalCustom(''); // 清除自定义输入
-                  }}
-                  bg="gray.700"
-                  border="none"
-                  color="white"
-                  placeholder="不选则自动优化"
-                >
-                  <option value="更幽默">更幽默</option>
-                  <option value="更暧昧">更暧昧</option>
-                  <option value="更自然">更自然</option>
-                  <option value="更真诚">更真诚</option>
-                </Select>
-              </Box>
-              <Box flex={1}>
-                <Text color="gray.300" fontSize="sm" mb={2}>或自定义方向</Text>
-                <Input
-                  value={optimizeGoalCustom}
-                  onChange={e => {
-                    setOptimizeGoalCustom(e.target.value);
-                    setOptimizeGoal(''); // 清除选择
-                  }}
-                  placeholder="如：更俏皮、更温柔"
-                  bg="gray.700"
-                  border="none"
-                  color="white"
-                />
-              </Box>
-            </HStack>
-            <Button
-              colorScheme="teal"
-              onClick={handleOptimizeReply}
-              isLoading={optimizeLoading}
-              isDisabled={!optimizeInput.trim()}
-              leftIcon={<Icon as={SparklesIcon} />}
-            >
-              优化话术
-            </Button>
-
-            {optimizedReplies && (
-              <VStack spacing={3} align="stretch" mt={2}>
-                <Text color="gray.400" fontSize="sm">
-                  原始：<Text as="span" color="gray.300">{optimizeInput}</Text>
-                </Text>
-                {(optimizedReplies || []).map((opt, idx) => (
-                  <Box key={idx} bg="gray.700" p={4} borderRadius="md">
-                    <Flex justify="space-between" align="center" mb={2}>
-                      <Badge colorScheme="teal">{opt.style}</Badge>
-                      <Button
-                        size="xs"
-                        variant="ghost"
-                        colorScheme="teal"
-                        onClick={() => copyToClipboard(opt.text)}
-                      >
-                        复制
-                      </Button>
-                    </Flex>
-                    <Text color="white" mb={2}>{opt.text}</Text>
-                    <Text color="gray.500" fontSize="xs" mb={1}>{opt.point}</Text>
-                    {opt.stageAdvice && (
-                      <Text color="gray.400" fontSize="xs" mb={1}>📍 {opt.stageAdvice}</Text>
-                    )}
-                    {opt.riskLevel && opt.riskLevel !== '低' && (
-                      <Badge colorScheme={opt.riskLevel === '高' ? 'red' : 'orange'}>
-                        风险: {opt.riskLevel}
-                      </Badge>
-                    )}
-                  </Box>
-                ))}
-              </VStack>
-            )}
-          </VStack>
-        </CardBody>
-      </Card>
-    </>
-  );
-
   return (
     <Box display="flex" flexDirection="column" h="calc(100vh - 140px)" overflow="hidden">
       <Flex justify="space-between" align="center" mb={3} flexShrink={0}>
@@ -1266,10 +1158,10 @@ export default function AICoach() {
             <AICoachPanel />
           </TabPanel>
           <TabPanel px={0} pt={4}>
-            <ReplySuggestionsPanel />
+            <ReplySuggestionsPanel apiUrl={apiUrl} selectedGirlId={selectedGirlId} toast={toast} headerProps={coachHeaderProps} />
           </TabPanel>
           <TabPanel px={0} pt={4}>
-            <OptimizeReplyPanel />
+            <OptimizeReplyPanel apiUrl={apiUrl} selectedGirlId={selectedGirlId} toast={toast} headerProps={coachHeaderProps} />
           </TabPanel>
         </TabPanels>
       </Tabs>

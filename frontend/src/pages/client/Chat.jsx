@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, VStack, HStack, Input, Button, Text, Flex, IconButton, Image, Badge, useToast, Center, Spinner } from '@chakra-ui/react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { chat, upload } from '../../utils/api';
 import { useSocket } from '../../contexts/SocketContext';
 import FlashImageViewer from '../../components/FlashImageViewer';
@@ -17,7 +18,8 @@ export default function ClientChat() {
   const [burnMode, setBurnMode] = useState(false);
   const [burnSeconds, setBurnSeconds] = useState(5);
   const [flashMode, setFlashMode] = useState(false);
-  const messagesEndRef = useRef();
+  const scrollRef = useRef();
+  const shouldAutoScrollRef = useRef(true);
   const fileInputRef = useRef();
   const mediaRecorderRef = useRef();
   const audioChunksRef = useRef([]);
@@ -28,6 +30,14 @@ export default function ClientChat() {
   const [loading, setLoading] = useState(true);
   const toast = useToast();
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3005';
+
+  const virtualizer = useVirtualizer({
+    count: messages.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 120,
+    measureElement: (el) => Math.max(el.getBoundingClientRect().height, 60),
+    overscan: 5,
+  });
 
   const getMediaUrl = (msg) => {
     if (msg.mediaUrl?.startsWith('/encrypted/')) {
@@ -155,8 +165,10 @@ export default function ClientChat() {
   }, [session, flashViewer.messageId, on, startBurnTimer]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (shouldAutoScrollRef.current) {
+      virtualizer.scrollToIndex(messages.length - 1, { align: 'end' });
+    }
+  }, [messages, virtualizer]);
 
   useEffect(() => {
     const timers = burnTimersRef.current;
@@ -395,7 +407,17 @@ export default function ClientChat() {
         </Box>
 
         {/* 消息列表 */}
-        <Box flex={1} p={4} overflowY="auto">
+        <Box
+          ref={scrollRef}
+          flex={1}
+          p={4}
+          overflowY="auto"
+          onScroll={() => {
+            if (!scrollRef.current) return;
+            const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+            shouldAutoScrollRef.current = scrollHeight - scrollTop - clientHeight < 120;
+          }}
+        >
           {messages.length === 0 ? (
             <Center h="100%">
               <VStack spacing={3}>
@@ -404,19 +426,25 @@ export default function ClientChat() {
               </VStack>
             </Center>
           ) : (
-            <Box w="100%">
-              {messages.map((msg, idx) => {
-                const prevMsg = idx > 0 ? messages[idx - 1] : null;
+            <Box position="relative" height={virtualizer.getTotalSize()} w="100%">
+              {virtualizer.getVirtualItems().map(virtualRow => {
+                const msg = messages[virtualRow.index];
+                const prevMsg = virtualRow.index > 0 ? messages[virtualRow.index - 1] : null;
                 const timeGap = prevMsg ? (new Date(msg.createdAt) - new Date(prevMsg.createdAt)) / 1000 / 60 : Infinity;
                 const showTime = timeGap > 5;
                 const isClient = msg.senderRole === 'client';
                 return (
                   <Flex
-                    key={msg.id}
+                    key={virtualRow.key}
+                    data-index={virtualRow.index}
+                    ref={virtualizer.measureElement}
                     w="100%"
                     direction="column"
                     align={isClient ? 'flex-end' : 'flex-start'}
-                    mb={3}
+                    position="absolute"
+                    top={0}
+                    transform={`translateY(${virtualRow.start}px)`}
+                    pb={3}
                   >
                     {showTime && (
                       <Text color="abyss.500" fontSize="xs" textAlign="center" w="100%" my={2}>
@@ -492,7 +520,6 @@ export default function ClientChat() {
                   </Flex>
                 );
               })}
-              <div ref={messagesEndRef} />
             </Box>
           )}
         </Box>
