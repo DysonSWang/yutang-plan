@@ -174,8 +174,9 @@ function DesktopSidebar() {
       left={0}
       top={0}
       display={{ base: 'none', lg: 'block' }}
+      overflowY="auto"
     >
-      <VStack spacing={2} align="stretch" overflowY="auto">
+      <VStack spacing={2} align="stretch">
         <Flex align="center" gap={3} mb={6} py={2}>
           <Box
             bg="linear-gradient(135deg, #319795 0%, #00B5D8 50%, #38B2AC 100%)"
