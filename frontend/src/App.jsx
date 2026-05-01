@@ -83,6 +83,20 @@ function OnboardingRoute() {
 function AppRoutes() {
   const { user, loading } = useAuth();
 
+  // 路由预加载：应用启动后2秒预加载关键页面
+  useEffect(() => {
+    if (loading || !user) return;
+    const timer = setTimeout(() => {
+      // 预加载客户常用页面
+      ClientHome.preload();
+      ClientChat.preload();
+      if (user.role === 'admin') {
+        AdminDashboard.preload();
+      }
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [user, loading]);
+
   if (loading) return null;
 
   return (

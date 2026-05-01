@@ -682,7 +682,7 @@ function GirlDetailModal({ girl, screenshots, onPreviewUrl }) {
           <SectionCard title={`照片 (${photos.length})`}>
             <SimpleGrid columns={Math.min(photos.length, 4)} spacing={2}>
               {photos.map((url, i) => (
-                <Image key={i} src={url} alt="照片" h="100px" w="100%" objectFit="cover" borderRadius="md" cursor="pointer" onClick={() => onPreviewUrl(url)} _hover={{ opacity: 0.8 }} fallbackSrc="https://via.placeholder.com/100x100?text=..." />
+                <Image key={i} src={url} alt="照片" h="100px" w="100%" objectFit="cover" borderRadius="md" cursor="pointer" onClick={() => onPreviewUrl(url)} _hover={{ opacity: 0.8 }} fallbackSrc="https://via.placeholder.com/100x100?text=..." loading="lazy" />
               ))}
             </SimpleGrid>
           </SectionCard>
@@ -885,6 +885,7 @@ function GirlDetailModal({ girl, screenshots, onPreviewUrl }) {
                   onClick={() => onPreviewUrl(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}${ss.imageUrl}`)}
                   _hover={{ opacity: 0.8 }}
                   fallbackSrc="https://via.placeholder.com/100x80?text=..."
+                  loading="lazy"
                 />
               ))}
             </SimpleGrid>

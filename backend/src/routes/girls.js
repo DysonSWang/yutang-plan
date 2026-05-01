@@ -86,15 +86,6 @@ router.get('/:id', authMiddleware, async (req, res) => {
     if (req.user.role === 'client' && girl.clientId !== req.user.id) {
       return res.status(403).json({ error: '无权限' });
     }
-    // 安全：操盘手只能访问其负责客户的女生（admin 和 client 跳过）
-    if (req.user.role === 'operator') {
-      const session = await prisma.chatSession.findFirst({
-        where: { operatorId: req.user.id, clientId: girl.clientId }
-      });
-      if (!session) {
-        return res.status(403).json({ error: '无权限' });
-      }
-    }
 
     // 尝试附带关联数据，如果失败则返回空数组
     let chatLogs = [];

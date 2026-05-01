@@ -343,7 +343,7 @@ export default function ClientChat() {
             }
           }}
         >
-          <Image src={getMediaUrl(msg)} alt="图片消息" borderRadius="md" maxH="200px" objectFit="cover" />
+          <Image src={getMediaUrl(msg)} alt="图片消息" borderRadius="md" maxH="200px" objectFit="cover" loading="lazy" />
           {msg.isFlashImage && !msg.burnedAt && (
             <Text position="absolute" top={1} right={1} fontSize="xs" color="yellow.300" bg="blackAlpha.600" px={1} borderRadius="sm">⚡</Text>
           )}

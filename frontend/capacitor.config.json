@@ -1,5 +1,14 @@
 {
   "appId": "com.zhuiai.app",
   "appName": "追爱AI",
-  "webDir": "dist"
+  "webDir": "dist",
+  "backgroundColor": "#0a0f1a",
+  "android": {
+    "backgroundColor": "#0a0f1a",
+    "allowMixedContent": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "server": {
+    "androidScheme": "https"
+  }
 }

@@ -6,10 +6,15 @@ import { parseErrorResponse, ErrorType } from './errorHandler';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3005';
 
+// API缓存配置
+const CACHE_TTL = 5 * 60 * 1000; // 5分钟
+const apiCache = new Map();
+
 class Api {
   constructor() {
     this.baseUrl = API_BASE;
     this.errorHandler = null;
+    this.maxRetries = 2;
   }
 
   setErrorHandler(handler) {
@@ -28,7 +33,24 @@ class Api {
     localStorage.removeItem('zhuiai_token');
   }
 
-  async request(method, path, data = null, timeoutMs = 15000) {
+  // 缓存GET请求
+  getCached(path) {
+    const cached = apiCache.get(path);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return Promise.resolve(cached.data);
+    }
+    return this.get(path).then(data => {
+      apiCache.set(path, { data, timestamp: Date.now() });
+      return data;
+    });
+  }
+
+  // 清除缓存
+  clearCache() {
+    apiCache.clear();
+  }
+
+  async request(method, path, data = null, timeoutMs = 15000, retries = null) {
     const token = this.getToken();
     const headers = {
       'Content-Type': 'application/json'
@@ -44,6 +66,7 @@ class Api {
 
     let response;
     let result;
+    const retryCount = retries !== null ? retries : this.maxRetries;
 
     // 超时控制器
     const controller = new AbortController();
@@ -61,7 +84,11 @@ class Api {
       }
     } catch (err) {
       clearTimeout(timeoutId);
-      // 网络错误
+      // 网络错误，检查是否重试
+      if (retryCount > 0 && (err.name === 'AbortError' || err.name === 'TypeError')) {
+        console.log(`[API] 请求失败，重试剩余次数: ${retryCount - 1}, path: ${path}`);
+        return this.request(method, path, data, timeoutMs, retryCount - 1);
+      }
       let errorMsg = '网络连接失败，请检查网络设置';
       if (err.name === 'AbortError') {
         errorMsg = '请求超时，请稍后重试';
@@ -115,12 +142,12 @@ export const auth = {
 
 // 女生资源
 export const girls = {
-  list: (params) => api.get('/api/girls' + (params ? '?' + new URLSearchParams(params) : '')),
+  list: (params) => api.getCached('/api/girls' + (params ? '?' + new URLSearchParams(params) : '')),
   get: (id) => api.get(`/api/girls/${id}`),
-  create: (data) => api.post('/api/girls', data),
-  clientAdd: (data) => api.post('/api/girls/client-add', data),
-  update: (id, data) => api.put('/api/girls/' + id, data),
-  delete: (id) => api.delete('/api/girls/' + id),
+  create: (data) => api.post('/api/girls', data).then(r => { api.clearCache(); return r; }),
+  clientAdd: (data) => api.post('/api/girls/client-add', data).then(r => { api.clearCache(); return r; }),
+  update: (id, data) => api.put('/api/girls/' + id, data).then(r => { api.clearCache(); return r; }),
+  delete: (id) => api.delete('/api/girls/' + id).then(r => { api.clearCache(); return r; }),
   // M007 S01: 关系阶段
   evaluateStage: (girlId) => api.post(`/api/girls/${girlId}/evaluate-stage`),
   setRelationshipStage: (girlId, data) => api.put(`/api/girls/${girlId}/relationship-stage`, data),
@@ -134,9 +161,9 @@ export const girls = {
 export const clients = {
   list: (params) => api.get('/api/clients' + (params ? '?' + new URLSearchParams(params) : '')),
   get: (id) => api.get(`/api/clients/${id}`),
-  me: () => api.get('/api/clients/me'),
-  update: (id, data) => api.put(`/api/clients/${id}`, data),
-  create: (data) => api.post('/api/clients', data),
+  me: () => api.getCached('/api/clients/me'),
+  update: (id, data) => api.put(`/api/clients/${id}`, data).then(r => { api.clearCache(); return r; }),
+  create: (data) => api.post('/api/clients', data).then(r => { api.clearCache(); return r; }),
   extractProfile: (text) => api.post('/api/clients/extract-profile', { text }),
   extractFromChat: (clientId, messageCount) => api.post(`/api/clients/${clientId}/extract-from-chat`, { messageCount }),
   // M007 S05: 入职完成
@@ -365,8 +392,8 @@ export const events = {
 
 // 会员/积分/邀请/学习版块
 export const membership = {
-  status: () => api.get('/api/membership/status'),
-  purchase: (couponToUse = 0) => api.post('/api/membership/purchase', { couponToUse }),
+  status: () => api.getCached('/api/membership/status'),
+  purchase: (couponToUse = 0) => api.post('/api/membership/purchase', { couponToUse }).then(r => { api.clearCache(); return r; }),
   // 试用
   activateTrial: () => api.post('/api/membership/trial/activate'),
   trialConfig: () => api.get('/api/membership/trial/config'),

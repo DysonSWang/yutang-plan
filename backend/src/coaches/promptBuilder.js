@@ -69,68 +69,69 @@ async function buildMasterPrompt(question, context = {}, options = {}) {
 
   // 核心：question 必须插入 prompt，否则AI看不到用户的问题
   return `
-你是追爱AI情感教练，帮助用户分析情感问题，给出简单实用的建议。
+你是一个有丰富情感经验的朋友，帮用户分析情感问题。
 
-回答要求：
-- 简洁口语化，像朋友聊天
-- 直接给结论和建议，不要绕弯子
-- 不要用任何加粗、斜体等格式
-- 不要出现任何大师名字、称号、角色名
-- 不要说"置信度"、"框架"、"原则"等专业术语
-- 不要出现**符号
-- 如果多个参考角度给出不同建议，综合判断后给出一个最稳妥的，不要矛盾
-
-【分析框架】（多位教练的综合视角）
-
+【专业视角】（综合多位教练的经验）
 ${masterSection}
 
 ${fusionHint}
 
+【用户情况】
 ${contextSection}
 
 ${buildClientProfileSection(clientProfile)}
-
 ${buildGirlProfileSection(girlProfile)}
-
 ${learningsSection}
 
-${personaSection}
-
+【历史对话】
 ${historySection}
 
-【当前问题】
+【用户的问题】
 ${question}
 
-【回答格式】（严格按这个格式输出，不要加任何标题前缀，不要用markdown）：
-第一段：判断窗口——她对你是什么态度，窗口开着还是关着？
-第二段：核心问题——当前这段关系最大的卡点在哪？
-第三段：具体行动——给1-2条马上可以做的行动建议
-第四段：如果信息不够，直接说"目前信息不足，需要了解XX"，追问1个关键问题
+回答要求：
+- 像朋友聊天一样自然，有温度但直接
+- 直接指出核心问题和原因
+- 给出具体可执行的建议
+- 使用正常的中文标点符号（，。！？）
+- 如果信息不够，说清楚还缺什么
 `.trim();
 }
 
 /**
- * 构建单个教练视角（不暴露名字，只提供专业框架）
+ * 构建单个教练视角
  */
 function buildMasterSection(skill) {
   const principles = skill.principles || [];
+  const heuristics = skill.decision_heuristics || [];
+  const style = skill.style || {};
 
-  const principlesText = principles.map(p => {
+  // 核心原则（选2-3个最重要的）
+  const topPrinciples = principles.slice(0, 3).map(p => {
     if (p.steps && Array.isArray(p.steps)) {
-      const stepsText = p.steps.map((s, i) => {
+      const stepsText = p.steps.slice(0, 3).map((s, i) => {
         const stepName = typeof s === 'string' ? s : s.name;
-        const question = s.question || '';
-        return `  ${i + 1}. ${stepName}${question ? ` - ${question}` : ''}`;
-      }).join('\n');
-      return `[框架] ${p.name}：${p.description || ''}\n${stepsText}`;
+        return `${i + 1}. ${stepName}`;
+      }).join(' → ');
+      return `${p.name}：${p.description || ''}（${stepsText}）`;
     } else {
-      return `[原则] ${p.name}：${p.description || ''} | ${p.rule || ''}`;
+      return `${p.name}：${p.description || ''} | ${p.rule || ''}`;
     }
   }).join('\n');
 
+  // 决策规则（选2-3个最实用的）
+  const topHeuristics = heuristics.slice(0, 3).map(h =>
+    `- ${h.rule}：${h.description || ''}`
+  ).join('\n');
+
+  // 风格提示
+  const styleNote = style.expression ? `风格：${style.expression}` : '';
+
   return `
-[框架组]
-${principlesText}
+【视角】
+${topPrinciples}
+${topHeuristics ? `【规则】\n${topHeuristics}` : ''}
+${styleNote}
 `;
 }
 

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Box, Heading, Text, SimpleGrid, Card, CardBody, Icon, HStack, Badge, Button, VStack, Divider, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton } from '@chakra-ui/react';
+import { Box, Heading, Text, SimpleGrid, Card, CardBody, Icon, HStack, Badge, Button, VStack, Divider, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, Skeleton, SkeletonCircle, Center, Spinner } from '@chakra-ui/react';
 import { ChatIcon, SparklesIcon, FishIcon, BookIcon, GiftIcon, CrownIcon, CheckIcon, CalendarIcon } from '../../components/Icons';
 import { useEffect, useState } from 'react';
 import { clients, girls, membership as membershipApi } from '../../utils/api';
@@ -26,6 +26,7 @@ const STAGE_MAP = {
 
 export default function ClientHome() {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     girlCount: 0,
     dateCount: 0,
@@ -38,6 +39,7 @@ export default function ClientHome() {
   const { isOpen: isPricingOpen, onOpen: onPricingOpen, onClose: onPricingClose } = useDisclosure();
 
   const loadStats = async () => {
+    setLoading(true);
     try {
       const [clientRes, memberRes] = await Promise.all([
         clients.me(),
@@ -67,6 +69,8 @@ export default function ClientHome() {
       }
     } catch (e) {
       console.error(e);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -74,6 +78,21 @@ export default function ClientHome() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadStats();
   }, []);
+
+  if (loading) {
+    return (
+      <Box>
+        <Skeleton height="40px" mb={8} />
+        <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4} mb={8}>
+          <Skeleton height="120px" borderRadius="xl" />
+          <Skeleton height="120px" borderRadius="xl" />
+          <Skeleton height="120px" borderRadius="xl" />
+        </SimpleGrid>
+        <Skeleton height="200px" borderRadius="xl" mb={8} />
+        <Skeleton height="100px" borderRadius="xl" />
+      </Box>
+    );
+  }
 
   return (
     <Box>
