@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, memo, useMemo } from 'react';
 import {
   Box, VStack, HStack, Input, Button, Text, Card, CardBody, CardHeader,
   Heading, Select, Textarea, Spinner, Flex, Badge, Icon, Tooltip, useToast,
@@ -23,6 +23,95 @@ function getHeatLevel(score) {
   if (score >= 5) return 'warm';
   return 'cold';
 }
+
+// 独立的输入区域组件 - 使用完全独立的本地状态
+const InputArea = memo(({ onSubmit, loading, deepMode }) => {
+  const [input, setInput] = useState('');
+  const textareaRef = useRef(null);
+
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (input.trim()) {
+        // 先保存输入值，再提交，避免状态更新导致 textarea 闪烁
+        const textToSubmit = input;
+        setInput(''); // 立即清空状态，textarea 会自然重置高度
+        onSubmit(textToSubmit);
+      }
+    }
+  }, [input, onSubmit]);
+
+  const handleChange = useCallback((e) => {
+    setInput(e.target.value);
+    // 动态调整高度
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px';
+    }
+  }, []);
+
+  const handleSubmitClick = useCallback(() => {
+    if (input.trim()) {
+      const textToSubmit = input;
+      setInput(''); // 立即清空状态，textarea 会自然重置高度
+      onSubmit(textToSubmit);
+    }
+  }, [input, onSubmit]);
+
+  return (
+    <Box bg="gray.800" borderRadius="md" p={3} flexShrink={0}>
+      <Flex gap={2} align="center">
+        <textarea
+          ref={textareaRef}
+          value={input}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          placeholder={deepMode ? '描述当前情况，深度分析会调用工具...' : '描述你的情况...'}
+          disabled={loading}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck="false"
+          style={{
+            backgroundColor: '#2d3748',
+            border: 'none',
+            borderRadius: '6px',
+            color: 'white',
+            width: '100%',
+            height: '40px',
+            minHeight: '40px',
+            maxHeight: '120px',
+            padding: '8px 12px',
+            resize: 'none',
+            overflowY: 'hidden',
+            outline: 'none',
+            fontSize: '14px',
+            fontFamily: 'inherit',
+            lineHeight: '1.4',
+            boxSizing: 'border-box'
+          }}
+        />
+        <Button
+          type="button"
+          colorScheme="teal"
+          isLoading={loading}
+          disabled={!input.trim()}
+          onClick={handleSubmitClick}
+          px={4}
+        >
+          发送
+        </Button>
+        <Button
+          variant="ghost"
+          colorScheme="gray"
+          size="sm"
+        >
+          新对话
+        </Button>
+      </Flex>
+    </Box>
+  );
+});
 
 // 消息气泡组件
 function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, copiedId, helpfulId }) {
@@ -155,17 +244,27 @@ export default function AICoach() {
   const [replyInput, setReplyInput] = useState('');
   const [replySuggestions, setReplySuggestions] = useState(null);
   const [replyLoading, setReplyLoading] = useState(false);
+  const [replyStyle, setReplyStyle] = useState(''); // 回复风格（可选）
+  const [replyStyleCustom, setReplyStyleCustom] = useState(''); // 自定义风格（可选）
   // 话术优化状态
   const [optimizeInput, setOptimizeInput] = useState('');
-  const [optimizeGoal, setOptimizeGoal] = useState('');
+  const [optimizeGoal, setOptimizeGoal] = useState(''); // 选定的优化方向
+  const [optimizeGoalCustom, setOptimizeGoalCustom] = useState(''); // 自定义优化方向
   const [optimizedReplies, setOptimizedReplies] = useState(null);
   const [optimizeLoading, setOptimizeLoading] = useState(false);
   const streamingContentRef = useRef('');
   const isStreamingRef = useRef(false);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
+  const scrollContainerRef = useRef(null);
+  const savedScrollPositionRef = useRef(0);
   const toast = useToast();
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3005';
+
+  // 使用 useCallback 稳定 deepMode 切换函数
+  const handleDeepModeToggle = useCallback(() => {
+    setDeepMode(d => !d);
+  }, []);
 
   useEffect(() => {
     loadGirls();
@@ -181,14 +280,55 @@ export default function AICoach() {
     }
   }, [selectedGirlId, girls]);
 
-  // 滚动到底部
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, []);
-
+  // 监听 deepMode 变化 - 保存和恢复滚动位置
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
+    // 使用 document.getElementById 获取滚动容器（比 ref 更可靠）
+    const container = document.getElementById('chat-scroll-container');
+    if (!container) return;
+
+    // 保存当前滚动位置
+    const savedScrollTop = container.scrollTop;
+    const savedScrollHeight = container.scrollHeight;
+
+    // 在状态更新后恢复滚动位置
+    requestAnimationFrame(() => {
+      const currentContainer = document.getElementById('chat-scroll-container');
+      if (currentContainer) {
+        // 恢复滚动到之前的位置（或底部）
+        currentContainer.scrollTop = savedScrollTop || savedScrollHeight;
+      }
+    });
+  }, [deepMode]);
+
+  // 监听消息变化，自动滚动到底部
+  // 这是一个备份机制，确保在消息更新后滚动
+  useEffect(() => {
+    // 消息变化时，等待 DOM 更新完成后滚动
+    const timer = setTimeout(() => {
+      const container = document.getElementById('chat-scroll-container');
+      if (container) {
+        container.scrollTop = container.scrollHeight;
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [messages.length]);
+
+  // 滚动到底部 - 使用 document.getElementById 确保获取正确的容器
+  const scrollToBottom = useCallback(() => {
+    // 使用 requestAnimationFrame 确保在下一帧执行，此时 DOM 应该已更新
+    const doScroll = () => {
+      const container = document.getElementById('chat-scroll-container');
+      if (container) {
+        // 设置 scrollTop 到最大值
+        container.scrollTop = container.scrollHeight;
+      }
+    };
+    requestAnimationFrame(doScroll);
+    // 双重保障：等待一帧后再执行一次
+    requestAnimationFrame(() => {
+      requestAnimationFrame(doScroll);
+    });
+  }, []);
 
   // 自动调整 textarea 高度 - 暂时禁用以排查问题
   // useEffect(() => {
@@ -238,7 +378,7 @@ export default function AICoach() {
     }
   };
 
-  const handleCopy = async (content, messageId) => {
+  const handleCopy = useCallback(async (content, messageId) => {
     try {
       await navigator.clipboard.writeText(content);
       setCopiedId(messageId);
@@ -246,9 +386,9 @@ export default function AICoach() {
     } catch (e) {
       console.error(e);
     }
-  };
+  }, []);
 
-  const handleRegenerate = async (content) => {
+  const handleRegenerate = useCallback(async (content) => {
     // 找到最后一条用户消息
     const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
     if (!lastUserMsg) return;
@@ -270,6 +410,14 @@ export default function AICoach() {
         createdAt: new Date().toISOString()
       }
     ]);
+
+    // 延迟滚动到底部，等待 DOM 更新完成
+    setTimeout(() => {
+      const container = document.getElementById('chat-scroll-container');
+      if (container) {
+        container.scrollTop = container.scrollHeight;
+      }
+    }, 50);
 
     setLoading(true);
     setError('');
@@ -305,17 +453,22 @@ export default function AICoach() {
         const decoder = new TextDecoder();
         let buffer = '';
         let lastUpdate = 0;
+        let rafId = null;
         const SENTENCE_ENDINGS = /[。！？\n]/;
 
         const flushUpdate = (content) => {
           const now = Date.now();
-          const shouldFlush = !isStreamingRef.current || now - lastUpdate >= 60 || SENTENCE_ENDINGS.test(content.slice(-1));
+          const shouldFlush = now - lastUpdate >= 150 || SENTENCE_ENDINGS.test(content.slice(-1));
           if (shouldFlush) {
             lastUpdate = now;
-            setMessages(prev =>
-              prev.map(m => m.id === assistantId ? { ...m, content } : m)
-            );
-            if (isStreamingRef.current) setTimeout(scrollToBottom, 10);
+            if (rafId) cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(() => {
+              rafId = null;
+              setMessages(prev =>
+                prev.map(m => m.id === assistantId ? { ...m, content } : m)
+              );
+              if (isStreamingRef.current) scrollToBottom();
+            });
           } else {
             streamingContentRef.current = content;
           }
@@ -365,10 +518,17 @@ export default function AICoach() {
     } finally {
       setLoading(false);
       isStreamingRef.current = false;
+      // 响应完成后滚动到底部
+      setTimeout(() => {
+        const container = document.getElementById('chat-scroll-container');
+        if (container) {
+          container.scrollTop = container.scrollHeight;
+        }
+      }, 50);
     }
-  };
+  }, [messages, apiUrl, deepMode]);
 
-  const handleHelpful = async (messageId, isHelpful) => {
+  const handleHelpful = useCallback(async (messageId, isHelpful) => {
     setHelpfulId(messageId);
     try {
       const token = localStorage.getItem('zhuiai_token');
@@ -392,7 +552,7 @@ export default function AICoach() {
     } catch (e) {
       console.error('[Feedback] 提交失败:', e);
     }
-  };
+  }, [apiUrl, toast]);
 
   const handleNewConversation = async () => {
     try {
@@ -435,6 +595,9 @@ export default function AICoach() {
       }
     ]);
 
+    // 立即滚动到底部（用户消息添加后）
+    scrollToBottom();
+
     setLoading(true);
     setError('');
     streamingContentRef.current = '';
@@ -451,6 +614,9 @@ export default function AICoach() {
         createdAt: new Date().toISOString()
       }
     ]);
+
+    // 助手消息添加后也滚动到底部
+    scrollToBottom();
 
     try {
       const res = await fetch(`${apiUrl}/api/ai-coach/situation`, {
@@ -483,21 +649,28 @@ export default function AICoach() {
         const decoder = new TextDecoder();
         let buffer = '';
         let lastUpdate = 0;
+        let rafId = null;
 
         // 按段落/句子缓冲：遇到句号、问号、感叹号或换行时才更新UI
         const SENTENCE_ENDINGS = /[。！？\n]/;
+
         const flushUpdate = (content) => {
           const now = Date.now();
-          const shouldFlush = !isStreamingRef.current ||  // 非流式直接更新
-            now - lastUpdate >= 60 ||  // 60ms间隔
+          const shouldFlush = now - lastUpdate >= 150 ||  // 150ms间隔（减少闪烁）
             SENTENCE_ENDINGS.test(content.slice(-1));  // 遇到句子结束符
 
           if (shouldFlush) {
             lastUpdate = now;
-            setMessages(prev =>
-              prev.map(m => m.id === assistantId ? { ...m, content } : m)
-            );
-            if (isStreamingRef.current) setTimeout(scrollToBottom, 10);
+            // 取消之前的 requestAnimationFrame
+            if (rafId) cancelAnimationFrame(rafId);
+            // 使用 requestAnimationFrame 批量更新，减少重渲染
+            rafId = requestAnimationFrame(() => {
+              rafId = null;
+              setMessages(prev =>
+                prev.map(m => m.id === assistantId ? { ...m, content } : m)
+              );
+              if (isStreamingRef.current) scrollToBottom();
+            });
           } else {
             streamingContentRef.current = content;
           }
@@ -543,6 +716,8 @@ export default function AICoach() {
         setMessages(prev =>
           prev.map(m => m.id === assistantId ? { ...m, content: streamingContentRef.current } : m)
         );
+        // 流式结束后滚动到底部
+        scrollToBottom();
       }
     } catch (e) {
       console.error(e);
@@ -552,6 +727,8 @@ export default function AICoach() {
     } finally {
       setLoading(false);
       isStreamingRef.current = false;
+      // 确保最终滚动到底部
+      scrollToBottom();
     }
   };
 
@@ -559,7 +736,7 @@ export default function AICoach() {
     e?.preventDefault();
     await handleSubmitInternal(input);
     setInput('');
-    if (textareaRef.current) textareaRef.current.style.height = 'auto';
+    // 不再手动重置高度，让 textarea 自然重置
   };
 
   const handleKeyDown = (e) => {
@@ -576,6 +753,7 @@ export default function AICoach() {
     setReplySuggestions(null);
 
     const token = localStorage.getItem('zhuiai_token');
+    const style = replyStyleCustom || replyStyle; // 优先使用自定义，其次是选定的
     try {
       const res = await fetch(`${apiUrl}/api/ai-coach/reply-suggestions`, {
         method: 'POST',
@@ -585,7 +763,8 @@ export default function AICoach() {
         },
         body: JSON.stringify({
           girlId: selectedGirlId || undefined,
-          lastMessage: replyInput
+          lastMessage: replyInput,
+          style: style || undefined // 可选，不传则返回多种风格
         })
       });
       const data = await res.json();
@@ -608,6 +787,7 @@ export default function AICoach() {
     setOptimizedReplies(null);
 
     const token = localStorage.getItem('zhuiai_token');
+    const goal = optimizeGoalCustom || optimizeGoal; // 优先使用自定义，其次是选定的
     try {
       const res = await fetch(`${apiUrl}/api/ai-coach/optimize-reply`, {
         method: 'POST',
@@ -618,7 +798,7 @@ export default function AICoach() {
         body: JSON.stringify({
           originalReply: optimizeInput,
           girlId: selectedGirlId || undefined,
-          goal: optimizeGoal || undefined
+          goal: goal || undefined // 可选，不传则自动优化
         })
       });
       const data = await res.json();
@@ -659,15 +839,22 @@ export default function AICoach() {
     );
   }
 
-  // 通用Header组件：女生选择 + 模式切换
-  const CoachHeader = () => (
+  // 通用Header组件：女生选择 + 模式切换 - 使用memo减少重渲染
+  const CoachHeader = memo(({
+    girls,
+    selectedGirlId,
+    onGirlChange,
+    selectedGirl,
+    deepMode,
+    onDeepModeToggle
+  }) => (
     <Card bg="gray.800" mb={4}>
       <CardBody py={3}>
         <Flex gap={4} wrap="wrap" align="center" justify="space-between">
           <Flex gap={4} wrap="wrap" align="center" flex={1}>
             <Select
               value={selectedGirlId}
-              onChange={e => setSelectedGirlId(e.target.value)}
+              onChange={e => onGirlChange(e.target.value)}
               bg="gray.700"
               border="none"
               color="white"
@@ -676,7 +863,7 @@ export default function AICoach() {
               placeholder="关联女生"
               size="sm"
             >
-              {girls.map(g => (
+              {(girls || []).map(g => (
                 <option key={g.id} value={g.id}>
                   {g.name} - {g.stage || '未知'}
                 </option>
@@ -685,28 +872,28 @@ export default function AICoach() {
 
             {/* 深度/快速模式切换 */}
             <Tooltip label={deepMode ? '深度分析：调用工具链，全面分析' : '快速分析：流式输出，快'}>
-              <HStack
-                bg={deepMode ? 'purple.900' : 'gray.700'}
-                px={3}
-                py={2}
-                borderRadius="md"
-                cursor="pointer"
-                onClick={() => setDeepMode(!deepMode)}
-                border={deepMode ? '1px solid' : 'none'}
-                borderColor="purple.500"
-                spacing={2}
+              <button
+                type="button"
+                onClick={onDeepModeToggle}
+                style={{
+                  background: deepMode ? '#553c9a' : '#374151',
+                  border: deepMode ? '1px solid #805ad5' : 'none',
+                  borderRadius: '6px',
+                  padding: '8px 12px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  color: deepMode ? '#d6bcfa' : '#a0aec0'
+                }}
               >
-                <Icon
-                  as={SparklesIcon}
-                  color={deepMode ? 'purple.300' : 'gray.400'}
-                  boxSize={4}
-                />
-                <Box>
-                  <Text color={deepMode ? 'purple.300' : 'gray.300'} fontSize="xs" fontWeight="bold">
-                    {deepMode ? '深度' : '快速'}
-                  </Text>
-                </Box>
-              </HStack>
+                <span style={{ fontSize: '16px' }}>
+                  <SparklesIcon />
+                </span>
+                <span style={{ fontSize: '12px', fontWeight: 'bold' }}>
+                  {deepMode ? '深度' : '快速'}
+                </span>
+              </button>
             </Tooltip>
           </Flex>
 
@@ -741,16 +928,27 @@ export default function AICoach() {
         </Flex>
       </CardBody>
     </Card>
-  );
+  ));
 
   // Tab 1: AI教练（多轮对话）
+  // 注意：不使用 memo，因为需要确保 ref 和状态更新正确同步
   const AICoachPanel = () => (
     <>
-      <CoachHeader />
-      <Card bg="gray.800" mb={4} minH="400px">
-        <CardBody>
+      {/* 固定顶部区域 - 女生选择 */}
+      <CoachHeader
+        girls={girls}
+        selectedGirlId={selectedGirlId}
+        onGirlChange={setSelectedGirlId}
+        selectedGirl={selectedGirl}
+        deepMode={deepMode}
+        onDeepModeToggle={handleDeepModeToggle}
+      />
+      {/* 固定高度的消息容器，flex布局 */}
+      <Box flex="1" minH="0" display="flex" flexDirection="column" bg="gray.800" borderRadius="md" mb={2} overflow="hidden">
+        {/* 消息列表区域 - 可滚动 */}
+        <Box id="chat-scroll-container" flex="1" overflowY="auto" p={4} ref={scrollContainerRef}>
           {messages.length === 0 ? (
-            <VStack spacing={4} py={8}>
+            <VStack spacing={4} py={8} justify="center" minH="200px">
               <Text color="gray.400" textAlign="center">
                 描述你的情况，AI 教练为你分析
               </Text>
@@ -771,7 +969,7 @@ export default function AICoach() {
               </Wrap>
             </VStack>
           ) : (
-            <VStack spacing={0} align="stretch">
+            <>
               {messages.map((message) => (
                 <MessageBubble
                   key={message.id}
@@ -808,54 +1006,21 @@ export default function AICoach() {
                 </Flex>
               )}
               <div ref={messagesEndRef} style={{ height: 1 }} />
-            </VStack>
+            </>
           )}
           {error && (
             <Box mt={4} p={3} bg="red.900" borderRadius="md">
               <Text color="red.200">{error}</Text>
             </Box>
           )}
-        </CardBody>
-      </Card>
-      <Card bg="gray.800">
-        <CardBody>
-          <Flex gap={2}>
-            <Textarea
-              ref={textareaRef}
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={deepMode ? '描述当前情况，深度分析会调用工具...' : '描述你的情况...'}
-              bg="gray.700"
-              border="none"
-              color="white"
-              _placeholder={{ color: 'gray.400' }}
-              disabled={loading}
-              minH="40px"
-              h="auto"
-              resize="none"
-            />
-            <Button
-              type="button"
-              colorScheme="teal"
-              isLoading={loading}
-              disabled={!input.trim()}
-              onClick={handleSubmit}
-              px={6}
-            >
-              发送
-            </Button>
-            <Button
-              variant="ghost"
-              colorScheme="gray"
-              onClick={handleNewConversation}
-              size="sm"
-            >
-              新对话
-            </Button>
-          </Flex>
-        </CardBody>
-      </Card>
+        </Box>
+      </Box>
+      {/* 固定底部输入区域 - 使用独立组件避免重渲染导致失焦 */}
+      <InputArea
+        onSubmit={handleSubmitInternal}
+        loading={loading}
+        deepMode={deepMode}
+      />
     </>
   );
 
@@ -879,6 +1044,41 @@ export default function AICoach() {
                 _placeholder={{ color: 'gray.400' }}
               />
             </Box>
+            {/* 风格选择 */}
+            <HStack spacing={3}>
+              <Box flex={1}>
+                <Text color="gray.300" fontSize="sm" mb={2}>回复风格（可选）</Text>
+                <Select
+                  value={replyStyle}
+                  onChange={e => {
+                    setReplyStyle(e.target.value);
+                    setReplyStyleCustom(''); // 清除自定义输入
+                  }}
+                  bg="gray.700"
+                  border="none"
+                  color="white"
+                  placeholder="不选则返回多种风格"
+                >
+                  <option value="稳妥型">稳妥型</option>
+                  <option value="推进型">推进型</option>
+                  <option value="调侃型">调侃型</option>
+                </Select>
+              </Box>
+              <Box flex={1}>
+                <Text color="gray.300" fontSize="sm" mb={2}>或自定义风格</Text>
+                <Input
+                  value={replyStyleCustom}
+                  onChange={e => {
+                    setReplyStyleCustom(e.target.value);
+                    setReplyStyle(''); // 清除选择
+                  }}
+                  placeholder="如：更幽默、更直接"
+                  bg="gray.700"
+                  border="none"
+                  color="white"
+                />
+              </Box>
+            </HStack>
             <Button
               colorScheme="teal"
               onClick={handleGetReplySuggestions}
@@ -958,15 +1158,42 @@ export default function AICoach() {
                 _placeholder={{ color: 'gray.400' }}
               />
             </Box>
-            <Input
-              value={optimizeGoal}
-              onChange={e => setOptimizeGoal(e.target.value)}
-              placeholder="优化方向（可选）：更幽默 / 更暧昧 / 更自然"
-              bg="gray.700"
-              border="none"
-              color="white"
-              _placeholder={{ color: 'gray.400' }}
-            />
+            {/* 优化方向选择 */}
+            <HStack spacing={3}>
+              <Box flex={1}>
+                <Text color="gray.300" fontSize="sm" mb={2}>优化方向（可选）</Text>
+                <Select
+                  value={optimizeGoal}
+                  onChange={e => {
+                    setOptimizeGoal(e.target.value);
+                    setOptimizeGoalCustom(''); // 清除自定义输入
+                  }}
+                  bg="gray.700"
+                  border="none"
+                  color="white"
+                  placeholder="不选则自动优化"
+                >
+                  <option value="更幽默">更幽默</option>
+                  <option value="更暧昧">更暧昧</option>
+                  <option value="更自然">更自然</option>
+                  <option value="更真诚">更真诚</option>
+                </Select>
+              </Box>
+              <Box flex={1}>
+                <Text color="gray.300" fontSize="sm" mb={2}>或自定义方向</Text>
+                <Input
+                  value={optimizeGoalCustom}
+                  onChange={e => {
+                    setOptimizeGoalCustom(e.target.value);
+                    setOptimizeGoal(''); // 清除选择
+                  }}
+                  placeholder="如：更俏皮、更温柔"
+                  bg="gray.700"
+                  border="none"
+                  color="white"
+                />
+              </Box>
+            </HStack>
             <Button
               colorScheme="teal"
               onClick={handleOptimizeReply}
@@ -1016,13 +1243,13 @@ export default function AICoach() {
   );
 
   return (
-    <Box>
-      <Flex justify="space-between" align="center" mb={4}>
+    <Box display="flex" flexDirection="column" h="calc(100vh - 140px)" overflow="hidden">
+      <Flex justify="space-between" align="center" mb={3} flexShrink={0}>
         <Heading color="white" size="lg">AI教练</Heading>
       </Flex>
 
-      <Tabs variant="soft-rounded" colorScheme="teal" isLazy>
-        <TabList bg="gray.800" borderRadius="lg" p={1}>
+      <Tabs variant="soft-rounded" colorScheme="teal" display="flex" flexDirection="column" flex="1" minH="0" overflow="hidden">
+        <TabList bg="gray.800" borderRadius="lg" p={1} flexShrink={0}>
           <Tab color="gray.400" _selected={{ color: 'white', bg: 'teal.600' }} fontSize="sm">
             🤖 AI教练
           </Tab>
@@ -1034,8 +1261,8 @@ export default function AICoach() {
           </Tab>
         </TabList>
 
-        <TabPanels>
-          <TabPanel px={0} pt={4}>
+        <TabPanels display="flex" flex="1" minH="0">
+          <TabPanel px={0} py={3} display="flex" flexDirection="column" flex="1" minH="0" overflow="hidden">
             <AICoachPanel />
           </TabPanel>
           <TabPanel px={0} pt={4}>

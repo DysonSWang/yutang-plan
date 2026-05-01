@@ -34,7 +34,7 @@ const { getCache, setCache, getOverviewCache, setOverviewCache } = require('../s
 const logger = require('../utils/logger');
 
 // ---- Token Budget Config ----
-const AI_RESPONSE_RESERVE = 600; // tokens reserved for AI response
+const AI_RESPONSE_RESERVE = 1200; // tokens reserved for AI response
 const SYSTEM_PROMPT_BASE = 800;  // rough overhead for coach persona + formatting
 const MAX_PROMPT_TOKENS = 28000; // leave headroom below model context limit
 // streamRetry: 指数退避 (ms)
@@ -496,7 +496,7 @@ router.post('/situation', authMiddleware, async (req, res) => {
         {
           messages: [{ role: 'user', content: systemPrompt }],
           temperature: 0.7,
-          max_tokens: 500,
+          max_tokens: 4000,
           stream: true
         },
         {
@@ -888,7 +888,7 @@ router.post('/reply-suggestions', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: '无权限' });
     }
 
-    const { girlId, lastMessage, context } = req.body;
+    const { girlId, lastMessage, context, style } = req.body;
 
     if (!lastMessage) {
       return res.status(400).json({ error: '对方消息是必需的' });
@@ -974,6 +974,19 @@ ${fullContext.pendingActions.length > 0
     }
 
     // 统一教练：综合多位大师视角
+    // 根据是否指定风格决定生成数量
+    const styleInstruction = style
+      ? `用户指定了回复风格「${style}」，请只生成该风格的回复选项。`
+      : `请生成3个不同风格的回复选项。`;
+
+    const styleOptions = style ? '' : `
+1. 稳妥型：安全、礼貌的回复，维持舒适感，不冒进
+2. 进攻型：稍微大胆、有攻势的回复，推进关系，制造暧昧
+   - ⚠️ 仅在关系阶段为"暧昧期"或"推进期"时生成，其他阶段自动降级为稳妥型
+3. 调侃型：轻松、幽默的回复，活跃气氛，试探对方反应
+   - ⚠️ 禁止涉及对方外貌、身高、体重、年龄等敏感话题
+   - ⚠️ 禁止使用可能引起误解的暧昧表达`;
+
     const systemPrompt = `你是鱼塘AI情感教练，根据以下信息生成回复选项。
 
 ${girlContextInfo}
@@ -984,14 +997,10 @@ ${lastMessage}
 
 ${context ? `【对话背景】\n${context}` : ''}
 
-请生成3个不同风格的回复，每个回复要求：15-30字、口语化、符合女生性格：
+${styleInstruction}
+${styleOptions}
 
-1. 稳妥型：安全、礼貌的回复，维持舒适感，不冒进
-2. 进攻型：稍微大胆、有攻势的回复，推进关系，制造暧昧
-   - ⚠️ 仅在关系阶段为"暧昧期"或"推进期"时生成，其他阶段自动降级为稳妥型
-3. 调侃型：轻松、幽默的回复，活跃气氛，试探对方反应
-   - ⚠️ 禁止涉及对方外貌、身高、体重、年龄等敏感话题
-   - ⚠️ 禁止使用可能引起误解的暧昧表达
+每个回复要求：15-30字、口语化、符合女生性格。
 
 回复风格适配阶段（关系阶段:${relStageLabel || '未设置'}），女生沟通风格（${p?.communicationStyle || '未知'}）。
 
@@ -1170,14 +1179,15 @@ ${clientProfile ? buildPersonaSection(await buildDynamicPersona({ clientProfile,
 【原始回复】
 "${originalReply}"
 
-${goalHint}
+${goalHint ? goalHint : '【优化目标】根据原始回复的语气和意图，进行自然优化'}
 
 请生成3个优化版本，每个15-30字：
+${goal ? `用户指定了优化方向「${goal}」，请按该方向优化。` : `
 1. 自然型：语气口语化，像正常聊天
 2. 温度型：情绪温暖，带点暧昧
    - ⚠️ 暧昧表达需根据关系阶段调整，早期阶段仅暗示不挑明
 3. 性格型：更契合${personality?.communicationStyle || '未知'}风格
-   - ⚠️ 禁止涉及外貌、身高、体重等敏感话题
+   - ⚠️ 禁止涉及外貌、身高、体重等敏感话题`}
 
 ⚠️ 安全红线：无论哪个版本，都不能包含：
 - 对女生外貌的评论
