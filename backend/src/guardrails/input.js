@@ -10,11 +10,6 @@
 
 const { getAIConfig } = require('../config');
 
-// 小模型用于 guardrail 检查（低成本）
-const GUARDRAIL_MODEL_CONFIG = {
-  model: 'gpt-4.1-mini',  // 轻量模型，降低成本
-};
-
 /**
  * Relevance 检查结果
  * @typedef {{ isRelevant: boolean, reasoning: string }} RelevanceResult
@@ -98,7 +93,7 @@ async function checkRelevance(input) {
   const needsLLMCheck = hasRelevant || hasOnlyIrrelevant; // 边界情况
 
   try {
-    const aiConfig = getAIConfig();
+    const aiConfig = getAIConfig('flash');
     const response = await fetch(aiConfig.url, {
       method: 'POST',
       headers: {
@@ -106,7 +101,7 @@ async function checkRelevance(input) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: GUARDRAIL_MODEL_CONFIG.model,
+        model: aiConfig.model,
         messages: [
           { role: 'system', content: RELEVANCE_SYSTEM_PROMPT },
           { role: 'user', content: `用户输入：${input}` }
@@ -222,7 +217,7 @@ async function checkJailbreak(input) {
 
   // 预检通过后才调用 LLM（更精准的判断）
   try {
-    const aiConfig = getAIConfig();
+    const aiConfig = getAIConfig('flash');
     const response = await fetch(aiConfig.url, {
       method: 'POST',
       headers: {
@@ -230,7 +225,7 @@ async function checkJailbreak(input) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: GUARDRAIL_MODEL_CONFIG.model,
+        model: aiConfig.model,
         messages: [
           { role: 'system', content: JAILBREAK_SYSTEM_PROMPT },
           { role: 'user', content: `用户输入：${input}` }

@@ -16,7 +16,7 @@ const { getAllLearnings } = require('./learning');
 const LEARNING_STYLE_CONFIG = {
   '强': { depth: 'deep', explanation: '详细', examples: true, rationale: true },
   '中': { depth: 'moderate', explanation: '适中', examples: true, rationale: false },
-  '弱': { depth: 'simple', explanation: '精简', examples: false, rationale: false }
+  '弱': { depth: 'moderate', explanation: '适中', examples: true, rationale: false }
 };
 
 // 客户类型 → 教练行为模式
@@ -174,7 +174,7 @@ class PersonaAdapter {
         '举具体例子帮助理解（最好用场景化描述）'
       ]);
     } else {
-      this._addHints(['回复适中，结论+简短理由即可']);
+      this._addHints(['回复详实完整，展开分析并给出可操作的具体建议']);
     }
   }
 
@@ -227,7 +227,7 @@ class PersonaAdapter {
           : this.clientProfile?.coachCooperation === '抵触' ? 2 : 5);
 
     if (level <= 2) {
-      this._addHints(['只说最核心的1条建议，信息量要少']);
+      this._addHints(['优先给出最核心的建议，同时完整分析背景和原因']);
     } else if (level >= 7) {
       this._addHints(['可以给完整分析和多步行动计划']);
     }
@@ -236,7 +236,7 @@ class PersonaAdapter {
   _loadPacePreference() {
     const pace = this.clientProfile?.pacePreference;
     if (pace === '快节奏') {
-      this._addHints(['建议简洁有力，推进关系不要拖泥带水']);
+      this._addHints(['建议直接有力，推进关系不要拖泥带水，分析展开完整']);
     } else if (pace === '慢热型') {
       this._addHints(['稳妥优先，先建立舒适感再考虑拉伸关系']);
     } else if (pace === '稳健型') {

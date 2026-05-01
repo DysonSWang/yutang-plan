@@ -23,7 +23,7 @@ module.exports = function(io) {
   // Auth middleware
   const authMiddleware = async (req, res, next) => {
     const authHeader = req.headers.authorization;
-    const token = authHeader?.split(' ')[1];
+    const token = authHeader?.split(' ')[1] || req.query.token;
 
     if (!token) {
       return res.status(401).json({ error: '未登录' });
@@ -44,19 +44,15 @@ module.exports = function(io) {
     const clientRoom = `client:${session.clientId}`;
     const operatorRoom = `operator:${session.operatorId}`;
 
-    // admin 发送的消息只推送给 client，不推送给 operator room
-    // admin 通过 HTTP 响应立即看到自己发的消息
-    if (senderRole === 'admin') {
-      io.to(clientRoom).emit('message:new', message);
-      return;
+    // 为新消息附加 flashBurnedByMe 字段
+    const enriched = { ...message, flashBurnedByMe: false };
+
+    // 不推送给发送者自己（发送者通过 HTTP 响应拿到消息）
+    if (senderUserId !== session.clientId) {
+      io.to(clientRoom).emit('message:new', enriched);
     }
-
-    // 非 admin 发送：推送给客户端
-    io.to(clientRoom).emit('message:new', message);
-
-    // 推送给操作员（如果发送者不是操作员本人）
-    if (message.senderId !== session.operatorId) {
-      io.to(operatorRoom).emit('message:new', message);
+    if (senderUserId !== session.operatorId) {
+      io.to(operatorRoom).emit('message:new', enriched);
     }
 
     console.log('[Chat] Emitting message:', message.id, 'to client:', clientRoom, 'operator:', operatorRoom);
@@ -246,6 +242,26 @@ module.exports = function(io) {
         take: parseInt(limit)
       });
 
+      // 闪图：查询当前用户已销毁的消息
+      const flashMessageIds = messages.filter(m => m.isFlashImage).map(m => m.id);
+      let burnedMessageIds = new Set();
+      if (flashMessageIds.length > 0) {
+        const burns = await prisma.flashImageBurn.findMany({
+          where: {
+            messageId: { in: flashMessageIds },
+            userId: req.user.id
+          },
+          select: { messageId: true }
+        });
+        burnedMessageIds = new Set(burns.map(b => b.messageId));
+      }
+
+      // 附加 flashBurnedByMe 字段
+      const enrichedMessages = messages.map(m => ({
+        ...m,
+        flashBurnedByMe: m.isFlashImage ? burnedMessageIds.has(m.id) : false
+      }));
+
       // 标记消息为已读
       await prisma.message.updateMany({
         where: {
@@ -265,7 +281,7 @@ module.exports = function(io) {
         data: { unreadCount: 0 }
       });
 
-      res.json({ success: true, messages: messages.reverse() });
+      res.json({ success: true, messages: enrichedMessages.reverse() });
     } catch (error) {
       console.error('[Chat] 获取消息失败:', error);
       res.status(500).json({ error: '获取失败' });
@@ -295,7 +311,7 @@ module.exports = function(io) {
 
       // 敏感图片：嵌入水印（溯源接收方）→ 重新加密 → 上传新OSS文件
       let finalMediaUrl = mediaUrl;
-      if (mediaUrl && (isFlashImage || isBurnAfterRead) && (type === 'image' || type === 'video')) {
+      if (mediaUrl && (isFlashImage || isBurnAfterRead) && type === 'image') {
         try {
           // 确定接收方（会话的另一方）
           const recipientId = senderRole === 'operator' ? session.clientId : session.operatorId;
@@ -407,7 +423,7 @@ module.exports = function(io) {
         return res.status(400).json({ error: '消息已被销毁' });
       }
 
-      // 授权检查：发送者本人，或会话参与者，admin可以操作所有
+      // 授权检查
       const session = message.sessionId
         ? await prisma.chatSession.findUnique({ where: { id: message.sessionId } })
         : null;
@@ -419,9 +435,73 @@ module.exports = function(io) {
         return res.status(403).json({ error: '无权限' });
       }
 
-      // 删除OSS文件（敏感内容存OSS，非敏感也在OSS）
+      if (message.isFlashImage) {
+        // 闪图：按用户独立销毁（幂等：已销毁则直接返回成功）
+        const existingBurn = await prisma.flashImageBurn.findUnique({
+          where: {
+            messageId_userId: {
+              messageId: message.id,
+              userId: req.user.id
+            }
+          }
+        });
+        if (!existingBurn) {
+          await prisma.flashImageBurn.create({
+            data: {
+              messageId: message.id,
+              userId: req.user.id
+            }
+          });
+        }
+
+        // 检查是否双方都已销毁
+        const participants = [];
+        if (session) {
+          if (session.operatorId) participants.push(session.operatorId);
+          if (session.clientId) participants.push(session.clientId);
+        }
+        const burnCount = await prisma.flashImageBurn.count({
+          where: { messageId: message.id, userId: { in: participants } }
+        });
+
+        // 双方都销毁后才删除 OSS 文件和清除消息内容
+        if (burnCount >= participants.length && participants.length > 0) {
+          if (message.mediaUrl && (message.mediaUrl.startsWith('/encrypted/') || message.mediaUrl.startsWith('/public/'))) {
+            const ossPath = message.mediaUrl.replace(/^\//, '');
+            try {
+              await deleteFile(ossPath);
+              console.log(`[FlashBurn] Deleted OSS file (all burned): ${ossPath}`);
+            } catch (err) {
+              console.error(`[FlashBurn] Failed to delete OSS file: ${ossPath}`, err.message);
+            }
+          }
+          await prisma.message.update({
+            where: { id: req.params.id },
+            data: {
+              content: '[消息已销毁]',
+              mediaUrl: null,
+              burnedAt: new Date(),
+              flashBurnedAt: new Date()
+            }
+          });
+        }
+
+        // 仅通知发起销毁的用户
+        const burnerRole = req.user.id === session?.operatorId ? 'operator' : 'client';
+        const burnerRoom = burnerRole === 'operator'
+          ? `operator:${session.operatorId}`
+          : `client:${session.clientId}`;
+        io.to(burnerRoom).emit('message:burned', {
+          sessionId: message.sessionId,
+          messageId: message.id
+        });
+
+        return res.json({ success: true, perUserBurned: true });
+      }
+
+      // 阅后即焚（非闪图）：全局销毁，和之前逻辑一致
       if (message.mediaUrl && (message.mediaUrl.startsWith('/encrypted/') || message.mediaUrl.startsWith('/public/'))) {
-        const ossPath = message.mediaUrl.replace(/^\//, ''); // 去掉前导 /
+        const ossPath = message.mediaUrl.replace(/^\//, '');
         try {
           await deleteFile(ossPath);
           console.log(`[Burn] Deleted OSS file: ${ossPath}`);
@@ -436,11 +516,6 @@ module.exports = function(io) {
         burnedAt: new Date()
       };
 
-      // 闪图时额外记录 flashBurnedAt
-      if (message.isFlashImage) {
-        updateData.flashBurnedAt = new Date();
-      }
-
       await prisma.message.update({
         where: { id: req.params.id },
         data: updateData
@@ -448,7 +523,6 @@ module.exports = function(io) {
 
       const updated = await prisma.message.findUnique({ where: { id: req.params.id } });
 
-      // 广播给会话另一方（同步销毁状态）
       if (session) {
         io.to(`operator:${session.operatorId}`).emit('message:burned', {
           sessionId: message.sessionId, messageId: message.id
@@ -483,6 +557,21 @@ module.exports = function(io) {
         return res.status(410).json({ error: '内容已销毁' });
       }
 
+      // 闪图：检查当前用户是否已销毁
+      if (message.isFlashImage) {
+        const userBurned = await prisma.flashImageBurn.findUnique({
+          where: {
+            messageId_userId: {
+              messageId: message.id,
+              userId: req.user.id
+            }
+          }
+        });
+        if (userBurned) {
+          return res.status(410).json({ error: '闪图已销毁' });
+        }
+      }
+
       // 权限检查：发送者或接收者才能看
       const session = message.sessionId
         ? await prisma.chatSession.findUnique({ where: { id: message.sessionId } })
@@ -510,15 +599,45 @@ module.exports = function(io) {
         return res.status(400).json({ error: '无法处理此媒体类型' });
       }
 
-      // 加密内容（/encrypted/）：从OSS下载 → 内存解密 → 流返回
+      // 加密内容（/encrypted/）：从OSS下载 → 内存解密 → 支持 Range 返回
       const ossPath = message.mediaUrl.replace(/^\//, '');
       const encryptedBuffer = await downloadBuffer(ossPath);
       const plaintext = decrypt(encryptedBuffer);
 
-      res.setHeader('Content-Type', message.type === 'video' ? 'video/mp4' : message.type === 'audio' ? 'audio/mpeg' : 'image/jpeg');
+      const mime = message.type === 'video' ? 'video/mp4' : message.type === 'audio' ? 'audio/mpeg' : 'image/jpeg';
+      const totalSize = plaintext.length;
+
+      // 支持 HTTP Range 请求（video/audio 元素需要 Range 才能正常播放）
+      const rangeHeader = req.headers.range;
+      if (rangeHeader) {
+        const parts = rangeHeader.replace(/bytes=/, '').split('-');
+        const start = parseInt(parts[0], 10);
+        const end = parts[1] ? parseInt(parts[1], 10) : totalSize - 1;
+
+        if (start >= totalSize) {
+          res.status(416).setHeader('Content-Range', `bytes */${totalSize}`).end();
+          return;
+        }
+
+        const chunkEnd = Math.min(end, totalSize - 1);
+        const chunkSize = chunkEnd - start + 1;
+        const chunk = plaintext.subarray(start, start + chunkSize); // Buffer#subarray 零拷贝
+
+        res.status(206);
+        res.setHeader('Content-Range', `bytes ${start}-${chunkEnd}/${totalSize}`);
+        res.setHeader('Content-Length', chunkSize);
+        res.setHeader('Content-Type', mime);
+        res.setHeader('Cache-Control', 'no-store, no-cache, private');
+        res.setHeader('Accept-Ranges', 'bytes');
+        res.end(chunk);
+        return;
+      }
+
+      res.setHeader('Content-Type', mime);
       res.setHeader('Cache-Control', 'no-store, no-cache, private');
       res.setHeader('X-Content-Type-Options', 'nosniff');
-      res.setHeader('Content-Length', plaintext.length);
+      res.setHeader('Content-Length', totalSize);
+      res.setHeader('Accept-Ranges', 'bytes');
       res.end(plaintext);
     } catch (error) {
       console.error('[Chat] 流媒体获取失败:', error);

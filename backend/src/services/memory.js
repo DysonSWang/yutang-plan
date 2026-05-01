@@ -766,9 +766,39 @@ async function getSessionDetail(memoryId) {
   };
 }
 
+/**
+ * 移除最后一条助手消息（用于重新生成场景）
+ */
+async function removeLastAssistantMessage(memoryId) {
+  const memory = await prisma.conversationMemory.findUnique({
+    where: { id: memoryId }
+  });
+  if (!memory) return false;
+
+  const messages = parseMessages(memory);
+  if (messages.length === 0) return false;
+
+  const lastMsg = messages[messages.length - 1];
+  if (lastMsg.role !== 'assistant') return false;
+
+  const removed = messages.pop();
+  const removedTokens = compaction.estimateMessageTokens(removed);
+
+  await prisma.conversationMemory.update({
+    where: { id: memoryId },
+    data: {
+      messages: serializeMessages(messages),
+      tokenCount: Math.max(0, memory.tokenCount - removedTokens)
+    }
+  });
+
+  return true;
+}
+
 module.exports = {
   getOrCreateMemorySession: getOrCreateMemorySession,
   addMessage,
+  removeLastAssistantMessage,
   shouldSummarize,
   getConversationHistory,
   getSessionStats,

@@ -335,15 +335,7 @@ function streamGuardrails(chunk) {
     }
   }
 
-  // 2. Markdown 格式彻底清理（加粗、斜体、标题、列表、代码等）
-  const preStrip = cleaned;
-  cleaned = stripMarkdown(cleaned);
-  if (cleaned !== preStrip) {
-    reasons.push('Markdown格式');
-    modified = true;
-  }
-
-  // 3. 清理行首行尾空白（连续空行、孤立空白）
+  // 2. 清理行首行尾空白（连续空行、孤立空白）
   const trimmed = cleaned.trim();
   if (trimmed !== cleaned) {
     cleaned = trimmed;

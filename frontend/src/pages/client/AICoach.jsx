@@ -28,7 +28,7 @@ function getHeatLevel(score) {
 
 
 // 独立的输入区域组件 - 使用完全独立的本地状态
-const InputArea = memo(({ onSubmit, loading, deepMode, onNewConversation }) => {
+const InputArea = memo(({ onSubmit, loading, deepMode, onNewConversation, placeholder, showNewConvBtn = true }) => {
   const [input, setInput] = useState('');
   const textareaRef = useRef(null);
 
@@ -36,9 +36,8 @@ const InputArea = memo(({ onSubmit, loading, deepMode, onNewConversation }) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       if (input.trim()) {
-        // 先保存输入值，再提交，避免状态更新导致 textarea 闪烁
         const textToSubmit = input;
-        setInput(''); // 立即清空状态，textarea 会自然重置高度
+        setInput('');
         onSubmit(textToSubmit);
       }
     }
@@ -46,20 +45,21 @@ const InputArea = memo(({ onSubmit, loading, deepMode, onNewConversation }) => {
 
   const handleChange = useCallback((e) => {
     setInput(e.target.value);
-    // 动态调整高度
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px';
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 360) + 'px';
     }
   }, []);
 
   const handleSubmitClick = useCallback(() => {
     if (input.trim()) {
       const textToSubmit = input;
-      setInput(''); // 立即清空状态，textarea 会自然重置高度
+      setInput('');
       onSubmit(textToSubmit);
     }
   }, [input, onSubmit]);
+
+  const defaultPlaceholder = deepMode ? '描述当前情况，深度分析会调用工具...' : '描述你的情况...';
 
   return (
     <Box bg="gray.800" borderRadius="md" p={3} flexShrink={0}>
@@ -69,7 +69,7 @@ const InputArea = memo(({ onSubmit, loading, deepMode, onNewConversation }) => {
           value={input}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          placeholder={deepMode ? '描述当前情况，深度分析会调用工具...' : '描述你的情况...'}
+          placeholder={placeholder || defaultPlaceholder}
           disabled={loading}
           autoComplete="off"
           autoCorrect="off"
@@ -83,7 +83,7 @@ const InputArea = memo(({ onSubmit, loading, deepMode, onNewConversation }) => {
             width: '100%',
             height: '40px',
             minHeight: '40px',
-            maxHeight: '120px',
+            maxHeight: '360px',
             padding: '8px 12px',
             resize: 'none',
             overflowY: 'hidden',
@@ -104,14 +104,16 @@ const InputArea = memo(({ onSubmit, loading, deepMode, onNewConversation }) => {
         >
           发送
         </Button>
-        <Button
-          variant="ghost"
-          colorScheme="gray"
-          size="sm"
-          onClick={onNewConversation}
-        >
-          新对话
-        </Button>
+        {showNewConvBtn && (
+          <Button
+            variant="ghost"
+            colorScheme="gray"
+            size="sm"
+            onClick={onNewConversation}
+          >
+            新对话
+          </Button>
+        )}
       </Flex>
     </Box>
   );
@@ -444,20 +446,23 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
         {isUser ? (
           <Text whiteSpace="pre-wrap">{message.content}</Text>
         ) : (
-          <Box
-            className="ai-coach-markdown"
-            sx={{
-              '& h1, & h2, & h3': { color: 'white', fontWeight: 'bold', mt: 3, mb: 1, fontSize: 'md' },
-              '& p': { mb: 2 },
-              '& ul, & ol': { pl: 4, mb: 2 },
-              '& li': { mb: 1 },
-              '& strong': { color: 'teal.200' },
-              '& code': { bg: 'whiteAlpha.200', px: 1, py: 0.5, borderRadius: 'sm', fontSize: '0.9em' },
-              '& blockquote': { borderLeft: '3px solid', borderColor: 'whiteAlpha.400', pl: 3, py: 1, color: 'gray.300' },
-              '& hr': { borderColor: 'whiteAlpha.300', my: 2 }
-            }}
-          >
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          <Box className="ai-coach-markdown" fontSize="14px" lineHeight="1.8" color="gray.100">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                h1: ({ children }) => <Text as="h1" color="white" fontWeight="bold" fontSize="md" mt={3} mb={1}>{children}</Text>,
+                h2: ({ children }) => <Text as="h2" color="white" fontWeight="bold" fontSize="md" mt={3} mb={1}>{children}</Text>,
+                h3: ({ children }) => <Text as="h3" color="white" fontWeight="bold" fontSize="md" mt={3} mb={1}>{children}</Text>,
+                p: ({ children }) => <Text mb={2}>{children}</Text>,
+                strong: ({ children }) => <Text as="strong" color="teal.200" fontWeight="bold">{children}</Text>,
+                ul: ({ children }) => <Text as="ul" pl={4} mb={2}>{children}</Text>,
+                ol: ({ children }) => <Text as="ol" pl={4} mb={2}>{children}</Text>,
+                li: ({ children }) => <Text as="li" mb={1}>{children}</Text>,
+                blockquote: ({ children }) => <Box borderLeft="3px solid" borderColor="whiteAlpha.400" pl={3} py={1} color="gray.300">{children}</Box>,
+                hr: () => <Box borderTop="1px solid" borderColor="whiteAlpha.300" my={2} />,
+                code: ({ children }) => <Text as="code" bg="whiteAlpha.200" px={1} py={0.5} borderRadius="sm" fontSize="0.9em">{children}</Text>,
+              }}
+            >
               {message.content}
             </ReactMarkdown>
           </Box>
@@ -537,6 +542,383 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
   );
 }
 
+// ====== 聊天实战子组件 ======
+
+// 聊天实战消息气泡（girl/me 两种角色）
+const CombatChatMessage = memo(({ msg, girlName }) => {
+  const isGirl = msg.role === 'girl';
+  return (
+    <Flex justify={isGirl ? 'flex-start' : 'flex-end'} mb={3}>
+      <Box maxW="85%">
+        <Text fontSize="11px" color="gray.400" mb={1} textAlign={isGirl ? 'left' : 'right'}>
+          {isGirl ? (girlName || '女生') : '我'}
+        </Text>
+        <Box
+          bg={isGirl ? 'gray.700' : 'teal.700'}
+          px={3} py={2}
+          borderRadius="xl"
+          borderBottomLeftRadius={isGirl ? 'sm' : undefined}
+          borderBottomRightRadius={isGirl ? undefined : 'sm'}
+        >
+          <Text fontSize="13px" lineHeight="1.6">{msg.content}</Text>
+        </Box>
+      </Box>
+    </Flex>
+  );
+});
+
+// 建议风格标签颜色
+const STYLE_COLORS = {
+  '稳妥型': 'blue', '进攻型': 'red', '调侃型': 'orange',
+  '幽默型': 'green', '更幽默': 'green', '暧昧型': 'pink', '更暧昧': 'pink',
+  '自然型': 'cyan', '更自然': 'cyan', '推进型': 'red',
+};
+
+// 单张建议/优化卡片
+const SuggestionCard = memo(({ item, index, isSelected, isDismissed, onSelect }) => {
+  const text = item.reply || item.text || '';
+  const style = item.type || item.style || '';
+  const subtext = item.intention || item.point || '';
+  const risk = item.riskNote || (item.riskLevel && item.riskLevel !== '低' ? item.riskLevel : '');
+
+  return (
+    <Box
+      onClick={() => !isSelected && !isDismissed && onSelect(index)}
+      bg={isSelected ? 'rgba(16,185,129,0.1)' : 'gray.700'}
+      border="1px solid"
+      borderColor={isSelected ? 'green.500' : (isDismissed ? 'gray.600' : 'gray.600')}
+      borderRadius="lg"
+      p={3}
+      cursor={isSelected || isDismissed ? 'default' : 'pointer'}
+      opacity={isDismissed ? 0.3 : 1}
+      transform={isDismissed ? 'scale(0.95)' : 'none'}
+      transition="all 0.2s"
+      position="relative"
+      _hover={!isSelected && !isDismissed ? { borderColor: 'teal.400', bg: 'whiteAlpha.50' } : {}}
+    >
+      {isSelected && (
+        <Badge colorScheme="green" fontSize="10px" position="absolute" top={2} right={2}>
+          ✓ 已选用
+        </Badge>
+      )}
+      {style && (
+        <Badge
+          colorScheme={STYLE_COLORS[style] || 'gray'}
+          fontSize="10px"
+          mb={1}
+          variant="subtle"
+        >
+          {style}
+        </Badge>
+      )}
+      <Text fontSize="13px" lineHeight="1.6">{text}</Text>
+      {subtext && <Text fontSize="11px" color="gray.400" mt={1}>{subtext}</Text>}
+      {risk && <Text fontSize="11px" color="orange.300" mt={1}>⚠ {risk}</Text>}
+    </Box>
+  );
+});
+
+// 建议卡片组容器
+const SuggestionGroup = memo(({
+  suggestions, selectedIndex, onSelect, onRegenerate,
+  onDismissAll, onSendDirect, loading, girlName, mode
+}) => {
+  if (!suggestions && !loading) return null;
+
+  const items = suggestions?.items || [];
+  const type = suggestions?.type || (mode === 'optimize' ? 'optimizations' : 'suggestions');
+
+  return (
+    <Box
+      borderLeft="2px solid" borderColor="teal.500"
+      pl={3} my={4}
+    >
+      {/* Header */}
+      <Flex align="center" gap={2} mb={2}>
+        <Text fontSize="11px" color="gray.400" letterSpacing=".5px">
+          {type === 'suggestions' ? `💡 回复建议 (${girlName || '女生'})` : '⚡ 话术优化'}
+        </Text>
+        <Flex gap={1} ml="auto">
+          <Button size="xs" variant="ghost" fontSize="10px" color="gray.400"
+            onClick={onRegenerate} isLoading={loading}
+          >🔄 重新生成</Button>
+          {mode === 'optimize' && onSendDirect && (
+            <Button size="xs" variant="ghost" fontSize="10px" color="green.300"
+              onClick={onSendDirect}
+            >📤 直接发送原文</Button>
+          )}
+          <Button size="xs" variant="ghost" fontSize="10px" color="gray.400"
+            onClick={onDismissAll}
+          >✕ 全部删除</Button>
+        </Flex>
+      </Flex>
+
+      {/* Cards */}
+      {loading ? (
+        <Flex justify="center" py={4}>
+          <HStack spacing={2}>
+            {[0, 150, 300].map((delay) => (
+              <Box key={delay} w="8px" h="8px" bg="teal.400" borderRadius="full"
+                animation={`bounce 1.4s infinite ease-in-out ${delay}ms`}
+                sx={{ '@keyframes bounce': { '0%,80%,100%': { transform: 'scale(0)' }, '40%': { transform: 'scale(1)' } } }}
+              />
+            ))}
+          </HStack>
+        </Flex>
+      ) : items.length > 0 ? (
+        <VStack spacing={2} align="stretch">
+          {items.map((item, i) => (
+            <SuggestionCard
+              key={i}
+              item={item}
+              index={i}
+              isSelected={selectedIndex === i}
+              isDismissed={selectedIndex !== null && selectedIndex !== i}
+              onSelect={onSelect}
+            />
+          ))}
+        </VStack>
+      ) : (
+        <Text fontSize="12px" color="gray.500" textAlign="center" py={3}>
+          AI 暂未生成建议，请重试
+        </Text>
+      )}
+    </Box>
+  );
+});
+
+// DeepSeek 思考过程 - 可折叠展示
+const ReasoningDisclosure = memo(({ content, isLoading }) => {
+  const [isOpen, setIsOpen] = useState(true);
+  if (!content) return null;
+
+  return (
+    <Flex justify="flex-start" mb={3}>
+      <Box bg="gray.750" borderRadius="lg" border="1px solid" borderColor="yellow.700" maxW="90%" overflow="hidden">
+        <Flex
+          as="button"
+          onClick={() => setIsOpen(!isOpen)}
+          w="100%" px={3} py={2} align="center" gap={2}
+          _hover={{ bg: 'whiteAlpha.50' }}
+        >
+          <Text fontSize="xs" color="yellow.300">
+            {isOpen ? '▼' : '▶'} 思考过程{isLoading ? ' · 生成中...' : ''}
+          </Text>
+          {isLoading && (
+            <Box w="6px" h="6px" bg="yellow.400" borderRadius="full"
+              animation="pulse 1s infinite"
+              sx={{ '@keyframes pulse': { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.3 } } }}
+            />
+          )}
+        </Flex>
+        {isOpen && (
+          <Box px={3} pb={3} maxH="300px" overflowY="auto">
+            <Text fontSize="12px" color="gray.300" lineHeight="1.7" whiteSpace="pre-wrap">{content}</Text>
+          </Box>
+        )}
+      </Box>
+    </Flex>
+  );
+});
+
+// 双模式输入栏
+const CombatInputBar = memo(({ mode, onModeChange, value, onChange, onSubmit, loading, girlName }) => {
+  const textareaRef = useRef(null);
+
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (value.trim() && !loading) onSubmit();
+    }
+  }, [value, loading, onSubmit]);
+
+  const autoResize = useCallback(() => {
+    const el = textareaRef.current;
+    if (el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 360) + 'px'; }
+  }, []);
+
+  useEffect(() => { autoResize(); }, [value, autoResize]);
+
+  return (
+    <Box bg="gray.800" borderTop="1px solid" borderColor="gray.700" px={4} py={3} flexShrink={0}>
+      {/* Mode toggle */}
+      <Flex gap={1} mb={2}>
+        <Button
+          size="xs"
+          variant={mode === 'suggest' ? 'solid' : 'ghost'}
+          colorScheme={mode === 'suggest' ? 'blue' : undefined}
+          color={mode !== 'suggest' ? 'gray.400' : undefined}
+          onClick={() => onModeChange('suggest')}
+          fontSize="12px"
+        >💡 回复建议</Button>
+        <Button
+          size="xs"
+          variant={mode === 'optimize' ? 'solid' : 'ghost'}
+          colorScheme={mode === 'optimize' ? 'orange' : undefined}
+          color={mode !== 'optimize' ? 'gray.400' : undefined}
+          onClick={() => onModeChange('optimize')}
+          fontSize="12px"
+        >⚡ 话术优化</Button>
+      </Flex>
+
+      {/* Input row */}
+      <Flex gap={2}>
+        <Textarea
+          ref={textareaRef}
+          value={value}
+          onChange={(e) => { onChange(e.target.value); autoResize(); }}
+          onKeyDown={handleKeyDown}
+          placeholder={mode === 'suggest' ? `粘贴${girlName || '女生'}说的消息...` : '粘贴你要优化的回复草稿...'}
+          bg="gray.700"
+          border="none"
+          color="white"
+          fontSize="13px"
+          rows={1}
+          resize="none"
+          overflow="hidden"
+          minH="40px"
+          maxH="360px"
+          isDisabled={loading}
+          _focus={{ outline: 'none', boxShadow: '0 0 0 2px #319795' }}
+          sx={{ fontFamily: 'inherit' }}
+        />
+        <Button
+          colorScheme={mode === 'suggest' ? 'blue' : 'orange'}
+          onClick={onSubmit}
+          isLoading={loading}
+          isDisabled={!value.trim()}
+          fontSize="13px"
+          px={6}
+          alignSelf="flex-end"
+        >
+          发送
+        </Button>
+      </Flex>
+    </Box>
+  );
+});
+
+// 右侧女生上下文面板
+const GirlContextSidebar = memo(({ girl, analysisContent }) => {
+  if (!girl) return null;
+
+  const stageColor = STAGE_COLORS[girl.stage] || 'gray';
+  const heatColor = (girl.tensionScore || 5) >= 7 ? 'orange.400' : (girl.tensionScore || 5) >= 5 ? 'yellow.400' : 'blue.400';
+
+  // 阶段策略提示
+  const stageTips = {
+    '陌生': [['🐢', '刚认识，先建立舒适感，不要急于推进'], ['💬', '重点：展示你的生活方式和价值观']],
+    '朋友': [['🐢', '热度偏低，先建立舒适感，不要急于推进'], ['🔑', '目标：让她习惯你的存在，成为她的情绪出口']],
+    '暧昧': [['🔥', '她已经有窗口信号，72小时内主动约见'], ['⚠️', '不要过度道歉或解释，她测试的是你的态度'], ['🔑', '目标：制造一个她有感觉的「在一起」时刻']],
+    '约会': [['🔥', '热度高，可以更激进地推进关系'], ['🔑', '目标：升级肢体接触，明确关系预期']],
+    '长期': [['💚', '长期关系，重点是维护和深化亲密度'], ['🔑', '保持新鲜感，定期制造小惊喜']],
+  };
+  const tips = stageTips[girl.stage] || stageTips['陌生'];
+
+  return (
+    <Box w="320px" flexShrink={0} display={{ base: 'none', lg: 'flex' }} flexDirection="column" overflowY="auto" minH="0" px={3} py={2}>
+      {/* 女生上下文 */}
+      <Card bg="gray.800" border="1px solid" borderColor="gray.700" mb={3}>
+        <CardHeader pb={0}>
+          <Flex align="center" gap={2}>
+            <Box w="6px" h="6px" borderRadius="full" bg="teal.400" />
+            <Text fontSize="12px" fontWeight="bold" color="gray.300" letterSpacing=".5px">
+              女生上下文
+            </Text>
+          </Flex>
+        </CardHeader>
+        <CardBody>
+          <VStack spacing={1} align="stretch" fontSize="13px">
+            <Flex justify="space-between"><Text color="gray.400">姓名</Text><Text fontWeight="bold">{girl.name}</Text></Flex>
+            <Flex justify="space-between"><Text color="gray.400">年龄/职业</Text><Text>{[girl.age, girl.occupation].filter(Boolean).join('岁 · ') || '未知'}</Text></Flex>
+            <Flex justify="space-between"><Text color="gray.400">关系阶段</Text>
+              <Badge colorScheme={stageColor}>{girl.stage || '未知'}</Badge>
+            </Flex>
+            <Flex justify="space-between"><Text color="gray.400">热度</Text>
+              <Text color={heatColor} fontWeight="bold">{(girl.tensionScore || 5).toFixed(1)} / 10</Text>
+            </Flex>
+            <Flex justify="space-between"><Text color="gray.400">亲密度</Text><Text>{girl.intimacyLevel || 1} / 5</Text></Flex>
+            {(girl.mbti || (girl.personality && typeof girl.personality === 'object' && girl.personality.mbti)) && (
+              <Flex justify="space-between"><Text color="gray.400">MBTI</Text><Text>{girl.mbti || (girl.personality && girl.personality.mbti)}</Text></Flex>
+            )}
+          </VStack>
+        </CardBody>
+      </Card>
+
+      {/* 阶段策略 */}
+      <Card bg="gray.800" border="1px solid" borderColor="gray.700">
+        <CardHeader pb={0}>
+          <Flex align="center" gap={2}>
+            <Box w="6px" h="6px" borderRadius="full" bg="orange.400" />
+            <Text fontSize="12px" fontWeight="bold" color="gray.300" letterSpacing=".5px">
+              阶段策略 · {girl.stage || '未知'}
+            </Text>
+          </Flex>
+        </CardHeader>
+        <CardBody>
+          <VStack spacing={2} align="stretch">
+            {tips.map((t, i) => (
+              <Flex key={i} align="flex-start" gap={2} fontSize="12px" pb={i < tips.length - 1 ? 2 : 0}
+                borderBottom={i < tips.length - 1 ? '1px solid' : 'none'} borderColor="gray.700">
+                <Text>{t[0]}</Text>
+                <Text color="gray.300">{t[1]}</Text>
+              </Flex>
+            ))}
+          </VStack>
+        </CardBody>
+      </Card>
+    </Box>
+  );
+});
+
+// 聊天实战聊天区
+const CombatChatPanel = memo(({
+  history, suggestions, selectedIndex, onSelect,
+  onRegenerate, onDismissAll, onSendDirect,
+  loading, girlName, combatMode
+}) => {
+  const scrollRef = useRef(null);
+  const endRef = useRef(null);
+
+  useEffect(() => {
+    if (endRef.current) {
+      endRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [history, suggestions, loading]);
+
+  const isEmpty = history.length === 0 && !suggestions && !loading;
+
+  return (
+    <Box flex="1" minH="0" overflowY="auto" p={4} ref={scrollRef}>
+      {isEmpty ? (
+        <Flex direction="column" align="center" justify="center" py={16} color="gray.400">
+          <Text fontSize="36px" mb={3}>💬</Text>
+          <Text fontSize="14px">在下方粘贴女生的消息，点击发送</Text>
+          <Text fontSize="12px" mt={1}>AI 会生成回复建议，选中后自动成为你的回复</Text>
+        </Flex>
+      ) : (
+        <>
+          {history.map(msg => (
+            <CombatChatMessage key={msg.id} msg={msg} girlName={girlName} />
+          ))}
+          <SuggestionGroup
+            suggestions={suggestions}
+            selectedIndex={selectedIndex}
+            onSelect={onSelect}
+            onRegenerate={onRegenerate}
+            onDismissAll={onDismissAll}
+            onSendDirect={onSendDirect}
+            loading={loading}
+            girlName={girlName}
+            mode={combatMode}
+          />
+          <div ref={endRef} style={{ height: 1 }} />
+        </>
+      )}
+    </Box>
+  );
+});
+
 export default function AICoach() {
   const { user } = useAuth();
   const [girls, setGirls] = useState([]);
@@ -544,7 +926,7 @@ export default function AICoach() {
   const [selectedGirl, setSelectedGirl] = useState(null);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [deepMode, setDeepMode] = useState(false);
+  const [deepMode, setDeepMode] = useState(true); // 默认深度思考模式
   const [messages, setMessages] = useState([]);
   const [sessions, setSessions] = useState([]);
   const [activeSessionId, setActiveSessionId] = useState(null);
@@ -553,6 +935,9 @@ export default function AICoach() {
   const [copiedId, setCopiedId] = useState(null);
   const [helpfulId, setHelpfulId] = useState(null);
   const [error, setError] = useState('');
+  const [thinkingLabel, setThinkingLabel] = useState(null); // 当前分析视角（来自 SSE meta 事件）
+  const [reasoningContent, setReasoningContent] = useState(''); // DeepSeek 思考过程
+  const reasoningContentRef = useRef('');
   const streamingContentRef = useRef('');
   const isStreamingRef = useRef(false);
   const messagesEndRef = useRef(null);
@@ -561,6 +946,25 @@ export default function AICoach() {
   const savedScrollPositionRef = useRef(0);
   const toast = useToast();
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3005';
+
+  // ====== 聊天实战 state ======
+  const [combatHistories, setCombatHistories] = useState({}); // { [girlId]: CombatMessage[] }
+  const [combatMode, setCombatMode] = useState('suggest'); // 'suggest' | 'optimize'
+  const [combatInput, setCombatInput] = useState('');
+  const [combatLoading, setCombatLoading] = useState(false);
+  const [combatSuggestions, setCombatSuggestions] = useState(null);
+  // { type: 'suggestions'|'optimizations', items: [...] }
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(null);
+  const [lastDraftText, setLastDraftText] = useState('');
+  // Girl-selected AI教练 state
+  const [girlAnalysisContent, setGirlAnalysisContent] = useState('');
+  const [girlAnalysisLoading, setGirlAnalysisLoading] = useState(false);
+  // Track active tab (0 = AI教练, 1 = 聊天实战/回复建议)
+  const [activeTabIndex, setActiveTabIndex] = useState(0);
+
+  const getCurrentCombatHistory = useCallback(() => {
+    return selectedGirlId ? (combatHistories[selectedGirlId] || []) : [];
+  }, [selectedGirlId, combatHistories]);
 
   // 使用 useCallback 稳定 deepMode 切换函数
   const handleDeepModeToggle = useCallback(() => {
@@ -686,7 +1090,17 @@ export default function AICoach() {
 
   const handleGirlChange = (girlId) => {
     setSelectedGirlId(girlId);
-    loadHistory(girlId);
+    if (girlId) {
+      // 选中女生：清空 AI教练消息，加载分析
+      setMessages([]);
+      setActiveSessionId(null);
+      setActiveTabIndex(0);
+      setGirlAnalysisContent('');
+      loadGirlAnalysis(girlId);
+    } else {
+      // 取消选择：回到通用咨询，加载历史
+      loadHistory('');
+    }
   };
 
   const handleSelectSession = useCallback((sessionId) => {
@@ -753,6 +1167,9 @@ export default function AICoach() {
 
     setLoading(true);
     setError('');
+    setThinkingLabel(null);
+    setReasoningContent('');
+    reasoningContentRef.current = '';
     streamingContentRef.current = '';
     isStreamingRef.current = true;
 
@@ -765,8 +1182,9 @@ export default function AICoach() {
         },
         body: JSON.stringify({
           situation: userMessage,
-          stream: !deepMode,
-          girlId: selectedGirlId || undefined
+          stream: true,
+          girlId: selectedGirlId || undefined,
+          regenerate: true
         })
       });
 
@@ -775,7 +1193,8 @@ export default function AICoach() {
         throw new Error(errData.error || `HTTP ${res.status}`);
       }
 
-      if (deepMode) {
+      // 始终使用流式模式
+      if (false) {
         const data = await res.json();
         setMessages(prev =>
           prev.map(m => m.id === assistantId ? { ...m, content: data.content || data.analysis || '' } : m)
@@ -901,13 +1320,19 @@ export default function AICoach() {
         const errData = await res.json().catch(() => ({}));
         throw new Error(errData.error || '新建会话失败');
       }
-      // 先刷新会话列表（旧会话标记为已归档）
-      await loadHistory();
-      // 清空聊天区域和会话选中状态，进入欢迎界面
-      // 新会话在用户发送下一条消息时由服务端自动创建（getOrCreateSession）
+      // 先清空聊天区域（避免 loadHistory 加载旧消息后闪烁）
       setMessages([]);
       setActiveSessionId(null);
       setError('');
+      setThinkingLabel(null);
+      setReasoningContent('');
+      reasoningContentRef.current = '';
+      streamingContentRef.current = '';
+      // 刷新会话列表（旧会话标记为已归档，新会话在发送消息时自动创建）
+      await loadHistory();
+      // 再次确保清空（loadHistory 可能设回旧会话数据）
+      setMessages([]);
+      setActiveSessionId(null);
       toast({
         title: '已开启新对话',
         status: 'info',
@@ -925,6 +1350,195 @@ export default function AICoach() {
       });
     }
   };
+
+  // ====== 聊天实战 Handler ======
+
+  // SSE 流式加载女生分析
+  const loadGirlAnalysis = useCallback(async (girlId) => {
+    if (!girlId) return;
+    setGirlAnalysisLoading(true);
+    setGirlAnalysisContent('');
+    const token = localStorage.getItem('zhuiai_token');
+    try {
+      const res = await fetch(`${apiUrl}/api/ai-coach/girl-summary/${girlId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('请求失败');
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let accumulated = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed === 'data: [DONE]') continue;
+          if (trimmed.startsWith('data: ')) {
+            try {
+              const parsed = JSON.parse(trimmed.substring(6));
+              if (parsed.content) { accumulated += parsed.content; setGirlAnalysisContent(accumulated); }
+            } catch {}
+          }
+        }
+      }
+      // fallback: 如果流中没有 content
+      if (!accumulated) setGirlAnalysisContent('分析加载完成，可向我提问');
+    } catch (e) {
+      console.warn('[AICoach] loadGirlAnalysis failed:', e.message);
+      setGirlAnalysisContent('暂无法加载分析，可直接向我提问');
+    } finally {
+      setGirlAnalysisLoading(false);
+    }
+  }, [apiUrl]);
+
+  // 聊天实战 - 发送
+  const handleCombatSend = useCallback(async () => {
+    const text = combatInput.trim();
+    if (!text || combatLoading || !selectedGirlId) return;
+    setCombatInput('');
+    const now = new Date().toISOString();
+    const girlName = selectedGirl?.name || '女生';
+
+    if (combatMode === 'suggest') {
+      // 回复建议：先追加女生消息气泡
+      const herMsg = { id: `combat-${Date.now()}`, role: 'girl', content: text, timestamp: now };
+      setCombatHistories(prev => ({
+        ...prev,
+        [selectedGirlId]: [...(prev[selectedGirlId] || []), herMsg]
+      }));
+      setCombatSuggestions(null);
+      setSelectedSuggestionIndex(null);
+      setCombatLoading(true);
+      try {
+        const token = localStorage.getItem('zhuiai_token');
+        const res = await fetch(`${apiUrl}/api/ai-coach/reply-suggestions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ girlId: selectedGirlId, lastMessage: text })
+        });
+        const data = await res.json();
+        if (data.success && data.suggestions?.options?.length) {
+          setCombatSuggestions({ type: 'suggestions', items: data.suggestions.options });
+        } else {
+          toast({ title: data.error || '获取建议失败', status: 'error', duration: 3000 });
+        }
+      } catch (e) {
+        toast({ title: '网络错误', status: 'error', duration: 3000 });
+      } finally {
+        setCombatLoading(false);
+      }
+    } else {
+      // 话术优化：不追加气泡，只调 API
+      setLastDraftText(text);
+      setCombatSuggestions(null);
+      setSelectedSuggestionIndex(null);
+      setCombatLoading(true);
+      try {
+        const token = localStorage.getItem('zhuiai_token');
+        const res = await fetch(`${apiUrl}/api/ai-coach/optimize-reply`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ girlId: selectedGirlId, originalReply: text })
+        });
+        const data = await res.json();
+        if (data.success && data.optimizations?.length) {
+          setCombatSuggestions({ type: 'optimizations', items: data.optimizations });
+        } else {
+          toast({ title: data.error || '优化失败', status: 'error', duration: 3000 });
+        }
+      } catch (e) {
+        toast({ title: '网络错误', status: 'error', duration: 3000 });
+      } finally {
+        setCombatLoading(false);
+      }
+    }
+  }, [combatInput, combatLoading, combatMode, selectedGirlId, selectedGirl, apiUrl, toast]);
+
+  // 聊天实战 - 选中建议卡片
+  const handleSelectSuggestion = useCallback((index) => {
+    if (selectedSuggestionIndex !== null) return;
+    const item = combatSuggestions?.items?.[index];
+    if (!item) return;
+    const replyText = item.reply || item.text || '';
+    if (!replyText) return;
+    setSelectedSuggestionIndex(index);
+    const now = new Date().toISOString();
+    const myMsg = { id: `combat-${Date.now()}`, role: 'user', content: replyText, timestamp: now };
+    setCombatHistories(prev => ({
+      ...prev,
+      [selectedGirlId]: [...(prev[selectedGirlId] || []), myMsg]
+    }));
+  }, [selectedSuggestionIndex, combatSuggestions, selectedGirlId]);
+
+  // 聊天实战 - 全部删除
+  const handleDismissAllSuggestions = useCallback(() => {
+    setCombatSuggestions(null);
+    setSelectedSuggestionIndex(null);
+  }, []);
+
+  // 聊天实战 - 重新生成
+  const handleRegenerateSuggestions = useCallback(() => {
+    setCombatSuggestions(null);
+    setSelectedSuggestionIndex(null);
+    setCombatLoading(true);
+    // 模拟延迟后重新发送请求
+    setTimeout(() => {
+      const token = localStorage.getItem('zhuiai_token');
+      const lastId = selectedGirlId;
+      if (!lastId) { setCombatLoading(false); return; }
+      const history = combatHistories[lastId] || [];
+      if (combatMode === 'suggest') {
+        const lastGirlMsg = [...history].reverse().find(m => m.role === 'girl');
+        if (!lastGirlMsg) { setCombatLoading(false); return; }
+        fetch(`${apiUrl}/api/ai-coach/reply-suggestions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ girlId: lastId, lastMessage: lastGirlMsg.content })
+        }).then(r => r.json()).then(data => {
+          if (data.success && data.suggestions?.options?.length) {
+            setCombatSuggestions({ type: 'suggestions', items: data.suggestions.options });
+          }
+        }).catch(() => {}).finally(() => setCombatLoading(false));
+      } else {
+        if (!lastDraftText) { setCombatLoading(false); return; }
+        fetch(`${apiUrl}/api/ai-coach/optimize-reply`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ girlId: lastId, originalReply: lastDraftText })
+        }).then(r => r.json()).then(data => {
+          if (data.success && data.optimizations?.length) {
+            setCombatSuggestions({ type: 'optimizations', items: data.optimizations });
+          }
+        }).catch(() => {}).finally(() => setCombatLoading(false));
+      }
+    }, 500);
+  }, [combatMode, selectedGirlId, combatHistories, lastDraftText, apiUrl]);
+
+  // 聊天实战 - 直接发送原文（话术优化模式）
+  const handleSendDirect = useCallback(() => {
+    if (!lastDraftText) return;
+    const now = new Date().toISOString();
+    const myMsg = { id: `combat-${Date.now()}`, role: 'user', content: lastDraftText, timestamp: now };
+    setCombatHistories(prev => ({
+      ...prev,
+      [selectedGirlId]: [...(prev[selectedGirlId] || []), myMsg]
+    }));
+    setCombatSuggestions(null);
+    setSelectedSuggestionIndex(null);
+    setLastDraftText('');
+  }, [lastDraftText, selectedGirlId]);
+
+  // 聊天实战 - 模式切换
+  const handleCombatModeChange = useCallback((mode) => {
+    setCombatMode(mode);
+    setCombatInput('');
+    setCombatSuggestions(null);
+    setSelectedSuggestionIndex(null);
+  }, []);
 
   const handleSubmitInternal = async (questionText) => {
     if (!questionText.trim() || loading) return;
@@ -949,6 +1563,9 @@ export default function AICoach() {
 
     setLoading(true);
     setError('');
+    setThinkingLabel(null);
+    setReasoningContent('');
+    reasoningContentRef.current = '';
     streamingContentRef.current = '';
     isStreamingRef.current = true;
 
@@ -976,7 +1593,7 @@ export default function AICoach() {
         },
         body: JSON.stringify({
           situation: userMessage,
-          stream: !deepMode,
+          stream: true,
           girlId: selectedGirlId || undefined
         })
       });
@@ -986,8 +1603,8 @@ export default function AICoach() {
         throw new Error(errData.error || `HTTP ${res.status}`);
       }
 
-      // 深度模式（非流式）
-      if (deepMode) {
+      // 始终使用流式模式
+      if (false) {
         const data = await res.json();
         setMessages(prev =>
           prev.map(m => m.id === assistantId ? { ...m, content: data.content || data.analysis || '' } : m)
@@ -1042,7 +1659,15 @@ export default function AICoach() {
               if (!jsonStr.startsWith('{')) continue;
               try {
                 const parsed = JSON.parse(jsonStr);
+                if (parsed.meta?.routedType) {
+                  setThinkingLabel(`正在从「${parsed.meta.routedType}」视角分析...`);
+                }
+                if (parsed.reasoning) {
+                  reasoningContentRef.current += parsed.reasoning;
+                  setReasoningContent(reasoningContentRef.current);
+                }
                 if (parsed.content) {
+                  setThinkingLabel(null);
                   streamingContentRef.current += parsed.content;
                   flushUpdate(streamingContentRef.current);
                 }
@@ -1120,8 +1745,224 @@ export default function AICoach() {
     );
   }
 
+  const hasGirl = !!(selectedGirlId && selectedGirl);
+
+  // ====== State 2: 选中女生 — 双 Tab 布局 ======
+  if (hasGirl) {
+    const currentCombatHistory = combatHistories[selectedGirlId] || [];
+
+    // AI教练 with girl — 内联聊天面板
+    const GirlCoachChatPanel = () => (
+      <>
+        <Box flex="1" minH="0" display="flex" flexDirection="column" bg="gray.800" borderRadius="md" mb={2} overflow="hidden">
+          <Box id="chat-scroll-container" flex="1" overflowY="auto" p={4} ref={scrollContainerRef}>
+            {/* 女生分析内容 */}
+            {girlAnalysisLoading ? (
+              <Flex justify="flex-start" mb={4}>
+                <HStack bg="gray.700" px={4} py={3} borderRadius="2xl" spacing={2}>
+                  {[0, 150, 300].map((delay) => (
+                    <Box key={delay} w="8px" h="8px" bg="teal.400" borderRadius="full"
+                      animation={`bounce 1.4s infinite ease-in-out ${delay}ms`}
+                      sx={{ '@keyframes bounce': { '0%,80%,100%': { transform: 'scale(0)' }, '40%': { transform: 'scale(1)' } } }}
+                    />
+                  ))}
+                  <Text color="gray.400" fontSize="sm">正在分析{selectedGirl?.name || '女生'}...</Text>
+                </HStack>
+              </Flex>
+            ) : girlAnalysisContent ? (
+              <Flex justify="flex-start" mb={4}>
+                <HStack align="flex-start" spacing={3}>
+                  <Avatar size="sm" bg="teal.500" icon={<span>🤖</span>} />
+                  <Box bg="gray.700" px={4} py={3} borderRadius="2xl" borderTopLeftRadius="sm" maxW="90%">
+                    <Box fontSize="13px" lineHeight="1.7" color="gray.100">
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          strong: ({ children }) => <Text as="strong" color="teal.300" fontWeight="bold">{children}</Text>,
+                          p: ({ children }) => <Text mb={2}>{children}</Text>,
+                          ul: ({ children }) => <Text as="ul" pl={4} mb={2}>{children}</Text>,
+                          li: ({ children }) => <Text as="li" mb={1}>{children}</Text>,
+                        }}
+                      >{girlAnalysisContent}</ReactMarkdown>
+                    </Box>
+                  </Box>
+                </HStack>
+              </Flex>
+            ) : (
+              <VStack spacing={4} py={8} justify="center" minH="200px">
+                <Text color="gray.400" textAlign="center">
+                  围绕{selectedGirl?.name || '女生'}的情况，向我提问
+                </Text>
+                <Wrap spacing={2} justify="center">
+                  {QUICK_QUESTIONS.map((q, i) => (
+                    <WrapItem key={i}>
+                      <Button size="sm" variant="outline" colorScheme="teal"
+                        onClick={() => handleSubmitInternal(q)} isDisabled={loading}>
+                        {q}
+                      </Button>
+                    </WrapItem>
+                  ))}
+                </Wrap>
+              </VStack>
+            )}
+
+            {/* 思考过程（在回答之前） */}
+            {reasoningContent && (
+              <ReasoningDisclosure
+                content={reasoningContent}
+                isLoading={loading && !messages[messages.length - 1]?.content}
+              />
+            )}
+            {/* 后续对话消息（在分析之后） */}
+            {messages.length > 0 && messages.map((message) => (
+              <MessageBubble
+                key={message.id}
+                message={message}
+                onCopy={handleCopy}
+                onRegenerate={handleRegenerate}
+                onHelpful={handleHelpful}
+                isStreaming={loading && message.id === messages[messages.length - 1]?.id && !message.content}
+                copiedId={copiedId}
+                helpfulId={helpfulId}
+              />
+            ))}
+            {loading && messages.length > 0 && messages[messages.length - 1]?.role === 'user' && (
+              <Flex justify="flex-start" mb={4}>
+                <HStack bg="gray.700" px={4} py={3} borderRadius="2xl" spacing={2}>
+                  {[0, 150, 300].map((delay) => (
+                    <Box key={delay} w="8px" h="8px" bg="teal.400" borderRadius="full"
+                      animation={`bounce 1.4s infinite ease-in-out ${delay}ms`}
+                      sx={{ '@keyframes bounce': { '0%,80%,100%': { transform: 'scale(0)' }, '40%': { transform: 'scale(1)' } } }}
+                    />
+                  ))}
+                  <Text color="gray.400" fontSize="sm">{thinkingLabel || 'AI 教练分析中...'}</Text>
+                </HStack>
+              </Flex>
+            )}
+            {error && (
+              <Box mt={4} p={3} bg="red.900" borderRadius="md">
+                <Text color="red.200">{error}</Text>
+              </Box>
+            )}
+            <div ref={messagesEndRef} style={{ height: 1 }} />
+          </Box>
+        </Box>
+        <InputArea
+          onSubmit={handleSubmitInternal}
+          loading={loading}
+          deepMode={deepMode}
+          onNewConversation={handleNewConversation}
+          placeholder={`向 AI 教练提问${selectedGirl ? '（围绕' + selectedGirl.name + '）' : ''}...`}
+          showNewConvBtn={false}
+        />
+      </>
+    );
+
+    return (
+      <Box display="flex" flexDirection="column" h={{ base: 'calc(100vh - 96px)', lg: 'calc(100vh - 48px)' }} overflow="hidden">
+        {/* Header */}
+        <Flex justify="space-between" align="center" mb={2} flexShrink={0} gap={3} wrap="wrap">
+          <Heading color="white" size="md" whiteSpace="nowrap">AI教练</Heading>
+          <HStack spacing={2} flexShrink={0}>
+            <Select
+              value={selectedGirlId}
+              onChange={e => handleGirlChange(e.target.value)}
+              bg="gray.700" border="none" color="white" size="sm" maxW="180px" borderRadius="md"
+              placeholder="关联女生"
+            >
+              {(girls || []).map(g => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+            </Select>
+            <Tooltip label={deepMode ? '深度分析：调用工具链，全面分析' : '快速分析：流式输出，快'}>
+              <button type="button" onClick={handleDeepModeToggle}
+                style={{
+                  background: deepMode ? '#553c9a' : '#374151',
+                  border: deepMode ? '1px solid #805ad5' : '1px solid transparent',
+                  borderRadius: '6px', padding: '6px 10px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  color: deepMode ? '#d6bcfa' : '#a0aec0', whiteSpace: 'nowrap'
+                }}>
+                <span style={{ fontSize: '14px' }}><SparklesIcon /></span>
+                <span style={{ fontSize: '11px', fontWeight: 'bold' }}>{deepMode ? '深度' : '快速'}</span>
+              </button>
+            </Tooltip>
+            {selectedGirl && (
+              <HStack bg="gray.700" px={2} py={1} borderRadius="md" spacing={2} flexShrink={0}>
+                <Badge colorScheme={STAGE_COLORS[selectedGirl.stage] || 'gray'} fontSize="xs">
+                  {selectedGirl.stage || '未知'}
+                </Badge>
+                <Text fontSize="xs" color={selectedGirl.tensionScore >= 5 ? 'orange.400' : 'blue.400'} fontWeight="bold">
+                  {selectedGirl.tensionScore?.toFixed(1) || '5.0'}
+                </Text>
+              </HStack>
+            )}
+          </HStack>
+        </Flex>
+
+        {/* Main: Left (Tabs) + Right (Context) */}
+        <Flex flex="1" minH="0" overflow="hidden" gap={0}>
+          {/* Left side */}
+          <Box flex="1" minW="0" display="flex" flexDirection="column">
+            <Tabs
+              variant="soft-rounded" colorScheme="teal"
+              index={activeTabIndex} onChange={setActiveTabIndex}
+              sx={{ display: 'flex', flexDirection: 'column', flex: 1, minH: 0, overflow: 'hidden' }}
+            >
+              <TabList bg="gray.800" borderRadius="lg" p={1} flexShrink={0}>
+                <Tab color="gray.400" _selected={{ color: 'white', bg: 'teal.600' }} fontSize="sm">
+                  🤖 AI教练
+                </Tab>
+                <Tab color="gray.400" _selected={{ color: 'white', bg: 'teal.600' }} fontSize="sm">
+                  💬 聊天实战
+                </Tab>
+              </TabList>
+
+              <TabPanels sx={{ display: 'flex', flex: 1, minH: 0 }}>
+                <TabPanel px={0} py={2} sx={{ display: 'flex', flexDirection: 'column', flex: 1, minH: 0, overflow: 'hidden' }}>
+                  <Box flex="1" minH="0" display="flex" flexDirection="column" overflow="hidden">
+                    <GirlCoachChatPanel />
+                  </Box>
+                </TabPanel>
+                <TabPanel px={0} py={2} sx={{ display: 'flex', flexDirection: 'column', flex: 1, minH: 0, overflow: 'hidden' }}>
+                  <Box flex="1" minH="0" display="flex" flexDirection="column" overflow="hidden">
+                    <CombatChatPanel
+                      history={currentCombatHistory}
+                      suggestions={combatSuggestions}
+                      selectedIndex={selectedSuggestionIndex}
+                      onSelect={handleSelectSuggestion}
+                      onRegenerate={handleRegenerateSuggestions}
+                      onDismissAll={handleDismissAllSuggestions}
+                      onSendDirect={handleSendDirect}
+                      loading={combatLoading}
+                      girlName={selectedGirl?.name}
+                      combatMode={combatMode}
+                    />
+                    <CombatInputBar
+                      mode={combatMode}
+                      onModeChange={handleCombatModeChange}
+                      value={combatInput}
+                      onChange={setCombatInput}
+                      onSubmit={handleCombatSend}
+                      loading={combatLoading}
+                      girlName={selectedGirl?.name}
+                    />
+                  </Box>
+                </TabPanel>
+              </TabPanels>
+            </Tabs>
+          </Box>
+
+          {/* Right side: Context panel */}
+          <GirlContextSidebar girl={selectedGirl} analysisContent={girlAnalysisContent} />
+        </Flex>
+      </Box>
+    );
+  }
+
+  // ====== State 1: 通用咨询 — 3 Tab 布局（保持现有行为）======
+
   // Tab 1: AI教练（多轮对话）
-  // 注意：不使用 memo，因为需要确保 ref 和状态更新正确同步
   const AICoachPanel = () => (
     <>
       {/* 会话选择栏 */}
@@ -1160,6 +2001,13 @@ export default function AICoach() {
             </VStack>
           ) : (
             <>
+              {/* 思考过程（在回答之前） */}
+              {reasoningContent && (
+                <ReasoningDisclosure
+                  content={reasoningContent}
+                  isLoading={loading && !messages[messages.length - 1]?.content}
+                />
+              )}
               {messages.map((message) => (
                 <MessageBubble
                   key={message.id}
@@ -1191,7 +2039,7 @@ export default function AICoach() {
                         }}
                       />
                     ))}
-                    <Text color="gray.400" fontSize="sm">思考中...</Text>
+                    <Text color="gray.400" fontSize="sm">{thinkingLabel || 'AI 教练分析中...'}</Text>
                   </HStack>
                 </Flex>
               )}
@@ -1256,7 +2104,7 @@ export default function AICoach() {
         </HStack>
       </Flex>
 
-      <Tabs variant="soft-rounded" colorScheme="teal" display="flex" flexDirection="column" flex="1" minH="0" overflow="hidden">
+      <Tabs variant="soft-rounded" colorScheme="teal" sx={{ display: 'flex', flexDirection: 'column', flex: 1, minH: 0, overflow: 'hidden' }}>
         <TabList bg="gray.800" borderRadius="lg" p={1} flexShrink={0}>
           <Tab color="gray.400" _selected={{ color: 'white', bg: 'teal.600' }} fontSize="sm">
             🤖 AI教练
@@ -1269,14 +2117,16 @@ export default function AICoach() {
           </Tab>
         </TabList>
 
-        <TabPanels display="flex" flex="1" minH="0">
-          <TabPanel px={0} py={2} display="flex" flexDirection="column" flex="1" minH="0" overflow="hidden">
-            <AICoachPanel />
+        <TabPanels sx={{ display: 'flex', flex: 1, minH: 0 }}>
+          <TabPanel px={0} py={2} sx={{ display: 'flex', flexDirection: 'column', flex: 1, minH: 0, overflow: 'hidden' }}>
+            <Box flex="1" minH="0" display="flex" flexDirection="column" overflow="hidden">
+              <AICoachPanel />
+            </Box>
           </TabPanel>
-          <TabPanel px={0} pt={4}>
+          <TabPanel px={0} pt={4} overflowY="auto">
             <ReplySuggestionsPanel apiUrl={apiUrl} selectedGirlId={selectedGirlId} toast={toast} />
           </TabPanel>
-          <TabPanel px={0} pt={4}>
+          <TabPanel px={0} pt={4} overflowY="auto">
             <OptimizeReplyPanel apiUrl={apiUrl} selectedGirlId={selectedGirlId} toast={toast} />
           </TabPanel>
         </TabPanels>

@@ -11,20 +11,13 @@ if (!JWT_SECRET) {
   console.warn('[Config] JWT_SECRET 未设置，使用临时密钥（仅开发环境）');
 }
 
-// AI Provider
-const AI_PROVIDER = process.env.AI_PROVIDER || 'dashscope';
-
-// 智谱AI
-const ZHIPU_API_KEY = process.env.ZHIPUAI_API_KEY;
-const ZHIPU_API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
-
-// 通义千问
-const DASHSCOPE_API_KEY = process.env.DASH_SCOPE_API_KEY;
-const DASHSCOPE_API_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
-
-// DeepSeek
+// DeepSeek（文本 AI 唯一提供商）
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions';
+
+// 通义千问（仅用于 VL 图片分析）
+const DASHSCOPE_API_KEY = process.env.DASH_SCOPE_API_KEY;
+const DASHSCOPE_API_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
 
 // 端口
 const PORT = parseInt(process.env.PORT, 10) || 3005;
@@ -32,31 +25,20 @@ const PORT = parseInt(process.env.PORT, 10) || 3005;
 // 服务器基础URL（用于生成完整图片URL）
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 
-function getAIConfig() {
-  // 优先使用 DeepSeek
-  if (DEEPSEEK_API_KEY) {
-    return {
-      url: DEEPSEEK_API_URL,
-      key: DEEPSEEK_API_KEY,
-      model: 'deepseek-v4-pro'
-    };
+/**
+ * 获取文本 AI 配置
+ * @param {'pro'|'flash'} mode - pro=深度模式, flash=快速模式
+ */
+function getAIConfig(mode = 'pro') {
+  if (!DEEPSEEK_API_KEY) {
+    console.error('[Config] DEEPSEEK_API_KEY 未设置，AI 功能将不可用');
+    return null;
   }
-  if (AI_PROVIDER === 'dashscope' && DASHSCOPE_API_KEY) {
-    // 使用 qwen3.6-flash 收费模型
-    return {
-      url: DASHSCOPE_API_URL,
-      key: DASHSCOPE_API_KEY,
-      model: 'qwen3.6-flash'
-    };
-  }
-  if (ZHIPU_API_KEY) {
-    return {
-      url: ZHIPU_API_URL,
-      key: ZHIPU_API_KEY,
-      model: 'glm-4'
-    };
-  }
-  return null;
+  return {
+    url: DEEPSEEK_API_URL,
+    key: DEEPSEEK_API_KEY,
+    model: mode === 'flash' ? 'deepseek-chat' : 'deepseek-v4-pro'
+  };
 }
 
 function getVLModelConfig() {
@@ -65,7 +47,7 @@ function getVLModelConfig() {
     return {
       url: DASHSCOPE_API_URL,
       key: DASHSCOPE_API_KEY,
-      model: 'qwen-vl-plus'
+      model: 'qwen3-vl-plus'
     };
   }
   return null;
@@ -73,13 +55,10 @@ function getVLModelConfig() {
 
 module.exports = {
   JWT_SECRET,
-  AI_PROVIDER,
-  ZHIPU_API_KEY,
-  ZHIPU_API_URL,
-  DASHSCOPE_API_KEY,
-  DASHSCOPE_API_URL,
   DEEPSEEK_API_KEY,
   DEEPSEEK_API_URL,
+  DASHSCOPE_API_KEY,
+  DASHSCOPE_API_URL,
   PORT,
   BASE_URL,
   getAIConfig,

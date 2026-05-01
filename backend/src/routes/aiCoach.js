@@ -17,7 +17,7 @@ const crypto = require('crypto');
 const { buildAICoachContext } = require('../services/contextBuilder');
 const { buildMasterPrompt, getSkillsForQuestion, getMultiDimensionalSkillsWithMeta } = require('../coaches');
 const { chatWithTools, toolDefinitions } = require('../services/coach-engine');
-const { getOrCreateSession, addMessage, getConversationHistory, listSessions, getClientSessions, getSystemStats, getSessionDetail, addFeedback, getFeedbackStats, endSession } = require('../services/memory');
+const { getOrCreateSession, addMessage, removeLastAssistantMessage, getConversationHistory, listSessions, getClientSessions, getSystemStats, getSessionDetail, addFeedback, getFeedbackStats, endSession } = require('../services/memory');
 const { streamGuardrails, runGuardrails, stripMarkdown, estimateTokens: guardEstimateTokens, createChunkDeduplicator } = require('../services/guardrails');
 const { runInputGuardrails } = require('../guardrails/input');
 const { triage } = require('../agents');
@@ -142,7 +142,7 @@ function calcContextBudget(coachSystemPrompt, situation, historyText) {
  * @returns {Promise<void>}
  */
 async function callAIStream(aiConfig, params, opts = {}) {
-  const { onChunk, onMeta, onDone, onError, deduplicator } = opts;
+  const { onChunk, onMeta, onDone, onError, onReasoning, deduplicator } = opts;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     if (attempt > 0) {
@@ -169,7 +169,7 @@ async function callAIStream(aiConfig, params, opts = {}) {
       }
 
       onMeta?.();
-      await processStreamResponse(response, { deduplicator, onChunk, onDone, onError });
+      await processStreamResponse(response, { deduplicator, onChunk, onReasoning, onDone, onError });
       return;
     } catch (err) {
       logger.error(`[AICoach] 流式调用异常 (attempt ${attempt + 1}): ${err.message}`, { attempt, error: err.message });
@@ -182,12 +182,12 @@ async function callAIStream(aiConfig, params, opts = {}) {
 
 /**
  * 通用流式读取循环（复用：situation / moment / overview / client-pool / girl-summary）
- * 包含：Guardrails 过滤 + Markdown strip + Chunk 去重
+ * 包含：思考过程处理 + Guardrails 过滤 + Markdown strip + Chunk 去重
  * @param {Response} response - fetch Response 对象
- * @param {object} opts - { deduplicator, onChunk, onDone, onError }
+ * @param {object} opts - { deduplicator, onChunk, onReasoning, onDone, onError }
  */
 async function processStreamResponse(response, opts = {}) {
-  const { deduplicator, onChunk, onDone, onError } = opts;
+  const { deduplicator, onChunk, onReasoning, onDone, onError } = opts;
 
   try {
     const reader = response.body.getReader();
@@ -208,7 +208,22 @@ async function processStreamResponse(response, opts = {}) {
           if (data === '[DONE]') { onDone?.(); return; }
           try {
             const parsed = JSON.parse(data);
-            let content = parsed.choices?.[0]?.delta?.content || '';
+            const delta = parsed.choices?.[0]?.delta || {};
+
+            // 检测截断
+            const finishReason = parsed.choices?.[0]?.finish_reason;
+            if (finishReason === 'length') {
+              logger.warn('[AICoach] 响应被 max_tokens 截断，需增大限制');
+            }
+
+            // DeepSeek 思考模式：reasoning_content 先于 content 到达
+            const reasoning = delta.reasoning_content || '';
+            if (reasoning) {
+              onReasoning?.(reasoning);
+              continue;
+            }
+
+            let content = delta.content || '';
             if (!content) continue;
 
             // Guardrails: 过滤大师名字
@@ -217,10 +232,6 @@ async function processStreamResponse(response, opts = {}) {
               logger.warn(`[Guardrails] ${guardResult.reason}，已过滤`, { reason: guardResult.reason });
               content = guardResult.filtered;
             }
-            if (!content) continue;
-
-            // Markdown 彻底清理（服务端 strip，不依赖 prompt 约束）
-            content = stripMarkdown(content);
             if (!content) continue;
 
             // Chunk 去重
@@ -368,6 +379,12 @@ router.post('/situation', authMiddleware, async (req, res) => {
 
     // 使用 contextBuilder 获取上下文（带预算感知）
     const { memory: sessionMemory } = await getOrCreateSession(req.user.id, unifiedCoachId, girlId);
+
+    // 重新生成：先移除旧助手回复，再构建上下文（否则旧回复仍会出现在新请求的上下文中）
+    if (req.body.regenerate) {
+      await removeLastAssistantMessage(sessionMemory.id);
+    }
+
     const history = await getConversationHistory(sessionMemory.id);
 
     // 构建对话历史文本（用于预算计算）
@@ -422,52 +439,30 @@ router.post('/situation', authMiddleware, async (req, res) => {
     const personaSection = await buildFullPersona({ clientProfile, clientId: req.user.id, girlId });
     const systemPrompt = basePrompt + buildPersonaSection(personaSection);
 
-    const aiConfig = getAIConfig();
+    const aiConfig = getAIConfig('pro'); // 默认使用深度模式（deepseek-v4-pro + thinking）
 
-    // ---- 输入 Guardrail 检查 ----
+    // ---- 输入 Guardrail 检查（仅深度模式） ----
     let guardrailPassed = true;
     let guardrailResults = [];
-    try {
-      const { passed, results, reason } = await runInputGuardrails(situation);
-      guardrailPassed = passed;
-      guardrailResults = results;
-      if (!passed) {
-        // 拦截不相关或可疑输入
-        if (stream) {
-          res.setHeader('Content-Type', 'text/event-stream');
-          res.setHeader('Cache-Control', 'no-cache');
-          res.setHeader('Connection', 'keep-alive');
-          res.setHeader('X-Accel-Buffering', 'no');
-          res.flushHeaders();
-          const failedCheck = results.find(r => !r.passed);
-          res.write(`data: ${JSON.stringify({
-            meta: {
-              guardrail: {
-                name: failedCheck?.name || 'unknown',
-                passed: false,
-                reason: reason || '输入检查未通过'
-              }
-            }
-          })}\n\n`);
-          res.write(`data: ${JSON.stringify({ content: '抱歉，我无法回答与情感咨询无关的问题。请描述一下你遇到的情况～' })}\n\n`);
-          res.write('data: [DONE]\n\n');
-          res.end();
-        } else {
-          res.json({ success: false, error: reason || '输入检查未通过', guardrailFailed: true });
+    if (!stream) {
+      try {
+        const { passed, results, reason } = await runInputGuardrails(situation);
+        guardrailPassed = passed;
+        guardrailResults = results;
+        if (!passed) {
+          logGuardrailCheck(situation, req.user.id, unifiedCoachId, girlId, '/situation').catch(() => {});
+          return res.json({ success: false, error: reason || '输入检查未通过', guardrailFailed: true });
         }
-        // 异步记录日志
         logGuardrailCheck(situation, req.user.id, unifiedCoachId, girlId, '/situation').catch(() => {});
-        return;
+      } catch (err) {
+        logger.warn(`[situation] Guardrail 检查异常: ${err.message}`, { error: err.message });
       }
-      // 异步记录（成功不阻塞响应）
-      logGuardrailCheck(situation, req.user.id, unifiedCoachId, girlId, '/situation').catch(() => {});
-    } catch (err) {
-      logger.warn(`[situation] Guardrail 检查异常: ${err.message}`, { error: err.message });
-      // Guardrail 异常时降级放行
     }
 
-    // 添加用户消息到记忆（在prompt构建之后）
-    await addMessage(sessionMemory.id, 'user', situation);
+    // 正常模式：添加用户消息到记忆（重新生成时用户消息已存在，不重复添加）
+    if (!req.body.regenerate) {
+      await addMessage(sessionMemory.id, 'user', situation);
+    }
 
     // 流式模式
     if (stream) {
@@ -492,14 +487,20 @@ router.post('/situation', authMiddleware, async (req, res) => {
         }
       }
 
+      const streamParams = {
+        messages: [{ role: 'user', content: systemPrompt }],
+        temperature: 0.7,
+        max_tokens: 16000,
+        stream: true
+      };
+      // deepseek-v4-pro 启用思考过程（deepseek-chat 不支持）
+      if (aiConfig.model === 'deepseek-v4-pro') {
+        streamParams.thinking = { type: 'enabled' };
+      }
+
       await callAIStream(
         aiConfig,
-        {
-          messages: [{ role: 'user', content: systemPrompt }],
-          temperature: 0.7,
-          max_tokens: 4000,
-          stream: true
-        },
+        streamParams,
         {
           deduplicator,
           onMeta: () => {
@@ -514,6 +515,10 @@ router.post('/situation', authMiddleware, async (req, res) => {
               }));
             }
             res.write(`data: ${JSON.stringify({ meta })}\n\n`);
+          },
+          onReasoning: (reasoning) => {
+            logger.info(`[AICoach] 思考过程 chunk: ${reasoning.length} 字符`);
+            res.write(`data: ${JSON.stringify({ reasoning })}\n\n`);
           },
           onChunk: (content) => {
             res.write(`data: ${JSON.stringify({ content })}\n\n`);
@@ -789,7 +794,6 @@ ${historyText}
 
 ${girlContextInfo}
 ${stageContext}
-${clientProfile ? buildPersonaSection(await buildDynamicPersona({ clientProfile, clientId: null })) : ''}
 
 请按以下10个维度输出 JSON 分析结果，直接写字段名和值：
 1. userIntention：用户意图
@@ -992,7 +996,6 @@ ${fullContext.pendingActions.length > 0
 
 ${girlContextInfo}
 ${stageContext}
-${clientProfile ? buildPersonaSection(await buildDynamicPersona({ clientProfile, clientId: null })) : ''}
 【对方最后一条消息】
 ${lastMessage}
 
@@ -1016,25 +1019,7 @@ ${styleOptions}
 
 只输出 JSON，不要其他内容。`;
 
-    // ---- 输入 Guardrail 检查 ----
-    try {
-      const { passed, results, reason } = await runInputGuardrails(lastMessage);
-      if (!passed) {
-        const failedCheck = results.find(r => !r.passed);
-        logGuardrailCheck(lastMessage, req.user.id, unifiedCoachId, girlId, '/reply-suggestions').catch(() => {});
-        return res.status(400).json({
-          success: false,
-          error: reason || '输入检查未通过',
-          guardrailFailed: true,
-          guardrailMeta: { name: failedCheck?.name, reason }
-        });
-      }
-      logGuardrailCheck(lastMessage, req.user.id, unifiedCoachId, girlId, '/reply-suggestions').catch(() => {});
-    } catch (err) {
-      logger.warn(`[reply-suggestions] Guardrail 检查异常: ${err.message}`, { error: err.message });
-    }
-
-    const aiConfig = getAIConfig();
+    const aiConfig = getAIConfig('flash');
     const response = await fetch(aiConfig.url, {
       method: 'POST',
       headers: {
@@ -1175,7 +1160,6 @@ router.post('/optimize-reply', authMiddleware, async (req, res) => {
 聊天禁忌：${(personality?.thingsToAvoid || []).join('、') || '暂无'}
 喜欢话题：${(personality?.talkingTopics || []).join('、') || '未知'}
 ${stageContext}
-${clientProfile ? buildPersonaSection(await buildDynamicPersona({ clientProfile, clientId: null })) : ''}
 
 【原始回复】
 "${originalReply}"
@@ -1207,25 +1191,7 @@ ${goal ? `用户指定了优化方向「${goal}」，请按该方向优化。` :
 
 只输出 JSON，不要其他内容。`;
 
-    // ---- 输入 Guardrail 检查 ----
-    try {
-      const { passed, results, reason } = await runInputGuardrails(originalReply);
-      if (!passed) {
-        const failedCheck = results.find(r => !r.passed);
-        logGuardrailCheck(originalReply, req.user.id, unifiedCoachId, girlId, '/optimize-reply').catch(() => {});
-        return res.status(400).json({
-          success: false,
-          error: reason || '输入检查未通过',
-          guardrailFailed: true,
-          guardrailMeta: { name: failedCheck?.name, reason }
-        });
-      }
-      logGuardrailCheck(originalReply, req.user.id, unifiedCoachId, girlId, '/optimize-reply').catch(() => {});
-    } catch (err) {
-      logger.warn(`[optimize-reply] Guardrail 检查异常: ${err.message}`, { error: err.message });
-    }
-
-    const aiConfig = getAIConfig();
+    const aiConfig = getAIConfig('flash');
     const response = await fetch(aiConfig.url, {
       method: 'POST',
       headers: {
@@ -1546,7 +1512,6 @@ ${contentDesc}
 第五段：如果信息不够，直接说还缺什么，追问1个关键问题
 
 ${stageContext}
-${clientProfile ? buildPersonaSection(await buildDynamicPersona({ clientProfile, clientId: null })) : ''}
 `;
 
     // ---- 输入 Guardrail 检查 ----

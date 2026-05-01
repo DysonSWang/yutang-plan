@@ -11,10 +11,18 @@ const client = new OSS({
   bucket: process.env.OSS_BUCKET || 'zhuiai-media',
 });
 
+const MULTIPART_THRESHOLD = 5 * 1024 * 1024; // 5MB 以上用分片上传
+
 /**
- * 上传 Buffer 到 OSS
+ * 上传 Buffer 到 OSS（小文件单次 PUT，大文件分片并发上传）
  */
 async function uploadBuffer(key, buffer, options = {}) {
+  if (buffer.length > MULTIPART_THRESHOLD) {
+    return await client.multipartUpload(key, buffer, {
+      partSize: 1024 * 1024, // 每片 1MB
+      ...options,
+    });
+  }
   return await client.put(key, buffer, options);
 }
 
@@ -23,11 +31,7 @@ async function uploadBuffer(key, buffer, options = {}) {
  */
 async function downloadBuffer(key) {
   const result = await client.get(key);
-  const chunks = [];
-  for await (const chunk of result.content) {
-    chunks.push(chunk);
-  }
-  return Buffer.concat(chunks);
+  return Buffer.isBuffer(result.content) ? result.content : Buffer.from(result.content);
 }
 
 /**

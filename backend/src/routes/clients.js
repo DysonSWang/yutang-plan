@@ -12,7 +12,7 @@ const fs = require('fs');
 
 const { JWT_SECRET, getAIConfig, BASE_URL } = require('../config');
 const prisma = require('../prisma');
-const { extractFromImage } = require('../services/signalExtractor');
+const { callVisionModel } = require('../services/profileEngine');
 
 // 截图上传目录
 const SCREENSHOT_DIR = path.join(__dirname, '../../uploads/chat-screenshots');
@@ -360,12 +360,13 @@ router.post('/', authMiddleware, async (req, res) => {
 // 更新客户信息
 // 客户可编辑的字段（用于自我更新）
 const CLIENT_EDITABLE_FIELDS = [
-  'nickname', 'phone', 'age', 'occupation', 'education', 'income', 'height',
+  'nickname', 'phone', 'age', 'occupation', 'education', 'income', 'height', 'weight',
   'residence', 'hometown', 'appearance', 'dressingStyle',
   'familyBackground', 'familyStructure', 'familyAtmosphere',
   'personality', 'communicationStyle', 'socialStyle',
   'relationshipAttitude', 'marriageHistory', 'emotionalGoal',
-  'relationshipGoal', 'profileBio', 'avatar'
+  'relationshipGoal', 'profileBio',
+  'humorStyle', 'strengths', 'weaknesses', 'matchPreferences', 'dateTaboos'
 ];
 
 router.put('/:id', authMiddleware, async (req, res) => {
@@ -466,13 +467,40 @@ router.put('/:id', authMiddleware, async (req, res) => {
     if (data.source !== undefined) updateData.source = data.source;
     if (data.serviceStartDate !== undefined) updateData.serviceStartDate = data.serviceStartDate;
 
-    // 将空字符串转换为 null，避免 Prisma Int 字段类型错误
-    const numericFields = ['age', 'height', 'trustLevel', 'interactionHeat', 'balance',
-      'empathy', 'communication', 'conflictRes',
+    // 数值字段处理
+    // 可空整数字段：空字符串/undefined → null，字符串数字 → 整数
+    const nullableInt = ['age', 'height', 'empathy', 'communication', 'conflictRes',
       'emotionalMaturityLevel', 'coachCooperationLevel'];
-    for (const field of numericFields) {
-      if (updateData[field] === '') {
+    for (const field of nullableInt) {
+      if (updateData[field] === '' || updateData[field] === null || updateData[field] === undefined) {
         updateData[field] = null;
+      } else if (typeof updateData[field] === 'string') {
+        const parsed = parseInt(updateData[field], 10);
+        if (!isNaN(parsed)) updateData[field] = parsed;
+      }
+    }
+    // 可空浮点字段
+    const nullableFloat = ['weight'];
+    for (const field of nullableFloat) {
+      if (updateData[field] === '' || updateData[field] === null || updateData[field] === undefined) {
+        updateData[field] = null;
+      } else if (typeof updateData[field] === 'string') {
+        const parsed = parseFloat(updateData[field]);
+        if (!isNaN(parsed)) updateData[field] = parsed;
+      }
+    }
+    // 不可空字段（有 @default）：未提供时删除，不要设为 null
+    const nonNullNumeric = ['trustLevel', 'interactionHeat', 'balance'];
+    for (const field of nonNullNumeric) {
+      if (updateData[field] === undefined || updateData[field] === null) {
+        delete updateData[field];
+      } else if (updateData[field] === '') {
+        delete updateData[field];
+      } else if (typeof updateData[field] === 'string') {
+        const parsed = field === 'interactionHeat' || field === 'balance'
+          ? parseFloat(updateData[field])
+          : parseInt(updateData[field], 10);
+        if (!isNaN(parsed)) updateData[field] = parsed;
       }
     }
 
@@ -520,100 +548,68 @@ router.post('/extract-profile', authMiddleware, async (req, res) => {
     }
 
     // 调用 AI 提取档案信息
-    const aiConfig = getAIConfig();
-    const extractPrompt = `你是一个客户档案信息提取专家。请从以下客户自我介绍文本中提取关键信息，生成结构化的档案字段。
+    const aiConfig = getAIConfig('flash');
+    const extractPrompt = `从以下客户自我介绍中提取档案信息，直接输出JSON（不要markdown代码块，不要其他文字）。
 
-【提取要求】
-1. 严格按照提供的选项值提取或推断
-2. 如果某项信息文本中未提及，填入空字符串
-3. 年龄用数字，婚姻状况用选项中的英文标签
-4. 所有文本字段用中文
+【规则】
+1. 有选项的字段必须从可选值中选择，不要自己编
+2. 数字字段填数字字符串如"7"，不要文字
+3. 文本中未提及的字段填空字符串""
 
-【可选值】
-- education: 小学/初中/中专/高中/大专/本科/硕士/博士
-- income: 10万以下/10-30万/30-50万/50-100万/100-300万/300万以上
-- familyBackground: 农村/城市/经商/公务员/其他
-- familyStructure: 双亲/单亲/离异/其他
-- familyAtmosphere: 和睦/一般/冷淡/争吵/离异
-- personality: INTJ/INTP/ENTJ/ENTP/INFJ/INFP/ENFJ/ENFP/ISTJ/ISFJ/ESTJ/ESFJ/ISTP/ISFP/ESTP/ESFP/其他
-- emotionalStable: 1-10的数字
-- eqLevel: 1-10的数字
-- communicationStyle: 直接/含蓄/话多/话少/幽默
-- socialStyle: 主动/被动/社交达人
-- relationshipAttitude: 认真/随便/急切
-- marriageHistory: 未婚/离异无子/离异有子/丧偶
-- emotionalGoal: 认真找对象/随便玩玩/家里催婚/空虚寂寞
-- relationshipGoal: 短期/长期/不确定
-- emotionalMaturity: 幼稚/一般/成熟
-- emotionalMaturityLevel: 1-10的数字（根据文字描述推断：幼稚=1-3，一般=4-6，成熟=7-10）
-- learningAbility: 强/中/弱
-- coachCooperation: 配合/一般/抵触
-- coachCooperationLevel: 1-10的数字（配合=7-10，一般=4-6，抵触=1-3）
-- assetsLevel: A6/A7/A8/A9/A10/A10+
-- clientType: 执行型/质疑型/自主型
-- humorStyle: 冷幽默/自嘲/调侃/正经
-- selfEsteemLevel: 高/中/低
-- pacePreference: 快节奏/稳健型/慢热型
-- residence: 北京/上海/广州/深圳/杭州/南京/苏州/成都/重庆/武汉/西安/天津/长沙/郑州/东莞/佛山/青岛/沈阳/大连/厦门/宁波/其他
-- occupation: 企业主/企业高管/公务员/医生/律师/教师/工程师/程序员/销售/金融从业者/自由职业/退休/其他
-- attachmentStyle: 焦虑型/回避型/安全型（根据文字描述推断）
-- empathy: 1-10的数字
-- communication: 1-10的数字
-- conflictRes: 1-10的数字
-- loveStyle: 真诚型/陪伴型/言语型/身体型/浪漫型
-- moneyDatingPattern: AA/请客/轮流/看情况
-- appearanceSelfAssessment: 根据外貌描述推断颜值区间，如"中等偏上"/"普通"/"帅气"/"其貌不扬"
-- appearanceSelfRequirement: 对女生颜值的要求，如"中等即可"/"要漂亮的"/"不看重外表"
-- dateTaboos: 约会雷区，如"不能太快"/"不能AA"/"不能问职业"
+【字段与可选值】
+age: 数字（从出生年份推算当前年龄，当前2026年）
+height: 数字(cm)
+weight: 数字(kg)
+residence: 城市名（优先从列表选：北京/上海/广州/深圳/杭州/南京/苏州/成都/重庆/武汉/西安/天津/长沙/郑州/东莞/佛山/青岛/沈阳/大连/厦门/宁波，不在列表则填实际城市）
+hometown: 城市名
+occupation: 企业主/企业高管/公务员/医生/律师/教师/工程师/程序员/销售/金融从业者/自由职业/退休/其他
+education: 小学/初中/中专/高中/大专/本科/硕士/博士
+income: 10万以下/10-30万/30-50万/50-100万/100-300万/300万以上
+personality: INTJ/INTP/ENTJ/ENTP/INFJ/INFP/ENFJ/ENFP/ISTJ/ISFJ/ESTJ/ESFJ/ISTP/ISFP/ESTP/ESFP/其他（根据性格描述推断最匹配的MBTI）
+familyBackground: 农村/城市/经商/公务员/其他
+familyStructure: 双亲/单亲/离异/其他
+familyAtmosphere: 和睦/一般/冷淡/争吵/离异
+marriageHistory: 未婚/离异无子/离异有子/丧偶
+emotionalGoal: 认真找对象/随便玩玩/家里催婚/空虚寂寞
+relationshipGoal: 短期/长期/不确定
+relationshipAttitude: 认真/随便/急切
+communicationStyle: 直接/含蓄/话多/话少/幽默
+socialStyle: 主动/被动/社交达人
+emotionalStable: 1-10数字
+eqLevel: 1-10数字
+emotionalMaturity: 幼稚/一般/成熟
+emotionalMaturityLevel: 1-10数字（幼稚1-3/一般4-6/成熟7-10）
+learningAbility: 强/中/弱
+coachCooperation: 配合/一般/抵触
+coachCooperationLevel: 1-10数字（配合7-10/一般4-6/抵触1-3）
+attachmentStyle: 焦虑型/回避型/安全型
+loveStyle: 真诚型/陪伴型/言语型/身体型/浪漫型
+moneyDatingPattern: AA/请客/轮流/看情况
+humorStyle: 冷幽默/自嘲/调侃/正经
+selfEsteemLevel: 高/中/低
+pacePreference: 快节奏/稳健型/慢热型
+assetsLevel: A6/A7/A8/A9/A10/A10+
+clientType: 执行型/质疑型/自主型
+empathy: 1-10数字（共情能力）
+communication: 1-10数字（沟通表达能力）
+conflictRes: 1-10数字（冲突处理能力）
+appearance: 外貌描述文本
+appearanceSelfAssessment: 自我颜值评价文本
+appearanceSelfRequirement: 对对方颜值要求文本
+strengths: 优势/优点文本
+weaknesses: 缺点/不足文本
+dateTaboos: 约会禁忌文本
+notes: 其他值得记录的备注
+matchPreferences: 对目标对象的期望描述（年龄、身高、学历、性格、收入等要求）
 
-【输出格式】
-请直接输出 JSON，不要有其他解释文字：
-{
-  "age": "38",
-  "occupation": "制造业老板",
-  "education": "本科",
-  "income": "100-300万",
-  "height": "175",
-  "residence": "上海",
-  "hometown": "浙江温州",
-  "appearance": "微胖，戴眼镜，偏商务休闲风",
-  "familyBackground": "城市",
-  "familyStructure": "双亲",
-  "familyAtmosphere": "和睦",
-  "personality": "ENFP",
-  "emotionalStable": "7",
-  "eqLevel": "6",
-  "communicationStyle": "直接",
-  "socialStyle": "社交达人",
-  "relationshipAttitude": "认真",
-  "marriageHistory": "未婚",
-  "emotionalGoal": "认真找对象",
-  "relationshipGoal": "长期",
-  "learningAbility": "强",
-  "coachCooperation": "配合",
-  "assetsLevel": "A8",
-  "clientType": "执行型",
-  "humorStyle": "冷幽默",
-  "selfEsteemLevel": "高",
-  "pacePreference": "稳健型",
-  "strengths": "有钱/幽默/真诚",
-  "weaknesses": "情商低/不会聊天",
-  "attachmentStyle": "安全型",
-  "empathy": "6",
-  "communication": "5",
-  "conflictRes": "4",
-  "loveStyle": "浪漫型",
-  "moneyDatingPattern": "请客",
-  "appearanceSelfAssessment": "普通",
-  "appearanceSelfRequirement": "不看重外表，聊得来就行",
-  "dateTaboos": "不能问收入",
-  "notes": "从文本中提取的其他备注信息"
-}
+【自我介绍】
+${text}`;
 
-【客户自我介绍文本】
-${text}
-
-请直接输出 JSON：`;
+    // SSE 流式响应
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
 
     const response = await fetch(aiConfig.url, {
       method: 'POST',
@@ -628,34 +624,78 @@ ${text}
           { role: 'user', content: extractPrompt }
         ],
         temperature: 0.1,
-        max_tokens: 1000
+        stream: true
       })
     });
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error('[Clients] AI提取失败:', response.status, errorText);
-      return res.status(500).json({ error: 'AI服务请求失败' });
+      res.write(`event: error\ndata: ${JSON.stringify({ error: 'AI服务请求失败' })}\n\n`);
+      return res.end();
     }
 
-    const result = await response.json();
-    let content = result.choices?.[0]?.message?.content || '';
+    let fullContent = '';
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
 
-    // 清理 markdown 代码块
-    content = content.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6);
+          if (data === '[DONE]') continue;
+
+          try {
+            const parsed = JSON.parse(data);
+            const delta = parsed.choices?.[0]?.delta?.content;
+            if (delta) {
+              fullContent += delta;
+              res.write(`event: progress\ndata: ${JSON.stringify({ text: delta })}\n\n`);
+            }
+          } catch {}
+        }
+      }
+    } catch (streamErr) {
+      console.error('[Clients] 流读取失败:', streamErr);
+      res.write(`event: error\ndata: ${JSON.stringify({ error: 'AI连接中断' })}\n\n`);
+      return res.end();
+    }
+
+    // 清理并解析
+    let content = fullContent.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+
+    if (!content) {
+      console.error('[Clients] AI返回空内容');
+      res.write(`event: error\ndata: ${JSON.stringify({ error: 'AI返回内容为空' })}\n\n`);
+      return res.end();
+    }
 
     let extracted;
     try {
       extracted = JSON.parse(content);
     } catch (e) {
-      console.error('[Clients] 解析AI输出失败:', content);
-      return res.status(500).json({ error: 'AI输出格式错误，无法解析' });
+      console.error('[Clients] 解析AI输出失败, content长度:', content.length, '前200字:', content.slice(0, 200));
+      res.write(`event: error\ndata: ${JSON.stringify({ error: 'AI输出格式错误' })}\n\n`);
+      return res.end();
     }
 
-    res.json({ success: true, profile: extracted });
+    res.write(`event: done\ndata: ${JSON.stringify({ success: true, profile: extracted })}\n\n`);
+    res.end();
   } catch (error) {
     console.error('[Clients] 提取客户档案失败:', error);
-    res.status(500).json({ error: '提取失败' });
+    if (!res.headersSent) {
+      return res.status(500).json({ error: '提取失败' });
+    }
+    try { res.write(`event: error\ndata: ${JSON.stringify({ error: '提取失败' })}\n\n`); res.end(); } catch {}
   }
 });
 
@@ -728,69 +768,20 @@ router.post('/:id/extract-from-chat', authMiddleware, async (req, res) => {
     }).join('\n');
 
     // 调用 AI 提取档案更新建议
-    const aiConfig = getAIConfig();
-    const extractPrompt = `你是客户档案分析专家。操盘手刚刚和客户进行了一次深度交流，请从聊天记录中提取档案更新信息。
+    const aiConfig = getAIConfig('flash');
+    const extractPrompt = `从操盘手与客户的聊天记录中提取档案更新和战略建议。直接输出JSON，无markdown。
 
-【当前客户档案】（供参考，如字段有值说明已有信息）
-- 昵称：${client?.nickname || '未知'}
-- 职业：${client?.occupation || '未知'}
-- 年龄：${client?.age || '未知'}
-- 性格：${client?.personality || '未知'}
-- 情绪稳定：${client?.emotionalStable || '未知'}/10
-- 情商：${client?.eqLevel || '未知'}/10
-- 依恋类型：${client?.attachmentStyle || '未知'}
-- 恋爱风格：${client?.loveStyle || '未知'}
-- 买单观念：${client?.moneyDatingPattern || '未知'}
-- 前任模式：${client?.pastRelationshipPattern || '未知'}
-- 约会雷区：${client?.dateTaboos || '未知'}
-- 舒适区：${client?.comfortZone || '未知'}
-- 优点：${client?.strengths || '未知'}
-- 缺点：${client?.weaknesses || '未知'}
-- 客户类型：${client?.clientType || '未知'}
-- 互动风格：${client?.interactionStyle || '未知'}
-- 幽默风格：${client?.humorStyle || '未知'}
-- 最佳策略：${client?.clientBestApproach || '未知'}
-- 推荐话题：${client?.clientRecommendedTopics || '未知'}
-- 风险因素：${client?.clientRiskFactors || '未知'}
-- 战略备注：${client?.clientStrategicNotes || '未知'}
-- 现有备注：${client?.notes || '无'}
+【客户档案】
+昵称:${client?.nickname || '-'} 职业:${client?.occupation || '-'} 年龄:${client?.age || '-'} 性格:${client?.personality || '-'} 情绪:${client?.emotionalStable || '-'}/10 情商:${client?.eqLevel || '-'}/10 依恋:${client?.attachmentStyle || '-'} 买单:${client?.moneyDatingPattern || '-'} 雷区:${client?.dateTaboos || '-'} 优点:${client?.strengths || '-'} 缺点:${client?.weaknesses || '-'}
 
 【聊天记录】
 ${chatText}
 
-【提取要求】
-请从聊天记录中分析并提取以下内容：
-1. 客户透露的新信息（之前档案没有的）
-2. 客户的态度/情绪变化（对服务的配合度、对女生、对关系的看法等）
-3. 客户的新雷区或新需求
-4. 建议更新的现有字段值（如果有变化）
-5. 给操盘手的战略建议（最佳策略/话题/风险/升级条件）
-
-【输出格式】请直接输出 JSON，不要有任何其他文字：
-{
-  "newInsights": ["发现1", "发现2", ...],
-  "updatedFields": {
-    "attachmentStyle": "安全型",
-    "emotionalStable": 7,
-    "dateTaboos": "补充的新雷区内容",
-    "loveStyle": "浪漫型",
-    "clientStrategicNotes": "操盘手战略建议"
-  },
-  "confidence": 0.85,
-  "strategicAnalysis": {
-    "clientBestApproach": "真诚型",
-    "clientRecommendedTopics": "健身,创业,旅行",
-    "clientUpgradeConditions": "需要更多正向反馈",
-    "clientRiskFactors": "容易在关系中退缩",
-    "clientStrategicNotes": "多给正面鼓励，少施压"
-  }
-}
-
-注意：
-- 只输出JSON，不要有markdown代码块
-- 如果某个字段在聊天记录中没有新的信息，不要输出它
-- confidence表示这次分析的置信度（0-1），如果聊天记录信息量少就低一些
-- strategicAnalysis为空对象表示AI分析部分置信度不足`;
+【输出字段说明】
+- newInsights: 字符串数组，从对话中发现的新信息
+- updatedFields: 对象，仅填有新信息或变化的字段（无变化不用输出），可选字段: attachmentStyle/loveStyle/moneyDatingPattern/dateTaboos/emotionalStable(数字)/eqLevel(数字)/strengths/weaknesses/notes/clientStrategicNotes
+- confidence: 0-1数字，信息充分度
+- strategicAnalysis: 对象，可选: clientBestApproach/clientRecommendedTopics/clientUpgradeConditions/clientRiskFactors/clientStrategicNotes，置信度不足时填空对象{}`;
 
     const response = await fetch(aiConfig.url, {
       method: 'POST',
@@ -804,8 +795,7 @@ ${chatText}
           { role: 'system', content: '你是一个专业的客户档案分析专家。请严格按照要求提取信息，直接输出JSON，不要有任何其他文字。' },
           { role: 'user', content: extractPrompt }
         ],
-        temperature: 0.3,
-        max_tokens: 1500
+        temperature: 0.3
       })
     });
 
@@ -816,16 +806,24 @@ ${chatText}
     }
 
     const result = await response.json();
-    let content = result.choices?.[0]?.message?.content || '';
+    let content = result.choices?.[0]?.message?.content
+      || result.choices?.[0]?.text
+      || result.content
+      || '';
 
-    // 清理 markdown 代码块
-    content = content.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
+    if (!content) {
+      console.error('[Clients] AI返回空内容, finish_reason:', result.choices?.[0]?.finish_reason, 'raw:', JSON.stringify(result).slice(0, 800));
+      return res.status(500).json({ error: 'AI返回内容为空，请重试' });
+    }
+
+    // 清理 markdown 代码块（兼容多种格式）
+    content = content.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
 
     let extracted;
     try {
       extracted = JSON.parse(content);
     } catch (e) {
-      console.error('[Clients] 解析AI输出失败:', content);
+      console.error('[Clients] 解析AI输出失败, content长度:', content.length, '前200字:', content.slice(0, 200));
       return res.status(500).json({ error: 'AI输出格式错误，无法解析' });
     }
 
@@ -1019,7 +1017,7 @@ router.put('/:id/password', authMiddleware, async (req, res) => {
   }
 });
 
-// 客户上传截图 AI 提取档案字段
+// 客户上传截图 AI 提取档案字段（全量识别）
 router.post('/extract-from-screenshot', authMiddleware, screenshotUpload.single('image'), async (req, res) => {
   try {
     if (!['admin', 'client'].includes(req.user.role)) {
@@ -1033,31 +1031,92 @@ router.post('/extract-from-screenshot', authMiddleware, screenshotUpload.single(
     const imageUrl = `/uploads/chat-screenshots/${req.file.filename}`;
     const clientId = req.user.role === 'client' ? req.user.id : (req.body.clientId || null);
 
+    // 全量字段提取 Prompt（与文本提取保持一致）
+    const extractPrompt = `分析以下聊天截图，从对话内容中提取客户（发送消息的一方）的档案信息，直接输出JSON（不要markdown代码块，不要其他文字）。
+
+请仔细阅读截图中的聊天文字，识别客户的基本信息、性格特征、沟通风格等。
+
+【规则】
+1. 有选项的字段必须从可选值中选择，不要自己编
+2. 数字字段填数字字符串如"7"，不要文字
+3. 截图中未提及的字段填空字符串""
+4. 只输出实际看到的信息，不要猜测、推断或编造
+
+【字段与可选值】
+age: 数字（如果提到出生年份推算年龄，当前2026年）
+height: 数字(cm)
+weight: 数字(kg)
+residence: 城市名
+hometown: 城市名
+occupation: 企业主/企业高管/公务员/医生/律师/教师/工程师/程序员/销售/金融从业者/自由职业/退休/其他
+education: 小学/初中/中专/高中/大专/本科/硕士/博士
+income: 10万以下/10-30万/30-50万/50-100万/100-300万/300万以上
+personality: INTJ/INTP/ENTJ/ENTP/INFJ/INFP/ENFJ/ENFP/ISTJ/ISFJ/ESTJ/ESFJ/ISTP/ISFP/ESTP/ESFP/其他
+familyBackground: 农村/城市/经商/公务员/其他
+familyStructure: 双亲/单亲/离异/其他
+familyAtmosphere: 和睦/一般/冷淡/争吵/离异
+marriageHistory: 未婚/离异无子/离异有子/丧偶
+emotionalGoal: 认真找对象/随便玩玩/家里催婚/空虚寂寞
+relationshipGoal: 短期/长期/不确定
+relationshipAttitude: 认真/随便/急切
+communicationStyle: 直接/含蓄/话多/话少/幽默
+socialStyle: 主动/被动/社交达人
+emotionalStable: 1-10数字
+eqLevel: 1-10数字
+emotionalMaturity: 幼稚/一般/成熟
+emotionalMaturityLevel: 1-10数字
+learningAbility: 强/中/弱
+coachCooperation: 配合/一般/抵触
+coachCooperationLevel: 1-10数字
+attachmentStyle: 焦虑型/回避型/安全型
+loveStyle: 真诚型/陪伴型/言语型/身体型/浪漫型
+moneyDatingPattern: AA/请客/轮流/看情况
+humorStyle: 冷幽默/自嘲/调侃/正经
+selfEsteemLevel: 高/中/低
+pacePreference: 快节奏/稳健型/慢热型
+assetsLevel: A6/A7/A8/A9/A10/A10+
+clientType: 执行型/质疑型/自主型
+empathy: 1-10数字
+communication: 1-10数字
+conflictRes: 1-10数字
+appearance: 外貌描述文本
+appearanceSelfAssessment: 自我颜值评价文本
+appearanceSelfRequirement: 对对方颜值要求文本
+strengths: 优势/优点文本
+weaknesses: 缺点/不足文本
+dateTaboos: 约会禁忌文本
+notes: 其他值得记录的备注
+dressingStyle: 穿着风格
+profileBio: 个人签名/简介
+matchPreferences: 对目标对象的期望描述（年龄、身高、学历、性格、收入等要求）`;
+
+    const messages = [{
+      role: 'user',
+      content: [
+        { type: 'text', text: extractPrompt },
+        { type: 'image_url', image_url: { url: imageUrl } }
+      ]
+    }];
+
     let pendingFields = {};
+    let aiErrorMessage = null;
     try {
-      const imageResult = await extractFromImage('fake-girl-id', imageUrl, BASE_URL, req.user.id, false);
-      if (imageResult?.pendingFields) {
-        const fieldMapping = {
-          age: 'age',
-          occupation: 'occupation',
-          education: 'education',
-          hometown: 'hometown',
-          residence: 'residence',
-          appearance: 'appearance',
-          personality: 'personality',
-          relationshipAttitude: 'relationshipAttitude',
-          interests: 'interests',
-          height: 'height'
-        };
-        for (const [girlKey, value] of Object.entries(imageResult.pendingFields)) {
-          const clientKey = fieldMapping[girlKey];
-          if (clientKey) {
-            pendingFields[clientKey] = value;
+      const raw = await callVisionModel(messages);
+      // 清理 markdown 代码块
+      let content = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+
+      if (content) {
+        const extracted = JSON.parse(content);
+        // 只保留非空字段
+        for (const [key, value] of Object.entries(extracted)) {
+          if (value && value !== '' && value !== '空' && value !== '未知') {
+            pendingFields[key] = value;
           }
         }
       }
     } catch (aiError) {
       console.warn('[Clients] AI分析截图失败:', aiError.message);
+      aiErrorMessage = aiError.message;
     }
 
     // 保存截图记录
@@ -1070,10 +1129,13 @@ router.post('/extract-from-screenshot', authMiddleware, screenshotUpload.single(
       }
     }).catch(() => {});
 
+    const count = Object.keys(pendingFields).filter(k => pendingFields[k]).length;
     res.json({
       success: true,
       pendingFields,
-      message: Object.keys(pendingFields).length > 0 ? '识别到档案信息' : '未识别到档案信息，请尝试更清晰的截图'
+      message: aiErrorMessage
+        ? `AI 分析失败：${aiErrorMessage}`
+        : (count > 0 ? `识别到 ${count} 个档案字段` : '未识别到档案信息，请尝试更清晰的截图')
     });
   } catch (error) {
     console.error('[Clients] 截图提取失败:', error);

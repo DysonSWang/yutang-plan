@@ -24,6 +24,7 @@ const crypto = require('crypto');
 
 const { JWT_SECRET, getAIConfig } = require('../config');
 const prisma = require('../prisma');
+const activityService = require('../services/activityService');
 
 const { createUnifiedContext, ROUTE_TYPES } = require('../agents/UnifiedContext');
 const { runInputGuardrails, formatGuardrailEvents } = require('../guardrails/input');
@@ -726,6 +727,7 @@ router.post('/chat', authMiddleware, async (req, res) => {
     // 记录用户消息到记忆
     if (ctx.memorySessionId) {
       addMessage(ctx.memorySessionId, 'user', message).catch(console.error);
+      activityService.recordActivity(req.user.id, 'mo_chat').catch(console.error);
     }
 
     // ---- 5. 执行对应 Agent ----

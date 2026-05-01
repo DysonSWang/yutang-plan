@@ -7,6 +7,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const fsp = require('fs/promises');
 const crypto = require('crypto');
 const { execFile } = require('child_process');
 const util = require('util');
@@ -85,11 +86,11 @@ router.post('/compress-video', authMiddleware, upload.single('file'), async (req
   try {
     // 敏感视频：跳过压缩，直接加密存OSS
     if (isSensitive) {
-      const videoBuffer = fs.readFileSync(inputPath);
-      fs.unlinkSync(inputPath); // 清理临时文件
+      const videoBuffer = await fsp.readFile(inputPath);
+      await fsp.unlink(inputPath).catch(() => {});
       const encrypted = encrypt(videoBuffer);
       const ossPath = `encrypted/videos/${crypto.randomBytes(16).toString('hex')}.mp4.enc`;
-      await uploadBuffer(encrypted, ossPath, true);
+      await uploadBuffer(ossPath, encrypted);
       return res.json({
         url: `/${ossPath}`,
         filename: path.basename(ossPath),
@@ -103,8 +104,8 @@ router.post('/compress-video', authMiddleware, upload.single('file'), async (req
     // 普通视频：判断是否需要压缩
     if (originalSize <= VIDEO_SIZE_THRESHOLD) {
       // 小文件直接移动到最终目录
-      fs.copyFileSync(inputPath, outputPath);
-      fs.unlinkSync(inputPath);
+      await fsp.copyFile(inputPath, outputPath);
+      await fsp.unlink(inputPath).catch(() => {});
       const url = `/uploads/chat-media/videos/${outputFilename}`;
       return res.json({
         url,
@@ -135,14 +136,15 @@ router.post('/compress-video', authMiddleware, upload.single('file'), async (req
     const { stderr } = await execPromise('ffmpeg', ffmpegArgs, { timeout: 120000 });
 
     // 删除原始临时文件
-    if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+    await fsp.unlink(inputPath).catch(() => {});
 
     // 检查压缩结果
-    if (!fs.existsSync(outputPath)) {
+    let compressedSize;
+    try {
+      compressedSize = (await fsp.stat(outputPath)).size;
+    } catch {
       throw new AppError(ErrorCodes.OSS_UPLOAD_FAILED, { devMessage: 'FFmpeg 压缩失败，输出文件未生成' });
     }
-
-    const compressedSize = fs.statSync(outputPath).size;
 
     res.json({
       url: `/uploads/chat-media/videos/${outputFilename}`,
@@ -156,12 +158,10 @@ router.post('/compress-video', authMiddleware, upload.single('file'), async (req
 
   } catch (err) {
     // 清理失败时的临时文件
-    if (fs.existsSync(inputPath)) {
-      try { fs.unlinkSync(inputPath); } catch (e) { console.warn('[VideoCompress] 清理 inputPath 失败:', e.message); }
-    }
-    if (fs.existsSync(outputPath)) {
-      try { fs.unlinkSync(outputPath); } catch (e) { console.warn('[VideoCompress] 清理 outputPath 失败:', e.message); }
-    }
+    await Promise.allSettled([
+      fsp.unlink(inputPath).catch(() => {}),
+      fsp.unlink(outputPath).catch(() => {}),
+    ]);
 
     console.error('视频压缩失败:', err.message);
     res.status(500).json({ error: '视频压缩失败: ' + err.message });

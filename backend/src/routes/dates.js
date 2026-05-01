@@ -12,6 +12,7 @@ const { JWT_SECRET, getAIConfig } = require('../config');
 const prisma = require('../prisma');
 const AppError = require('../errors/AppError');
 const { ErrorCodes } = require('../errors/errorCodes');
+const { analyzeSuitableVenueTypes } = require('./membership');
 // 辅助：验证目标用户是否为 client（管理员可操作所有客户）
 async function verifyIsClient(userId) {
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
@@ -108,16 +109,38 @@ async function baiduAISearch(query) {
   }
 }
 
-async function searchVenues({ location, interests, budget, dateStyle, girl }) {
+async function searchVenues({ location, interests, budget, dateStyle, girl, dateTime }) {
   const results = { restaurants: [], venues: [], activities: [], summary: '' };
 
   // 提取预算数字
   const budgetNum = parseInt((budget || '500').replace(/[^0-9]/g, '')) || 500;
-  const locationText = location || '上海';
+  const locationText = location || '';
+
+  // 解析约会时间，确定时段
+  let timeHint = '';
+  if (dateTime) {
+    try {
+      const d = new Date(dateTime);
+      const hour = d.getHours();
+      if (hour >= 5 && hour < 11) timeHint = '上午时段';
+      else if (hour >= 11 && hour < 13) timeHint = '午餐时段';
+      else if (hour >= 13 && hour < 17) timeHint = '下午';
+      else if (hour >= 17 && hour < 19) timeHint = '傍晚';
+      else if (hour >= 19 && hour < 22) timeHint = '晚上黄金时段，推荐酒吧、居酒屋、夜景餐厅等晚间场所';
+      else if (hour >= 22 || hour < 2) timeHint = '深夜时段，请只推荐营业至深夜的场所如酒吧、夜宵、Livehouse，严禁推荐咖啡厅和已打烊店铺';
+      else timeHint = '凌晨时段';
+    } catch {}
+  }
+
+  // 智能分析合适场所类型
+  const sceneText = [dateStyle, interests].filter(Boolean).join(' ');
+  const venueTypes = analyzeSuitableVenueTypes(sceneText, budget, dateTime, girl?.stage || '');
 
   // 1. 用百度AI搜索约会场地（一次性获取综合结果）
   try {
-    const query = `上海${locationText}附近适合2人约会的餐厅、咖啡厅、KTV推荐，包含具体店名、地址、人均消费`;
+    const timeFilter = timeHint ? `，时间段：${timeHint}` : '';
+    const typeFilter = venueTypes.length > 0 ? `，场所类型：${venueTypes.join('、')}` : '';
+    const query = `${locationText}附近适合2人约会${timeFilter}${typeFilter}推荐，包含具体店名、地址、人均消费`;
     const data = await baiduAISearch(query);
 
     // 提取AI总结
@@ -199,7 +222,7 @@ async function searchVenues({ location, interests, budget, dateStyle, girl }) {
   return results;
 }
 
-function buildDatePlanPrompt({ client, girl, conditions, venueSearchResults }) {
+function buildDatePlanPrompt({ client, girl, conditions, venueSearchResults, date }) {
   return `你是一位顶尖约会策划师，代号"月老"。请根据以下信息，为客户生成一份详细的约会策划方案。
 
 【客户信息】
@@ -235,8 +258,37 @@ function buildDatePlanPrompt({ client, girl, conditions, venueSearchResults }) {
 约会风格：${conditions.dateStyle || '正常约会'}
 预算范围：${conditions.budget || '适中即可'}
 兴趣爱好偏好：${conditions.interests || girl.interests || '未知'}
-时间偏好：${conditions.timePreference || '周末下午'}
-地点要求：${conditions.locationPreference || girl.residence || '未指定'}
+${(() => {
+      let timeInfo = conditions.timePreference || '';
+      let timeWarning = '';
+      if (!timeInfo && date?.dateTime) {
+        try {
+          const d = new Date(date.dateTime);
+          const weekNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+          const weekDay = weekNames[d.getDay()];
+          const hour = d.getHours();
+          const minute = d.getMinutes();
+          const timeStr = d.getMonth() + 1 + '月' + d.getDate() + '日 ' + weekDay + ' ' + String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+          let period = '';
+          if (hour >= 5 && hour < 9) period = '清晨';
+          else if (hour >= 9 && hour < 11) period = '上午';
+          else if (hour >= 11 && hour < 13) period = '午餐时段';
+          else if (hour >= 13 && hour < 17) period = '下午';
+          else if (hour >= 17 && hour < 19) period = '傍晚';
+          else if (hour >= 19 && hour < 22) period = '晚上黄金时段';
+          else if (hour >= 22 || hour < 2) period = '深夜';
+          else period = '凌晨';
+          timeInfo = timeStr + '（' + period + '）';
+          if (hour >= 22 || hour < 2) {
+            timeWarning = '\\n🚫 深夜时段铁律：严禁推荐咖啡厅、茶馆、下午茶等白天场所！只能推荐酒吧、夜宵、Livehouse、深夜书店、夜间散步点等营业至深夜的地点。';
+          } else if (hour >= 19 && hour < 22) {
+            timeWarning = '\\n🌙 晚间时段：优先推荐酒吧、居酒屋、夜景餐厅等晚间氛围场所。';
+          }
+        } catch {}
+      }
+      return '⏰ 约会时间：' + (timeInfo || '周末下午') + timeWarning;
+    })()}
+📍 约会地点：${conditions.locationPreference || date?.location || girl?.residence || '未指定'}
 特殊要求：${conditions.specialRequirements || '无'}
 约会时长：${conditions.duration || '2-3小时'}
 约会目的：${conditions.purpose || '加深了解，建立好感'}
@@ -248,6 +300,10 @@ ${venueSearchResults?.venues?.length ? `【咖啡厅/茶馆】
 ${venueSearchResults.venues.map(v => `☕ ${v.name} | ${v.type} | ${v.source} | ${v.description || ''}`).join('\n')}` : ''}
 ${venueSearchResults?.activities?.length ? `【娱乐活动】
 ${venueSearchResults.activities.map(a => `🎵 ${a.name} | ${a.type} | ${a.source} | ${a.description || ''}`).join('\n')}` : ''}
+${(() => {
+  const hasResults = (venueSearchResults?.restaurants?.length || 0) + (venueSearchResults?.venues?.length || 0) + (venueSearchResults?.activities?.length || 0) > 0;
+  return hasResults ? '🚫 场地铁律：请从上述搜索结果中挑选真实存在的场所推荐，严禁虚构任何店名。' : '🚫 场地铁律：搜索未找到真实商家数据。严禁编造任何具体店名（如"XXX酒吧（假设位于...）"），只能建议场所类型（如"精酿啤酒吧"、"深夜食堂"等），地址一律写搜索区域名称。';
+})()}
 
 请生成一份JSON格式的约会方案，结构如下（只需要JSON，不要其他文字）：
 {
@@ -384,31 +440,41 @@ router.get('/', authMiddleware, async (req, res) => {
 // 创建约会
 router.post('/', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    const { clientId, girlId, dateTime, location, title, conditions, notes } = req.body;
+
+    let effectiveClientId;
+    if (req.user.role === 'client') {
+      effectiveClientId = req.user.id;
+    } else if (req.user.role === 'admin') {
+      if (!clientId) return res.status(400).json({ error: '参数不完整（需 clientId）' });
+      const ok = await verifyIsClient(clientId);
+      if (!ok) return res.status(403).json({ error: '无权限为该客户创建约会' });
+      effectiveClientId = clientId;
+    } else {
       return res.status(403).json({ error: '无权限' });
     }
 
-    const { clientId, girlId, dateTime, location, title, conditions, notes } = req.body;
-
-    if (!clientId || !girlId || !dateTime) {
-      return res.status(400).json({ error: '参数不完整（需 clientId、girlId、dateTime）' });
+    if (!girlId) {
+      return res.status(400).json({ error: '参数不完整（需 girlId）' });
     }
 
-    // 安全：操盘手可为所有客户创建约会
-    const ok = await verifyIsClient(clientId);
-    if (!ok) return res.status(403).json({ error: '无权限为该客户创建约会' });
+    // 验证女生属于该客户
+    const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+    if (!girl || girl.clientId !== effectiveClientId) {
+      return res.status(400).json({ error: '该女生不属于您' });
+    }
 
     const date = await prisma.date.create({
       data: {
-        userId: clientId,
+        userId: effectiveClientId,
         girlId,
-        dateTime: new Date(dateTime),
+        dateTime: dateTime ? new Date(dateTime) : new Date(),
         location,
         title,
         conditions: conditions ? JSON.stringify(conditions) : null,
         notes,
-        status: 'pending_plan',
-        planStatus: 'pending'
+        status: req.user.role === 'client' ? 'confirmed' : 'pending_plan',
+        planStatus: req.user.role === 'client' ? 'confirmed' : 'pending'
       }
     });
 
@@ -416,6 +482,21 @@ router.post('/', authMiddleware, async (req, res) => {
     await prisma.girl.update({
       where: { id: girlId },
       data: { stage: '约会', status: 'dating' }
+    });
+
+    // 自动创建日历事件
+    const eventTime = dateTime ? new Date(dateTime) : new Date();
+    await prisma.event.create({
+      data: {
+        clientId: effectiveClientId,
+        girlId,
+        title: title || '约会',
+        content: location ? `地点：${location}` : null,
+        eventTime,
+        type: 'date',
+        status: 'pending',
+        dateId: date.id
+      }
     });
 
     res.json({ success: true, date });
@@ -479,8 +560,7 @@ router.get('/client-pending', authMiddleware, async (req, res) => {
     const dates = await prisma.date.findMany({
       where: {
         userId: req.user.id,
-        status: 'pending_client_confirm',
-        clientConfirmed: false
+        status: { in: ['pending_plan', 'planned', 'pending_client_confirm', 'confirmed'] }
       },
       include: {
         girl: { select: { id: true, name: true, age: true, stage: true, personality: true } }
@@ -665,10 +745,6 @@ router.put('/:id/checklist', authMiddleware, async (req, res) => {
 // AI 生成约会方案
 router.post('/:id/generate-plan', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
-    }
-
     const date = await prisma.date.findUnique({
       where: { id: req.params.id },
       include: {
@@ -679,10 +755,16 @@ router.post('/:id/generate-plan', authMiddleware, async (req, res) => {
 
     if (!date) return res.status(404).json({ error: '约会不存在' });
 
-    // 安全：操盘手可操作所有客户的约会
+    // 安全：操盘手可操作所有客户的约会，客户只能操作自己的
     if (req.user.role === 'admin') {
       const ok = await verifyIsClient(date.userId);
       if (!ok) return res.status(403).json({ error: '无权操作此约会' });
+    } else if (req.user.role === 'client') {
+      if (date.userId !== req.user.id) {
+        return res.status(403).json({ error: '无权操作此约会' });
+      }
+    } else {
+      return res.status(403).json({ error: '无权限' });
     }
 
     // 更新状态为生成中
@@ -697,11 +779,12 @@ router.post('/:id/generate-plan', authMiddleware, async (req, res) => {
     let venueSearchResults = null;
     try {
       venueSearchResults = await searchVenues({
-        location: conditions.locationPreference || date.girl?.residence || '上海',
+        location: conditions.locationPreference || date.location || date.girl?.residence || '',
         interests: conditions.interests || date.girl?.interests,
         budget: conditions.budget,
         dateStyle: conditions.dateStyle,
-        girl: date.girl
+        girl: date.girl,
+        dateTime: date.dateTime
       });
       console.log('[Dates] 场地搜索完成:', {
         restaurants: venueSearchResults.restaurants?.length || 0,
@@ -716,7 +799,8 @@ router.post('/:id/generate-plan', authMiddleware, async (req, res) => {
       client: date.user,
       girl: date.girl,
       conditions,
-      venueSearchResults
+      venueSearchResults,
+      date
     });
 
     let planText;
@@ -1117,19 +1201,23 @@ router.post('/:id/client-confirm', authMiddleware, async (req, res) => {
 // 删除约会
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    const existing = await prisma.date.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: '约会不存在' });
+
+    if (req.user.role === 'admin') {
+      const ok = await verifyIsClient(existing.userId);
+      if (!ok) return res.status(403).json({ error: '无权删除此约会' });
+    } else if (req.user.role === 'client') {
+      if (existing.userId !== req.user.id) {
+        return res.status(403).json({ error: '无权删除此约会' });
+      }
+    } else {
       return res.status(403).json({ error: '无权限' });
     }
 
-    const existing = await prisma.date.findUnique({ where: { id: req.params.id } });
-    if (!existing) return res.status(404).json({ error: '约会不存在' });
-    // 安全：操盘手可操作所有客户的约会
-    const ok = await verifyIsClient(existing.userId);
-    if (!ok) return res.status(403).json({ error: '无权删除此约会' });
-
-    await prisma.date.delete({
-      where: { id: req.params.id }
-    });
+    // 同时删除关联的日历事件
+    await prisma.event.deleteMany({ where: { dateId: req.params.id } });
+    await prisma.date.delete({ where: { id: req.params.id } });
 
     res.json({ success: true });
   } catch (error) {

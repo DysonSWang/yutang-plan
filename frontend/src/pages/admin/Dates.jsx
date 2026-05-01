@@ -171,7 +171,8 @@ export default function AdminDates() {
       const conditions = {
         dateStyle: form.dateStyle, budget: form.budget,
         timePreference: form.timePreference, duration: form.duration,
-        specialRequirements: form.specialRequirements, purpose: form.purpose
+        specialRequirements: form.specialRequirements, purpose: form.purpose,
+        locationPreference: form.location
       };
       const res = await dates.create({
         clientId: form.clientId, girlId: form.girlId,

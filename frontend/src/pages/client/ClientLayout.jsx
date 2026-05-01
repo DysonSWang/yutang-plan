@@ -245,7 +245,7 @@ export default function ClientLayout() {
 
   // socket 事件（仅在 ClientLayout 注册一次，避免 Desktop/Mobile 竞争）
   useEffect(() => {
-    on('chat-log:new', (log) => {
+    const unsub1 = on('chat-log:new', (log) => {
       toast({
         title: '操盘手发来代聊记录',
         description: log.content?.slice(0, 30) + (log.content?.length > 30 ? '...' : ''),
@@ -256,11 +256,11 @@ export default function ClientLayout() {
       });
     });
 
-    on('notification:new', () => {
+    const unsub2 = on('notification:new', () => {
       setUnreadCount(prev => prev + 1);
     });
 
-    on('message:new', (message) => {
+    const unsub3 = on('message:new', (message) => {
       if (message.senderRole === 'client') return;
       if (location.pathname !== '/chat') {
         setChatUnread(prev => prev + 1);
@@ -271,6 +271,7 @@ export default function ClientLayout() {
     window.addEventListener('chat-enter', handleChatEnter);
     return () => {
       window.removeEventListener('chat-enter', handleChatEnter);
+      unsub1(); unsub2(); unsub3();
     };
   }, [on, toast, location.pathname]);
 

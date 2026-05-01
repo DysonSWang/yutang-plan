@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, VStack, HStack, Input, Button, Text, Flex, IconButton, Image, Badge, useToast, Center, Spinner } from '@chakra-ui/react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { chat, upload } from '../../utils/api';
+import { api, chat, upload } from '../../utils/api';
 import { useSocket } from '../../contexts/SocketContext';
 import FlashImageViewer from '../../components/FlashImageViewer';
+import EmojiPanel from '../../components/EmojiPanel';
 
 export default function ClientChat() {
   const { on } = useSocket();
@@ -21,12 +22,18 @@ export default function ClientChat() {
   const scrollRef = useRef();
   const shouldAutoScrollRef = useRef(true);
   const fileInputRef = useRef();
+  const inputRef = useRef();
   const mediaRecorderRef = useRef();
   const audioChunksRef = useRef([]);
   const recordTimerRef = useRef();
   const burnTimersRef = useRef({});
   const [countdowns, setCountdowns] = useState({});
-  const [flashViewer, setFlashViewer] = useState({ isOpen: false, imageUrl: '', messageId: null, senderRole: '' });
+  const [flashViewer, setFlashViewer] = useState({ isOpen: false, imageUrl: '', messageId: null, senderRole: '', isFlashMode: false, mediaType: 'image' });
+  const [forceShow, setForceShow] = useState(0);
+  const openFlashViewer = useCallback((params) => {
+    setForceShow(f => f + 1);
+    setFlashViewer({ isOpen: true, ...params });
+  }, []);
   const [loading, setLoading] = useState(true);
   const toast = useToast();
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3005';
@@ -41,10 +48,29 @@ export default function ClientChat() {
 
   const getMediaUrl = (msg) => {
     if (msg.mediaUrl?.startsWith('/encrypted/')) {
-      return `${API_BASE}/api/chat/media/${msg.id}`;
+      const token = api.getToken();
+      return `${API_BASE}/api/chat/media/${msg.id}?token=${token}`;
     }
+    if (msg.mediaUrl?.startsWith('http')) return msg.mediaUrl;
     return `${API_BASE}${msg.mediaUrl}`;
   };
+
+  const handleEmojiSelect = useCallback((emoji) => {
+    const el = inputRef.current;
+    if (!el) {
+      setInput(prev => prev + emoji);
+      return;
+    }
+    const start = el.selectionStart ?? input.length;
+    const end = el.selectionEnd ?? input.length;
+    const newValue = input.slice(0, start) + emoji + input.slice(end);
+    setInput(newValue);
+    requestAnimationFrame(() => {
+      el.focus();
+      const pos = start + emoji.length;
+      el.setSelectionRange(pos, pos);
+    });
+  }, [input]);
 
   const loadSession = async () => {
     setLoading(true);
@@ -69,7 +95,13 @@ export default function ClientChat() {
     try {
       const res = await chat.burn(msg.id);
       if (res.success) {
-        setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, content: '[消息已销毁]', mediaUrl: null, burnedAt: new Date() } : m));
+        setMessages(prev => prev.map(m => {
+          if (m.id !== msg.id) return m;
+          if (m.isFlashImage) {
+            return { ...m, flashBurnedByMe: true };
+          }
+          return { ...m, content: '[消息已销毁]', mediaUrl: null, burnedAt: new Date() };
+        }));
       }
     } catch (e) {
       console.error(e);
@@ -144,24 +176,32 @@ export default function ClientChat() {
         }
       }
     };
-    on('message:new', handler);
+    const unsub1 = on('message:new', handler);
 
     const burnHandler = ({ sessionId, messageId }) => {
       if (session && sessionId === session.id) {
-        setMessages(prev => prev.map(m => m.id === messageId ? { ...m, content: '[消息已销毁]', mediaUrl: null, burnedAt: new Date() } : m));
+        setMessages(prev => prev.map(m => {
+          if (m.id !== messageId) return m;
+          if (m.isFlashImage) {
+            return { ...m, flashBurnedByMe: true };
+          }
+          return { ...m, content: '[消息已销毁]', mediaUrl: null, burnedAt: new Date() };
+        }));
         if (flashViewer.messageId === messageId) {
           setFlashViewer(v => ({ ...v, isOpen: false }));
         }
       }
     };
-    on('message:burned', burnHandler);
+    const unsub2 = on('message:burned', burnHandler);
 
     const recallHandler = ({ sessionId, messageId }) => {
       if (session && sessionId === session.id) {
         setMessages(prev => prev.map(m => m.id === messageId ? { ...m, content: '[消息已撤回]', mediaUrl: null, recalledAt: new Date() } : m));
       }
     };
-    on('message:recalled', recallHandler);
+    const unsub3 = on('message:recalled', recallHandler);
+
+    return () => { unsub1(); unsub2(); unsub3(); };
   }, [session, flashViewer.messageId, on, startBurnTimer]);
 
   useEffect(() => {
@@ -202,10 +242,25 @@ export default function ClientChat() {
     const imageFiles = files.filter(f => f.type.startsWith('image/'));
     const videoFiles = files.filter(f => f.type.startsWith('video/'));
 
-    // 视频：进入预览确认流程
     if (videoFiles.length > 0) {
       const file = videoFiles[0];
-      setPreviewFile({ file, preview: URL.createObjectURL(file), type: 'video' });
+      if (flashMode) {
+        // 闪图模式：视频直接上传发送，不预览
+        setSending(true);
+        try {
+          const res = await upload.video(file, burnMode, flashMode);
+          if (res.url) {
+            await sendMediaMessage(res.url, 'video', null, false, true);
+            setFlashMode(false);
+          }
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setSending(false);
+        }
+      } else {
+        setPreviewFile({ file, preview: URL.createObjectURL(file), type: 'video' });
+      }
     }
 
     // 图片：直接上传发送
@@ -371,6 +426,7 @@ export default function ClientChat() {
   const renderMessageContent = (msg) => {
     if (msg.recalledAt) return <Text color="gray.500" fontStyle="italic">{msg.content}</Text>;
     if (msg.burnedAt) return <Text color="gray.500" fontStyle="italic">{msg.content}</Text>;
+    if (msg.isFlashImage && msg.flashBurnedByMe) return <Text color="gray.500" fontStyle="italic">⚡ 闪图已销毁</Text>;
     if (msg.type === 'image') {
       const isClickable = msg.isBurnAfterRead && msg.senderRole !== 'client' && !msg.burnedAt;
       const imageUrl = getMediaUrl(msg);
@@ -381,25 +437,62 @@ export default function ClientChat() {
           opacity={msg.isBurnAfterRead ? 0.85 : 1}
           position="relative"
           onClick={() => {
-            if (msg.isFlashImage && !msg.burnedAt) {
+            if (msg.isFlashImage && !msg.burnedAt && !msg.flashBurnedByMe) {
               // 闪图：打开满屏查看器（带倒计时）
-              setFlashViewer({ isOpen: true, imageUrl, messageId: msg.id, senderRole: msg.senderRole, isFlashMode: true });
+              openFlashViewer({ imageUrl, messageId: msg.id, senderRole: msg.senderRole, isFlashMode: true });
             } else if (msg.isBurnAfterRead && msg.senderRole !== 'client') {
               handleBurnMessage(msg);
             } else {
               // 普通图片：打开满屏查看器（无倒计时）
-              setFlashViewer({ isOpen: true, imageUrl, messageId: msg.id, senderRole: msg.senderRole, isFlashMode: false });
+              openFlashViewer({ imageUrl, messageId: msg.id, senderRole: msg.senderRole, isFlashMode: false });
             }
           }}
         >
-          <Image src={getMediaUrl(msg)} alt="图片消息" borderRadius="md" maxH="200px" objectFit="cover" loading="lazy" />
-          {msg.isFlashImage && !msg.burnedAt && (
-            <Text position="absolute" top={1} right={1} fontSize="xs" color="yellow.300" bg="blackAlpha.600" px={1} borderRadius="sm">⚡</Text>
+          {msg.isFlashImage && !msg.burnedAt && !msg.flashBurnedByMe ? (
+            <Box
+              w="120px"
+              h="90px"
+              bg="gray.800"
+              borderRadius="md"
+              display="flex"
+              flexDirection="column"
+              alignItems="center"
+              justifyContent="center"
+              border="1px dashed"
+              borderColor="yellow.500"
+            >
+              <Text fontSize="xl">⚡</Text>
+              <Text fontSize="xs" color="yellow.300" mt={1}>闪图</Text>
+            </Box>
+          ) : (
+            <Image src={getMediaUrl(msg)} alt="图片消息" borderRadius="md" maxH="200px" objectFit="cover" loading="lazy" />
           )}
         </Box>
       );
     }
     if (msg.type === 'video') {
+      const videoUrl = getMediaUrl(msg);
+      if (msg.isFlashImage && !msg.burnedAt && !msg.flashBurnedByMe) {
+        return (
+          <Box
+            w="120px"
+            h="90px"
+            bg="rgba(255,255,255,0.05)"
+            borderRadius="md"
+            display="flex"
+            flexDirection="column"
+            alignItems="center"
+            justifyContent="center"
+            border="1px dashed"
+            borderColor="yellow.500"
+            cursor="pointer"
+            onClick={() => openFlashViewer({ imageUrl: videoUrl, messageId: msg.id, senderRole: msg.senderRole, isFlashMode: true, mediaType: 'video' })}
+          >
+            <Text fontSize="xl">⚡</Text>
+            <Text fontSize="xs" color="yellow.300" mt={1}>闪图</Text>
+          </Box>
+        );
+      }
       return (
         <Box maxW="250px" cursor={msg.isBurnAfterRead ? 'pointer' : 'default'} onClick={() => msg.isBurnAfterRead && msg.senderRole !== 'client' && handleBurnMessage(msg)}>
           <video src={getMediaUrl(msg)} controls={!msg.isBurnAfterRead} style={{ borderRadius: '8px', maxHeight: '200px', width: '100%' }} />
@@ -485,7 +578,7 @@ export default function ClientChat() {
                   >
                     {showTime && (
                       <Text color="abyss.500" fontSize="xs" textAlign="center" w="100%" my={2}>
-                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {new Date(msg.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })}
                       </Text>
                     )}
                     <HStack spacing={2} maxW="85%">
@@ -524,9 +617,6 @@ export default function ClientChat() {
                             </Text>
                           </HStack>
                         )}
-                        <Text fontSize="xs" color="gray.300" mt={1}>
-                          {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </Text>
                         {!msg.recalledAt && !msg.burnedAt && isClient && (
                           <IconButton
                             className="recall-btn"
@@ -674,10 +764,17 @@ export default function ClientChat() {
               aria-label="闪图模式"
               isDisabled={sending || !!previewFile || burnMode}
               title={flashMode ? '闪图：查阅后5秒自动销毁' : '闪图模式'}
-              onClick={() => { setFlashMode(f => !f); setBurnMode(false); }}
+              onClick={() => {
+                const newMode = !flashMode;
+                setFlashMode(newMode);
+                setBurnMode(false);
+                if (newMode) fileInputRef.current?.click();
+              }}
               size="sm"
             />
+            <EmojiPanel onSelect={handleEmojiSelect} isDisabled={sending || !!previewFile} variant="client" />
             <Input
+              ref={inputRef}
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyPress={e => e.key === 'Enter' && sendMessage()}
@@ -695,12 +792,13 @@ export default function ClientChat() {
         </Box>
       </Box>
       <FlashImageViewer
+        forceShow={forceShow}
         isOpen={flashViewer.isOpen}
         onClose={() => setFlashViewer(v => ({ ...v, isOpen: false }))}
         imageUrl={flashViewer.imageUrl}
         messageId={flashViewer.messageId}
-        senderRole={flashViewer.senderRole}
         isFlashMode={flashViewer.isFlashMode || false}
+        mediaType={flashViewer.mediaType || 'image'}
       />
     </Flex>
   );

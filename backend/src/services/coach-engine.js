@@ -17,7 +17,7 @@ const MAX_TOOL_CALLS = 5;
  */
 async function callAI(messages, options = {}) {
   const aiConfig = getAIConfig();
-  const { tools = [], temperature = 0.7, maxTokens = 1000 } = options;
+  const { tools = [], temperature = 0.7, maxTokens = 4000 } = options;
 
   const requestBody = {
     model: aiConfig.model,
@@ -78,7 +78,7 @@ async function chatWithTools(messages, options = {}) {
     const result = await callAI(messages, {
       tools: toolsToUse,
       temperature: coachConfig.settings?.temperature || 0.7,
-      maxTokens: coachConfig.settings?.maxTokens || 1000
+      maxTokens: coachConfig.settings?.maxTokens || 4000
     });
 
     lastContent = result.content;

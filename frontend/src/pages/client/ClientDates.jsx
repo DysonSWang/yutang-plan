@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useLayoutEffect, useState, useMemo, useRef } from 'react';
 import {
   Box, Heading, Card, CardBody, Button, Badge, Modal, ModalOverlay, ModalContent,
   ModalHeader, ModalBody, ModalCloseButton, useDisclosure, VStack, HStack, Text,
@@ -7,10 +7,20 @@ import {
 } from '@chakra-ui/react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import DatePicker, { registerLocale } from 'react-datepicker';
+import { zhCN } from 'date-fns/locale/zh-CN';
+import 'react-datepicker/dist/react-datepicker.css';
 import { CalendarIcon, SparklesIcon, QuestionIcon, CopyIcon, MapPinIcon, ClockIcon, FireIcon } from '../../components/Icons';
 import ClientCalendar from '../../components/ClientCalendar';
-import RegionSelector from '../../components/RegionSelector';
 import { dates, membership as membershipApi, clients } from '../../utils/api';
+
+function formatLocalDateTime(date) {
+  if (!date) return '';
+  const pad = n => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+registerLocale('zh-CN', zhCN);
 
 function parseJSON(val, fallback = null) {
   if (!val) return fallback;
@@ -73,38 +83,32 @@ export default function ClientDates() {
   const [interviewSubmitting, setInterviewSubmitting] = useState(false);
   const [selectedAiPlan, setSelectedAiPlan] = useState(null);
   const [generating, setGenerating] = useState(false);
-  const [aiForm, setAiForm] = useState({
-    title: '',
-    scene: '',
-    budget: '',
-    duration: '半天',
-    dateTime: '',  // 约会时间：中午/下午/傍晚/晚上
-    district: '',  // 约会区域
-    transportMode: '地铁/打车',
-    relationshipStage: '初次见面',
-    specialRequirements: ''
-  });
+  const aiModalContentRef = useRef(null);
+  const aiScrollSaveRef = useRef(0);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [addMode, setAddMode] = useState('ai'); // 'ai' | 'manual'
-  const [addStep, setAddStep] = useState(1); // 分步添加：1=选择模式 2=选择女生 3=填写信息
+  const [addStep, setAddStep] = useState(1); // 1=选择女生 2=填写信息
   const [selectedGirlForDate, setSelectedGirlForDate] = useState(null);
-  const [manualForm, setManualForm] = useState({ title: '', girlId: '', dateTime: '', location: '', notes: '' });
-  const [manualSubmitting, setManualSubmitting] = useState(false);
+  const [dateForm, setDateForm] = useState({
+    title: '', dateTime: '', location: '', notes: '',
+    scene: '', budget: '', duration: '半天', transportMode: '地铁/打车',
+    relationshipStage: '初次见面', specialRequirements: ''
+  });
+  const [showAiFields, setShowAiFields] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [filterGirlId, setFilterGirlId] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const toast = useToast();
-
   // 加载记忆的偏好设置
   useEffect(() => {
     const savedTransport = localStorage.getItem('dating_transportMode');
     if (savedTransport) {
-      setAiForm(prev => ({ ...prev, transportMode: savedTransport }));
+      setDateForm(prev => ({ ...prev, transportMode: savedTransport }));
     }
   }, []);
 
   // 记忆出行方式偏好
   const handleTransportModeChange = (value) => {
-    setAiForm(prev => ({ ...prev, transportMode: value }));
+    setDateForm(prev => ({ ...prev, transportMode: value }));
     localStorage.setItem('dating_transportMode', value);
   };
 
@@ -204,31 +208,24 @@ export default function ClientDates() {
     return { percent: 10, label: '初始化' };
   };
 
-  const handleManualSubmit = async () => {
-    if (!manualForm.girlId) {
+  const handleSaveDate = async () => {
+    if (!selectedGirlForDate) {
       toast({ title: '请选择约会对象', status: 'warning' });
       return;
     }
-    setManualSubmitting(true);
+    setSaving(true);
     try {
-      const res = await fetch('/api/dates', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          title: manualForm.title || '新约会',
-          girlId: parseInt(manualForm.girlId),
-          dateTime: manualForm.dateTime || null,
-          location: manualForm.location,
-          notes: manualForm.notes
-        })
-      }).then(r => r.json());
+      const res = await dates.create({
+        girlId: selectedGirlForDate.id,
+        dateTime: dateForm.dateTime || undefined,
+        location: dateForm.location,
+        title: dateForm.title || '新约会',
+        notes: dateForm.notes
+      });
       if (res.success) {
         toast({ title: '约会添加成功', status: 'success', duration: 2000 });
         setShowAddModal(false);
-        setManualForm({ title: '', girlId: '', dateTime: '', location: '', notes: '' });
+        resetDateForm();
         loadAll();
       } else {
         toast({ title: res.error || '添加失败', status: 'error' });
@@ -236,7 +233,18 @@ export default function ClientDates() {
     } catch (e) {
       toast({ title: '添加失败', status: 'error' });
     }
-    setManualSubmitting(false);
+    setSaving(false);
+  };
+
+  const resetDateForm = () => {
+    setDateForm({
+      title: '', dateTime: '', location: '', notes: '',
+      scene: '', budget: '', duration: '半天', transportMode: localStorage.getItem('dating_transportMode') || '地铁/打车',
+      relationshipStage: '初次见面', specialRequirements: ''
+    });
+    setShowAiFields(false);
+    setSelectedGirlForDate(null);
+    setAddStep(1);
   };
 
   const loadAll = async () => {
@@ -264,12 +272,12 @@ export default function ClientDates() {
         if (res.client?.id) {
           setClientId(res.client.id);
         }
-        if (res.girls) {
-          setGirlList(res.girls);
+        if (res.client?.girls) {
+          setGirlList(res.client.girls);
         }
         // 预填充用户偏好
         if (res.client) {
-          setAiForm(prev => ({
+          setDateForm(prev => ({
             ...prev,
             transportMode: res.client.preferredTransportMode || prev.transportMode,
           }));
@@ -333,11 +341,101 @@ export default function ClientDates() {
     setSubmitting(false);
   };
 
-  const generateAiPlan = async () => {
-    if (!aiForm.scene) {
-      toast({ title: '请填写约会场景', status: 'warning' });
-      return;
+  const [reoptimizing, setReoptimizing] = useState(false);
+  const handleReoptimizeDate = async () => {
+    if (!selected) return;
+    setReoptimizing(true);
+    try {
+      const res = await dates.generatePlan(selected.id);
+      if (res.success) {
+        toast({ title: 'AI 正在重新生成方案，请稍后刷新查看', status: 'success', duration: 3000 });
+        onClose();
+        loadAll();
+      } else {
+        toast({ title: res.error || '重新生成失败', status: 'error' });
+      }
+    } catch (e) {
+      toast({ title: '重新生成失败', status: 'error' });
     }
+    setReoptimizing(false);
+  };
+
+  const [deleting, setDeleting] = useState(false);
+  const handleDeleteDate = async (dateId) => {
+    const id = dateId || selected?.id;
+    if (!id) return;
+    if (!window.confirm('确定要删除这个约会吗？关联的日历事件也会一并删除。')) return;
+    setDeleting(true);
+    try {
+      const res = await dates.delete(id);
+      if (res.success) {
+        toast({ title: '约会已删除', status: 'success', duration: 2000 });
+        if (dateId) {
+          setDatesList(prev => prev.filter(d => d.id !== dateId));
+          setAllDates(prev => prev.filter(d => d.id !== dateId));
+        } else {
+          onClose();
+          loadAll();
+        }
+      } else {
+        toast({ title: res.error || '删除失败', status: 'error' });
+      }
+    } catch (e) {
+      toast({ title: '删除失败', status: 'error' });
+    }
+    setDeleting(false);
+  };
+
+  const [reoptimizingAi, setReoptimizingAi] = useState(false);
+
+  // 当方案内容更新时（AI 重新生成完成）强制滚到底部
+  // 使用多重 rAF + setTimeout 确保在 FocusLock/DOM 稳定后执行
+  useLayoutEffect(() => {
+    const el = aiModalContentRef.current;
+    if (!el || aiScrollSaveRef.current <= 0) return;
+    const scrollToBottom = () => {
+      el.scrollTo({ top: el.scrollHeight, behavior: 'instant' });
+    };
+    // 第一轮：useLayoutEffect 同步执行（在浏览器 paint 前）
+    scrollToBottom();
+    // 第二轮：一个 rAF 后（浏览器 paint 前）
+    requestAnimationFrame(scrollToBottom);
+    // 第三轮：setTimeout 作为最后的兜底
+    const timer = setTimeout(scrollToBottom, 100);
+    return () => clearTimeout(timer);
+  }, [selectedAiPlan?.content]);
+
+  const handleReoptimizeAiPlan = async () => {
+    if (!selectedAiPlan || reoptimizingAi) return;
+    aiScrollSaveRef.current = aiModalContentRef.current?.scrollTop || 0;
+    setReoptimizingAi(true);
+    try {
+      const res = await membershipApi.generateDatingPlan({
+        title: selectedAiPlan.title,
+        scene: selectedAiPlan.scene,
+        budget: selectedAiPlan.budget,
+        duration: selectedAiPlan.duration,
+        girlId: selectedAiPlan.girlId,
+        location: selectedAiPlan.location,
+        dateTime: selectedAiPlan.dateTime,
+        optimize: true,
+        previousContent: selectedAiPlan.content
+      });
+      if (res.success) {
+        toast({ title: 'AI 正在重新优化方案，请稍候...', status: 'success', duration: 2000 });
+        // 不立即替换方案，保持当前内容可见，等轮询到新方案再更新
+        pollPlanStatus(res.plan.id, true);
+      } else {
+        toast({ title: '重新优化失败', status: 'error' });
+        setReoptimizingAi(false);
+      }
+    } catch (e) {
+      toast({ title: '重新优化失败', status: 'error' });
+      setReoptimizingAi(false);
+    }
+  };
+
+  const generateAiPlan = async () => {
     if (!selectedGirlForDate) {
       toast({ title: '请先选择约会对象', status: 'warning' });
       return;
@@ -361,15 +459,15 @@ export default function ClientDates() {
         residence: selectedGirlForDate.residence,
       };
       const res = await membershipApi.generateDatingPlan({
-        title: aiForm.title,
-        scene: aiForm.scene,
-        budget: aiForm.budget,
-        duration: aiForm.duration,
-        dateTime: aiForm.dateTime,
-        district: aiForm.district,
-        transportMode: aiForm.transportMode,
-        relationshipStage: aiForm.relationshipStage,
-        specialRequirements: aiForm.specialRequirements,
+        title: dateForm.title,
+        scene: dateForm.scene,
+        budget: dateForm.budget,
+        duration: dateForm.duration,
+        dateTime: dateForm.dateTime,
+        location: dateForm.location,
+        transportMode: dateForm.transportMode,
+        relationshipStage: dateForm.relationshipStage,
+        specialRequirements: dateForm.specialRequirements,
         girl: girlInfo
       });
       if (res.success) {
@@ -378,7 +476,7 @@ export default function ClientDates() {
         setSelectedAiPlan(res.plan);
 
         // 清空表单
-        setAiForm({ title: '', scene: '', budget: '', duration: '半天', dateTime: '', district: '', transportMode: localStorage.getItem('dating_transportMode') || '地铁/打车', relationshipStage: '初次见面', specialRequirements: '' });
+        resetDateForm();
 
         // 轮询刷新方案直到生成完成
         pollPlanStatus(res.plan.id);
@@ -389,8 +487,8 @@ export default function ClientDates() {
     }
   };
 
-  // 轮询方案状态直到生成完成
-  const pollPlanStatus = async (planId) => {
+  // 轮询方案状态直到生成完成，keepContent=true 时不替换正在显示的内容
+  const pollPlanStatus = async (planId, keepContent = false) => {
     const maxAttempts = 30; // 最多30次
     const interval = 2000;   // 每2秒查询一次
 
@@ -400,13 +498,29 @@ export default function ClientDates() {
       try {
         const res = await membershipApi.getDatingPlan(planId);
         if (res.success && res.plan) {
-          setSelectedAiPlan(res.plan);
-          setAiPlans(prev => prev.map(p => p.id === planId ? res.plan : p));
+          // 更新列表
+          setAiPlans(prev => {
+            const exists = prev.some(p => p.id === planId);
+            return exists ? prev.map(p => p.id === planId ? res.plan : p) : [res.plan, ...prev];
+          });
 
           if (res.plan.planStatus === 'generated') {
+            setSelectedAiPlan(res.plan);
             setGenerating(false);
+            setReoptimizingAi(false);
+            // 延迟滚到底部，确保 DOM 更新完成
+            setTimeout(() => {
+              if (aiModalContentRef.current) {
+                aiModalContentRef.current.scrollTo({ top: aiModalContentRef.current.scrollHeight, behavior: 'instant' });
+              }
+            }, 150);
             toast({ title: '✨ 方案已生成', status: 'success', duration: 3000 });
             return;
+          }
+
+          // 非 keepContent 模式才实时更新显示内容
+          if (!keepContent) {
+            setSelectedAiPlan(res.plan);
           }
         }
       } catch (err) {
@@ -907,7 +1021,15 @@ export default function ClientDates() {
                       onClick={() => openDetail(d)}
                       transition="all 0.2s"
                     >
-                      <CardBody py={4} px={5}>
+                      <CardBody py={4} px={5} position="relative">
+                        <Button
+                          position="absolute" top={2} right={2} zIndex={2}
+                          size="xs" colorScheme="red" variant="ghost"
+                          onClick={(e) => { e.stopPropagation(); handleDeleteDate(d.id); }}
+                          isLoading={deleting}
+                        >
+                          删除
+                        </Button>
                         <Flex gap={4} align="flex-start">
                           {/* 头像区域 */}
                           <Avatar size="lg" name={d.girl?.name} src={getAvatar(d.girl)} />
@@ -996,7 +1118,13 @@ export default function ClientDates() {
         <ModalContent bg="gray.800" maxH="85vh" overflow="auto">
           <ModalHeader color="white">
             {selected?.title || '约会方案'}
-            <Badge ml={2} colorScheme="purple">待确认</Badge>
+            <Badge ml={2} colorScheme={selected?.status === 'confirmed' ? 'green' : selected?.status === 'pending_client_confirm' ? 'purple' : selected?.status === 'planned' ? 'teal' : 'orange'}>
+              {selected?.status === 'confirmed' ? '已确认' : selected?.status === 'pending_client_confirm' ? '待确认' : selected?.status === 'planned' ? '已策划' : '待策划'}
+            </Badge>
+            {!selected?.conditions && <Badge ml={2} colorScheme="gray">自建</Badge>}
+            <Button ml={3} size="sm" colorScheme="red" variant="outline" onClick={() => handleDeleteDate()} isLoading={deleting}>
+              删除约会
+            </Button>
           </ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={6}>
@@ -1025,50 +1153,87 @@ export default function ClientDates() {
 
                 <Divider borderColor="gray.600" my={4} />
 
-                {/* 确认/调整 */}
-                <Alert status="info" mb={4} borderRadius="md">
-                  <AlertIcon />
-                  <AlertDescription fontSize="sm">
-                    查看完方案后，可以直接确认，或提出调整建议让顾问优化。
-                  </AlertDescription>
-                </Alert>
-
-                <VStack spacing={3} align="stretch">
-                  <Text color="gray.300" fontSize="sm" fontWeight="bold">我想调整方案</Text>
-                  <FormControl>
-                    <FormLabel color="gray.400" fontSize="sm">调整建议</FormLabel>
-                    <Textarea
-                      value={feedbackText}
-                      onChange={e => setFeedbackText(e.target.value)}
-                      placeholder="比如：换一个更安静的餐厅 / 预算降低一些 / 增加户外活动..."
-                      bg="gray.700" color="white" rows={2}
-                    />
-                  </FormControl>
-                  <FormControl>
-                    <FormLabel color="gray.400" fontSize="sm">原因（选填）</FormLabel>
-                    <Textarea
-                      value={feedbackReason}
-                      onChange={e => setFeedbackReason(e.target.value)}
-                      placeholder="为什么想调整？"
-                      bg="gray.700" color="white" rows={2}
-                    />
-                  </FormControl>
-                  <HStack>
-                    <Button
-                      colorScheme="purple" variant="outline" flex={1}
-                      onClick={handleFeedback} isLoading={submitting}
-                      isDisabled={!feedbackText.trim() || submitting}
-                    >
-                      提交调整建议
+                {/* 确认/调整：自建约会仅显示 AI 重新生成 */}
+                {!selected?.conditions ? (
+                  <VStack spacing={3} align="stretch">
+                    <Alert status="success" mb={4} borderRadius="md">
+                      <AlertIcon />
+                      <AlertDescription fontSize="sm">这是您自己创建的约会。如需优化方案，可让 AI 重新生成。</AlertDescription>
+                    </Alert>
+                    <Button colorScheme="teal" leftIcon={<SparklesIcon />} onClick={handleReoptimizeDate} isLoading={reoptimizing}>
+                      AI 重新生成
                     </Button>
-                    <Button
-                      colorScheme="green" flex={1}
-                      onClick={handleConfirm} isLoading={confirming}
-                    >
-                      确认此方案 ✓
-                    </Button>
-                  </HStack>
-                </VStack>
+                  </VStack>
+                ) : selected?.status === 'pending_client_confirm' ? (
+                  <>
+                    <Alert status="info" mb={4} borderRadius="md">
+                      <AlertIcon />
+                      <AlertDescription fontSize="sm">查看完方案后，可以直接确认，或提出调整建议让顾问优化。</AlertDescription>
+                    </Alert>
+                    <VStack spacing={3} align="stretch">
+                      <Text color="gray.300" fontSize="sm" fontWeight="bold">我想调整方案</Text>
+                      <FormControl>
+                        <FormLabel color="gray.400" fontSize="sm">调整建议</FormLabel>
+                        <Textarea value={feedbackText} onChange={e => setFeedbackText(e.target.value)} placeholder="比如：换一个更安静的餐厅 / 预算降低一些 / 增加户外活动..." bg="gray.700" color="white" rows={2} />
+                      </FormControl>
+                      <FormControl>
+                        <FormLabel color="gray.400" fontSize="sm">原因（选填）</FormLabel>
+                        <Textarea value={feedbackReason} onChange={e => setFeedbackReason(e.target.value)} placeholder="为什么想调整？" bg="gray.700" color="white" rows={2} />
+                      </FormControl>
+                      <HStack>
+                        <Button colorScheme="purple" variant="outline" flex={1} onClick={handleFeedback} isLoading={submitting} isDisabled={!feedbackText.trim() || submitting}>
+                          提交调整建议
+                        </Button>
+                        <Button colorScheme="teal" variant="outline" flex={1} leftIcon={<SparklesIcon />} onClick={handleReoptimizeDate} isLoading={reoptimizing}>
+                          AI 重新生成
+                        </Button>
+                        <Button colorScheme="green" flex={1} onClick={handleConfirm} isLoading={confirming}>
+                          确认此方案 ✓
+                        </Button>
+                      </HStack>
+                    </VStack>
+                  </>
+                ) : selected?.status === 'confirmed' ? (
+                  <VStack spacing={3} align="stretch">
+                    <Alert status="success" mb={4} borderRadius="md">
+                      <AlertIcon />
+                      <AlertDescription fontSize="sm">方案已确认。如需调整，可使用 AI 重新生成或提交调整建议。</AlertDescription>
+                    </Alert>
+                    <Text color="gray.300" fontSize="sm" fontWeight="bold">方案调整</Text>
+                    <FormControl>
+                      <FormLabel color="gray.400" fontSize="sm">调整建议（选填）</FormLabel>
+                      <Textarea value={feedbackText} onChange={e => setFeedbackText(e.target.value)} placeholder="比如：换一个更安静的餐厅 / 预算降低一些 / 增加户外活动..." bg="gray.700" color="white" rows={2} />
+                    </FormControl>
+                    <HStack>
+                      <Button colorScheme="purple" variant="outline" flex={1} onClick={handleFeedback} isLoading={submitting} isDisabled={!feedbackText.trim() || submitting}>
+                        提交调整建议
+                      </Button>
+                      <Button colorScheme="teal" flex={1} leftIcon={<SparklesIcon />} onClick={handleReoptimizeDate} isLoading={reoptimizing}>
+                        AI 重新生成
+                      </Button>
+                    </HStack>
+                  </VStack>
+                ) : (
+                  <VStack spacing={3} align="stretch">
+                    <Alert status="info" mb={4} borderRadius="md">
+                      <AlertIcon />
+                      <AlertDescription fontSize="sm">方案待推送。您可以提交调整建议或让 AI 重新生成。</AlertDescription>
+                    </Alert>
+                    <Text color="gray.300" fontSize="sm" fontWeight="bold">方案调整</Text>
+                    <FormControl>
+                      <FormLabel color="gray.400" fontSize="sm">调整建议（选填）</FormLabel>
+                      <Textarea value={feedbackText} onChange={e => setFeedbackText(e.target.value)} placeholder="比如：换一个更安静的餐厅 / 预算降低一些 / 增加户外活动..." bg="gray.700" color="white" rows={2} />
+                    </FormControl>
+                    <HStack>
+                      <Button colorScheme="purple" variant="outline" flex={1} onClick={handleFeedback} isLoading={submitting} isDisabled={!feedbackText.trim() || submitting}>
+                        提交调整建议
+                      </Button>
+                      <Button colorScheme="teal" flex={1} leftIcon={<SparklesIcon />} onClick={handleReoptimizeDate} isLoading={reoptimizing}>
+                        AI 重新生成
+                      </Button>
+                    </HStack>
+                  </VStack>
+                )}
               </Box>
             )}
           </ModalBody>
@@ -1158,10 +1323,10 @@ export default function ClientDates() {
         </ModalContent>
       </Modal>
 
-      {/* AI 方案详情 */}
-      <Modal isOpen={!!selectedAiPlan} onClose={() => setSelectedAiPlan(null)} size="3xl">
+      {/* AI 方案详情 — trapFocus=false 防止方案更新时 FocusLock 自动聚焦关闭按钮导致滚回顶部 */}
+      <Modal isOpen={!!selectedAiPlan} onClose={() => { aiScrollSaveRef.current = 0; setSelectedAiPlan(null); }} size="3xl" trapFocus={false}>
         <ModalOverlay />
-        <ModalContent bg="gray.800" maxH="85vh" overflow="auto">
+        <ModalContent bg="gray.800" maxH="85vh" overflow="auto" ref={aiModalContentRef}>
           <ModalHeader color="white">
             {selectedAiPlan?.title || 'AI 约会方案'}
             <Badge ml={2} colorScheme="brand">AI</Badge>
@@ -1276,7 +1441,16 @@ export default function ClientDates() {
                   <Text color="gray.400">暂无方案内容</Text>
                 )}
 
-                <HStack mt={6} justify="flex-end">
+                <HStack mt={6} justify="flex-end" spacing={3}>
+                  <Button
+                    leftIcon={reoptimizingAi ? <Spinner size="sm" /> : <SparklesIcon />}
+                    colorScheme="teal"
+                    onClick={handleReoptimizeAiPlan}
+                    isDisabled={selectedAiPlan?.planStatus === 'generating'}
+                    style={reoptimizingAi ? { pointerEvents: 'none', opacity: 0.7 } : undefined}
+                  >
+                    {reoptimizingAi ? '正在优化...' : 'AI 再次优化'}
+                  </Button>
                   <Button
                     leftIcon={<CopyIcon />}
                     variant="outline"
@@ -1297,18 +1471,18 @@ export default function ClientDates() {
         </ModalContent>
       </Modal>
 
-      {/* 添加约会 Modal - 分步流程 */}
-      <Modal isOpen={showAddModal} onClose={() => { setShowAddModal(false); setAddStep(1); setSelectedGirlForDate(null); }} size="lg">
+            {/* 添加约会 Modal - 双步统一流程 */}
+      <Modal isOpen={showAddModal} onClose={() => { setShowAddModal(false); resetDateForm(); }} size="lg">
         <ModalOverlay />
         <ModalContent bg="gray.800" maxH="85vh" overflow="auto">
           <ModalHeader color="white">
-            {addStep === 1 ? '创建约会' : addStep === 2 ? '选择约会对象' : (addMode === 'ai' ? 'AI 智能策划' : '填写信息')}
+            {addStep === 1 ? '选择约会对象' : '填写约会信息'}
           </ModalHeader>
-          <ModalCloseButton onClick={() => { setShowAddModal(false); setAddStep(1); setSelectedGirlForDate(null); }} />
+          <ModalCloseButton onClick={() => { setShowAddModal(false); resetDateForm(); }} />
           <ModalBody pb={6}>
             {/* 步骤指示器 */}
             <Flex justify="center" gap={2} mb={8}>
-              {[1, 2, 3].map(step => (
+              {[1, 2].map(step => (
                 <Box
                   key={step}
                   w={addStep === step ? '32px' : '8px'}
@@ -1320,64 +1494,14 @@ export default function ClientDates() {
               ))}
             </Flex>
 
-            {/* Step 1: 选择模式 */}
+            {/* Step 1: 选择女生 */}
             {addStep === 1 && (
-              <VStack spacing={4} align="stretch">
-                <Text color="gray.400" textAlign="center" mb={2}>选择创建方式</Text>
-                <HStack spacing={4}>
-                  <Card
-                    flex={1}
-                    cursor="pointer"
-                    bg={addMode === 'ai' ? 'rgba(0,212,170,0.15)' : 'gray.750'}
-                    border="2px solid"
-                    borderColor={addMode === 'ai' ? 'brand.500' : 'gray.600'}
-                    onClick={() => setAddMode('ai')}
-                    _hover={{ borderColor: 'brand.400' }}
-                    transition="all 0.2s"
-                  >
-                    <CardBody textAlign="center" py={8}>
-                      <Box fontSize="40px" mb={3}>✨</Box>
-                      <Text color={addMode === 'ai' ? 'brand.400' : 'gray.300'} fontWeight="bold" fontSize="lg">AI 智能策划</Text>
-                      <Text color="gray.500" fontSize="sm" mt={1}>描述场景，AI 定制专属方案</Text>
-                    </CardBody>
-                  </Card>
-                  <Card
-                    flex={1}
-                    cursor="pointer"
-                    bg={addMode === 'manual' ? 'rgba(0,212,170,0.15)' : 'gray.750'}
-                    border="2px solid"
-                    borderColor={addMode === 'manual' ? 'brand.500' : 'gray.600'}
-                    onClick={() => setAddMode('manual')}
-                    _hover={{ borderColor: 'brand.400' }}
-                    transition="all 0.2s"
-                  >
-                    <CardBody textAlign="center" py={8}>
-                      <Box fontSize="40px" mb={3}>📝</Box>
-                      <Text color={addMode === 'manual' ? 'brand.400' : 'gray.300'} fontWeight="bold" fontSize="lg">手动创建</Text>
-                      <Text color="gray.500" fontSize="sm" mt={1}>自己填写约会信息</Text>
-                    </CardBody>
-                  </Card>
-                </HStack>
-                <Button
-                  colorScheme="brand"
-                  size="lg"
-                  mt={4}
-                  onClick={() => setAddStep(2)}
-                >
-                  下一步
-                </Button>
-              </VStack>
-            )}
-
-            {/* Step 2: 选择女生 */}
-            {addStep === 2 && (
               <VStack spacing={4} align="stretch">
                 <Text color="gray.400" textAlign="center" mb={2}>选择约会对象</Text>
                 <VStack spacing={3} align="stretch" maxH="300px" overflowY="auto">
                   {girlList.length === 0 ? (
                     <Text color="gray.500" textAlign="center" py={8}>暂无比心仪的女生</Text>
                   ) : girlList.map(girl => {
-                    // 关系阶段标签
                     const stageLabels = {
                       '陌生': { color: 'gray', text: '陌生' },
                       '朋友': { color: 'blue', text: '朋友' },
@@ -1399,22 +1523,16 @@ export default function ClientDates() {
                       borderColor={selectedGirlForDate?.id === girl.id ? 'brand.500' : 'gray.600'}
                       onClick={() => {
                         setSelectedGirlForDate(girl);
-                        // 自动设置关系阶段
                         const stageMap = {
-                          '陌生': '初次见面',
-                          '朋友': '已聊过几次',
-                          '暧昧': '暧昧中',
-                          '亲密': '确定关系',
-                          'EXPLORATION': '初次见面',
-                          'FLIRTING': '暧昧中',
-                          'ADVANCEMENT': '暧昧中',
-                          'CONFIRMATION': '确定关系',
+                          '陌生': '初次见面', '朋友': '已聊过几次',
+                          '暧昧': '暧昧中', '亲密': '确定关系',
+                          'EXPLORATION': '初次见面', 'FLIRTING': '暧昧中',
+                          'ADVANCEMENT': '暧昧中', 'CONFIRMATION': '确定关系',
                           'STABLE': '确定关系',
                         };
-                        setAiForm(prev => ({
+                        setDateForm(prev => ({
                           ...prev,
                           relationshipStage: stageMap[girl.currentStage] || stageMap[girl.relationshipStage] || prev.relationshipStage,
-                          // 自动填充饮食偏好
                           specialRequirements: girl.dietRestrictions
                             ? `她有饮食限制：${girl.dietRestrictions}`
                             : girl.dietPreferences
@@ -1454,22 +1572,20 @@ export default function ClientDates() {
                     </Card>
                   )})}
                 </VStack>
-                <HStack mt={4}>
-                  <Button variant="outline" colorScheme="gray" onClick={() => setAddStep(1)}>上一步</Button>
-                  <Button
-                    colorScheme="brand"
-                    flex={1}
-                    isDisabled={!selectedGirlForDate}
-                    onClick={() => setAddStep(3)}
-                  >
-                    下一步
-                  </Button>
-                </HStack>
+                <Button
+                  colorScheme="brand"
+                  size="lg"
+                  mt={4}
+                  isDisabled={!selectedGirlForDate}
+                  onClick={() => setAddStep(2)}
+                >
+                  下一步
+                </Button>
               </VStack>
             )}
 
-            {/* Step 3: 填写信息 */}
-            {addStep === 3 && (
+            {/* Step 2: 填写信息（统一表单） */}
+            {addStep === 2 && (
               <VStack spacing={4} align="stretch">
                 {/* 已选女生信息卡片 */}
                 {selectedGirlForDate && (
@@ -1486,22 +1602,100 @@ export default function ClientDates() {
                             {selectedGirlForDate.interests && <Tag size="sm" colorScheme="pink">{selectedGirlForDate.interests}</Tag>}
                           </HStack>
                         </Box>
-                        <Button size="xs" variant="ghost" colorScheme="brand" onClick={() => setAddStep(2)}>修改</Button>
+                        <Button size="xs" variant="ghost" colorScheme="brand" onClick={() => setAddStep(1)}>修改</Button>
                       </Flex>
                     </CardBody>
                   </Card>
                 )}
 
-                {addMode === 'ai' ? (
-                  /* AI 生成表单 */
-                  <VStack spacing={4} align="stretch">
+                {/* --- 公共基础信息 --- */}
+                <FormControl>
+                  <FormLabel color="gray.400" fontSize="sm">约会标题</FormLabel>
+                  <Input
+                    placeholder="如：周末约会"
+                    value={dateForm.title}
+                    onChange={e => setDateForm({ ...dateForm, title: e.target.value })}
+                    bg="gray.700" borderColor="gray.600"
+                  />
+                </FormControl>
+
+                <FormControl>
+                  <FormLabel color="gray.400" fontSize="sm">约会时间</FormLabel>
+                  <DatePicker
+                    selected={dateForm.dateTime ? new Date(dateForm.dateTime) : null}
+                    onChange={(date) => setDateForm({ ...dateForm, dateTime: formatLocalDateTime(date) })}
+                    showTimeSelect
+                    timeIntervals={15}
+                    timeCaption="时间"
+                    dateFormat="yyyy/MM/dd aaah:mm"
+                    locale="zh-CN"
+                    placeholderText="选择日期和时间"
+                    customInput={
+                      <Input
+                        bg="gray.700" borderColor="gray.600"
+                        _placeholder={{ color: 'gray.500' }}
+                      />
+                    }
+                    calendarClassName="chinese-calendar"
+                  />
+                </FormControl>
+
+                <FormControl>
+                  <FormLabel color="gray.400" fontSize="sm">约会地点</FormLabel>
+                  <Input
+                    placeholder="如：北京三里屯 / 海底捞火锅"
+                    value={dateForm.location}
+                    onChange={e => setDateForm({ ...dateForm, location: e.target.value })}
+                    bg="gray.700" borderColor="gray.600"
+                    _placeholder={{ color: 'gray.500' }}
+                  />
+                </FormControl>
+
+                <FormControl>
+                  <FormLabel color="gray.400" fontSize="sm">备注（选填）</FormLabel>
+                  <Textarea
+                    placeholder="备注信息"
+                    value={dateForm.notes}
+                    onChange={e => setDateForm({ ...dateForm, notes: e.target.value })}
+                    bg="gray.700" borderColor="gray.600" rows={2}
+                  />
+                </FormControl>
+
+                {/* --- 操作按钮 --- */}
+                <HStack mt={4} spacing={3}>
+                  <Button
+                    colorScheme="green"
+                    flex={1}
+                    size="lg"
+                    isLoading={saving}
+                    onClick={handleSaveDate}
+                  >
+                    保存约会
+                  </Button>
+                  <Button
+                    variant={showAiFields ? 'solid' : 'outline'}
+                    colorScheme={showAiFields ? 'brand' : 'gray'}
+                    leftIcon={<SparklesIcon />}
+                    flex={1}
+                    size="lg"
+                    onClick={() => setShowAiFields(!showAiFields)}
+                  >
+                    {showAiFields ? '收起 AI 策划' : 'AI 智能策划'}
+                  </Button>
+                </HStack>
+
+                {/* --- AI 智能策划区域（可展开） --- */}
+                {showAiFields && (
+                  <VStack spacing={4} align="stretch" mt={2}>
+                    <Divider />
+                    <Text color="brand.400" fontWeight="bold" fontSize="sm">✨ AI 增强信息（可选填，填得越详细方案越精准）</Text>
+
                     <FormControl>
                       <FormLabel color="gray.400" fontSize="sm">出行方式</FormLabel>
                       <Select
-                        value={aiForm.transportMode}
+                        value={dateForm.transportMode}
                         onChange={e => handleTransportModeChange(e.target.value)}
-                        bg="gray.700"
-                        borderColor="gray.600"
+                        bg="gray.700" borderColor="gray.600"
                       >
                         <option value="地铁/打车">地铁/打车</option>
                         <option value="开车">开车</option>
@@ -1513,10 +1707,9 @@ export default function ClientDates() {
                     <FormControl>
                       <FormLabel color="gray.400" fontSize="sm">当前关系阶段</FormLabel>
                       <Select
-                        value={aiForm.relationshipStage}
-                        onChange={e => setAiForm({ ...aiForm, relationshipStage: e.target.value })}
-                        bg="gray.700"
-                        borderColor="gray.600"
+                        value={dateForm.relationshipStage}
+                        onChange={e => setDateForm({ ...dateForm, relationshipStage: e.target.value })}
+                        bg="gray.700" borderColor="gray.600"
                       >
                         <option value="初次见面">初次见面</option>
                         <option value="已聊过几次">已聊过几次</option>
@@ -1529,47 +1722,20 @@ export default function ClientDates() {
                       <FormLabel color="gray.400" fontSize="sm">特殊要求（选填）</FormLabel>
                       <Input
                         placeholder="如：她吃素/过敏/不吃辣等"
-                        value={aiForm.specialRequirements}
-                        onChange={e => setAiForm({ ...aiForm, specialRequirements: e.target.value })}
-                        bg="gray.700"
-                        borderColor="gray.600"
+                        value={dateForm.specialRequirements}
+                        onChange={e => setDateForm({ ...dateForm, specialRequirements: e.target.value })}
+                        bg="gray.700" borderColor="gray.600"
                         _placeholder={{ color: 'gray.500' }}
                       />
                     </FormControl>
-
-                    <HStack>
-                      <FormControl>
-                        <FormLabel color="gray.400" fontSize="sm">约会时间</FormLabel>
-                        <Select
-                          value={aiForm.dateTime}
-                          onChange={e => setAiForm({ ...aiForm, dateTime: e.target.value })}
-                          bg="gray.700"
-                          borderColor="gray.600"
-                          placeholder="选择时段"
-                        >
-                          <option value="中午 11:30-14:00">中午</option>
-                          <option value="下午 14:00-17:00">下午</option>
-                          <option value="傍晚 17:00-19:00">傍晚</option>
-                          <option value="晚上 19:00-21:00">晚上</option>
-                        </Select>
-                      </FormControl>
-                      <FormControl>
-                        <FormLabel color="gray.400" fontSize="sm">约会区域</FormLabel>
-                        <RegionSelector
-                          value={aiForm.district}
-                          onChange={val => setAiForm({ ...aiForm, district: val })}
-                        />
-                      </FormControl>
-                    </HStack>
 
                     <FormControl>
                       <FormLabel color="gray.400" fontSize="sm">约会场景描述</FormLabel>
                       <Textarea
                         placeholder="描述你的约会想法，例如：想和女生去一家有氛围的餐厅吃饭，她喜欢粤菜"
-                        value={aiForm.scene}
-                        onChange={e => setAiForm({ ...aiForm, scene: e.target.value })}
-                        bg="gray.700"
-                        borderColor="gray.600"
+                        value={dateForm.scene}
+                        onChange={e => setDateForm({ ...dateForm, scene: e.target.value })}
+                        bg="gray.700" borderColor="gray.600"
                         _placeholder={{ color: 'gray.500' }}
                         rows={3}
                       />
@@ -1580,20 +1746,18 @@ export default function ClientDates() {
                         <FormLabel color="gray.400" fontSize="sm">预算</FormLabel>
                         <Input
                           placeholder="如：1000元左右"
-                          value={aiForm.budget}
-                          onChange={e => setAiForm({ ...aiForm, budget: e.target.value })}
-                          bg="gray.700"
-                          borderColor="gray.600"
+                          value={dateForm.budget}
+                          onChange={e => setDateForm({ ...dateForm, budget: e.target.value })}
+                          bg="gray.700" borderColor="gray.600"
                           _placeholder={{ color: 'gray.500' }}
                         />
                       </FormControl>
                       <FormControl>
                         <FormLabel color="gray.400" fontSize="sm">时长</FormLabel>
                         <Select
-                          value={aiForm.duration}
-                          onChange={e => setAiForm({ ...aiForm, duration: e.target.value })}
-                          bg="gray.700"
-                          borderColor="gray.600"
+                          value={dateForm.duration}
+                          onChange={e => setDateForm({ ...dateForm, duration: e.target.value })}
+                          bg="gray.700" borderColor="gray.600"
                         >
                           <option value="2小时内">2小时内</option>
                           <option value="半天">半天</option>
@@ -1609,10 +1773,6 @@ export default function ClientDates() {
                       size="lg"
                       mt={2}
                       onClick={() => {
-                        if (!aiForm.scene) {
-                          toast({ title: '请填写约会场景描述', status: 'warning' });
-                          return;
-                        }
                         setGenerating(true);
                         toast({ title: '大师团正在精心策划中...', status: 'info', duration: 2000 });
                         generateAiPlan();
@@ -1623,68 +1783,11 @@ export default function ClientDates() {
                       生成精细化方案
                     </Button>
                   </VStack>
-                ) : (
-                  /* 手动填写表单 */
-                  <VStack spacing={4} align="stretch">
-                    <FormControl>
-                      <FormLabel color="gray.400" fontSize="sm">约会标题</FormLabel>
-                      <Input
-                        placeholder="如：周末约会"
-                        value={manualForm.title}
-                        onChange={e => setManualForm({ ...manualForm, title: e.target.value })}
-                        bg="gray.700"
-                        borderColor="gray.600"
-                      />
-                    </FormControl>
-                    <FormControl>
-                      <FormLabel color="gray.400" fontSize="sm">约会时间</FormLabel>
-                      <Input
-                        type="datetime-local"
-                        value={manualForm.dateTime}
-                        onChange={e => setManualForm({ ...manualForm, dateTime: e.target.value })}
-                        bg="gray.700"
-                        borderColor="gray.600"
-                      />
-                    </FormControl>
-                    <FormControl>
-                      <FormLabel color="gray.400" fontSize="sm">地点</FormLabel>
-                      <Input
-                        placeholder="约会地点"
-                        value={manualForm.location}
-                        onChange={e => setManualForm({ ...manualForm, location: e.target.value })}
-                        bg="gray.700"
-                        borderColor="gray.600"
-                      />
-                    </FormControl>
-                    <FormControl>
-                      <FormLabel color="gray.400" fontSize="sm">备注</FormLabel>
-                      <Textarea
-                        placeholder="备注信息（选填）"
-                        value={manualForm.notes}
-                        onChange={e => setManualForm({ ...manualForm, notes: e.target.value })}
-                        bg="gray.700"
-                        borderColor="gray.600"
-                        rows={2}
-                      />
-                    </FormControl>
-                    <Button
-                      colorScheme="brand"
-                      leftIcon={<CalendarIcon />}
-                      size="lg"
-                      onClick={() => {
-                        setManualForm(prev => ({ ...prev, girlId: selectedGirlForDate?.id || '' }));
-                        handleManualSubmit();
-                        setShowAddModal(false);
-                        setAddStep(1);
-                        setSelectedGirlForDate(null);
-                      }}
-                      isLoading={manualSubmitting}
-                    >
-                      添加约会
-                    </Button>
-                  </VStack>
                 )}
-                <Button variant="outline" colorScheme="gray" onClick={() => setAddStep(2)}>上一步</Button>
+
+                <Button variant="outline" colorScheme="gray" onClick={() => { setAddStep(1); setShowAiFields(false); }}>
+                  上一步
+                </Button>
               </VStack>
             )}
           </ModalBody>

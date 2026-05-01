@@ -58,6 +58,7 @@ const CLIENT_EDITABLE_FIELDS = [
   { key: 'strengths', label: '个人优势', type: 'textarea' },
   { key: 'weaknesses', label: '个人不足', type: 'textarea' },
   { key: 'matchPreferences', label: '对目标的期望', type: 'textarea' },
+  { key: 'dateTaboos', label: '禁忌', type: 'textarea' },
   { key: 'profileBio', label: '个人签名', type: 'textarea' },
 ];
 
@@ -97,7 +98,7 @@ Object.assign(ALL_FIELD_LABELS, {
   assetsLevel: '资产等级', clientType: '客户类型', empathy: '共情能力',
   communication: '沟通表达能力', conflictRes: '冲突处理能力',
   appearanceSelfAssessment: '自我颜值评价', appearanceSelfRequirement: '对对方颜值要求',
-  strengths: '优势', weaknesses: '不足', dateTaboos: '约会禁忌', notes: '备注',
+  strengths: '优势', weaknesses: '不足', dateTaboos: '禁忌', notes: '备注',
   trustLevel: '信任度', interactionHeat: '互动热度', feedbackQuality: '反馈质量',
   budgetRange: '预算范围', timeInvestment: '时间投入', balance: '余额', source: '来源',
   selfValuePerception: '自我价值感知', cognitiveAccuracy: '认知准确性',
@@ -882,6 +883,16 @@ export default function ClientProfile() {
             <CardBody>
               <Text color="pink.400" fontWeight="bold" mb={2}>对目标的期望</Text>
               <Text color="gray.300" fontSize="sm" whiteSpace="pre-wrap">{profile.matchPreferences}</Text>
+            </CardBody>
+          </Card>
+        )}
+
+        {/* 禁忌 */}
+        {profile.dateTaboos && (
+          <Card bg="gray.800">
+            <CardBody>
+              <Text color="red.400" fontWeight="bold" mb={2}>禁忌</Text>
+              <Text color="gray.300" fontSize="sm" whiteSpace="pre-wrap">{profile.dateTaboos}</Text>
             </CardBody>
           </Card>
         )}
