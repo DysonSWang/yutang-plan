@@ -6,9 +6,38 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
-const { JWT_SECRET, getAIConfig } = require('../config');
+const { JWT_SECRET, getAIConfig, BASE_URL } = require('../config');
 const prisma = require('../prisma');
+const { extractFromImage } = require('../services/signalExtractor');
+
+// 截图上传目录
+const SCREENSHOT_DIR = path.join(__dirname, '../../uploads/chat-screenshots');
+if (!fs.existsSync(SCREENSHOT_DIR)) {
+  fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
+}
+
+const screenshotUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, SCREENSHOT_DIR),
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('仅支持图片格式'));
+    }
+  }
+});
 
 // Auth middleware
 const authMiddleware = async (req, res, next) => {
@@ -481,7 +510,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 // 从文本提取客户档案
 router.post('/extract-profile', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (!['admin', 'client'].includes(req.user.role)) {
       return res.status(403).json({ error: '无权限' });
     }
 
@@ -987,6 +1016,71 @@ router.put('/:id/password', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('[Clients] 修改密码失败:', error);
     res.status(500).json({ error: '修改失败' });
+  }
+});
+
+// 客户上传截图 AI 提取档案字段
+router.post('/extract-from-screenshot', authMiddleware, screenshotUpload.single('image'), async (req, res) => {
+  try {
+    if (!['admin', 'client'].includes(req.user.role)) {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: '请上传截图' });
+    }
+
+    const imageUrl = `/uploads/chat-screenshots/${req.file.filename}`;
+    const clientId = req.user.role === 'client' ? req.user.id : (req.body.clientId || null);
+
+    let pendingFields = {};
+    try {
+      const imageResult = await extractFromImage('fake-girl-id', imageUrl, BASE_URL, req.user.id, false);
+      if (imageResult?.pendingFields) {
+        const fieldMapping = {
+          age: 'age',
+          occupation: 'occupation',
+          education: 'education',
+          hometown: 'hometown',
+          residence: 'residence',
+          appearance: 'appearance',
+          personality: 'personality',
+          relationshipAttitude: 'relationshipAttitude',
+          interests: 'interests',
+          height: 'height'
+        };
+        for (const [girlKey, value] of Object.entries(imageResult.pendingFields)) {
+          const clientKey = fieldMapping[girlKey];
+          if (clientKey) {
+            pendingFields[clientKey] = value;
+          }
+        }
+      }
+    } catch (aiError) {
+      console.warn('[Clients] AI分析截图失败:', aiError.message);
+    }
+
+    // 保存截图记录
+    await prisma.chatScreenshot.create({
+      data: {
+        clientId,
+        operatorId: req.user.id,
+        imageUrl,
+        notes: req.user.role === 'client' ? '客户自助截图提取' : '管理员截图提取'
+      }
+    }).catch(() => {});
+
+    res.json({
+      success: true,
+      pendingFields,
+      message: Object.keys(pendingFields).length > 0 ? '识别到档案信息' : '未识别到档案信息，请尝试更清晰的截图'
+    });
+  } catch (error) {
+    console.error('[Clients] 截图提取失败:', error);
+    if (error.message === '仅支持图片格式') {
+      return res.status(400).json({ error: error.message });
+    }
+    res.status(500).json({ error: '提取失败' });
   }
 });
 

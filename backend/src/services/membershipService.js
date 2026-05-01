@@ -16,6 +16,8 @@
  */
 const prisma = require('../prisma');
 const crypto = require('crypto');
+const AppError = require('../errors/AppError');
+const { ErrorCodes } = require('../errors/errorCodes');
 
 // ===== 价格常量 =====
 const PRICE_MONTHLY = 999;
@@ -252,46 +254,44 @@ async function purchaseMembership(userId, type, pointsToUse = 0) {
     ? Math.round(basePrice * REFERRAL_DISCOUNT)
     : basePrice;
 
-  // 校验积分（积分只能续费抵扣）
-  if (pointsToUse > 0) {
-    const balance = await getPointsBalance(userId);
-    if (pointsToUse > balance) throw new Error('积分余额不足');
-    if (pointsToUse > price) pointsToUse = price;
+  // 校验积分：系统仅支持积分支付，积分必须覆盖全款
+  const balance = await getPointsBalance(userId);
+  if (pointsToUse < price) {
+    throw new AppError(ErrorCodes.MEMBERSHIP_POINTS_INSUFFICIENT, { userMessage: `积分余额不足，需要${price}积分，当前${balance}积分` });
   }
+  if (pointsToUse > balance) throw new AppError(ErrorCodes.MEMBERSHIP_POINTS_INSUFFICIENT, { userMessage: '积分余额不足' });
+  // 超出部分不扣
+  if (pointsToUse > price) pointsToUse = price;
 
-  const netPrice = price - pointsToUse;
   const startDate = new Date();
   const endDate = calcEndDate(startDate, type);
 
   return prisma.$transaction(async (tx) => {
-    // 消费积分（生成负向积分记录）
-    if (pointsToUse > 0) {
-      await tx.pointsLedger.create({
-        data: {
-          userId,
-          amount: -pointsToUse,
-          balanceAfter: await getPointsBalance(userId) - pointsToUse,
-          type: 'membership_discount',
-          refId: null,
-          note: `续费抵扣：使用${pointsToUse}积分`
-        }
-      });
-    }
+    // 消费积分
+    await tx.pointsLedger.create({
+      data: {
+        userId,
+        amount: -pointsToUse,
+        balanceAfter: balance - pointsToUse,
+        type: 'membership_discount',
+        refId: null,
+        note: `${existingActive ? '续费' : '开通'}抵扣：使用${pointsToUse}积分`
+      }
+    });
 
-    // 已有有效会员 → 续期 + 补差价
+    // 已有有效会员 → 续期
     if (existingActive) {
       const newEnd = calcEndDate(existingActive.endDate, type);
-      const membership = await tx.membership.update({
+      return tx.membership.update({
         where: { id: existingActive.id },
         data: {
           type,
           endDate: newEnd,
-          price: (existingActive.price || 0) + netPrice,
+          price: (existingActive.price || 0) + price,
           pointsDiscount: (existingActive.pointsDiscount || 0) + pointsToUse,
           status: 'active'
         }
       });
-      return membership;
     }
 
     // 新购
@@ -300,7 +300,7 @@ async function purchaseMembership(userId, type, pointsToUse = 0) {
         userId,
         type,
         status: 'active',
-        price: netPrice,
+        price,
         pointsDiscount: pointsToUse,
         startDate,
         endDate

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Box, Heading, Card, CardBody, SimpleGrid, Badge, Text, VStack, HStack, Flex, Avatar, Button, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton, useDisclosure, FormControl, FormLabel, Input, Select, Textarea, useToast, Spinner, Icon, InputGroup, InputRightElement, IconButton } from '@chakra-ui/react';
+import { Box, Heading, Card, CardBody, SimpleGrid, Badge, Text, VStack, HStack, Flex, Avatar, Button, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton, useDisclosure, FormControl, FormLabel, Input, Select, Textarea, useToast, Spinner, Icon, InputGroup, InputRightElement, IconButton, Image } from '@chakra-ui/react';
 import { CrownIcon, CheckIcon } from '../../components/Icons';
 import { FiEdit2 } from 'react-icons/fi';
 import { clients, membership as membershipApi, auth, upload } from '../../utils/api';
@@ -157,8 +157,9 @@ export default function ClientProfile() {
   const { isOpen: isPwdOpen, onOpen: onPwdOpen, onClose: onPwdClose } = useDisclosure();
   const { isOpen: isRenewalOpen, onOpen: onRenewalOpen, onClose: onRenewalClose } = useDisclosure();
   const [renewalType, setRenewalType] = useState('monthly');
-  const [renewalPoints, setRenewalPoints] = useState(0);
   const [renewing, setRenewing] = useState(false);
+  const renewalPrice = memberStatus?.prices?.[renewalType] || PRICING_DATA.find(p => p.type === renewalType)?.price || 0;
+  const renewalPointsInsufficient = (memberStatus?.points || 0) < renewalPrice;
   const [updateInfo, setUpdateInfo] = useState(null);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [oldPassword, setOldPassword] = useState('');
@@ -172,7 +173,15 @@ export default function ClientProfile() {
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState('');
   const [savingAvatar, setSavingAvatar] = useState(false);
+  const [aiMode, setAiMode] = useState('manual'); // 'manual' | 'ai'
+  const [aiTab, setAiTab] = useState('text'); // 'text' | 'screenshot'
+  const [aiText, setAiText] = useState('');
+  const [aiExtracting, setAiExtracting] = useState(false);
+  const [aiExtractedFields, setAiExtractedFields] = useState(null);
+  const [aiScreenshotFile, setAiScreenshotFile] = useState(null);
+  const [aiScreenshotPreview, setAiScreenshotPreview] = useState('');
   const fileInputRef = useRef(null);
+  const screenshotInputRef = useRef(null);
   const toast = useToast();
 
   useEffect(() => {
@@ -234,7 +243,85 @@ export default function ClientProfile() {
       data[f.key] = profile[f.key] || '';
     });
     setEditData(data);
+    setAiMode('manual');
+    setAiText('');
+    setAiExtractedFields(null);
+    setAiScreenshotFile(null);
+    setAiScreenshotPreview('');
     onOpen();
+  };
+
+  // AI 文本提取
+  const handleAiTextExtract = async () => {
+    if (!aiText.trim() || aiText.trim().length < 20) {
+      toast({ title: '请至少输入20字的自我介绍', status: 'warning' });
+      return;
+    }
+    setAiExtracting(true);
+    setAiExtractedFields(null);
+    try {
+      const res = await clients.extractProfile(aiText);
+      if (res.success && res.profile) {
+        setAiExtractedFields(res.profile);
+        toast({ title: 'AI 分析完成', description: `识别到 ${Object.keys(res.profile).filter(k => res.profile[k]).length} 个字段`, status: 'success' });
+      } else {
+        toast({ title: 'AI 分析失败', description: res.error || '请重试', status: 'error' });
+      }
+    } catch (e) {
+      console.error(e);
+      toast({ title: 'AI 分析失败', status: 'error' });
+    } finally {
+      setAiExtracting(false);
+    }
+  };
+
+  // AI 截图提取
+  const handleAiScreenshotExtract = async () => {
+    if (!aiScreenshotFile) {
+      toast({ title: '请先选择截图文件', status: 'warning' });
+      return;
+    }
+    setAiExtracting(true);
+    setAiExtractedFields(null);
+    try {
+      const res = await clients.extractFromScreenshot(aiScreenshotFile);
+      if (res.success && res.pendingFields) {
+        setAiExtractedFields(res.pendingFields);
+        const count = Object.keys(res.pendingFields).filter(k => res.pendingFields[k]).length;
+        toast({ title: 'AI 分析完成', description: `识别到 ${count} 个字段`, status: 'success' });
+      } else {
+        toast({ title: res.message || '未识别到信息', status: 'warning' });
+      }
+    } catch (e) {
+      console.error(e);
+      toast({ title: '截图分析失败', status: 'error' });
+    } finally {
+      setAiExtracting(false);
+    }
+  };
+
+  // 将 AI 提取的字段应用到编辑表单
+  const handleApplyAiFields = () => {
+    if (!aiExtractedFields) return;
+    setEditData(prev => {
+      const next = { ...prev };
+      for (const [key, value] of Object.entries(aiExtractedFields)) {
+        if (value && CLIENT_EDITABLE_FIELDS.some(f => f.key === key)) {
+          next[key] = value;
+        }
+      }
+      return next;
+    });
+    toast({ title: '已应用 AI 识别的字段', description: '请检查并修改后保存', status: 'success' });
+    setAiMode('manual');
+  };
+
+  // 截图文件选择
+  const handleScreenshotSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAiScreenshotFile(file);
+    setAiScreenshotPreview(URL.createObjectURL(file));
   };
 
   const handleCheckUpdate = async () => {
@@ -289,12 +376,11 @@ export default function ClientProfile() {
   const handleRenewalSubmit = async () => {
     setRenewing(true);
     try {
-      const res = await membershipApi.purchase(renewalType, renewalPoints);
+      const res = await membershipApi.purchase(renewalType, renewalPrice);
       if (res.success) {
         toast({ title: '续费成功', description: '会员有效期已延长', status: 'success', duration: 3000 });
         onRenewalClose();
         await loadMembership();
-        setRenewalPoints(0);
         setRenewalType('monthly');
       } else {
         toast({ title: res.error?.message || '续费失败', status: 'error' });
@@ -659,23 +745,171 @@ export default function ClientProfile() {
       <Modal isOpen={isOpen} onClose={onClose} size="xl">
         <ModalOverlay bg="blackAlpha.700" />
         <ModalContent bg="gray.800" overflow="auto">
-          <ModalHeader color="white">编辑我的档案</ModalHeader>
+          <ModalHeader color="white">
+            <HStack spacing={3}>
+              <Text>编辑我的档案</Text>
+              <HStack spacing={0} bg="gray.700" borderRadius="md" p="2px">
+                <Button
+                  size="xs"
+                  colorScheme={aiMode === 'manual' ? 'teal' : 'gray'}
+                  variant={aiMode === 'manual' ? 'solid' : 'ghost'}
+                  onClick={() => setAiMode('manual')}
+                >手动填写</Button>
+                <Button
+                  size="xs"
+                  colorScheme={aiMode === 'ai' ? 'teal' : 'gray'}
+                  variant={aiMode === 'ai' ? 'solid' : 'ghost'}
+                  onClick={() => setAiMode('ai')}
+                  leftIcon={<Icon as={FiEdit2} />}
+                >AI 智能识别</Button>
+              </HStack>
+            </HStack>
+          </ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={6}>
-            <SimpleGrid columns={2} spacing={4}>
-              {CLIENT_EDITABLE_FIELDS.map(field => (
-                <ProfileField
-                  key={field.key}
-                  field={field}
-                  value={editData[field.key]}
-                  onChange={handleFieldChange}
-                />
-              ))}
-            </SimpleGrid>
-            <HStack justify="flex-end" mt={6} spacing={3}>
-              <Button variant="ghost" color="gray.400" onClick={onClose}>取消</Button>
-              <Button colorScheme="teal" onClick={handleSave} isLoading={saving}>保存</Button>
-            </HStack>
+            {aiMode === 'manual' ? (
+              <>
+                <SimpleGrid columns={2} spacing={4}>
+                  {CLIENT_EDITABLE_FIELDS.map(field => (
+                    <ProfileField
+                      key={field.key}
+                      field={field}
+                      value={editData[field.key]}
+                      onChange={handleFieldChange}
+                    />
+                  ))}
+                </SimpleGrid>
+                <HStack justify="flex-end" mt={6} spacing={3}>
+                  <Button variant="ghost" color="gray.400" onClick={onClose}>取消</Button>
+                  <Button colorScheme="teal" onClick={handleSave} isLoading={saving}>保存</Button>
+                </HStack>
+              </>
+            ) : (
+              <VStack spacing={4} align="stretch">
+                {/* 子 tab 切换 */}
+                <HStack spacing={0} bg="gray.700" borderRadius="md" p="2px" w="fit-content">
+                  <Button
+                    size="xs"
+                    colorScheme={aiTab === 'text' ? 'blue' : 'gray'}
+                    variant={aiTab === 'text' ? 'solid' : 'ghost'}
+                    onClick={() => { setAiTab('text'); setAiExtractedFields(null); }}
+                  >文字描述</Button>
+                  <Button
+                    size="xs"
+                    colorScheme={aiTab === 'screenshot' ? 'blue' : 'gray'}
+                    variant={aiTab === 'screenshot' ? 'solid' : 'ghost'}
+                    onClick={() => { setAiTab('screenshot'); setAiExtractedFields(null); }}
+                  >上传截图</Button>
+                </HStack>
+
+                {/* 文字描述模式 */}
+                {aiTab === 'text' && (
+                  <VStack spacing={3} align="stretch">
+                    <Text color="gray.400" fontSize="sm">
+                      粘贴一段自我介绍文字，AI 将自动分析并提取档案字段。支持描述自己的年龄、职业、学历、性格、感情观等。
+                    </Text>
+                    <Textarea
+                      value={aiText}
+                      onChange={e => setAiText(e.target.value)}
+                      placeholder="例如：我今年28岁，在深圳做互联网工程师，本科学历，性格开朗幽默，喜欢运动和旅行。希望能找到认真交往的对象..."
+                      rows={5}
+                      bg="gray.700"
+                      color="white"
+                      border="1px solid"
+                      borderColor="gray.600"
+                      _hover={{ borderColor: 'gray.500' }}
+                      _focus={{ borderColor: 'blue.500', boxShadow: '0 0 0 1px var(--chakra-colors-blue-500)' }}
+                    />
+                    <Button
+                      colorScheme="blue"
+                      onClick={handleAiTextExtract}
+                      isLoading={aiExtracting}
+                      loadingText="AI 分析中..."
+                      isDisabled={aiText.trim().length < 20}
+                    >智能分析</Button>
+                  </VStack>
+                )}
+
+                {/* 截图模式 */}
+                {aiTab === 'screenshot' && (
+                  <VStack spacing={3} align="stretch">
+                    <Text color="gray.400" fontSize="sm">
+                      上传一张聊天截图（如交友资料页、聊天记录等），AI 将识别其中的个人信息并提取档案字段。
+                    </Text>
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      ref={screenshotInputRef}
+                      onChange={handleScreenshotSelect}
+                      display="none"
+                    />
+                    {aiScreenshotPreview ? (
+                      <Box position="relative" borderRadius="md" overflow="hidden" bg="gray.900">
+                        <Image src={aiScreenshotPreview} alt="预览" maxH="200px" w="full" objectFit="contain" />
+                        <IconButton
+                          icon={<Icon as={FiEdit2} />}
+                          size="xs"
+                          position="absolute"
+                          top={2}
+                          right={2}
+                          colorScheme="red"
+                          onClick={() => { setAiScreenshotFile(null); setAiScreenshotPreview(''); }}
+                          aria-label="移除图片"
+                        />
+                      </Box>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        colorScheme="blue"
+                        onClick={() => screenshotInputRef.current?.click()}
+                        h="80px"
+                        borderStyle="dashed"
+                      >点击选择聊天截图</Button>
+                    )}
+                    <Button
+                      colorScheme="blue"
+                      onClick={handleAiScreenshotExtract}
+                      isLoading={aiExtracting}
+                      loadingText="AI 分析中..."
+                      isDisabled={!aiScreenshotFile}
+                    >上传分析</Button>
+                  </VStack>
+                )}
+
+                {/* AI 提取结果 */}
+                {aiExtractedFields && (
+                  <Card bg="gray.700" border="1px solid" borderColor="teal.600">
+                    <CardBody>
+                      <Text color="teal.400" fontWeight="bold" mb={3}>
+                        AI 识别结果（共 {Object.entries(aiExtractedFields).filter(([, v]) => v).length} 个字段）
+                      </Text>
+                      <SimpleGrid columns={2} spacing={2}>
+                        {Object.entries(aiExtractedFields).map(([key, value]) => {
+                          if (!value) return null;
+                          const field = CLIENT_EDITABLE_FIELDS.find(f => f.key === key);
+                          const label = field?.label || key;
+                          return (
+                            <HStack key={key} justify="space-between" bg="gray.800" px={3} py={1.5} borderRadius="md">
+                              <Text color="gray.400" fontSize="sm">{label}</Text>
+                              <Text color="white" fontSize="sm" fontWeight="medium">{String(value)}</Text>
+                            </HStack>
+                          );
+                        })}
+                      </SimpleGrid>
+                      <HStack justify="flex-end" mt={4} spacing={3}>
+                        <Button size="sm" variant="ghost" color="gray.400" onClick={() => setAiExtractedFields(null)}>清除</Button>
+                        <Button size="sm" colorScheme="teal" onClick={handleApplyAiFields}>应用到表单</Button>
+                      </HStack>
+                    </CardBody>
+                  </Card>
+                )}
+
+                <HStack justify="flex-end" spacing={3}>
+                  <Button variant="ghost" color="gray.400" onClick={onClose}>取消</Button>
+                  <Button colorScheme="teal" onClick={() => setAiMode('manual')}>返回手动填写</Button>
+                </HStack>
+              </VStack>
+            )}
           </ModalBody>
         </ModalContent>
       </Modal>
@@ -783,7 +1017,7 @@ export default function ClientProfile() {
                   cursor="pointer"
                   border="2px solid"
                   borderColor={renewalType === plan.type ? 'teal.500' : 'transparent'}
-                  onClick={() => { setRenewalType(plan.type); setRenewalPoints(0); }}
+                  onClick={() => { setRenewalType(plan.type); }}
                   _hover={{ borderColor: 'teal.400' }}
                   textAlign="center"
                   transition="all 0.15s"
@@ -796,68 +1030,54 @@ export default function ClientProfile() {
             </SimpleGrid>
 
             <Box p={3} bg="gray.700" borderRadius="md">
-              <HStack justify="space-between" mb={2}>
-                <Text color="gray.300" fontSize="sm">可用积分</Text>
-                <Badge colorScheme="orange">{memberStatus?.points || 0}</Badge>
-              </HStack>
-              <FormControl>
-                <FormLabel color="gray.400" fontSize="sm">使用积分抵扣 (1积分=1元)</FormLabel>
-                <Input
-                  type="number"
-                  min={0}
-                  max={(() => {
-                    const price = memberStatus?.prices?.[renewalType] || PRICING_DATA.find(p => p.type === renewalType)?.price || 0;
-                    return Math.min(memberStatus?.points || 0, price);
-                  })()}
-                  value={renewalPoints}
-                  onChange={e => {
-                    const v = parseInt(e.target.value) || 0;
-                    const price = memberStatus?.prices?.[renewalType] || PRICING_DATA.find(p => p.type === renewalType)?.price || 0;
-                    setRenewalPoints(Math.max(0, Math.min(v, Math.min(memberStatus?.points || 0, price))));
-                  }}
-                  bg="gray.600"
-                  color="white"
-                  border="1px solid"
-                  borderColor="gray.500"
-                  _hover={{ borderColor: 'gray.400' }}
-                  _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }}
-                />
-              </FormControl>
-
-              {memberStatus?.membership && (() => {
-                const d = new Date(memberStatus.membership.endDate);
-                if (renewalType === 'monthly') d.setMonth(d.getMonth() + 1);
-                else d.setFullYear(d.getFullYear() + 1);
+              {(() => {
+                const price = renewalPrice;
+                const balance = memberStatus?.points || 0;
+                const insufficient = balance < price;
                 return (
-                  <Text color="gray.400" fontSize="xs" mt={2}>
-                    续费后有效期至: {formatDate(d.toISOString())}
-                  </Text>
+                  <>
+                    <HStack justify="space-between" mb={3}>
+                      <HStack>
+                        <Text color="gray.300" fontSize="sm">需要积分</Text>
+                        <Badge colorScheme="teal" fontSize="md">{price}</Badge>
+                      </HStack>
+                      <HStack>
+                        <Text color="gray.300" fontSize="sm">可用积分</Text>
+                        <Badge colorScheme={insufficient ? 'red' : 'orange'} fontSize="md">{balance}</Badge>
+                      </HStack>
+                    </HStack>
+                    {insufficient && (
+                      <Text color="red.300" fontSize="sm" mb={3}>
+                        积分不足，还差 {price - balance} 积分。邀请好友购买会员可获得积分。
+                      </Text>
+                    )}
+                    {memberStatus?.membership && (() => {
+                      const d = new Date(memberStatus.membership.endDate);
+                      if (renewalType === 'monthly') d.setMonth(d.getMonth() + 1);
+                      else d.setFullYear(d.getFullYear() + 1);
+                      return (
+                        <Text color="gray.400" fontSize="xs" mb={2}>
+                          续费后有效期至: {formatDate(d.toISOString())}
+                        </Text>
+                      );
+                    })()}
+                  </>
                 );
               })()}
-
-              <Box mt={3} p={2} bg="gray.600" borderRadius="md">
-                <HStack justify="space-between">
-                  <Text color="gray.300" fontSize="sm">
-                    {memberStatus?.membership ? '续费金额' : '开通金额'}
-                  </Text>
-                  <Text color="teal.300" fontWeight="bold">
-                    ¥{Math.max(0, (memberStatus?.prices?.[renewalType] || PRICING_DATA.find(p => p.type === renewalType)?.price || 0) - renewalPoints)}
-                  </Text>
-                </HStack>
-              </Box>
             </Box>
 
             <Text color="gray.500" fontSize="xs" mt={3}>
+              系统仅支持积分支付，1积分=1元。
               {memberStatus?.membership
-                ? '续费后有效期将在现有基础上累加，积分可抵扣部分金额'
-                : '开通后即可享受全部会员功能，积分可在后续续费中使用'}
+                ? '续费后有效期将在现有基础上累加。'
+                : '开通后即可享受全部会员功能。'}
             </Text>
           </ModalBody>
 
           <ModalFooter>
             <Button variant="ghost" color="gray.400" mr={3} onClick={onRenewalClose}>取消</Button>
-            <Button colorScheme="teal" onClick={handleRenewalSubmit} isLoading={renewing} loadingText="处理中">
-              {memberStatus?.membership ? '确认续费' : '确认开通'}
+            <Button colorScheme="teal" onClick={handleRenewalSubmit} isLoading={renewing} loadingText="处理中" isDisabled={renewalPointsInsufficient}>
+              {renewalPointsInsufficient ? '积分不足' : (memberStatus?.membership ? '确认续费' : '确认开通')}
             </Button>
           </ModalFooter>
         </ModalContent>

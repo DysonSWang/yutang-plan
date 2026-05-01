@@ -54,6 +54,9 @@ const ErrorCodes = {
   VALIDATION_ERROR:          { code: 'S0803', status: 400, message: '参数校验失败' },
   RESOURCE_NOT_FOUND:        { code: 'S0804', status: 404, message: '请求的资源不存在' },
 
+  // ========== M10 会员/积分模块 ==========
+  MEMBERSHIP_POINTS_INSUFFICIENT: { code: 'M1001', status: 400, message: '积分余额不足' },
+
   // ========== T09 试用会员 ==========
   TRIAL_LIMIT_EXCEEDED:      { code: 'T0901', status: 403, message: '试用次数已用完' },
   TRIAL_EXPIRED:             { code: 'T0902', status: 403, message: '试用已到期，请升级会员' },

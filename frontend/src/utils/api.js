@@ -166,6 +166,17 @@ export const clients = {
   update: (id, data) => api.put(`/api/clients/${id}`, data).then(r => { api.clearCache(); return r; }),
   create: (data) => api.post('/api/clients', data).then(r => { api.clearCache(); return r; }),
   extractProfile: (text) => api.post('/api/clients/extract-profile', { text }),
+  extractFromScreenshot: async (file) => {
+    const token = api.getToken();
+    const formData = new FormData();
+    formData.append('image', file);
+    const res = await fetch(`${api.baseUrl}/api/clients/extract-from-screenshot`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData
+    });
+    return res.json();
+  },
   extractFromChat: (clientId, messageCount) => api.post(`/api/clients/${clientId}/extract-from-chat`, { messageCount }),
   // M007 S05: 入职完成
   onboardingComplete: (data) => api.post('/api/clients/onboarding-complete', data),

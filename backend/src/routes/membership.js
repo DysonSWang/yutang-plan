@@ -635,7 +635,7 @@ router.post('/dating-plan/generate', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: e.message });
     }
 
-    const { title, scene, budget, duration, location } = req.body;
+    const { title, scene, budget, duration, location, girlId } = req.body;
     const { getAIConfig } = require('../config');
 
     // 从scene提取场所类型关键词
@@ -653,6 +653,7 @@ router.post('/dating-plan/generate', authMiddleware, async (req, res) => {
     const plan = await prisma.datingPlan.create({
       data: {
         userId: req.user.id,
+        girlId: girlId || null,
         title: title || '约会方案',
         scene,
         budget,
@@ -877,6 +878,9 @@ router.get('/dating-plan', authMiddleware, async (req, res) => {
   try {
     const plans = await prisma.datingPlan.findMany({
       where: { userId: req.user.id },
+      include: {
+        girl: { select: { id: true, name: true, age: true, residence: true, photos: true, personality: true, interests: true } }
+      },
       orderBy: { createdAt: 'desc' }
     });
     res.json({ success: true, plans });
@@ -888,7 +892,12 @@ router.get('/dating-plan', authMiddleware, async (req, res) => {
 // 获取单个约会方案
 router.get('/dating-plan/:id', authMiddleware, async (req, res) => {
   try {
-    const plan = await prisma.datingPlan.findUnique({ where: { id: req.params.id } });
+    const plan = await prisma.datingPlan.findUnique({
+      where: { id: req.params.id },
+      include: {
+        girl: { select: { id: true, name: true, age: true, residence: true, photos: true, personality: true, interests: true } }
+      }
+    });
     if (!plan || plan.userId !== req.user.id) {
       return res.status(404).json({ error: '方案不存在' });
     }
