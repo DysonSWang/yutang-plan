@@ -128,7 +128,7 @@ function GirlCombatChat({ girlsList }) {
     setClientProfilePendingId(null);
     setClientPendingFields({});
     try {
-      const res = await chatLogs.byGirl(girl.id);
+      const res = await chatLogs.my({ girlId: girl.id });
       if (res.success) setRecentLogs(res.logs);
     } catch { /* ignore */ }
   };
