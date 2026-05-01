@@ -203,6 +203,7 @@ function ProfileField({ field, value, onChange }) {
 
 export default function ClientProfile() {
   const [profile, setProfile] = useState(null);
+  const [completeness, setCompleteness] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editData, setEditData] = useState({});
@@ -246,6 +247,7 @@ export default function ClientProfile() {
   useEffect(() => {
     loadProfile();
     loadMembership();
+    loadCompleteness();
   }, []);
 
   const loadProfile = async () => {
@@ -270,6 +272,13 @@ export default function ClientProfile() {
     try {
       const res = await membershipApi.status().catch(() => ({ success: false }));
       if (res.success) setMemberStatus(res);
+    } catch (e) { console.error(e); }
+  };
+
+  const loadCompleteness = async () => {
+    try {
+      const res = await membershipApi.profileCompleteness();
+      if (res.success) setCompleteness(res.completeness);
     } catch (e) { console.error(e); }
   };
 
@@ -601,16 +610,9 @@ export default function ClientProfile() {
     return <Box color="white">无法加载档案</Box>;
   }
 
-  // 档案完整度计算
-  const PROFILE_FIELDS = ['age', 'occupation', 'education', 'income', 'residence', 'hometown',
-    'height', 'weight', 'dressingStyle', 'appearance',
-    'familyBackground', 'familyStructure', 'familyAtmosphere',
-    'personality', 'communicationStyle', 'socialStyle', 'humorStyle',
-    'strengths', 'weaknesses',
-    'relationshipAttitude', 'relationshipGoal', 'emotionalGoal', 'marriageHistory',
-    'matchPreferences', 'dateTaboos', 'profileBio'];
-  const filledCount = PROFILE_FIELDS.filter(f => profile[f]).length;
-  const completeness = Math.round((filledCount / PROFILE_FIELDS.length) * 100);
+  // 档案完整度 — 使用后端统一加权计算
+  const completenessPercent = completeness?.percentage ?? 0;
+  const completenessMissing = completeness?.missingFields ?? [];
 
   return (
     <Box>
@@ -640,10 +642,7 @@ export default function ClientProfile() {
                 />
               </Box>
               <Box minW="0">
-                <HStack>
-                  <Text color="white" fontSize="lg" fontWeight="bold" noOfLines={1}>{profile.nickname || profile.username}</Text>
-                  <Badge colorScheme={STAGE_COLORS[profile.serviceStage] || 'gray'} fontSize="xs">{profile.serviceStage || '未开始'}</Badge>
-                </HStack>
+                <Text color="white" fontSize="lg" fontWeight="bold" noOfLines={1}>{profile.nickname || profile.username}</Text>
                 <Text color="gray.400" fontSize="sm">{profile.occupation || profile.education || '未填写'}</Text>
               </Box>
             </HStack>
@@ -670,6 +669,10 @@ export default function ClientProfile() {
                       {memberStatus?.points || 0}
                     </Badge>
                   </HStack>
+                  <HStack spacing={2} pt={1}>
+                    <Button size="xs" colorScheme="teal" onClick={onRenewalOpen}>续费</Button>
+                    <Button size="xs" variant="link" color="teal.400" onClick={onPricingOpen}>定价</Button>
+                  </HStack>
                 </VStack>
               ) : (
                 <VStack spacing={1.5} align="stretch">
@@ -682,6 +685,10 @@ export default function ClientProfile() {
                     <Badge colorScheme="orange" px={2} py={0.5} borderRadius="md" fontSize="xs">
                       {memberStatus?.points || 0}
                     </Badge>
+                  </HStack>
+                  <HStack spacing={2} pt={1}>
+                    <Button size="xs" colorScheme="brand" variant="outline" leftIcon={<Icon as={CrownIcon} />} onClick={onRenewalOpen}>开通</Button>
+                    <Button size="xs" variant="link" color="teal.400" onClick={onPricingOpen}>定价</Button>
                   </HStack>
                 </VStack>
               )}
@@ -731,27 +738,20 @@ export default function ClientProfile() {
           <Box>
             <HStack justify="space-between" mb={1}>
               <Text color="gray.400" fontSize="xs">档案完整度</Text>
-              <Text color={completeness >= 80 ? 'green.400' : completeness >= 50 ? 'yellow.400' : 'orange.400'} fontSize="xs" fontWeight="bold">{completeness}%</Text>
+              <Text color={completenessPercent >= 80 ? 'green.400' : completenessPercent >= 50 ? 'yellow.400' : 'orange.400'} fontSize="xs" fontWeight="bold">{completenessPercent}%</Text>
             </HStack>
             <Progress
-              value={completeness}
+              value={completenessPercent}
               size="xs"
-              colorScheme={completeness >= 80 ? 'green' : completeness >= 50 ? 'yellow' : 'orange'}
+              colorScheme={completenessPercent >= 80 ? 'green' : completenessPercent >= 50 ? 'yellow' : 'orange'}
               borderRadius="full"
               bg="gray.700"
               mb={2}
             />
-            {completeness < 80 ? (
+            {completenessPercent < 80 ? (
               <Text color="gray.600" fontSize="xs" mb={2}>完善档案后，AI 教练能为你提供更精准的建议</Text>
             ) : null}
-            <HStack spacing={2}>
-              {memberStatus?.membership ? (
-                <Button size="xs" colorScheme="teal" onClick={onRenewalOpen}>续费会员</Button>
-              ) : (
-                <Button size="xs" colorScheme="brand" variant="outline" leftIcon={<Icon as={CrownIcon} />} onClick={onRenewalOpen}>开通会员</Button>
-              )}
-              <Button size="xs" variant="link" color="teal.400" onClick={onPricingOpen}>查看定价方案</Button>
-            </HStack>
+
           </Box>
         </CardBody>
       </Card>
