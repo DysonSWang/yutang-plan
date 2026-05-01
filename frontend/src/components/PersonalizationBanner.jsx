@@ -119,48 +119,79 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
     <Box mb={6} p={5} bg={cardBg} borderRadius="xl" border={cardBorder}>
       {/* 状态 1: 档案不完善 */}
       {status === 'profile_incomplete' && (
-        <VStack align="stretch" spacing={3}>
+        <VStack align="stretch" spacing={4}>
           <HStack>
-            <Badge colorScheme="orange" variant="subtle">档案不完善</Badge>
+            <Badge colorScheme="orange" variant="subtle" fontSize="sm" px={2} py={0.5}>因材施教</Badge>
             <Text color="abyss.300" fontSize="sm">
-              完善度 {completeness?.percentage || 0}%，需达到 70% 才能生成专属版本
+              档案完善度 {completeness?.percentage || 0}%，需达到 70% 才能解锁专属版本
             </Text>
           </HStack>
-          <Text color="abyss.400" fontSize="sm">
-            完善个人档案后，系统将根据你的性格、段位、学习风格，为你量身生成专属版本。
-            案例、建议、行动方案全部因人而异。
-          </Text>
+          <Box>
+            <Text color="white" fontSize="md" fontWeight="bold" mb={2}>
+              每个人都是独特的，你的学习内容为什么不是？
+            </Text>
+            <Text color="abyss.300" fontSize="sm" lineHeight="1.8">
+              完善个人档案后，系统会根据你的性格特质、沟通风格、感情目标和所处阶段，
+              将标准版宝典中的案例场景、话术示例、行动方案全部重写——
+              让同一套方法论，在不同的人身上发挥最大效果。
+            </Text>
+          </Box>
           <Button
-            size="sm"
+            size="md"
             colorScheme="brand"
             variant="outline"
             alignSelf="flex-start"
             onClick={() => window.location.href = '/profile'}
+            px={6}
           >
-            去完善档案
+            去完善档案，解锁专属版本
           </Button>
         </VStack>
       )}
 
       {/* 状态 2: 可生成 */}
       {status === 'ready' && (
-        <VStack align="stretch" spacing={3}>
-          <HStack>
-            <Badge colorScheme="green" variant="subtle">可生成</Badge>
-            <Text color="abyss.300" fontSize="sm">
-              档案完善度 {completeness?.percentage || 0}%
-            </Text>
+        <VStack align="stretch" spacing={4}>
+          <HStack justify="space-between">
+            <HStack>
+              <Badge colorScheme="purple" variant="subtle" fontSize="sm" px={2} py={0.5}>因材施教</Badge>
+              <Text color="abyss.300" fontSize="sm">
+                档案完善度 {completeness?.percentage || 0}%
+              </Text>
+            </HStack>
           </HStack>
-          <Text color="abyss.400" fontSize="sm">
-            系统将根据你的档案数据，逐章生成专属内容。预计 3-5 分钟。
-          </Text>
+
+          <Box>
+            <Text color="white" fontSize="md" fontWeight="bold" mb={2}>
+              同样的宝典体系，只属于你的版本
+            </Text>
+            <Text color="abyss.300" fontSize="sm" lineHeight="1.8">
+              标准版是一套通用方法论——但我们都知道，内向者和外向者的沟通方式不同，
+              程序员和销售的社交场景不同，想认真找对象和还在犹豫的人需要的建议也不同。
+            </Text>
+            <Text color="abyss.300" fontSize="sm" lineHeight="1.8" mt={2}>
+              系统会读取你的性格、沟通风格、感情目标和过往经历，将每一章的
+              <Text as="span" color="brand.300" fontWeight="medium">案例场景</Text>、
+              <Text as="span" color="brand.300" fontWeight="medium">话术示例</Text>、
+              <Text as="span" color="brand.300" fontWeight="medium">行动方案</Text>
+              ——从底层重写，匹配你这个人。不是换几个词，是换一种打法。
+            </Text>
+          </Box>
+
+          <HStack gap={2} flexWrap="wrap">
+            {['案例因人而异', '策略匹配性格', '行动贴合阶段', '沟通调性一致'].map(tag => (
+              <Badge key={tag} colorScheme="brand" variant="subtle" fontSize="xs">{tag}</Badge>
+            ))}
+          </HStack>
+
           <Button
-            size="sm"
+            size="md"
             colorScheme="brand"
             alignSelf="flex-start"
             onClick={handleGenerate}
+            px={6}
           >
-            生成我的专属版本
+            生成我的专属版本 · 预计 3-5 分钟
           </Button>
         </VStack>
       )}
@@ -169,9 +200,9 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
       {status === 'generating' && (
         <VStack align="stretch" spacing={3}>
           <HStack>
-            <Badge colorScheme="blue" variant="subtle">生成中</Badge>
+            <Badge colorScheme="blue" variant="subtle" fontSize="sm" px={2} py={0.5}>因材施教</Badge>
             <Text color="abyss.300" fontSize="sm">
-              正在为你定制专属版本
+              正在逐章生成你的专属版本——案例、话术、行动方案全部因人而异
             </Text>
           </HStack>
           {batchProgress && (
@@ -200,8 +231,8 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
         <VStack align="stretch" spacing={3}>
           <HStack justify="space-between">
             <HStack>
-              <Badge colorScheme="green" variant="subtle">已定制</Badge>
-              <Text color="abyss.300" fontSize="sm">专属版本已就绪</Text>
+              <Badge colorScheme="green" variant="subtle" fontSize="sm" px={2} py={0.5}>因材施教</Badge>
+              <Text color="abyss.300" fontSize="sm">专属版本已就绪 · 为你量身打造</Text>
             </HStack>
             {onSwitchVersion && (
               <HStack gap={2}>
