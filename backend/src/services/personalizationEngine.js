@@ -7,23 +7,22 @@ const crypto = require('crypto');
 // 完善度计算
 // ==========================================
 
-// 字段权重配置
+// 字段权重配置 — 严格对应档案页 CLIENT_EDITABLE_FIELDS（排除 nickname/phone）
 const FIELD_WEIGHTS = {
-  // 核心字段（权重 3）
-  personality: 3, emotionalStable: 3, eqLevel: 3, communicationStyle: 3, socialStyle: 3,
-  relationshipAttitude: 3, pastRelationshipSummary: 3, marriageHistory: 3, emotionalWounds: 3, exPartnerTaboos: 3,
-  emotionalGoal: 3, relationshipGoal: 3, commitmentWillingness: 3, emotionalMaturity: 3,
-  learningAbility: 3, coachCooperation: 3, feedbackQuality: 3,
+  // 核心字段（权重 3）— 决定个性化方向
+  personality: 3, communicationStyle: 3, socialStyle: 3,
+  emotionalGoal: 3, relationshipGoal: 3, relationshipAttitude: 3,
+  marriageHistory: 3,
   strengths: 3, weaknesses: 3,
-  clientType: 3,
-  selfValuePerception: 3, cognitiveAccuracy: 3,
-  // 重要字段（权重 2）
-  age: 2, occupation: 2, education: 2, income: 2, height: 2, residence: 2, hometown: 2,
-  appearance: 2, dressingStyle: 2,
-  preferredTransportMode: 2, preferredDateStyle: 2, dateBudget: 2,
-  // 外围字段（权重 1）
-  familyBackground: 1, familyStructure: 1, familyAtmosphere: 1, familyBurden: 1, familyMembers: 1,
-  assetsLevel: 1, budgetRange: 1, timeInvestment: 1, serviceStage: 1,
+  // 重要字段（权重 2）— 基本画像
+  age: 2, occupation: 2, education: 2, income: 2,
+  height: 2, residence: 2, hometown: 2,
+  appearance: 2,
+  matchPreferences: 2, profileBio: 2,
+  // 外围字段（权重 1）— 补充信息
+  weight: 1, dressingStyle: 1, humorStyle: 1,
+  familyBackground: 1, familyStructure: 1, familyAtmosphere: 1,
+  dateTaboos: 1,
 };
 
 // 所有参与计算的字段
@@ -588,20 +587,15 @@ async function regenerateChapter(userId, chapterId, user, chapter, prisma, io) {
 // 所有42个画像字段
 const USER_PROFILE_SELECT = {
   id: true,
-  age: true, occupation: true, education: true, income: true, height: true,
-  residence: true, hometown: true, appearance: true, dressingStyle: true,
+  age: true, occupation: true, education: true, income: true,
+  height: true, weight: true, residence: true, hometown: true,
+  appearance: true, dressingStyle: true,
   familyBackground: true, familyStructure: true, familyAtmosphere: true,
-  familyBurden: true, familyMembers: true,
-  personality: true, emotionalStable: true, eqLevel: true,
-  communicationStyle: true, socialStyle: true,
-  relationshipAttitude: true, pastRelationshipSummary: true, marriageHistory: true,
-  emotionalWounds: true, exPartnerTaboos: true,
-  emotionalGoal: true, relationshipGoal: true, commitmentWillingness: true,
-  emotionalMaturity: true, learningAbility: true, coachCooperation: true,
-  feedbackQuality: true, strengths: true, weaknesses: true, clientType: true,
-  preferredTransportMode: true, preferredDateStyle: true, dateBudget: true,
-  selfValuePerception: true, cognitiveAccuracy: true,
-  assetsLevel: true, budgetRange: true, timeInvestment: true, serviceStage: true,
+  personality: true, communicationStyle: true, socialStyle: true, humorStyle: true,
+  relationshipAttitude: true, marriageHistory: true,
+  emotionalGoal: true, relationshipGoal: true,
+  strengths: true, weaknesses: true,
+  matchPreferences: true, dateTaboos: true, profileBio: true,
 };
 
 /**

@@ -92,18 +92,18 @@ describe('完善度计算', () => {
     expect(result.percentage).toBeLessThan(100);
   });
 
-  it('clientType 为空字符串视为不完整', () => {
-    const user = { clientType: '', age: 25 };
+  it('humorStyle 为空字符串视为不完整', () => {
+    const user = { humorStyle: '', age: 25 };
     const result = calculateCompleteness(user);
-    // clientType 权重3 但空字符串不计分，age 权重2 = 2
+    // humorStyle 权重1 但空字符串不计分，age 权重2 = 2
     expect(result.score).toBe(2);
   });
 
-  it('emotionalStable=0 视为已填写（Int类型非null即有效）', () => {
-    const user = { emotionalStable: 0, age: 25 };
+  it('weight=0 视为已填写（Int类型非null即有效）', () => {
+    const user = { weight: 0, age: 25 };
     const result = calculateCompleteness(user);
-    // emotionalStable(3) + age(2) = 5
-    expect(result.score).toBe(5);
+    // weight(1) + age(2) = 3
+    expect(result.score).toBe(3);
   });
 });
 
