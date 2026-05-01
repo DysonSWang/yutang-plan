@@ -21,13 +21,13 @@ export default function Logs() {
   const [isAlerting, setIsAlerting] = useState(false);
   const [slowAnalysis, setSlowAnalysis] = useState(null);
   const [slowAnalysisLoading, setSlowAnalysisLoading] = useState(false);
+  const [tabIndex, setTabIndex] = useState(0);
   const [traceId, setTraceId] = useState('');
   const [traceResult, setTraceResult] = useState(null);
   const [traceLoading, setTraceLoading] = useState(false);
   const logContainerRef = useRef(null);
   const toast = useToast();
   const { socket } = useSocket();
-  const { isOpen: isTraceOpen, onOpen: onTraceOpen, onClose: onTraceClose } = useDisclosure();
 
   // 加载日志文件列表
   useEffect(() => {
@@ -92,6 +92,21 @@ export default function Logs() {
       .catch(() => setSlowAnalysisLoading(false));
   };
 
+  // 点击日志中的 trace ID → 直接跳到 Trace 追踪 tab 并自动查询
+  const handleTraceClick = (id) => {
+    setTraceId(id);
+    setTraceResult(null);
+    setTraceLoading(true);
+    setTabIndex(2);
+    fetch(`/api/logs/trace/${id}`)
+      .then(r => r.json())
+      .then(d => {
+        setTraceResult(d);
+        setTraceLoading(false);
+      })
+      .catch(() => setTraceLoading(false));
+  };
+
   // 查询trace
   const searchTrace = () => {
     if (!traceId.trim()) return;
@@ -103,6 +118,14 @@ export default function Logs() {
         setTraceLoading(false);
       })
       .catch(() => setTraceLoading(false));
+  };
+
+  // 切换到慢请求分析 tab 时自动加载
+  const handleTabChange = (index) => {
+    setTabIndex(index);
+    if (index === 1 && !slowAnalysis) {
+      loadSlowAnalysis();
+    }
   };
 
   // WebSocket 实时更新
@@ -256,9 +279,9 @@ export default function Logs() {
         </>
       )}
 
-      {!slowAnalysis && !slowAnalysisLoading && (
+      {slowAnalysisLoading && !slowAnalysis && (
         <Text color="gray.500" textAlign="center" py={8}>
-          点击"刷新分析"加载慢请求数据
+          正在加载慢请求分析...
         </Text>
       )}
     </Box>
@@ -369,7 +392,7 @@ export default function Logs() {
       </HStack>
 
       {/* Tab切换 */}
-      <Tabs variant="soft-rounded" colorScheme="teal" mb={4}>
+      <Tabs variant="soft-rounded" colorScheme="teal" mb={4} index={tabIndex} onChange={handleTabChange}>
         <TabList>
           <Tab>📋 日志列表</Tab>
           <Tab>🐌 慢请求分析</Tab>
@@ -446,7 +469,7 @@ export default function Logs() {
                       <Text fontWeight="bold">{log.message}</Text>
                     </HStack>
                     <HStack spacing={4} fontSize="0.75rem" color="gray.400" flexWrap="wrap">
-                      {log.requestId && <Text>trace: <Text as="span" color="cyan.300">{log.requestId}</Text></Text>}
+                      {log.requestId && <Text>trace: <Text as="span" color="cyan.300" cursor="pointer" textDecoration="underline" _hover={{ color: 'cyan.100' }} onClick={() => handleTraceClick(log.requestId)}>{log.requestId}</Text></Text>}
                       {log.method && <Text>method: <Text as="span" color="green.300">{log.method}</Text></Text>}
                       {log.path && <Text>path: <Text as="span" color="yellow.300">{log.path}</Text></Text>}
                       {log.status && <Text>status: <Text as="span" color={log.status >= 400 ? 'red.300' : 'green.300'}>{log.status}</Text></Text>}
