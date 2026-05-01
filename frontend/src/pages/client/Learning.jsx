@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { membership as membershipApi } from '../../utils/api';
 import { BookIcon, CheckIcon } from '../../components/Icons';
 import { FiChevronDown, FiChevronUp } from 'react-icons/fi';
+import PersonalizationBanner from '../../components/PersonalizationBanner';
 
 // Chapter card component
 function ChapterCard({ chapter, progress, personalizationStatus, onUpdate }) {
@@ -155,6 +156,9 @@ export default function ClientLearning() {
           <Text color="abyss.400" mt={1} fontSize="sm">Mo哥宝典 · 完整版 v1.3</Text>
         </Box>
       </HStack>
+
+      {/* 个性化学习引导 */}
+      <PersonalizationBanner />
 
       {/* 前言区 - 可展开 */}
       <Box mb={6} p={5} bg="rgba(0,212,170,0.06)" borderRadius="xl" border="1px solid rgba(0,212,170,0.15)">

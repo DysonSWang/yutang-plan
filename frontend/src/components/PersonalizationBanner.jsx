@@ -203,24 +203,26 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
               <Badge colorScheme="green" variant="subtle">已定制</Badge>
               <Text color="abyss.300" fontSize="sm">专属版本已就绪</Text>
             </HStack>
-            <HStack gap={2}>
-              <Button
-                size="xs"
-                variant={currentVersion === 'personalized' ? 'solid' : 'ghost'}
-                colorScheme={currentVersion === 'personalized' ? 'brand' : 'gray'}
-                onClick={() => onSwitchVersion('personalized')}
-              >
-                专属版
-              </Button>
-              <Button
-                size="xs"
-                variant={currentVersion === 'standard' ? 'solid' : 'ghost'}
-                colorScheme={currentVersion === 'standard' ? 'brand' : 'gray'}
-                onClick={() => onSwitchVersion('standard')}
-              >
-                公共版
-              </Button>
-            </HStack>
+            {onSwitchVersion && (
+              <HStack gap={2}>
+                <Button
+                  size="xs"
+                  variant={currentVersion === 'personalized' ? 'solid' : 'ghost'}
+                  colorScheme={currentVersion === 'personalized' ? 'brand' : 'gray'}
+                  onClick={() => onSwitchVersion('personalized')}
+                >
+                  专属版
+                </Button>
+                <Button
+                  size="xs"
+                  variant={currentVersion === 'standard' ? 'solid' : 'ghost'}
+                  colorScheme={currentVersion === 'standard' ? 'brand' : 'gray'}
+                  onClick={() => onSwitchVersion('standard')}
+                >
+                  公共版
+                </Button>
+              </HStack>
+            )}
           </HStack>
           <Text color="abyss.500" fontSize="xs">
             档案更新后，可重新生成以获得最新匹配
