@@ -8,6 +8,8 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { girls as girlsApi } from '../../utils/api';
 import { FireIcon, SnowIcon, SparklesIcon, BrainIcon } from '../../components/Icons';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const STAGE_COLORS = {
   '陌生': 'gray',
@@ -62,7 +64,7 @@ const CoachHeader = memo(({ girls, selectedGirlId, onGirlChange, selectedGirl, d
 ));
 
 // 独立的输入区域组件 - 使用完全独立的本地状态
-const InputArea = memo(({ onSubmit, loading, deepMode }) => {
+const InputArea = memo(({ onSubmit, loading, deepMode, onNewConversation }) => {
   const [input, setInput] = useState('');
   const textareaRef = useRef(null);
 
@@ -142,11 +144,69 @@ const InputArea = memo(({ onSubmit, loading, deepMode }) => {
           variant="ghost"
           colorScheme="gray"
           size="sm"
+          onClick={onNewConversation}
         >
           新对话
         </Button>
       </Flex>
     </Box>
+  );
+});
+
+// ====== 会话选择栏（模块级组件） ======
+const SessionBar = memo(({
+  sessions, activeSessionId, selectedGirlId, loading,
+  onSelectSession, onNewSession
+}) => {
+  const displaySessions = useMemo(() => {
+    if (!selectedGirlId) return (sessions || []).filter(s => !s.girlId);
+    return (sessions || []).filter(s => s.girlId === selectedGirlId);
+  }, [sessions, selectedGirlId]);
+
+  const activeSession = useMemo(() =>
+    displaySessions.find(s => s.id === activeSessionId),
+    [displaySessions, activeSessionId]
+  );
+
+  const formatTime = (isoStr) => {
+    if (!isoStr) return '';
+    const d = new Date(isoStr);
+    const now = new Date();
+    const isToday = d.toDateString() === now.toDateString();
+    if (isToday) return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+  };
+
+  return (
+    <Card bg="gray.800" mb={2} variant="outline">
+      <CardBody py={2} px={3}>
+        <Flex align="center" justify="space-between" gap={2}>
+          <Flex align="center" gap={2} flex={1} minW={0}>
+            <Text color="gray.400" fontSize="xs" flexShrink={0}>会话</Text>
+            <Select
+              value={activeSessionId || ''}
+              onChange={e => { if (e.target.value) onSelectSession(e.target.value); }}
+              bg="gray.700" border="none" color="white" size="sm"
+              flex={1} maxW="280px"
+              placeholder={displaySessions.length === 0 ? '暂无历史会话' : '选择历史会话'}
+              isDisabled={loading}
+            >
+              {displaySessions.map(s => (
+                <option key={s.id} value={s.id}>{formatTime(s.createdAt)} · {(s.messages || []).length}条 · {s.active !== false ? '活跃' : '已归档'}</option>
+              ))}
+            </Select>
+            {activeSession && (
+              <Badge colorScheme="teal" variant="subtle" fontSize="xs" flexShrink={0}>
+                {(activeSession.messages || []).length}条
+              </Badge>
+            )}
+          </Flex>
+          <Button size="xs" variant="outline" colorScheme="teal" onClick={onNewSession} isLoading={loading}>
+            + 新建
+          </Button>
+        </Flex>
+      </CardBody>
+    </Card>
   );
 });
 
@@ -414,14 +474,23 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
         {isUser ? (
           <Text whiteSpace="pre-wrap">{message.content}</Text>
         ) : (
-          <Text whiteSpace="pre-wrap" sx={{
-            '& h1, & h2, & h3': { color: 'white', mt: 3, mb: 1 },
-            '& p': { mb: 2 },
-            '& ul, & ol': { pl: 4, mb: 2 },
-            '& li': { mb: 1 }
-          }}>
-            {message.content}
-          </Text>
+          <Box
+            className="ai-coach-markdown"
+            sx={{
+              '& h1, & h2, & h3': { color: 'white', fontWeight: 'bold', mt: 3, mb: 1, fontSize: 'md' },
+              '& p': { mb: 2 },
+              '& ul, & ol': { pl: 4, mb: 2 },
+              '& li': { mb: 1 },
+              '& strong': { color: 'teal.200' },
+              '& code': { bg: 'whiteAlpha.200', px: 1, py: 0.5, borderRadius: 'sm', fontSize: '0.9em' },
+              '& blockquote': { borderLeft: '3px solid', borderColor: 'whiteAlpha.400', pl: 3, py: 1, color: 'gray.300' },
+              '& hr': { borderColor: 'whiteAlpha.300', my: 2 }
+            }}
+          >
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {message.content}
+            </ReactMarkdown>
+          </Box>
         )}
 
         {/* 助手消息底部操作栏 */}
@@ -507,6 +576,9 @@ export default function AICoach() {
   const [loading, setLoading] = useState(false);
   const [deepMode, setDeepMode] = useState(false);
   const [messages, setMessages] = useState([]);
+  const [sessions, setSessions] = useState([]);
+  const [activeSessionId, setActiveSessionId] = useState(null);
+  const [sessionLoading, setSessionLoading] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
   const [helpfulId, setHelpfulId] = useState(null);
@@ -608,26 +680,31 @@ export default function AICoach() {
     }
   };
 
-  const loadHistory = async () => {
+  const loadHistory = async (girlIdOverride) => {
+    const girlId = girlIdOverride !== undefined ? girlIdOverride : selectedGirlId;
     const token = localStorage.getItem('zhuiai_token');
     setLoadingHistory(true);
     try {
-      const res = await fetch(`${apiUrl}/api/ai-coach/history?girlId=${selectedGirlId || ''}`, {
+      const res = await fetch(`${apiUrl}/api/ai-coach/history?girlId=${girlId || ''}&activeOnly=false`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.sessions && data.sessions.length > 0) {
-          // 获取最新会话的消息
-          const latestSession = data.sessions[0];
-          if (latestSession.messages && latestSession.messages.length > 0) {
-            setMessages(latestSession.messages.map(m => ({
-              id: m.id,
-              role: m.role === 'user' ? 'user' : 'assistant',
-              content: m.content,
-              createdAt: m.createdAt
-            })));
-          }
+        const allSessions = data.sessions || [];
+        setSessions(allSessions);
+        if (allSessions.length > 0) {
+          const latestId = allSessions[0].id;
+          setActiveSessionId(latestId);
+          const latestMessages = (allSessions[0].messages || []).map(m => ({
+            id: m.id,
+            role: m.role === 'user' ? 'user' : 'assistant',
+            content: m.content,
+            createdAt: m.createdAt
+          }));
+          setMessages(latestMessages);
+        } else {
+          setActiveSessionId(null);
+          setMessages([]);
         }
       }
     } catch (e) {
@@ -636,6 +713,32 @@ export default function AICoach() {
       setLoadingHistory(false);
     }
   };
+
+  const handleGirlChange = (girlId) => {
+    setSelectedGirlId(girlId);
+    loadHistory(girlId);
+  };
+
+  const handleSelectSession = useCallback((sessionId) => {
+    if (!sessionId) return;
+    const session = sessions.find(s => s.id === sessionId);
+    if (!session) return;
+    setSessionLoading(true);
+    setActiveSessionId(sessionId);
+    const msgs = (session.messages || []).map(m => ({
+      id: m.id,
+      role: m.role === 'user' ? 'user' : 'assistant',
+      content: m.content,
+      createdAt: m.createdAt
+    }));
+    setMessages(msgs);
+    setError('');
+    setTimeout(() => {
+      const container = document.getElementById('chat-scroll-container');
+      if (container) container.scrollTop = container.scrollHeight;
+      setSessionLoading(false);
+    }, 100);
+  }, [sessions]);
 
   const handleCopy = useCallback(async (content, messageId) => {
     try {
@@ -824,7 +927,8 @@ export default function AICoach() {
         },
         body: JSON.stringify({ girlId: selectedGirlId || undefined })
       });
-      setMessages([]);
+      // 重新加载会话列表（旧会话已被结束，不再出现在活跃列表中）
+      await loadHistory();
       toast({
         title: '已开启新对话',
         status: 'info',
@@ -1025,7 +1129,7 @@ export default function AICoach() {
   const coachHeaderProps = useMemo(() => ({
     girls,
     selectedGirlId,
-    onGirlChange: setSelectedGirlId,
+    onGirlChange: handleGirlChange,
     selectedGirl,
     deepMode,
     onDeepModeToggle: handleDeepModeToggle
@@ -1048,10 +1152,19 @@ export default function AICoach() {
       <CoachHeader
         girls={girls}
         selectedGirlId={selectedGirlId}
-        onGirlChange={setSelectedGirlId}
+        onGirlChange={handleGirlChange}
         selectedGirl={selectedGirl}
         deepMode={deepMode}
         onDeepModeToggle={handleDeepModeToggle}
+      />
+      {/* 会话选择栏 */}
+      <SessionBar
+        sessions={sessions}
+        activeSessionId={activeSessionId}
+        selectedGirlId={selectedGirlId}
+        loading={sessionLoading}
+        onSelectSession={handleSelectSession}
+        onNewSession={handleNewConversation}
       />
       {/* 固定高度的消息容器，flex布局 */}
       <Box flex="1" minH="0" display="flex" flexDirection="column" bg="gray.800" borderRadius="md" mb={2} overflow="hidden">
@@ -1130,6 +1243,7 @@ export default function AICoach() {
         onSubmit={handleSubmitInternal}
         loading={loading}
         deepMode={deepMode}
+        onNewConversation={handleNewConversation}
       />
     </>
   );

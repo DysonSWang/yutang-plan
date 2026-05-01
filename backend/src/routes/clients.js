@@ -336,7 +336,7 @@ const CLIENT_EDITABLE_FIELDS = [
   'familyBackground', 'familyStructure', 'familyAtmosphere',
   'personality', 'communicationStyle', 'socialStyle',
   'relationshipAttitude', 'marriageHistory', 'emotionalGoal',
-  'relationshipGoal', 'profileBio'
+  'relationshipGoal', 'profileBio', 'avatar'
 ];
 
 router.put('/:id', authMiddleware, async (req, res) => {

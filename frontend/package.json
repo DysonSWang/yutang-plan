@@ -25,11 +25,13 @@
     "better-sqlite3": "^12.9.0",
     "browser-image-compression": "^2.0.2",
     "framer-motion": "^6.5.1",
+    "fullcalendar": "^6.1.20",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-icons": "^5.6.0",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.14.1",
+    "remark-gfm": "^4.0.1",
     "socket.io-client": "^4.8.3"
   },
   "devDependencies": {

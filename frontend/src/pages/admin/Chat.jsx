@@ -7,7 +7,7 @@ import ProfileSuggestModal from './ProfileSuggestModal';
 import FlashImageViewer from '../../components/FlashImageViewer';
 
 export default function AdminChat() {
-  const { on } = useSocket();
+  const { on, addChatUnread, clearChatUnread } = useSocket();
   const [sessions, setSessions] = useState([]);
   const [currentSession, setCurrentSession] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -146,6 +146,7 @@ export default function AdminChat() {
         ));
       } else {
         // 非当前会话，增加未读数
+        addChatUnread(1);
         setSessions(prev => prev.map(s => {
           if (s.id === message.sessionId) {
             return {
@@ -485,6 +486,7 @@ export default function AdminChat() {
                   setShowChat(true);
                   // 清空当前会话未读数
                   if (session.unreadCount > 0) {
+                    clearChatUnread(session.unreadCount);
                     setSessions(prev => prev.map(s =>
                       s.id === session.id ? { ...s, unreadCount: 0 } : s
                     ));
@@ -593,6 +595,7 @@ export default function AdminChat() {
                         key={virtualRow.key}
                         data-index={virtualRow.index}
                         ref={virtualizer.measureElement}
+                        w="100%"
                         direction="column"
                         align={isOperator ? 'flex-end' : 'flex-start'}
                         position="absolute"

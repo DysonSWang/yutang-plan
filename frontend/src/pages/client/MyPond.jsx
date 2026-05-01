@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Box, Heading, Text, SimpleGrid, Card, CardBody, Badge, Tabs, TabList, TabPanels, Tab, TabPanel, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure, HStack, VStack, Icon, Image, Flex, Divider, Tag, TagLabel, Wrap, WrapItem, Spinner, Center, Input, Button, useToast, Spinner as CSpinner, Checkbox, Collapse, Alert, AlertIcon, NumberInput, NumberInputField, NumberInputStepper, NumberIncrementStepper, NumberDecrementStepper, Select, Textarea, FormControl, FormLabel } from '@chakra-ui/react';
+import { Box, Heading, Text, SimpleGrid, Card, CardBody, Badge, Tabs, TabList, TabPanels, Tab, TabPanel, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure, HStack, VStack, Icon, Image, Flex, Divider, Tag, TagLabel, Wrap, WrapItem, Spinner, Center, Input, Button, useToast, Spinner as CSpinner, Checkbox, Collapse, Alert, AlertIcon, NumberInput, NumberInputField, NumberInputStepper, NumberIncrementStepper, NumberDecrementStepper, Select, Textarea, FormControl, FormLabel, Avatar, InputGroup, InputRightElement, IconButton } from '@chakra-ui/react';
 import { HeartIcon } from '../../components/Icons';
 import { girls, chatScreenshots, chatLogs, chatPartner } from '../../utils/api';
-import { FiSend, FiMessageSquare, FiZap, FiCopy, FiUser } from 'react-icons/fi';
+import { FiSend, FiMessageSquare, FiZap, FiCopy, FiUser, FiEdit2 } from 'react-icons/fi';
 
 const STAGE_COLORS = {
   '陌生': 'gray',
@@ -628,7 +628,12 @@ function GirlCombatChat({ girlsList }) {
   );
 }
 
-function GirlDetailModal({ girl, screenshots, onPreviewUrl }) {
+function GirlDetailModal({ girl, screenshots, onPreviewUrl, onAvatarUpdate }) {
+  const [editingAvatar, setEditingAvatar] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState(girl.avatar || '');
+  const [savingAvatar, setSavingAvatar] = useState(false);
+  const toast = useToast();
+
   if (!girl) return null;
 
   const photos = parseJSONField(girl.photos);
@@ -642,9 +647,82 @@ function GirlDetailModal({ girl, screenshots, onPreviewUrl }) {
     ? new Date(girl.lastContact).toLocaleString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
     : null;
 
+  // 生成默认头像
+  const getDefaultAvatar = () => {
+    const name = girl.name || '';
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = ((hash << 5) - hash) + name.charCodeAt(i);
+      hash = hash & hash;
+    }
+    return `https://i.pravatar.cc/150?img=${Math.abs(hash) % 70}`;
+  };
+
+  const handleSaveAvatar = async () => {
+    setSavingAvatar(true);
+    try {
+      const res = await girls.updateAvatar(girl.id, avatarUrl.trim());
+      if (res.success) {
+        toast({ title: '头像已更新', status: 'success', duration: 2000 });
+        setEditingAvatar(false);
+        if (onAvatarUpdate) onAvatarUpdate(girl.id, avatarUrl.trim());
+      }
+    } catch (e) {
+      toast({ title: '更新失败', status: 'error', duration: 2000 });
+    } finally {
+      setSavingAvatar(false);
+    }
+  };
+
+  const handleCancelAvatar = () => {
+    setAvatarUrl(girl.avatar || '');
+    setEditingAvatar(false);
+  };
+
+  const displayAvatar = avatarUrl || girl.avatar || getDefaultAvatar();
+
   return (
     <>
       <ModalBody pb={6}>
+        {/* 头像编辑 */}
+        <Box mb={4} display="flex" alignItems="center" gap={4}>
+          <Box position="relative">
+            <Avatar size="xl" name={girl.name} src={displayAvatar} />
+            <IconButton
+              aria-label="编辑头像"
+              icon={<Icon as={FiEdit2} />}
+              size="xs"
+              colorScheme="teal"
+              position="absolute"
+              bottom={0}
+              right={0}
+              borderRadius="full"
+              onClick={() => setEditingAvatar(true)}
+            />
+          </Box>
+          {editingAvatar ? (
+            <VStack align="stretch" flex={1} spacing={2}>
+              <Input
+                size="sm"
+                placeholder="输入头像图片URL"
+                value={avatarUrl}
+                onChange={(e) => setAvatarUrl(e.target.value)}
+                bg="gray.700"
+                borderColor="gray.600"
+              />
+              <HStack spacing={2}>
+                <Button size="sm" colorScheme="teal" onClick={handleSaveAvatar} isLoading={savingAvatar}>保存</Button>
+                <Button size="sm" variant="ghost" onClick={handleCancelAvatar}>取消</Button>
+              </HStack>
+            </VStack>
+          ) : (
+            <VStack align="start" spacing={1}>
+              <Text color="gray.400" fontSize="sm">点击编辑头像</Text>
+              {!girl.avatar && <Text color="gray.600" fontSize="xs">当前使用默认头像</Text>}
+            </VStack>
+          )}
+        </Box>
+
         {/* 基本信息 */}
         <SectionCard title="基本信息">
           <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4}>
@@ -1129,6 +1207,10 @@ export default function MyPond() {
               girl={girlDetail || selectedGirl}
               screenshots={girlScreenshots}
               onPreviewUrl={(url) => setPreviewImage(url)}
+              onAvatarUpdate={(girlId, avatar) => {
+                setGirls(prev => prev.map(g => g.id === girlId ? { ...g, avatar } : g));
+                if (girlDetail?.id === girlId) setGirlDetail(prev => prev ? { ...prev, avatar } : prev);
+              }}
             />
           )}
         </ModalContent>

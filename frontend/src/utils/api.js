@@ -147,6 +147,7 @@ export const girls = {
   create: (data) => api.post('/api/girls', data).then(r => { api.clearCache(); return r; }),
   clientAdd: (data) => api.post('/api/girls/client-add', data).then(r => { api.clearCache(); return r; }),
   update: (id, data) => api.put('/api/girls/' + id, data).then(r => { api.clearCache(); return r; }),
+  updateAvatar: (id, avatar) => api.patch(`/api/girls/${id}/avatar`, { avatar }).then(r => { api.clearCache(); return r; }),
   delete: (id) => api.delete('/api/girls/' + id).then(r => { api.clearCache(); return r; }),
   // M007 S01: 关系阶段
   evaluateStage: (girlId) => api.post(`/api/girls/${girlId}/evaluate-stage`),

@@ -29,7 +29,7 @@ Available skills:
 - **Think**: `/office-hours`, `/plan-ceo-review`, `/plan-eng-review`, `/plan-design-review`, `/design-consultation`
 - **Build**: `/review`, `/investigate`, `/design-review`
 - **Test**: `/qa`, `/qa-only`, `/benchmark`
-- **Ship**: `/ship`, `/land-and-deploy`, `/canary`, `/document-release`
+- **Ship**: `/ship`, `/land-and-deploy`, `/canary`, `/document-release`, `/release`
 - **Reflect**: `/retro`
 - **Power Tools**: `/browse`, `/setup-browser-cookies`, `/codex`, `/careful`, `/freeze`, `/guard`, `/unfreeze`, `/gstack-upgrade`, `/setup-deploy`
 

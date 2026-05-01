@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -48,9 +48,17 @@ function fromLocalDatetimeString(str) {
   return new Date(normalized);
 }
 
+function getSavedView() {
+  try { return localStorage.getItem('calendarView') || 'dayGridMonth'; } catch { return 'dayGridMonth'; }
+}
+function saveView(view) {
+  try { localStorage.setItem('calendarView', view); } catch { /* noop */ }
+}
+
 export default function ClientCalendar({ clientId, clientNickname, girlList, refreshKey }) {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [calendarView, setCalendarView] = useState(getSavedView);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [editMode, setEditMode] = useState('view'); // 'view' | 'edit' | 'create'
   const [isDateEvent, setIsDateEvent] = useState(false);
@@ -61,8 +69,23 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
   const [deleting, setDeleting] = useState(false);
   const toast = useToast();
   const calendarRef = useRef(null);
+  const containerRef = useRef(null);
 
   const { isOpen, onOpen, onClose } = useDisclosure();
+
+  // 当日历容器从隐藏变为可见时，触发 resize
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => {
+      const api = calendarRef.current?.getApi();
+      if (api && el.offsetParent !== null) {
+        api.updateSize();
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const loadEvents = useCallback(async () => {
     if (!clientId) {
@@ -381,7 +404,7 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
       {loading ? (
         <Flex justify="center" py={8}><Spinner color="teal.400" /></Flex>
       ) : (
-        <Box minH="500px" sx={{
+        <Box ref={containerRef} minH="500px" sx={{
           '.fc': { fontFamily: 'inherit' },
           '.fc .fc-toolbar-title': { color: 'gray.200', fontSize: 'md !important' },
           '.fc .fc-button': {
@@ -409,13 +432,20 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
           <FullCalendar
             ref={calendarRef}
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-            initialView="dayGridMonth"
+            initialView={calendarView}
             headerToolbar={{
               left: 'prev,next today',
               center: 'title',
               right: 'dayGridMonth,timeGridWeek,timeGridDay'
             }}
             events={calendarEvents}
+            datesSet={(arg) => {
+              const newView = arg.view.type;
+              if (newView !== calendarView) {
+                setCalendarView(newView);
+                saveView(newView);
+              }
+            }}
             dateClick={handleDateClick}
             eventClick={handleEventClick}
             height="auto"

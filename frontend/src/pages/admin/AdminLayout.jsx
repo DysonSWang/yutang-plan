@@ -5,6 +5,7 @@ import {
 } from '@chakra-ui/react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSocket } from '../../contexts/SocketContext';
 import { alerts as alertsApi } from '../../utils/api';
 import { DashboardIcon, UsersIcon, FemaleIcon, ChatIcon, BrainIcon, ChartIcon, FishIcon, CalendarIcon, MembershipIcon } from '../../components/Icons';
 import { FiBell, FiAlertTriangle, FiInfo, FiCheck, FiX, FiRefreshCw, FiActivity, FiLogOut } from 'react-icons/fi';
@@ -125,6 +126,7 @@ function AlertPanel({ alerts, stats, loading, onRefresh, onAcknowledge, onDismis
 function DesktopSidebar() {
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { chatUnreadCount } = useSocket();
   const [alertStats, setAlertStats] = useState({ p0: 0, p1: 0, p2: 0 });
   const [alerts, setAlerts] = useState([]);
   const [alertLoading, setAlertLoading] = useState(false);
@@ -275,8 +277,28 @@ function DesktopSidebar() {
               gap={3}
               transition="all 0.15s ease"
               cursor="pointer"
+              position="relative"
             >
-              <Icon as={item.icon} />
+              <Box position="relative">
+                <Icon as={item.icon} />
+                {item.path === '/admin/chat' && chatUnreadCount > 0 && (
+                  <Badge
+                    colorScheme="red"
+                    fontSize="10px"
+                    position="absolute"
+                    top="-6px"
+                    right="-10px"
+                    borderRadius="full"
+                    minW="18px"
+                    h="18px"
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                  >
+                    {chatUnreadCount > 99 ? '99+' : chatUnreadCount}
+                  </Badge>
+                )}
+              </Box>
               <Text>{item.label}</Text>
             </Flex>
           </NavLink>
@@ -305,6 +327,7 @@ function DesktopSidebar() {
 // 移动端底部 Tab 导航
 function MobileBottomNav() {
   const location = useLocation();
+  const { chatUnreadCount } = useSocket();
 
   return (
     <Box
@@ -334,8 +357,29 @@ function MobileBottomNav() {
                 transition="all 0.15s ease"
                 _hover={{ color: 'teal.300' }}
                 minW="60px"
+                position="relative"
               >
-                <Icon as={item.icon} boxSize={5} mb={1} />
+                <Box position="relative" mb={1}>
+                  <Icon as={item.icon} boxSize={5} />
+                  {item.path === '/admin/chat' && chatUnreadCount > 0 && (
+                    <Badge
+                      colorScheme="red"
+                      fontSize="10px"
+                      position="absolute"
+                      top="-6px"
+                      right="-12px"
+                      borderRadius="full"
+                      minW="16px"
+                      h="16px"
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      px={0}
+                    >
+                      {chatUnreadCount > 99 ? '99+' : chatUnreadCount}
+                    </Badge>
+                  )}
+                </Box>
                 <Text fontSize="xs">{item.label}</Text>
               </Flex>
             </NavLink>

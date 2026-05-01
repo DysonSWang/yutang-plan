@@ -490,6 +490,41 @@ router.post('/client-add', authMiddleware, async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// 客户端更新女生头像
+// ---------------------------------------------------------------------------
+router.patch('/:id/avatar', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'client') {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const girl = await prisma.girl.findUnique({
+      where: { id: req.params.id }
+    });
+
+    if (!girl) {
+      return res.status(404).json({ error: '女生不存在' });
+    }
+
+    if (girl.clientId !== req.user.id) {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const { avatar } = req.body;
+
+    const updated = await prisma.girl.update({
+      where: { id: girl.id },
+      data: { avatar: avatar || null }
+    });
+
+    res.json({ success: true, girl: updated });
+  } catch (error) {
+    console.error('[Girls] 更新头像失败:', error);
+    res.status(500).json({ error: '更新失败' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // 关系阶段路由（M007 S01 T02）
 // ---------------------------------------------------------------------------
 

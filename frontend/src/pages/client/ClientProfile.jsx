@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Box, Heading, Card, CardBody, SimpleGrid, Badge, Text, VStack, HStack, Flex, Avatar, Button, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton, useDisclosure, FormControl, FormLabel, Input, Select, Textarea, useToast, Spinner, Icon, Divider, InputGroup, InputRightElement, IconButton } from '@chakra-ui/react';
 import { CrownIcon, CheckIcon } from '../../components/Icons';
+import { FiEdit2 } from 'react-icons/fi';
 import { clients, membership as membershipApi, auth } from '../../utils/api';
 import RegionSelector from '../../components/RegionSelector';
 import { checkVersion, VERSION } from '../../utils/version';
@@ -47,6 +48,7 @@ const CLIENT_EDITABLE_FIELDS = [
   { key: 'emotionalGoal', label: '感情诉求', type: 'select', options: ['认真找对象', '随便玩玩', '家里催婚', '空虚寂寞'] },
   { key: 'relationshipGoal', label: '关系目标', type: 'select', options: ['短期', '长期', '不确定'] },
   { key: 'profileBio', label: '个人签名', type: 'textarea' },
+  { key: 'avatar', label: '头像URL', type: 'input' },
 ];
 
 // 不显示给客户的字段（操盘手内部使用）
@@ -154,6 +156,9 @@ export default function ClientProfile() {
   const [showOld, setShowOld] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [changingPwd, setChangingPwd] = useState(false);
+  const [editingAvatar, setEditingAvatar] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [savingAvatar, setSavingAvatar] = useState(false);
   const toast = useToast();
 
   useEffect(() => {
@@ -262,6 +267,32 @@ export default function ClientProfile() {
     }
   };
 
+  const handleSaveAvatar = async () => {
+    setSavingAvatar(true);
+    try {
+      const res = await clients.update(profile.id, { avatar: avatarUrl.trim() });
+      if (res.success) {
+        setProfile(prev => ({ ...prev, avatar: avatarUrl.trim() }));
+        toast({ title: '头像已更新', status: 'success', duration: 2000 });
+        setEditingAvatar(false);
+      }
+    } catch (e) {
+      toast({ title: '更新失败', status: 'error', duration: 2000 });
+    } finally {
+      setSavingAvatar(false);
+    }
+  };
+
+  const handleCancelAvatar = () => {
+    setAvatarUrl(profile?.avatar || '');
+    setEditingAvatar(false);
+  };
+
+  const openAvatarEdit = () => {
+    setAvatarUrl(profile?.avatar || '');
+    setEditingAvatar(true);
+  };
+
   if (loading) {
     return (
       <Flex justify="center" align="center" minH="200px">
@@ -287,7 +318,20 @@ export default function ClientProfile() {
       <Card bg="gray.800" mb={4}>
         <CardBody>
           <HStack spacing={4} mb={4}>
-            <Avatar size="lg" name={profile.nickname || profile.username} bg="teal.500" />
+            <Box position="relative">
+              <Avatar size="lg" name={profile.nickname || profile.username} src={profile.avatar} bg="teal.500" />
+              <IconButton
+                aria-label="编辑头像"
+                icon={<Icon as={FiEdit2} />}
+                size="xs"
+                colorScheme="teal"
+                position="absolute"
+                bottom={0}
+                right={0}
+                borderRadius="full"
+                onClick={openAvatarEdit}
+              />
+            </Box>
             <Box>
               <HStack>
                 <Text color="white" fontSize="xl" fontWeight="bold">{profile.nickname || profile.username}</Text>
@@ -296,6 +340,28 @@ export default function ClientProfile() {
               <Text color="gray.400">{profile.occupation || profile.education || '未填写'}</Text>
             </Box>
           </HStack>
+
+          {/* 头像编辑 */}
+          {editingAvatar && (
+            <Box mt={2} p={3} bg="gray.700" borderRadius="md">
+              <VStack align="stretch" spacing={2}>
+                <Text color="gray.300" fontSize="sm">输入头像图片URL</Text>
+                <InputGroup size="sm">
+                  <Input
+                    placeholder="https://example.com/avatar.jpg"
+                    value={avatarUrl}
+                    onChange={(e) => setAvatarUrl(e.target.value)}
+                    bg="gray.600"
+                    borderColor="gray.500"
+                  />
+                </InputGroup>
+                <HStack spacing={2}>
+                  <Button size="sm" colorScheme="teal" onClick={handleSaveAvatar} isLoading={savingAvatar}>保存</Button>
+                  <Button size="sm" variant="ghost" onClick={handleCancelAvatar}>取消</Button>
+                </HStack>
+              </VStack>
+            </Box>
+          )}
         </CardBody>
       </Card>
 

@@ -15,14 +15,70 @@
     <!-- Description -->
     <meta name="description" content="AI智能恋爱助手" />
 
-    <!-- FullCalendar CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/@fullcalendar@6.1.10/core/main.min.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/@fullcalendar@6.1.10/daygrid/main.min.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/@fullcalendar@6.1.10/timegrid/main.min.css" rel="stylesheet" />
+    <!-- FullCalendar CSS v5（兼容 v6，JS 注入的样式需要此基础） -->
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/main.min.css" rel="stylesheet" media="print" onload="this.media='all'" />
 
     <title>追爱AI</title>
+    <style>
+      #app-splash {
+        position: fixed; inset: 0;
+        background: #0a0f1a;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        z-index: 99999;
+        transition: opacity 0.3s ease-out;
+      }
+      #app-splash.hidden { opacity: 0; pointer-events: none; }
+      #app-splash .logo {
+        width: 80px; height: 80px;
+        background: linear-gradient(135deg, #f472b6 0%, #c084fc 50%, #818cf8 100%);
+        border-radius: 22px;
+        display: flex; align-items: center; justify-content: center;
+        margin-bottom: 24px;
+        animation: splash-pulse 2s ease-in-out infinite;
+      }
+      #app-splash .logo-text {
+        font-size: 32px;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 4px;
+        letter-spacing: 2px;
+      }
+      #app-splash .sub-text {
+        font-size: 14px;
+        color: rgba(255,255,255,0.4);
+        margin-bottom: 32px;
+      }
+      #app-splash .dot-bounce { display: flex; gap: 8px; }
+      #app-splash .dot-bounce span {
+        width: 8px; height: 8px;
+        background: rgba(255,255,255,0.3);
+        border-radius: 50%;
+        animation: dot-bounce 1.4s ease-in-out infinite both;
+      }
+      #app-splash .dot-bounce span:nth-child(1) { animation-delay: -0.32s; }
+      #app-splash .dot-bounce span:nth-child(2) { animation-delay: -0.16s; }
+      @keyframes splash-pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+      }
+      @keyframes dot-bounce {
+        0%, 80%, 100% { transform: scale(0); opacity: 0.2; }
+        40% { transform: scale(1); opacity: 1; }
+      }
+    </style>
   </head>
   <body>
+    <div id="app-splash">
+      <div class="logo">
+        <span style="font-size:38px;line-height:1">💕</span>
+      </div>
+      <div class="logo-text">追爱AI</div>
+      <div class="sub-text">AI智能恋爱助手</div>
+      <div class="dot-bounce">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

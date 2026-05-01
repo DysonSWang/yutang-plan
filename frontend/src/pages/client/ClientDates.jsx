@@ -6,6 +6,7 @@ import {
   FormLabel, Icon, Alert, AlertIcon, AlertDescription, Spinner, Progress, Tabs, TabList, TabPanels, Tab, TabPanel, Input, Select, Center, Avatar, Link, Table
 } from '@chakra-ui/react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { CalendarIcon, SparklesIcon, QuestionIcon, CopyIcon, MapPinIcon, ClockIcon, FireIcon } from '../../components/Icons';
 import ClientCalendar from '../../components/ClientCalendar';
 import RegionSelector from '../../components/RegionSelector';
@@ -15,6 +16,21 @@ function parseJSON(val, fallback = null) {
   if (!val) return fallback;
   if (typeof val === 'object') return val;
   try { return JSON.parse(val); } catch { return fallback; }
+}
+
+// 去除 AI 输出中包裹的 ```markdown ... ``` 代码块
+function unwrapMarkdown(content) {
+  if (!content) return content;
+  let text = content.trim();
+  if (text.startsWith('```markdown')) {
+    text = text.slice('```markdown'.length);
+  } else if (text.startsWith('```')) {
+    text = text.slice(3);
+  }
+  if (text.endsWith('```')) {
+    text = text.slice(0, -3);
+  }
+  return text.trim();
 }
 
 // 访谈状态标签映射
@@ -300,6 +316,9 @@ export default function ClientDates() {
       return;
     }
     setGenerating(true);
+    setShowAddModal(false);
+    toast({ title: '大师团正在精心策划中...', status: 'info', duration: 3000 });
+
     try {
       // 传递女生完整信息给AI
       const girlInfo = {
@@ -327,17 +346,50 @@ export default function ClientDates() {
         girl: girlInfo
       });
       if (res.success) {
-        setAiPlans([res.plan, ...aiPlans]);
+        // 添加到列表并选中
+        setAiPlans(prev => [res.plan, ...prev]);
         setSelectedAiPlan(res.plan);
-        setShowAddModal(false);
+
+        // 清空表单
         setAiForm({ title: '', scene: '', budget: '', duration: '半天', dateTime: '', district: '', transportMode: localStorage.getItem('dating_transportMode') || '地铁/打车', relationshipStage: '初次见面', specialRequirements: '' });
-        toast({ title: '方案已生成', status: 'success', duration: 3000 });
+
+        // 轮询刷新方案直到生成完成
+        pollPlanStatus(res.plan.id);
       }
     } catch (err) {
       toast({ title: '生成失败', description: err.message, status: 'error' });
-    } finally {
       setGenerating(false);
     }
+  };
+
+  // 轮询方案状态直到生成完成
+  const pollPlanStatus = async (planId) => {
+    const maxAttempts = 30; // 最多30次
+    const interval = 2000;   // 每2秒查询一次
+
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise(resolve => setTimeout(resolve, interval));
+
+      try {
+        const res = await membershipApi.getDatingPlan(planId);
+        if (res.success && res.plan) {
+          setSelectedAiPlan(res.plan);
+          setAiPlans(prev => prev.map(p => p.id === planId ? res.plan : p));
+
+          if (res.plan.planStatus === 'generated') {
+            setGenerating(false);
+            toast({ title: '✨ 方案已生成', status: 'success', duration: 3000 });
+            return;
+          }
+        }
+      } catch (err) {
+        console.error('轮询方案状态失败:', err);
+      }
+    }
+
+    // 超过最大次数仍未完成
+    setGenerating(false);
+    toast({ title: '方案生成超时，请稍后刷新查看', status: 'warning', duration: 4000 });
   };
 
   // 打开访谈问卷
@@ -508,7 +560,7 @@ export default function ClientDates() {
         </HStack>
       </Flex>
 
-      <Tabs colorScheme="brand" variant="soft-rounded" mb={6} defaultIndex={window.location.hash === '#calendar' ? 1 : 0}>
+      <Tabs colorScheme="brand" variant="soft-rounded" mb={6} defaultIndex={window.location.hash === '#calendar' ? 1 : 0} isLazy lazyBehavior="keepMounted">
         <TabList>
           <Tab>约会方案</Tab>
           <Tab>我的日历</Tab>
@@ -1058,47 +1110,78 @@ export default function ClientDates() {
                 </SimpleGrid>
 
                 {selectedAiPlan.planStatus === 'generating' ? (
-                  <Center py={20}>
-                    <VStack>
-                      <Spinner size="lg" color="brand.500" />
-                      <Text color="gray.400" mt={3}>AI 正在为你策划约会方案...</Text>
+                  <Center py={16}>
+                    <VStack spacing={4}>
+                      <Box position="relative">
+                        <Spinner size="xl" color="teal.400" thickness="3px" />
+                        <Box position="absolute" top="50%" left="50%" transform="translate(-50%, -50%)" fontSize="2xl">✨</Box>
+                      </Box>
+                      <Text color="teal.300" fontSize="lg" fontWeight="bold">大师团精心策划中</Text>
+                      <Text color="gray.400" fontSize="sm">正在为你生成专属约会方案，请稍候...</Text>
+                      <Progress size="sm" isIndeterminate colorScheme="teal" w="200px" borderRadius="full" />
                     </VStack>
                   </Center>
                 ) : selectedAiPlan.content ? (
                   <Box
                     className="markdown-content"
                     p={6}
-                    bg="rgba(255,255,255,0.02)"
-                    border="1px solid rgba(255,255,255,0.06)"
-                    borderRadius="xl"
+                    bg="rgba(255,255,255,0.03)"
+                    border="1px solid rgba(255,255,255,0.08)"
+                    borderRadius="2xl"
                     color="gray.200"
                     fontSize="sm"
-                    lineHeight="1.8"
+                    lineHeight="1.9"
+                    position="relative"
+                    overflow="hidden"
+                    sx={{
+                      '& h1': { fontSize: '22px', fontWeight: 'bold', color: '#38B2AC', mb: 4, mt: 6, pb: 2, borderBottom: '1px solid rgba(255,255,255,0.1)' },
+                      '& h2': { fontSize: '18px', fontWeight: 'bold', color: '#F6AD55', mb: 3, mt: 5 },
+                      '& h3': { fontSize: '16px', fontWeight: 'bold', color: '#FC8181', mb: 2, mt: 4 },
+                      '& p': { mb: 4, color: '#E2E8F0', lineHeight: '1.8' },
+                      '& ul': { pl: 5, mb: 4, '& li': { mb: 2, color: '#CBD5E0' } },
+                      '& ol': { pl: 5, mb: 4, counterReset: 'item', '& li': { mb: 2, color: '#CBD5E0' } },
+                      '& li': { mb: 1 },
+                      '& strong': { fontWeight: 'bold', color: '#F6E05E' },
+                      '& em': { fontStyle: 'italic', color: '#A0AEC0' },
+                      '& blockquote': { borderLeft: '3px solid #38B2AC', pl: 4, py: 2, my: 3, bg: 'rgba(56,178,172,0.08)', color: '#A0AEC0', fontStyle: 'italic', borderRadius: '0 8px 8px 0' },
+                      '& table': { width: '100%', my: 4, borderCollapse: 'collapse' },
+                      '& thead': { bg: 'rgba(56,178,172,0.15)' },
+                      '& th': { color: '#38B2AC', fontWeight: 'bold', py: 2, px: 4, textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.1)' },
+                      '& td': { color: '#E2E8F0', py: 2, px: 4, borderBottom: '1px solid rgba(255,255,255,0.05)' },
+                      '& tr': { '&:hover': { bg: 'rgba(255,255,255,0.02)' } },
+                      '& code': { bg: 'rgba(237,100,166,0.15)', color: '#F687B3', px: 2, py: 0.5, borderRadius: '4px', fontSize: '13px', fontFamily: 'mono' },
+                      '& pre': { bg: 'rgba(26,32,44,0.8)', p: 4, borderRadius: '8px', overflowX: 'auto', my: 4, border: '1px solid rgba(255,255,255,0.05)' },
+                      '& hr': { my: 6, borderColor: 'rgba(255,255,255,0.1)' },
+                      '& a': { color: '#38B2AC', textDecoration: 'underline', '&:hover': { color: '#4FD1C5' } },
+                    }}
                   >
                     <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
                       components={{
-                        h1: ({ children }) => <Text as="h1" fontSize="2xl" fontWeight="bold" color="brand.400" mb={4} mt={6} pb={2} borderBottom="1px solid" borderColor="gray.600">{children}</Text>,
-                        h2: ({ children }) => <Text as="h2" fontSize="xl" fontWeight="bold" color="teal.300" mb={3} mt={5}>{children}</Text>,
-                        h3: ({ children }) => <Text as="h3" fontSize="lg" fontWeight="bold" color="orange.300" mb={2} mt={4}>{children}</Text>,
-                        p: ({ children }) => <Text mb={3} color="gray.200" lineHeight="1.8">{children}</Text>,
-                        ul: ({ children }) => <Box as="ul" pl={5} mb={3} color="gray.200">{children}</Box>,
-                        ol: ({ children }) => <Box as="ol" pl={5} mb={3} color="gray.200">{children}</Box>,
-                        li: ({ children }) => <Box as="li" mb={1}>{children}</Box>,
-                        strong: ({ children }) => <Text as="strong" fontWeight="bold" color="yellow.300">{children}</Text>,
-                        em: ({ children }) => <Text as="em" fontStyle="italic" color="gray.300">{children}</Text>,
-                        blockquote: ({ children }) => <Box as="blockquote" borderLeft="3px solid" borderColor="teal.400" pl={4} py={2} my={3} bg="rgba(0,212,170,0.05)" color="gray.300" fontStyle="italic">{children}</Box>,
-                        table: ({ children }) => <Box overflowX="auto" my={4}><Table size="sm" variant="simple" colorScheme="teal">{children}</Table></Box>,
-                        thead: ({ children }) => <Box as="thead" bg="gray.700">{children}</Box>,
-                        th: ({ children }) => <Box as="th" color="teal.300" fontWeight="bold" py={2} px={3}>{children}</Box>,
-                        td: ({ children }) => <Box as="td" color="gray.200" py={2} px={3} borderColor="gray.600">{children}</Box>,
-                        tr: ({ children }) => <Box as="tr" borderBottom="1px solid" borderColor="gray.600">{children}</Box>,
-                        code: ({ children }) => <Text as="code" bg="gray.700" color="pink.300" px={1} borderRadius="md" fontSize="xs">{children}</Text>,
-                        pre: ({ children }) => <Box as="pre" bg="gray.800" p={3} borderRadius="md" overflowX="auto" my={3}>{children}</Box>,
-                        hr: () => <Divider my={4} borderColor="gray.600" />,
-                        a: ({ href, children }) => <Link href={href} color="teal.400" isExternal>{children}</Link>,
+                        h1: ({ node, ...props }) => <Text as="h1" fontSize="22px" fontWeight="bold" color="#38B2AC" mb={4} mt={6} pb={2} borderBottom="1px solid rgba(255,255,255,0.1)" {...props} />,
+                        h2: ({ node, ...props }) => <Text as="h2" fontSize="18px" fontWeight="bold" color="#F6AD55" mb={3} mt={5} {...props} />,
+                        h3: ({ node, ...props }) => <Text as="h3" fontSize="16px" fontWeight="bold" color="#FC8181" mb={2} mt={4} {...props} />,
+                        p: ({ node, ...props }) => <Text mb={4} color="#E2E8F0" lineHeight="1.8" {...props} />,
+                        ul: ({ node, ...props }) => <Box as="ul" pl={5} mb={4} {...props} />,
+                        ol: ({ node, ...props }) => <Box as="ol" pl={5} mb={4} {...props} />,
+                        li: ({ node, ...props }) => <Text as="li" mb={2} color="#CBD5E0" {...props} />,
+                        strong: ({ node, ...props }) => <Text as="strong" fontWeight="bold" color="#F6E05E" {...props} />,
+                        em: ({ node, ...props }) => <Text as="em" fontStyle="italic" color="#A0AEC0" {...props} />,
+                        blockquote: ({ node, ...props }) => <Box as="blockquote" borderLeft="3px solid #38B2AC" pl={4} py={2} my={3} bg="rgba(56,178,172,0.08)" color="#A0AEC0" fontStyle="italic" borderRadius="0 8px 8px 0" {...props} />,
+                        table: ({ node, ...props }) => <Box as="table" width="100%" my={4} borderCollapse="collapse" {...props} />,
+                        thead: ({ node, ...props }) => <Box as="thead" bg="rgba(56,178,172,0.15)" {...props} />,
+                        th: ({ node, ...props }) => <Text as="th" color="#38B2AC" fontWeight="bold" py={2} px={4} textAlign="left" borderBottom="1px solid rgba(255,255,255,0.1)" {...props} />,
+                        td: ({ node, ...props }) => <Text as="td" color="#E2E8F0" py={2} px={4} borderBottom="1px solid rgba(255,255,255,0.05)" {...props} />,
+                        tr: ({ node, ...props }) => <Box as="tr" _hover={{ bg: 'rgba(255,255,255,0.02)' }} {...props} />,
+                        code: ({ node, inline, ...props }) => inline
+                          ? <Text as="code" bg="rgba(237,100,166,0.15)" color="#F687B3" px={2} py={0.5} borderRadius="4px" fontSize="13px" fontFamily="monospace" {...props} />
+                          : <Box as="code" display="block" bg="rgba(26,32,44,0.8)" p={4} borderRadius="8px" overflowX="auto" my={4} border="1px solid rgba(255,255,255,0.05)" fontFamily="monospace" fontSize="13px" color="#E2E8F0" {...props} />,
+                        pre: ({ node, ...props }) => <Box as="pre" bg="rgba(26,32,44,0.8)" p={4} borderRadius="8px" overflowX="auto" my={4} border="1px solid rgba(255,255,255,0.05)" fontSize="13px" color="#E2E8F0" whiteSpace="pre-wrap" {...props} />,
+                        hr: ({ node, ...props }) => <Divider my={6} borderColor="rgba(255,255,255,0.1)" {...props} />,
+                        a: ({ node, ...props }) => <Link color="#38B2AC" textDecoration="underline" {...props} />,
                       }}
                     >
-                      {selectedAiPlan.content}
+                      {unwrapMarkdown(selectedAiPlan.content)}
                     </ReactMarkdown>
                   </Box>
                 ) : (
@@ -1112,7 +1195,7 @@ export default function ClientDates() {
                     colorScheme="brand"
                     onClick={() => {
                       if (selectedAiPlan.content) {
-                        navigator.clipboard.writeText(selectedAiPlan.content);
+                        navigator.clipboard.writeText(unwrapMarkdown(selectedAiPlan.content));
                         toast({ title: '已复制', status: 'success', duration: 2000 });
                       }
                     }}
@@ -1443,12 +1526,11 @@ export default function ClientDates() {
                           return;
                         }
                         setGenerating(true);
-                        setAddStep(1);
-                        setSelectedGirlForDate(null);
+                        toast({ title: '大师团正在精心策划中...', status: 'info', duration: 2000 });
                         generateAiPlan();
                       }}
                       isLoading={generating}
-                      loadingText="大师团策划中..."
+                      loadingText="策划中..."
                     >
                       生成精细化方案
                     </Button>

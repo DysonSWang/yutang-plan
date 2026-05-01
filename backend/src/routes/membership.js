@@ -463,8 +463,13 @@ async function baiduVenueSearch(location, venueTypes, budget) {
   try {
     const budgetNum = parseInt((budget || '200').replace(/[^0-9]/g, '')) || 200;
     const venueTypeStr = venueTypes.join('、');
-    // 使用用户输入的地址进行搜索
-    const query = `${location}适合2人约会的${venueTypeStr}推荐，包含具体店名、详细地址、人均消费，预算人均${budgetNum}元，必须包含真实街道地址`;
+    const query = `在${location}附近搜索真实存在的${venueTypeStr}，适合2人约会，人均约${budgetNum}元。从百度搜索结果中提取信息。要求：
+1. 只选搜索结果中真实存在的场所，地址真实即可，不强制门牌号
+2. 没有确切地址的场所不要推荐，宁可少推也不要编造
+3. 价格从搜索结果原文摘取，搜不到就写"未知"
+4. 人均超过${budgetNum * 2}元的不推荐
+5. 严格按JSON数组输出：
+[{"name":"店名","address":"真实地址","price":"人均或未知"}]`;
     const postData = JSON.stringify({
       messages: [{ content: query, role: 'user' }],
       model: 'deepseek-v3',
@@ -550,43 +555,80 @@ router.post('/dating-plan/generate', authMiddleware, async (req, res) => {
 
     console.log('[Dating] 坐标:', coords, '天气:', weather ? '有' : '无');
 
-    // 处理搜索结果
+    // 处理搜索结果 — 优先 JSON 解析，回退 Markdown 正则
     if (addressKeyword && searchResult) {
       const choices = searchResult.choices || [];
       const references = searchResult.references || [];
-
-      // 从choices[0]的表格内容中提取餐厅
       const validRestaurants = [];
       const content = choices[0]?.message?.content || '';
 
-      // 匹配表格行：| 店名 | 地址 | 人均 |
-      const tableRows = content.match(/\|\s*[^|]+\|[^|]+\|\s*[^|]+\|/g) || [];
-      for (const row of tableRows) {
-        // 提取每列内容
-        const cols = row.split('|').map(c => c.trim()).filter(Boolean);
-        if (cols.length >= 2) {
-          const name = cols[0];
-          const addrOrPrice = cols[1];
-          // 简单检查是否是有效地址
-          const isValidAddr = addrOrPrice.includes('市') || addrOrPrice.includes('区') || addrOrPrice.includes('县') || addrOrPrice.includes('路') || addrOrPrice.includes('街');
-          if (isValidAddr && (name.includes('店') || name.includes('馆') || name.includes('餐厅') || name.includes('咖啡') || name.includes('酒吧'))) {
-            validRestaurants.push(name + '，' + addrOrPrice);
+      // 策略1：JSON 格式解析（百度 AI Search 按要求返回 [{"name":"","address":"","price":""}）
+      const jsonMatch = content.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        try {
+          const arr = JSON.parse(jsonMatch[0]);
+          for (const item of arr) {
+            if (!item.name || !item.address) continue;
+            const addr = String(item.address).trim();
+            // 过滤明显虚假/模糊地址
+            if (/附近$|周边$|具体地址|未提供|不详/.test(addr)) continue;
+            // 至少包含路/街/道/弄/号/广场/大厦/中心/城 之一
+            if (!/[路街道弄号广场大厦中心城]/.test(addr)) continue;
+            const price = item.price && item.price !== '未知' ? String(item.price) : '';
+            const exists = validRestaurants.some(r => r.includes(item.name));
+            if (!exists) {
+              const priceStr = price ? '，人均：' + price : '';
+              validRestaurants.push(`${item.name}，地址：${addr}${priceStr}`);
+            }
+          }
+        } catch { /* JSON 解析失败，回退正则 */ }
+      }
+
+      // 策略2（回退）：Markdown 标题 + 地址/人均 正则解析
+      if (validRestaurants.length === 0) {
+        const headingRegex = /(?:^|\n)(#{2,4})\s*\d*\.?\s*\*{0,2}([^\n*]{2,50}?)\*{0,2}(?=\s*\n)/g;
+        let hm;
+        while ((hm = headingRegex.exec(content)) !== null) {
+          const name = hm[2].trim().replace(/[【】\[\]]/g, '');
+          if ((/推荐|场所|清单|列表|汇总|精选/.test(name) && name.length <= 6) || name.length < 2) continue;
+          if (!/店|馆|餐厅|咖啡|酒楼|食府|酒吧|茶|厅|厨房|食堂/.test(name)) continue;
+          const after = content.slice(headingRegex.lastIndex, headingRegex.lastIndex + 300);
+          const am = after.match(/[*-]\s*\*{0,2}地址\*{0,2}[：:]\s*([^\n]+)/);
+          if (!am) continue;
+          const addr = am[1].trim();
+          if (!/市|区|县|路|街|道|镇|号|广场|大厦|中心|城|楼|层|栋/.test(addr)) continue;
+          const pm = after.match(/[*-]\s*\*{0,2}人均\*{0,2}[：:]\s*[￥¥]?\s*([^\n]+)/);
+          const price = pm ? pm[1].trim().replace(/[￥¥]/g, '') : '';
+          if (!validRestaurants.some(r => r.includes(name))) {
+            const ps = price ? '，人均：' + (price.includes('元') ? price : price + '元') : '';
+            validRestaurants.push(name + '，地址：' + addr + ps);
           }
         }
       }
 
-      // 如果表格没找到，尝试从references提取
+      // 策略3（回退）：表格格式
+      if (validRestaurants.length === 0) {
+        const tableRows = content.match(/\|[^|]+\|[^|]+\|[^|]+\|/g) || [];
+        for (const row of tableRows) {
+          const cols = row.split('|').map(c => c.trim()).filter(Boolean);
+          if (cols.length >= 2) {
+            const name = cols[0].replace(/[*_#]/g, '');
+            if (/市|区|县|路|街|道|镇|号|广场|大厦|中心|城|楼|层/.test(cols[1]) && /店|馆|餐厅|咖啡|酒吧|茶/.test(name)) {
+              validRestaurants.push(name + '，' + cols[1]);
+            }
+          }
+        }
+      }
+
+      // 策略4（最后回退）：从 references 提取
       if (validRestaurants.length === 0) {
         for (const ref of references) {
-          const refContent = ref.content || '';
-          const refTitle = ref.title || '';
-          // 地址格式：餐厅地址:上海市松江区九亭镇... 或 地址：xxx
-          const addrMatch = refContent.match(/(?:餐厅)?地址[：:]\s*([^，,。\n]+)/);
-          const addr = addrMatch ? addrMatch[1] : '';
-          const isVenue = /店|馆|餐厅|咖啡|酒楼|食府|酒吧/.test(refTitle);
-          if (isVenue && addr) {
-            const cleanName = refTitle.replace(/^[^\w一-龥]+/, '').replace(/[#*【】\[\]]/g, '');
-            validRestaurants.push(cleanName + '，地址：' + addr);
+          const rc = ref.content || '';
+          const rt = ref.title || '';
+          const am = rc.match(/(?:餐厅)?地址[：:]\s*([^，,。\n]+)/);
+          if (am && /店|馆|餐厅|咖啡|酒楼|食府|酒吧/.test(rt)) {
+            const cn = rt.replace(/^[^\w一-鿿]+/, '').replace(/[#*【】\[\]]/g, '');
+            validRestaurants.push(cn + '，地址：' + am[1]);
           }
         }
       }
@@ -598,7 +640,6 @@ router.post('/dating-plan/generate', authMiddleware, async (req, res) => {
         }
         venueContext += '\n';
       } else {
-        // 搜索结果中没有找到真实餐厅
         venueContext = `\n【重要提示】百度搜索未找到符合条件的真实餐厅数据，请打开大众点评定位"${addressKeyword}"搜索。\n`;
       }
     }
@@ -625,25 +666,26 @@ router.post('/dating-plan/generate', authMiddleware, async (req, res) => {
     const safeBudget = escapePrompt(budget);
     const safeDuration = escapePrompt(duration);
 
-    const prompt = `你是约会策划专家，根据以下信息为用户设计一次完美的约会方案。
+    const prompt = `你是资深约会策划专家，根据以下信息为用户设计一次完美的约会方案。
 
+【用户信息】
 场景：${safeScene || '普通约会'}
 预算：${safeBudget || '1000元左右'}
 时长：${safeDuration || '半天'}${venueContext}${weatherInfo}
 
-请以Markdown格式输出，内容包含：
+请以专业约会策划师的角度输出Markdown方案，内容包含：
 1. 约会概览（适合人群、整体风格）
-2. 推荐地点（2-3个，**必须从【百度搜索真实场地】中选择真实餐厅/咖啡厅**，标注名称、地址、人均消费）
+2. 推荐地点（2-3个精选场所，标注名称、地址、人均消费）
 3. 时间安排（从见面到结束的完整时间线）
 4. 聊天话题（每个阶段推荐聊什么）
 5. 注意事项（雷区和加分项）
 6. 穿着建议（根据天气调整）
-7. 预算提示
-8. **天气提示**（根据【今日天气】给出出行建议，如遇雨天建议室内备选方案）
+7. 预算分配提示
+8. 天气出行建议（如遇雨天提供室内备选）
 
-**严格约束**：你只能使用【百度搜索真实场地】中列出的餐厅，禁止额外添加其他餐厅、咖啡厅或娱乐场所。如果搜索结果中的餐厅不足以填满推荐地点，请如实说明"搜索结果有限，建议自行通过大众点评确认"。
+要求：内容专业、实用，给出具体可执行的建议。让用户感受到这是一份精心策划的约会方案。
 
-只输出Markdown方案内容，不要其他内容。`;
+只输出Markdown方案内容，不要任何额外说明。`;
 
     try {
       const response = await fetch(aiConfig.url, {
@@ -661,7 +703,18 @@ router.post('/dating-plan/generate', authMiddleware, async (req, res) => {
       });
 
       const data = await response.json();
-      const content = data.choices?.[0]?.message?.content || '生成失败，请重试。';
+    let content = data.choices?.[0]?.message?.content || '生成失败，请重试。';
+    // 去除 AI 可能包裹的 ```markdown ... ``` 代码块
+    content = content.trim();
+    if (content.startsWith('```markdown')) {
+      content = content.slice('```markdown'.length);
+    } else if (content.startsWith('```')) {
+      content = content.slice(3);
+    }
+    if (content.endsWith('```')) {
+      content = content.slice(0, -3);
+    }
+    content = content.trim();
 
       const updatedPlan = await prisma.datingPlan.update({
         where: { id: plan.id },

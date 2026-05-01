@@ -8,11 +8,11 @@ const router = express.Router();
 // 版本配置（每次发版时更新）
 // upgradeType: 'force' | 'suggest' | 'none'
 const VERSION_CONFIG = {
-  latestVersion: '1.0.3',
-  minVersion: '1.0.0',      // 强制升级版本，低于此版本必须更新
-  downloadUrl: 'https://zhuiai.club/app/zhuiai-release.apk',
-  updateDescription: '1. 新增完整学习中心（20章节）；2. 前言可展开阅读；3. 修复已知问题',
-  buildNumber: 4
+  latestVersion: '1.0.5',
+  minVersion: '1.0.5',      // 强制升级版本，低于此版本必须更新
+  downloadUrl: 'https://www.pgyer.com/zhuiaiai',
+  updateDescription: '优化体验',
+  buildNumber: 10
 };
 
 router.get('/check', (req, res) => {

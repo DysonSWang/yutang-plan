@@ -1842,30 +1842,31 @@ router.get('/history', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: '无权限' });
     }
 
-    const { girlId } = req.query;
+    const { girlId, activeOnly } = req.query;
     const unifiedCoachId = 'unified';
 
     // 获取用户的会话
     const { getOrCreateSession, getConversationHistory, listSessions } = require('../services/memory');
 
-    // 获取所有相关会话
+    // 获取所有相关会话（默认只返回活跃会话，传 activeOnly=false 可获取全部历史会话）
     const sessions = await listSessions({
       clientId: req.user.id,
       coachId: unifiedCoachId,
       girlId,
-      activeOnly: true,
-      pageSize: 10
+      activeOnly: activeOnly !== 'false',
+      pageSize: 20
     });
 
     // 获取每个会话的消息
     const sessionsWithMessages = await Promise.all(
-      (sessions.items || []).slice(0, 10).map(async (session) => {
+      (sessions.items || []).map(async (session) => {
         const messages = await getConversationHistory(session.id);
         return {
           id: session.id,
           girlId: session.girlId,
           createdAt: session.createdAt,
           updatedAt: session.updatedAt,
+          active: !session.summary,
           messages: messages.map((m, idx) => ({
             id: m.id || `msg-${idx}`,
             role: m.role,

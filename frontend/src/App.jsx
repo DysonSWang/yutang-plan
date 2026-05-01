@@ -9,7 +9,7 @@ import Login from './pages/Login';
 import ClientLayout from './pages/client/ClientLayout';
 import AdminLayout from './pages/admin/AdminLayout';
 import VersionUpdateModal from './components/VersionUpdateModal';
-import { checkVersion } from './utils/version';
+import { checkVersion, isCapacitorApp } from './utils/version';
 import { api } from './utils/api';
 import { normalizeError, getErrorMessage } from './utils/errorHandler';
 
@@ -83,6 +83,17 @@ function OnboardingRoute() {
 function AppRoutes() {
   const { user, loading } = useAuth();
 
+  // 认证加载完成后隐藏启动屏，避免 splash→黑屏→内容的闪烁
+  useEffect(() => {
+    if (!loading) {
+      const splash = document.getElementById('app-splash');
+      if (splash) {
+        splash.classList.add('hidden');
+        setTimeout(() => splash.remove(), 400);
+      }
+    }
+  }, [loading]);
+
   if (loading) return null;
 
   return (
@@ -143,7 +154,7 @@ export default function App() {
   return (
     <ChakraProvider theme={theme}>
       <ErrorBoundary>
-        <BrowserRouter basename={import.meta.env.PROD ? '/app/' : '/'}>
+        <BrowserRouter basename={import.meta.env.PROD && !isCapacitorApp() ? '/app/' : '/'}>
           <AuthProvider>
             <SocketProvider>
               <VersionChecker />

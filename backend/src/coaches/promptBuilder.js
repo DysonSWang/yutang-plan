@@ -23,6 +23,7 @@ async function buildMasterPrompt(question, context = {}, options = {}) {
     girlProfile = null,
     clientId = null
   } = options;
+  const girlId = girlInfo?.id || null;
 
   // 获取相关skill（会返回多个coach视角）
   const { skills, meta } = getMultiDimensionalSkillsWithMeta(question, context);
@@ -237,7 +238,6 @@ function buildContextSection(girlInfo) {
 
   const personality = girlInfo.personality || {};
 
-  const { STAGE_LABELS } = require('./stageGuard');
   const relStageLabel = girlInfo.relationshipStage ? STAGE_LABELS[girlInfo.relationshipStage] || girlInfo.relationshipStage : null;
   return `
 【女生上下文】

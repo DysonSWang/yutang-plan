@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useCallback } from 'react';
+import { createContext, useContext, useEffect, useRef, useCallback, useState } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 
@@ -9,6 +9,7 @@ export function SocketProvider({ children }) {
   const { user } = useAuth();
   const socketRef = useRef(null);
   const listenersRef = useRef({});
+  const [chatUnreadCount, setChatUnreadCount] = useState(0);
 
   // 建立/断开 socket 连接（跟随 user 状态）
   useEffect(() => {
@@ -78,8 +79,21 @@ export function SocketProvider({ children }) {
     socketRef.current = null;
   }, []);
 
+  // 聊天未读计数（供导航红点使用）
+  const addChatUnread = useCallback((count = 1) => {
+    setChatUnreadCount(prev => prev + count);
+  }, []);
+
+  const clearChatUnread = useCallback((count) => {
+    if (count != null) {
+      setChatUnreadCount(prev => Math.max(0, prev - count));
+    } else {
+      setChatUnreadCount(0);
+    }
+  }, []);
+
   return (
-    <SocketContext.Provider value={{ socketRef, on, emit, disconnect }}>
+    <SocketContext.Provider value={{ socketRef, on, emit, disconnect, chatUnreadCount, addChatUnread, clearChatUnread }}>
       {children}
     </SocketContext.Provider>
   );
