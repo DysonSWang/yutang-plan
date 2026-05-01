@@ -92,9 +92,10 @@ router.get('/me', authMiddleware, async (req, res) => {
     }
     const { password, ...clientData } = client;
 
-    // 获取女生数量
-    const girlCount = await prisma.girl.count({
-      where: { clientId: req.user.id }
+    // 获取女生列表
+    const girls = await prisma.girl.findMany({
+      where: { clientId: req.user.id },
+      orderBy: { updatedAt: 'desc' }
     });
 
     // 获取约会数量
@@ -102,7 +103,7 @@ router.get('/me', authMiddleware, async (req, res) => {
       where: { userId: req.user.id }
     });
 
-    res.json({ success: true, client: { ...clientData, girlCount, dateCount } });
+    res.json({ success: true, client: { ...clientData, girls, dateCount } });
   } catch (error) {
     console.error('[Clients] 获取客户信息失败:', error);
     res.status(500).json({ error: '获取失败' });
