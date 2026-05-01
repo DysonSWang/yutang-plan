@@ -175,7 +175,7 @@ function DesktopSidebar() {
       top={0}
       display={{ base: 'none', lg: 'block' }}
     >
-      <VStack spacing={2} align="stretch">
+      <VStack spacing={2} align="stretch" overflowY="auto">
         <Flex align="center" gap={3} mb={6} py={2}>
           <Box
             bg="linear-gradient(135deg, #319795 0%, #00B5D8 50%, #38B2AC 100%)"
@@ -343,7 +343,7 @@ function MobileBottomNav() {
       zIndex={50}
       pb="env(safe-area-inset-bottom)"
     >
-      <HStack spacing={0} justify="space-around" py={2}>
+      <HStack spacing={0} justify="space-around" py={2} overflowX="auto">
         {navItems.map(item => {
           const isActive = location.pathname === item.path;
           return (
