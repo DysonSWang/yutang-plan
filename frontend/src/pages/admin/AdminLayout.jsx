@@ -7,7 +7,7 @@ import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSocket } from '../../contexts/SocketContext';
 import { alerts as alertsApi } from '../../utils/api';
-import { DashboardIcon, UsersIcon, FemaleIcon, ChatIcon, BrainIcon, ChartIcon, FishIcon, CalendarIcon, MembershipIcon } from '../../components/Icons';
+import { DashboardIcon, UsersIcon, FemaleIcon, ChatIcon, BrainIcon, ChartIcon, FishIcon, CalendarIcon, MembershipIcon, BookIcon } from '../../components/Icons';
 import { FiBell, FiAlertTriangle, FiInfo, FiCheck, FiX, FiRefreshCw, FiActivity, FiLogOut } from 'react-icons/fi';
 
 const navItems = [
@@ -21,6 +21,7 @@ const navItems = [
   { path: '/admin/activity', label: '活跃看板', icon: FiActivity },
   { path: '/admin/membership', label: '会员管理', icon: MembershipIcon },
   { path: '/admin/logs', label: '日志监控', icon: FiActivity },
+  { path: '/admin/chapters', label: '学习版块', icon: BookIcon },
 ];
 
 const SEVERITY_COLOR = { P0: 'red', P1: 'orange', P2: 'gray' };
