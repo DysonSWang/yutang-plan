@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   Box, Heading, SimpleGrid, Card, CardBody, Stat, StatLabel, StatNumber, StatHelpText,
-  Table, Thead, Tbody, Tr, Th, Td, Text, Badge, Button, HStack, VStack, Flex, Select,
-  Spinner, Divider, Icon, useToast, Tabs, TabList, TabPanels, Tab, TabPanel,
-  Progress, Tooltip
+  Table, Thead, Tbody, Tr, Th, Td, Text, Badge, HStack, VStack, Flex,
+  Spinner, Button, Tabs, TabList, TabPanels, Tab, TabPanel,
+  Progress, Tooltip, Icon
 } from '@chakra-ui/react';
+import { FiTrendingUp } from 'react-icons/fi';
 import { membership as membershipApi } from '../../utils/api';
 const activityApi = membershipApi.activity;
 
@@ -17,15 +18,24 @@ const LEVEL_COLORS = {
 
 const LEVEL_ORDER = ['high', 'medium', 'low', 'dormant'];
 
+const TREND_METRICS = {
+  users: { label: '累计用户', color: 'purple.300', field: 'cumulativeUsers', unit: '人' },
+  dau: { label: '日活跃 (DAU)', color: 'cyan.300', field: 'activeUsers', unit: '人' },
+  mau: { label: '月活跃 (MAU)', color: 'teal.300', field: 'mau', unit: '人' },
+  newUsers: { label: '每日新增', color: 'blue.300', field: 'newUsers', unit: '人' },
+};
+
 export default function ActivityBoard() {
   const [loading, setLoading] = useState(true);
   const [dashboard, setDashboard] = useState(null);
   const [clients, setClients] = useState([]);
   const [dormantUsers, setDormantUsers] = useState([]);
-  const [trendDays, setTrendDays] = useState(30);
+  const [trendDays, setTrendDays] = useState(90);
   const [trend, setTrend] = useState([]);
-  const [sendingRemind, setSendingRemind] = useState(null);
-  const toast = useToast();
+  const [growth, setGrowth] = useState([]);
+  const [growthDays, setGrowthDays] = useState(90);
+  const [tabIndex, setTabIndex] = useState(0);
+  const [trendMetric, setTrendMetric] = useState('dau');
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -64,25 +74,23 @@ export default function ActivityBoard() {
     }
   }, []);
 
+  const loadGrowth = useCallback(async (days) => {
+    try {
+      const res = await activityApi.growth(days);
+      if (res.success) {
+        setGrowth(res.growth || []);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
   useEffect(() => {
     loadDashboard();
     loadClients();
     loadDormantUsers();
-  }, [loadDashboard, loadClients, loadDormantUsers]);
-
-  const handleSendRemind = async (userId) => {
-    setSendingRemind(userId);
-    try {
-      const res = await activityApi.sendRemind(userId);
-      if (res.success) {
-        toast({ title: '提醒已发送', status: 'success', duration: 2000 });
-      }
-    } catch (e) {
-      toast({ title: '发送失败', status: 'error', duration: 2000 });
-    } finally {
-      setSendingRemind(null);
-    }
-  };
+    loadGrowth(90);
+  }, [loadDashboard, loadClients, loadDormantUsers, loadGrowth]);
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
@@ -90,17 +98,14 @@ export default function ActivityBoard() {
     return `${d.getMonth() + 1}月${d.getDate()}日`;
   };
 
-  const formatDaysAgo = (dateStr) => {
-    if (!dateStr) return '-';
-    const d = new Date(dateStr);
-    const now = new Date();
-    const diff = Math.floor((now - d) / (1000 * 60 * 60 * 24));
-    return diff;
+  const getMaxValue = (data, field) => {
+    if (!data.length) return 100;
+    return Math.max(...data.map(t => t[field] || 0), 1);
   };
 
-  const getTrendMaxScore = () => {
-    if (!trend.length) return 100;
-    return Math.max(...trend.map(t => t.totalScore), 100);
+  const handleCardClick = (metric) => {
+    setTrendMetric(metric);
+    setTabIndex(1);
   };
 
   if (loading && !dashboard) {
@@ -112,59 +117,90 @@ export default function ActivityBoard() {
   }
 
   const totalUsers = dashboard?.totalUsers || 0;
+  const dau = dashboard?.dau || 0;
+  const mau = dashboard?.mau || 0;
   const weeklyActive = dashboard?.weeklyActive || 0;
   const weeklyNew = dashboard?.weeklyNew || 0;
   const dormantUsersCount = dashboard?.dormantUsers || 0;
+  const dauRate = totalUsers > 0 ? Math.round((dau / totalUsers) * 100) : 0;
+  const mauRate = totalUsers > 0 ? Math.round((mau / totalUsers) * 100) : 0;
   const weeklyActiveRate = totalUsers > 0 ? Math.round((weeklyActive / totalUsers) * 100) : 0;
   const dormantRate = totalUsers > 0 ? Math.round((dormantUsersCount / totalUsers) * 100) : 0;
   const dist = dashboard?.levelDistribution || { high: 0, medium: 0, low: 0, dormant: 0 };
-  const featureUsage = dashboard?.weeklyFeatureUsage || { aiCoachCalls: 0, datePlans: 0, chatMessages: 0, girlsAdded: 0 };
+  const featureUsage = dashboard?.weeklyFeatureUsage || { aiCoachCalls: 0, datePlans: 0, chatMessages: 0, girlsAdded: 0, learningActions: 0, moChats: 0 };
 
   return (
     <Box p={6}>
-      <Heading size="lg" mb={6}>活跃看板</Heading>
+      <Heading size="lg" mb={6}>分析看板</Heading>
 
       {/* 汇总指标卡 */}
-      <SimpleGrid columns={4} spacing={4} mb={6}>
-        <Card bg="white">
+      <SimpleGrid columns={{ base: 2, md: 3, lg: 6 }} spacing={4} mb={6}>
+        <Card cursor="pointer" _hover={{ borderColor: 'purple.400' }} onClick={() => handleCardClick('users')}>
           <CardBody>
             <Stat>
-              <StatLabel>总用户数</StatLabel>
+              <Flex align="center" gap={1}>
+                <StatLabel>总用户数</StatLabel>
+                <Icon as={FiTrendingUp} boxSize={3} color="gray.500" />
+              </Flex>
               <StatNumber>{totalUsers}</StatNumber>
               <StatHelpText>人</StatHelpText>
             </Stat>
           </CardBody>
         </Card>
-        <Card bg="white">
+        <Card cursor="pointer" _hover={{ borderColor: 'cyan.400' }} onClick={() => handleCardClick('dau')}>
+          <CardBody>
+            <Stat>
+              <Flex align="center" gap={1}>
+                <StatLabel>日活跃 (DAU)</StatLabel>
+                <Icon as={FiTrendingUp} boxSize={3} color="gray.500" />
+              </Flex>
+              <StatNumber color="cyan.300">{dau}</StatNumber>
+              <StatHelpText>{dauRate}%</StatHelpText>
+            </Stat>
+          </CardBody>
+        </Card>
+        <Card cursor="pointer" _hover={{ borderColor: 'teal.400' }} onClick={() => handleCardClick('mau')}>
+          <CardBody>
+            <Stat>
+              <Flex align="center" gap={1}>
+                <StatLabel>月活跃 (MAU)</StatLabel>
+                <Icon as={FiTrendingUp} boxSize={3} color="gray.500" />
+              </Flex>
+              <StatNumber color="teal.300">{mau}</StatNumber>
+              <StatHelpText>{mauRate}%</StatHelpText>
+            </Stat>
+          </CardBody>
+        </Card>
+        <Card>
           <CardBody>
             <Stat>
               <StatLabel>本周活跃</StatLabel>
-              <StatNumber color="green.500">{weeklyActive}</StatNumber>
+              <StatNumber color="green.300">{weeklyActive}</StatNumber>
               <StatHelpText>{weeklyActiveRate}%</StatHelpText>
             </Stat>
           </CardBody>
         </Card>
-        <Card bg="white">
+        <Card>
           <CardBody>
             <Stat>
               <StatLabel>本周新增</StatLabel>
-              <StatNumber color="blue.500">{weeklyNew}</StatNumber>
+              <StatNumber color="blue.300">{weeklyNew}</StatNumber>
               <StatHelpText>人</StatHelpText>
             </Stat>
           </CardBody>
         </Card>
-        <Card bg="white">
+        <Card>
           <CardBody>
             <Stat>
               <StatLabel>沉睡用户</StatLabel>
-              <StatNumber color="red.500">{dormantUsersCount}</StatNumber>
+              <StatNumber color="red.300">{dormantUsersCount}</StatNumber>
               <StatHelpText>{dormantRate}%</StatHelpText>
             </Stat>
           </CardBody>
         </Card>
       </SimpleGrid>
 
-      <Tabs variant="soft-rounded" colorScheme="teal">
+      <Tabs variant="soft-rounded" colorScheme="teal" index={tabIndex} onChange={setTabIndex}>
         <TabList mb={4}>
           <Tab>总览</Tab>
           <Tab>活跃趋势</Tab>
@@ -176,7 +212,7 @@ export default function ActivityBoard() {
           <TabPanel p={0}>
             <SimpleGrid columns={2} spacing={6}>
               {/* 活跃度分布 */}
-              <Card bg="white">
+              <Card>
                 <CardBody>
                   <Heading size="md" mb={4}>活跃度分布</Heading>
                   <VStack align="stretch" spacing={3}>
@@ -200,7 +236,7 @@ export default function ActivityBoard() {
               </Card>
 
               {/* 本周功能使用 */}
-              <Card bg="white">
+              <Card>
                 <CardBody>
                   <Heading size="md" mb={4}>本周功能使用</Heading>
                   <VStack align="stretch" spacing={3}>
@@ -220,12 +256,20 @@ export default function ActivityBoard() {
                       <Text>添加女生</Text>
                       <Badge colorScheme="orange">{featureUsage.girlsAdded} 次</Badge>
                     </Flex>
+                    <Flex justify="space-between" align="center">
+                      <Text>学习版块</Text>
+                      <Badge colorScheme="green">{featureUsage.learningActions || 0} 次</Badge>
+                    </Flex>
+                    <Flex justify="space-between" align="center">
+                      <Text>mo哥聊天</Text>
+                      <Badge colorScheme="pink">{featureUsage.moChats || 0} 次</Badge>
+                    </Flex>
                   </VStack>
                 </CardBody>
               </Card>
 
               {/* 客户活跃度排行 */}
-              <Card bg="white" gridColumn="span 2">
+              <Card gridColumn="span 2">
                 <CardBody>
                   <Heading size="md" mb={4}>客户活跃度</Heading>
                   <Table size="sm">
@@ -238,6 +282,8 @@ export default function ActivityBoard() {
                         <Th isNumeric>约会方案</Th>
                         <Th isNumeric>聊天</Th>
                         <Th isNumeric>加女生</Th>
+                        <Th isNumeric>学习</Th>
+                        <Th isNumeric>mo哥</Th>
                         <Th>最后活跃</Th>
                       </Tr>
                     </Thead>
@@ -253,6 +299,8 @@ export default function ActivityBoard() {
                           <Td isNumeric>{client.featureUsage?.datePlans || 0}</Td>
                           <Td isNumeric>{client.featureUsage?.chatMessages || 0}</Td>
                           <Td isNumeric>{client.featureUsage?.girlsAdded || 0}</Td>
+                          <Td isNumeric>{client.featureUsage?.learningActions || 0}</Td>
+                          <Td isNumeric>{client.featureUsage?.moChats || 0}</Td>
                           <Td fontSize="xs">{formatDate(client.lastActive)}</Td>
                         </Tr>
                       ))}
@@ -265,56 +313,83 @@ export default function ActivityBoard() {
 
           {/* 活跃趋势 Tab */}
           <TabPanel p={0}>
-            <Card bg="white">
+            <Card>
               <CardBody>
-                <Flex justify="space-between" align="center" mb={4}>
-                  <Heading size="md">每日活跃趋势</Heading>
-                  <HStack>
-                    <Button size="xs" variant={trendDays === 7 ? 'solid' : 'outline'} onClick={() => setTrendDays(7)}>7天</Button>
-                    <Button size="xs" variant={trendDays === 30 ? 'solid' : 'outline'} onClick={() => setTrendDays(30)}>30天</Button>
-                    <Button size="xs" variant={trendDays === 90 ? 'solid' : 'outline'} onClick={() => setTrendDays(90)}>90天</Button>
+                <Flex justify="space-between" align="center" mb={4} wrap="wrap" gap={2}>
+                  <Heading size="md">活跃趋势</Heading>
+                  <HStack spacing={2}>
+                    <HStack spacing={1}>
+                      {Object.entries(TREND_METRICS).map(([key, meta]) => (
+                        <Button
+                          key={key}
+                          size="xs"
+                          variant={trendMetric === key ? 'solid' : 'outline'}
+                          onClick={() => setTrendMetric(key)}
+                        >
+                          {meta.label}
+                        </Button>
+                      ))}
+                    </HStack>
+                    <HStack spacing={1} ml={2}>
+                      <Button size="xs" variant={trendDays === 7 ? 'solid' : 'outline'} onClick={() => setTrendDays(7)}>7天</Button>
+                      <Button size="xs" variant={trendDays === 30 ? 'solid' : 'outline'} onClick={() => setTrendDays(30)}>30天</Button>
+                      <Button size="xs" variant={trendDays === 90 ? 'solid' : 'outline'} onClick={() => setTrendDays(90)}>90天</Button>
+                    </HStack>
                   </HStack>
                 </Flex>
-                <Box>
-                  <Flex align="flex-end" h="200px" gap="2px">
-                    {trend.slice(-trendDays).map((day, idx) => {
-                      const heightPct = getTrendMaxScore() > 0 ? (day.totalScore / getTrendMaxScore()) * 100 : 0;
-                      const activeHeightPct = day.activeUsers > 0 ? Math.min(day.activeUsers / 20 * 100, 100) : 0;
-                      return (
-                        <Tooltip key={day.date} label={`${day.date}: ${day.activeUsers}人活跃, ${day.totalScore}分`}>
-                          <Box flex={1} bg="teal.100" borderRadius="2px 2px 0 0" position="relative" cursor="pointer"
-                            _hover={{ bg: 'teal.200' }}>
-                            <Box
-                              position="absolute"
-                              bottom={0}
-                              left={0}
-                              right={0}
-                              bg="teal.400"
-                              borderRadius="2px 2px 0 0"
-                              h={`${heightPct}%`}
-                              minH={day.totalScore > 0 ? '4px' : '0'}
-                            />
-                          </Box>
-                        </Tooltip>
-                      );
-                    })}
+
+                {/* 所有趋势指标统一使用 growth 数据（含 cumulativeUsers / activeUsers / mau / newUsers） */}
+                {growth.length > 0 ? (
+                  <Box>
+                    <Flex h="200px" gap="2px">
+                      {growth.slice(-trendDays).map((day) => {
+                        const metric = TREND_METRICS[trendMetric];
+                        const val = day[metric.field] || 0;
+                        const maxVal = getMaxValue(growth.slice(-trendDays), metric.field);
+                        const heightPct = maxVal > 0 ? (val / maxVal) * 100 : 0;
+                        return (
+                          <Tooltip key={day.date} label={`${day.date}: ${val}${metric.unit}`}>
+                            <Box flex={1} h="100%" bg="gray.800" borderRadius="2px 2px 0 0" position="relative" cursor="pointer"
+                              _hover={{ bg: 'gray.700' }}>
+                              <Box
+                                position="absolute"
+                                bottom={0}
+                                left={0}
+                                right={0}
+                                bg={metric.color}
+                                borderRadius="2px 2px 0 0"
+                                h={`${heightPct}%`}
+                                minH={val > 0 ? '4px' : '0'}
+                              />
+                            </Box>
+                          </Tooltip>
+                        );
+                      })}
+                    </Flex>
+                    <Flex justify="space-between" mt={2} fontSize="xs" color="gray.400">
+                      <Text>{growth.length > 0 ? formatDate(growth[Math.max(0, growth.length - trendDays)]?.date) : '-'}</Text>
+                      <Text>
+                        {TREND_METRICS[trendMetric].label}
+                        {growth.length > 0 && ` · ${growth[growth.length - 1]?.[TREND_METRICS[trendMetric].field] || 0}${TREND_METRICS[trendMetric].unit}`}
+                      </Text>
+                    </Flex>
+                  </Box>
+                ) : (
+                  <Flex justify="center" align="center" h="200px">
+                    <Spinner />
                   </Flex>
-                  <Flex justify="space-between" mt={2} fontSize="xs" color="gray.500">
-                    <Text>{trend.length > 0 ? formatDate(trend[0]?.date) : '-'}</Text>
-                    <Text>今天</Text>
-                  </Flex>
-                </Box>
+                )}
               </CardBody>
             </Card>
           </TabPanel>
 
           {/* 沉睡用户 Tab */}
           <TabPanel p={0}>
-            <Card bg="white">
+            <Card>
               <CardBody>
                 <Heading size="md" mb={4}>沉睡用户名单</Heading>
-                <Text fontSize="sm" color="gray.600" mb={4}>
-                  已连续14天无活跃操作，需要激活
+                <Text fontSize="sm" color="gray.400" mb={4}>
+                  已连续14天无活跃操作
                 </Text>
                 <Table size="sm">
                   <Thead>
@@ -323,7 +398,6 @@ export default function ActivityBoard() {
                       <Th>注册时间</Th>
                       <Th>最后活跃</Th>
                       <Th isNumeric>沉睡天数</Th>
-                      <Th>操作</Th>
                     </Tr>
                   </Thead>
                   <Tbody>
@@ -335,22 +409,11 @@ export default function ActivityBoard() {
                         <Td isNumeric>
                           <Badge colorScheme="red">{user.dormantDays || 0}天</Badge>
                         </Td>
-                        <Td>
-                          <Button
-                            size="xs"
-                            colorScheme="red"
-                            variant="outline"
-                            isLoading={sendingRemind === user.userId}
-                            onClick={() => handleSendRemind(user.userId)}
-                          >
-                            发提醒
-                          </Button>
-                        </Td>
                       </Tr>
                     ))}
                     {dormantUsers.length === 0 && (
                       <Tr>
-                        <Td colSpan={5} textAlign="center" color="gray.500">
+                        <Td colSpan={4} textAlign="center" color="gray.500">
                           暂无沉睡用户
                         </Td>
                       </Tr>

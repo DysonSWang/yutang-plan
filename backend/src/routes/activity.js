@@ -154,33 +154,19 @@ router.get('/trend', authMiddleware, operatorOnly, async (req, res) => {
   }
 });
 
-// 给沉睡用户发送提醒（待实现：实际发送站内通知）
-router.post('/dormant-users/:id/remind', authMiddleware, operatorOnly, async (req, res) => {
+// 获取用户增长趋势（新用户、累计、DAU、MAU）
+router.get('/growth', authMiddleware, operatorOnly, async (req, res) => {
   try {
-    const { id } = req.params;
-
-    // 获取用户信息
-    const user = await prisma.user.findUnique({
-      where: { id },
-      select: { id: true, nickname: true, username: true },
-    });
-
-    if (!user) {
-      return res.status(404).json({ error: '用户不存在' });
-    }
-
-    // TODO: 实际发送通知逻辑
-    // 这里可以调用通知服务发送站内通知或短信/邮件
-
-    console.log(`[Activity] 向沉睡用户 ${user.nickname || user.username} 发送提醒`);
+    const { days = 90 } = req.query;
+    const growth = await activityService.getGrowthTrend(parseInt(days));
 
     res.json({
       success: true,
-      message: '提醒已发送',
+      growth,
     });
   } catch (error) {
-    console.error('[Activity] 发送提醒失败:', error);
-    res.status(500).json({ error: '发送提醒失败' });
+    console.error('[Activity] 获取增长趋势失败:', error);
+    res.status(500).json({ error: '获取数据失败' });
   }
 });
 
