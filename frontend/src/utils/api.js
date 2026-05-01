@@ -156,6 +156,83 @@ export const girls = {
   // M007 S03: 反撇分析
   analyzeReversal: (girlId) => api.post(`/api/girls/${girlId}/analyze-reversal`),
   getReversalRisk: (girlId) => api.get(`/api/girls/${girlId}/reversal-risk`),
+  // 客户端编辑女生档案
+  clientUpdate: (id, data) => api.put(`/api/girls/${id}/client-update`, data).then(r => { api.clearCache(); return r; }),
+  // AI 文字提取 (SSE 流式)
+  extractText: async (id, text, { onProgress, onDone, onError } = {}) => {
+    const token = api.getToken();
+    const response = await fetch(`${API_BASE}/api/girls/${id}/extract-text`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: token ? `Bearer ${token}` : ''
+      },
+      body: JSON.stringify({ text })
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: '请求失败' }));
+      throw new Error(err.error || '请求失败');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (line.startsWith('event: ')) {
+          const eventType = line.slice(7).trim();
+          continue;
+        }
+        if (line.startsWith('data: ')) {
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.success && onDone) onDone(data);
+            else if (data.error && onError) onError(data.error);
+          } catch { /* ignore parse errors */ }
+        }
+      }
+    }
+    // 处理剩余 buffer
+    if (buffer.startsWith('data: ')) {
+      try {
+        const data = JSON.parse(buffer.slice(6));
+        if (data.success && onDone) onDone(data);
+        else if (data.error && onError) onError(data.error);
+      } catch { /* ignore */ }
+    }
+  },
+  // 截图上传 + AI 提取
+  extractScreenshot: async (id, file) => {
+    const token = api.getToken();
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const response = await fetch(`${API_BASE}/api/girls/${id}/extract-screenshot`, {
+      method: 'POST',
+      headers: {
+        Authorization: token ? `Bearer ${token}` : ''
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: '上传失败' }));
+      throw new Error(err.error || '上传失败');
+    }
+
+    return response.json();
+  },
+  // 获取女生关联数据
+  getRelated: (id) => api.get(`/api/girls/${id}/related`),
 };
 
 // 客户
@@ -439,6 +516,7 @@ export const membership = {
   // 个性化学习
   getPersonalizedChapter: (chapterId) => api.get(`/api/membership/learning/${chapterId}?version=personalized`),
   personalizedStatus: () => api.get('/api/membership/learning/personalized-status'),
+  profileCompleteness: () => api.get('/api/membership/profile-completeness'),
   generateAll: () => api.post('/api/membership/learning/generate-all'),
   generateStatus: (batchId) => api.get(`/api/membership/learning/generate-status/${batchId}`),
   regenerate: () => api.post('/api/membership/learning/regenerate'),

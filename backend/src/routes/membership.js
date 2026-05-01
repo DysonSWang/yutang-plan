@@ -78,6 +78,21 @@ router.get('/status', authMiddleware, async (req, res) => {
   }
 });
 
+// 档案完善度（与个性化学习引擎使用统一计算逻辑）
+router.get('/profile-completeness', authMiddleware, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: personalizationEngine.USER_PROFILE_SELECT,
+    });
+    if (!user) return res.status(404).json({ error: '用户不存在' });
+    const completeness = personalizationEngine.calculateCompleteness(user);
+    res.json({ success: true, completeness });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 购买/续费会员
 router.post('/purchase', authMiddleware, async (req, res) => {
   try {
