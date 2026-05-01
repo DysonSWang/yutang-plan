@@ -418,6 +418,11 @@ export const membership = {
   chapters: () => api.get('/api/membership/learning/chapters'),
   learningProgress: () => api.get('/api/membership/learning/progress'),
   updateLearningProgress: (chapterId, status) => api.put(`/api/membership/learning/progress/${chapterId}`, { status }),
+  // 管理员 - 学习版块
+  adminListChapters: () => api.get('/api/membership/admin/learning/chapters'),
+  adminCreateChapter: (data) => api.post('/api/membership/admin/learning/chapters', data),
+  adminUpdateChapter: (chapterId, data) => api.put(`/api/membership/admin/learning/chapters/${chapterId}`, data),
+  adminDeleteChapter: (chapterId) => api.delete(`/api/membership/admin/learning/chapters/${chapterId}`),
   // AI约会方案
   generateDatingPlan: (data) => api.post('/api/membership/dating-plan/generate', data),
   datingPlans: () => api.get('/api/membership/dating-plan'),
