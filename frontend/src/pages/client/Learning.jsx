@@ -5,6 +5,7 @@ import { membership as membershipApi } from '../../utils/api';
 import { BookIcon, CheckIcon } from '../../components/Icons';
 import { FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import PersonalizationBanner from '../../components/PersonalizationBanner';
+import { useSocket } from '../../contexts/SocketContext';
 
 // Chapter card component
 function ChapterCard({ chapter, progress, personalizationStatus, onUpdate }) {
@@ -90,30 +91,73 @@ function ChapterCard({ chapter, progress, personalizationStatus, onUpdate }) {
 
 export default function ClientLearning() {
   const toast = useToast();
+  const { on } = useSocket();
   const [chapters, setChapters] = useState([]);
   const [progress, setProgress] = useState([]);
   const [personalizationStatus, setPersonalizationStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showPreface, setShowPreface] = useState(false);
+  const [prefaceData, setPrefaceData] = useState(null); // { title, personalized, content }
+  const [prefaceRegenerating, setPrefaceRegenerating] = useState(false);
 
   useEffect(() => {
     load();
   }, []);
+
+  // 监听前言个性化生成完成，自动刷新内容
+  useEffect(() => {
+    const cleanup = on('personalization:progress', (data) => {
+      if (data.chapterId === '00' && data.status === 'completed') {
+        loadPreface();
+      }
+    });
+    return cleanup;
+  }, [on]);
+
+  async function loadPreface() {
+    try {
+      const preRes = await membershipApi.getPersonalizedChapter('00');
+      if (preRes?.success) {
+        setPrefaceData({
+          title: preRes.chapter?.title || '写在前面',
+          personalized: !!preRes.personalized,
+          content: preRes.personalized?.content || null,
+        });
+      }
+    } catch {
+      // 静默处理
+    }
+  }
 
   async function load() {
     try {
       const [chRes, progRes, perRes] = await Promise.all([
         membershipApi.chapters(),
         membershipApi.learningProgress(),
-        membershipApi.personalizedStatus().catch(() => null)
+        membershipApi.personalizedStatus().catch(() => null),
       ]);
       if (chRes.success) setChapters(chRes.chapters);
       if (progRes.success) setProgress(progRes.progress);
       if (perRes?.success) setPersonalizationStatus(perRes.chapters);
+      loadPreface();
     } catch (err) {
       toast({ title: '加载失败', description: err.message, status: 'error' });
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function regeneratePreface() {
+    setPrefaceRegenerating(true);
+    try {
+      const res = await membershipApi.regenerateChapter('00');
+      if (res.success) {
+        toast({ title: '正在重新生成前言...', status: 'info', duration: 2000 });
+      }
+    } catch (err) {
+      toast({ title: '生成失败', description: err.message, status: 'error' });
+    } finally {
+      setPrefaceRegenerating(false);
     }
   }
 
@@ -153,7 +197,6 @@ export default function ClientLearning() {
           <Heading size="lg" color="white" display="flex" alignItems="center" gap={2}>
             <BookIcon /> 学习中心
           </Heading>
-          <Text color="abyss.400" mt={1} fontSize="sm">Mo哥宝典 · 完整版 v1.3</Text>
         </Box>
       </HStack>
 
@@ -164,42 +207,101 @@ export default function ClientLearning() {
       <Box mb={6} p={5} bg="rgba(0,212,170,0.06)" borderRadius="xl" border="1px solid rgba(0,212,170,0.15)">
         <Flex justify="space-between" align="center" cursor="pointer" onClick={() => setShowPreface(!showPreface)}>
           <Box>
-            <Text color="brand.300" fontWeight="bold" fontSize="lg">写在前面：为什么你需要这本宝典？</Text>
-            <Text color="abyss.400" fontSize="xs" mt={1}>点击展开阅读全文</Text>
+            <Text color="brand.300" fontWeight="bold" fontSize="lg">
+              {prefaceData?.title || '写在前面'}
+            </Text>
           </Box>
-          <Icon
-            as={showPreface ? FiChevronUp : FiChevronDown}
-            color="brand.300"
-            boxSize={6}
-          />
+          <HStack gap={3} onClick={(e) => e.stopPropagation()}>
+            {prefaceData?.personalized && (
+              <Button
+                size="xs"
+                variant="ghost"
+                colorScheme="brand"
+                isLoading={prefaceRegenerating}
+                onClick={regeneratePreface}
+              >
+                重新生成
+              </Button>
+            )}
+            <Icon
+              as={showPreface ? FiChevronUp : FiChevronDown}
+              color="brand.300"
+              boxSize={6}
+              cursor="pointer"
+              onClick={() => setShowPreface(!showPreface)}
+            />
+          </HStack>
         </Flex>
         <Collapse in={showPreface} animateOpacity>
           <Box mt={4} pt={4} borderTop="1px solid rgba(255,255,255,0.1)">
-            <VStack align="stretch" spacing={4}>
-              <Text color="abyss.200" fontSize="sm" lineHeight="1.9">
-                <Text as="span" fontWeight="bold" color="brand.300">你追女生失败的次数，比你知道的要多。</Text>
-              </Text>
-              <Text color="abyss.300" fontSize="sm" lineHeight="1.8">
-                不是运气差。不是她眼光高。不是「缘分没到」。
-                是因为你从第一步开始，就在用让结果变糟的方式努力。
-                你以为你在追她，其实你在推开她。每发一条「在吗」，每等20分钟才回消息，每送一次礼、解释一次自己，都在强化一个信号：「我不重要，是我更需要你」。
-              </Text>
-              <Text color="abyss.300" fontSize="sm" lineHeight="1.8">
-                <Text as="span" fontWeight="bold" color="brand.300">这不是你的错。</Text>从来没有人教过你这些。学校没有，爸妈没有，哥们儿只会说「大胆点」。结果就是：大多数人凭感觉在情感世界里裸奔，摸黑走路，踩一个坑学一个坑。
-              </Text>
-              <Text color="abyss.300" fontSize="sm" lineHeight="1.8">
-                <Text as="span" fontWeight="bold" color="brand.300">我现在用一套系统方法，一年做到了50个。</Text>不是理论，不是网上抄的，是我用这套方法在真实世界里一趟一趟跑出来的。这个结果不是运气。是系统。
-              </Text>
-              <HStack gap={3} flexWrap="wrap" pt={2}>
-                <Badge colorScheme="teal" variant="subtle">20章节</Badge>
-                <Badge colorScheme="blue" variant="subtle">5.5万字</Badge>
-                <Badge colorScheme="purple" variant="subtle">126+方法</Badge>
-                <Badge colorScheme="orange" variant="subtle">90+心理学原理</Badge>
-              </HStack>
-              <Text color="abyss.400" fontSize="xs" pt={2} fontStyle="italic">
-                追爱不是终点，幸福才是。—— Mo哥
-              </Text>
-            </VStack>
+            {prefaceData?.personalized ? (
+              <VStack align="stretch" spacing={3}>
+                {prefaceData.content.split('\n').filter(line => line.trim()).map((line, i) => {
+                  const trimmed = line.trim();
+                  // 标题
+                  if (trimmed.startsWith('### ')) {
+                    return <Heading key={i} as="h4" size="sm" color="brand.200" mt={2}>{trimmed.slice(4)}</Heading>;
+                  }
+                  if (trimmed.startsWith('## ')) {
+                    return <Heading key={i} as="h3" size="sm" color="brand.200" mt={3}>{trimmed.slice(3)}</Heading>;
+                  }
+                  if (trimmed.startsWith('# ')) {
+                    return <Heading key={i} as="h2" size="md" color="brand.200" mt={3}>{trimmed.slice(2)}</Heading>;
+                  }
+                  // 引用
+                  if (trimmed.startsWith('> ')) {
+                    return (
+                      <Text key={i} color="abyss.400" fontSize="xs" fontStyle="italic" pl={3} borderLeft="2px solid" borderColor="brand.400">
+                        {trimmed.slice(2)}
+                      </Text>
+                    );
+                  }
+                  // 普通段落
+                  return (
+                    <Text key={i} color="abyss.200" fontSize="sm" lineHeight="1.9">
+                      {trimmed.split(/(\*\*[^*]+\*\*)/).map((part, j) => {
+                        if (part.startsWith('**') && part.endsWith('**')) {
+                          return <Text as="span" key={j} fontWeight="bold" color="brand.300">{part.slice(2, -2)}</Text>;
+                        }
+                        return part;
+                      })}
+                    </Text>
+                  );
+                })}
+                <HStack gap={3} flexWrap="wrap" pt={2}>
+                  <Badge colorScheme="teal" variant="subtle">20章节</Badge>
+                  <Badge colorScheme="blue" variant="subtle">5.5万字</Badge>
+                  <Badge colorScheme="purple" variant="subtle">126+方法</Badge>
+                  <Badge colorScheme="orange" variant="subtle">90+心理学原理</Badge>
+                </HStack>
+              </VStack>
+            ) : (
+              <VStack align="stretch" spacing={4}>
+                <Text color="abyss.200" fontSize="sm" lineHeight="1.9">
+                  <Text as="span" fontWeight="bold" color="brand.300">你追女生失败的次数，比你知道的要多。</Text>
+                </Text>
+                <Text color="abyss.300" fontSize="sm" lineHeight="1.8">
+                  不是运气差。不是她眼光高。不是「缘分没到」。
+                  是因为你从第一步开始，就在用让结果变糟的方式努力。
+                  你以为你在追她，其实你在推开她。每发一条「在吗」，每等20分钟才回消息，每送一次礼、解释一次自己，都在强化一个信号：「我不重要，是我更需要你」。
+                </Text>
+                <Text color="abyss.300" fontSize="sm" lineHeight="1.8">
+                  <Text as="span" fontWeight="bold" color="brand.300">这不是你的错。</Text>从来没有人教过你这些。学校没有，爸妈没有，哥们儿只会说「大胆点」。结果就是：大多数人凭感觉在情感世界里裸奔，摸黑走路，踩一个坑学一个坑。
+                </Text>
+                <Text color="abyss.300" fontSize="sm" lineHeight="1.8">
+                  <Text as="span" fontWeight="bold" color="brand.300">我现在用一套系统方法，一年做到了50个。</Text>不是理论，不是网上抄的，是我用这套方法在真实世界里一趟一趟跑出来的。这个结果不是运气。是系统。
+                </Text>
+                <HStack gap={3} flexWrap="wrap" pt={2}>
+                  <Badge colorScheme="teal" variant="subtle">20章节</Badge>
+                  <Badge colorScheme="blue" variant="subtle">5.5万字</Badge>
+                  <Badge colorScheme="purple" variant="subtle">126+方法</Badge>
+                  <Badge colorScheme="orange" variant="subtle">90+心理学原理</Badge>
+                </HStack>
+                <Text color="abyss.400" fontSize="xs" pt={2} fontStyle="italic">
+                  追爱不是终点，幸福才是。—— Mo哥
+                </Text>
+              </VStack>
+            )}
           </Box>
         </Collapse>
       </Box>
@@ -216,7 +318,7 @@ export default function ClientLearning() {
       </Box>
 
       <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
-        {chapters.map(chapter => (
+        {chapters.filter(c => c.chapterId !== '00').map(chapter => (
           <ChapterCard
             key={chapter.chapterId}
             chapter={chapter}
