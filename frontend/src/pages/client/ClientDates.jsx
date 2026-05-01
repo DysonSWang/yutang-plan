@@ -72,16 +72,8 @@ export default function ClientDates() {
   const [addStep, setAddStep] = useState(1); // 分步添加：1=选择模式 2=选择女生 3=填写信息
   const [selectedGirlForDate, setSelectedGirlForDate] = useState(null);
   const [manualForm, setManualForm] = useState({ title: '', girlId: '', dateTime: '', location: '', notes: '' });
-  const [girlsList, setGirlsList] = useState([]);
   const [manualSubmitting, setManualSubmitting] = useState(false);
   const toast = useToast();
-
-  // 加载女生列表
-  useEffect(() => {
-    if (showAddModal && (addMode === 'manual' || addStep === 2)) {
-      loadGirls();
-    }
-  }, [showAddModal, addMode, addStep]);
 
   // 加载记忆的偏好设置
   useEffect(() => {
@@ -156,15 +148,6 @@ export default function ClientDates() {
     if (dateItem.status === 'pending_client_confirm') return { percent: 50, label: '待您确认' };
     if (dateItem.planStatus === 'pending' || dateItem.status === 'pending_plan') return { percent: 25, label: '等待策划' };
     return { percent: 10, label: '初始化' };
-  };
-
-  const loadGirls = async () => {
-    try {
-      const res = await fetch('/api/girls', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      }).then(r => r.json());
-      if (res.success) setGirlsList(res.girls || []);
-    } catch (e) { console.error(e); }
   };
 
   const handleManualSubmit = async () => {
