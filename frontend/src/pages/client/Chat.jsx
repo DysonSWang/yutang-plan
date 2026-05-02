@@ -527,8 +527,8 @@ export default function ClientChat() {
         {/* 聊天头部 */}
         <Box p={4} borderBottom="1px solid rgba(255,255,255,0.06)">
           <HStack spacing={3}>
-            <Box w="40px" h="40px" borderRadius="full" bg="gold.500" display="flex" alignItems="center" justifyContent="center">
-              <Text fontSize="lg">💕</Text>
+            <Box w="40px" h="40px" borderRadius="full" bg="gold.500" display="flex" alignItems="center" justifyContent="center" overflow="hidden">
+              <Image src="/logo.svg" alt="Mo哥" w="28px" h="28px" objectFit="contain" />
             </Box>
             <Box>
               <Text color="white" fontWeight="bold">Mo哥</Text>
@@ -593,8 +593,9 @@ export default function ClientChat() {
                           alignItems="center"
                           justifyContent="center"
                           flexShrink={0}
+                          overflow="hidden"
                         >
-                          <Text fontSize="xs">🤖</Text>
+                          <Image src="/logo.svg" alt="Mo哥" w="20px" h="20px" objectFit="contain" />
                         </Box>
                       )}
                       <Box

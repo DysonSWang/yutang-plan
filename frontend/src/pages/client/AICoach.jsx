@@ -501,11 +501,11 @@ const AnalysisReasoning = memo(({ reasoning, loading }) => {
         w="100%" px={4} py={2} align="center" gap={2}
         _hover={{ bg: 'whiteAlpha.50' }}
       >
-        <Text fontSize="xs" color="yellow.300">
+        <Text fontSize="xs" color="gold.300">
           {open ? '▼' : '▶'} 思考过程{loading ? ' · 生成中...' : ''}
         </Text>
         {loading && (
-          <Box w="6px" h="6px" bg="yellow.400" borderRadius="full"
+          <Box w="6px" h="6px" bg="gold.400" borderRadius="full"
             animation="pulse 1s infinite"
             sx={{ '@keyframes pulse': { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.3 } } }}
           />
@@ -540,8 +540,8 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
       )}
       <Box
         maxW="75%"
-        bg={isUser ? 'gold.600' : 'warm.700'}
-        color={isUser ? 'white' : 'warm.50'}
+        bg={isUser ? 'gold.700' : 'warm.700'}
+        color={isUser ? 'white' : 'warm.100'}
         px={hasReasoning ? 0 : 4}
         py={hasReasoning ? 0 : 3}
         borderRadius="2xl"
@@ -559,11 +559,11 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
               w="100%" px={4} py={2} align="center" gap={2}
               _hover={{ bg: 'whiteAlpha.50' }}
             >
-              <Text fontSize="xs" color="yellow.300">
+              <Text fontSize="xs" color="gold.300">
                 {reasoningOpen ? '▼' : '▶'} 思考过程{reasoningLoading ? ' · 生成中...' : ''}
               </Text>
               {reasoningLoading && (
-                <Box w="6px" h="6px" bg="yellow.400" borderRadius="full"
+                <Box w="6px" h="6px" bg="gold.400" borderRadius="full"
                   animation="pulse 1s infinite"
                   sx={{ '@keyframes pulse': { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.3 } } }}
                 />
