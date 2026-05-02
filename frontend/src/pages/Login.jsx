@@ -78,7 +78,7 @@ export default function Login() {
   return (
     <Box
       minH="100vh"
-      bg="abyss.950"
+      bg="warm.950"
       position="relative"
       overflow="hidden"
       display="flex"
@@ -95,7 +95,7 @@ export default function Login() {
         width="400px"
         height="400px"
         borderRadius="full"
-        bg="radial-gradient(circle, rgba(0,212,170,0.15) 0%, transparent 70%)"
+        bg="radial-gradient(circle, rgba(212,168,83,0.1) 0%, transparent 70%)"
         filter="blur(100px)"
         animation="float1 8s ease-in-out infinite"
         pointerEvents="none"
@@ -107,7 +107,7 @@ export default function Login() {
         width="300px"
         height="300px"
         borderRadius="full"
-        bg="radial-gradient(circle, rgba(14,165,233,0.1) 0%, transparent 70%)"
+        bg="radial-gradient(circle, rgba(193,127,89,0.08) 0%, transparent 70%)"
         filter="blur(80px)"
         animation="float2 10s ease-in-out infinite reverse"
         pointerEvents="none"
@@ -149,11 +149,11 @@ export default function Login() {
             w="64px"
             h="64px"
             borderRadius="20px"
-            bgGradient="linear(135deg, brand.500, brand.400)"
+            bgGradient="linear(135deg, gold.500, gold.400)"
             display="flex"
             alignItems="center"
             justifyContent="center"
-            boxShadow="0 8px 32px rgba(0, 212, 170, 0.3)"
+            boxShadow="0 8px 32px rgba(212, 168, 83, 0.25)"
           >
             <Text fontSize="2xl">💕</Text>
           </Box>
@@ -168,7 +168,7 @@ export default function Login() {
           </Heading>
           <Text
             fontSize="xs"
-            color="abyss.500"
+            color="rgba(245,240,232,0.2)"
             letterSpacing="0.3em"
           >
             PURSUE LOVE WITH AI
@@ -197,7 +197,7 @@ export default function Login() {
             h="60px"
             borderTop="1px solid"
             borderRight="1px solid"
-            borderColor="brand.500"
+            borderColor="gold.500"
             borderTopRightRadius="24px"
             opacity={0.4}
             pointerEvents="none"
@@ -211,7 +211,7 @@ export default function Login() {
             h="60px"
             borderBottom="1px solid"
             borderLeft="1px solid"
-            borderColor="ocean.500"
+            borderColor="rose.500"
             borderBottomLeftRadius="24px"
             opacity={0.3}
             pointerEvents="none"
@@ -233,31 +233,31 @@ export default function Login() {
                 <IconButton
                   size="sm"
                   variant="ghost"
-                  color="abyss.500"
+                  color="rgba(245,240,232,0.2)"
                   aria-label="设置"
-                  _hover={{ color: 'abyss.300', bg: 'rgba(255,255,255,0.06)' }}
+                  _hover={{ color: 'rgba(245,240,232,0.6)', bg: 'rgba(255,255,255,0.06)' }}
                   icon={<Text fontSize="sm">⚙</Text>}
                 />
               </PopoverTrigger>
               <PopoverContent
-                bg="abyss.900"
+                bg="warm.900"
                 border="1px solid rgba(255,255,255,0.08)"
                 w="200px"
                 boxShadow="0 8px 32px rgba(0,0,0,0.4)"
               >
                 <PopoverHeader borderColor="rgba(255,255,255,0.06)">
-                  <Text color="abyss.200" fontSize="sm" fontWeight="bold">设置</Text>
+                  <Text color="rgba(245,240,232,0.6)" fontSize="sm" fontWeight="bold">设置</Text>
                 </PopoverHeader>
                 <PopoverBody>
                   <Flex align="center" justify="space-between">
                     <Box>
                       <Text color="white" fontSize="sm">伪装模式</Text>
-                      <Text color="abyss.500" fontSize="xs">开启后显示为记事本</Text>
+                      <Text color="rgba(245,240,232,0.2)" fontSize="xs">开启后显示为记事本</Text>
                     </Box>
                     <Switch
                       isChecked={disguiseMode}
                       onChange={e => toggleDisguise(e.target.checked)}
-                      colorScheme="brand"
+                      colorScheme="gold"
                     />
                   </Flex>
                 </PopoverBody>
@@ -270,7 +270,7 @@ export default function Login() {
             <form onSubmit={handleLogin} className="stagger-2" style={{ opacity: 0 }}>
               <VStack spacing={4}>
                 <FormControl>
-                  <FormLabel color="abyss.500" fontSize="xs" letterSpacing="0.1em">用户名</FormLabel>
+                  <FormLabel color="rgba(245,240,232,0.2)" fontSize="xs" letterSpacing="0.1em">用户名</FormLabel>
                   <Input
                     value={username}
                     onChange={e => { setUsername(e.target.value); setLoginError(''); }}
@@ -281,12 +281,12 @@ export default function Login() {
                     border="1px solid rgba(255,255,255,0.08)"
                     borderRadius="12px"
                     _hover={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)' }}
-                    _focus={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'brand.500', boxShadow: '0 0 0 3px rgba(0,212,170,0.15)' }}
-                    _placeholder={{ color: 'abyss.600' }}
+                    _focus={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'gold.500', boxShadow: '0 0 0 3px rgba(212,168,83,0.12)' }}
+                    _placeholder={{ color: 'rgba(245,240,232,0.15)' }}
                   />
                 </FormControl>
                 <FormControl>
-                  <FormLabel color="abyss.500" fontSize="xs" letterSpacing="0.1em">密码</FormLabel>
+                  <FormLabel color="rgba(245,240,232,0.2)" fontSize="xs" letterSpacing="0.1em">密码</FormLabel>
                   <Input
                     type="password"
                     value={password}
@@ -298,8 +298,8 @@ export default function Login() {
                     border="1px solid rgba(255,255,255,0.08)"
                     borderRadius="12px"
                     _hover={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)' }}
-                    _focus={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'brand.500', boxShadow: '0 0 0 3px rgba(0,212,170,0.15)' }}
-                    _placeholder={{ color: 'abyss.600' }}
+                    _focus={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'gold.500', boxShadow: '0 0 0 3px rgba(212,168,83,0.12)' }}
+                    _placeholder={{ color: 'rgba(245,240,232,0.15)' }}
                   />
                 </FormControl>
                 {loginError && (
@@ -317,12 +317,12 @@ export default function Login() {
                   type="submit"
                   w="100%"
                   size="md"
-                  bgGradient="linear(135deg, brand.500, brand.400)"
-                  color="abyss.950"
+                  bgGradient="linear(135deg, gold.500, gold.400)"
+                  color="warm.950"
                   fontWeight="500"
                   borderRadius="12px"
                   isLoading={loading}
-                  _hover={{ transform: 'translateY(-2px)', boxShadow: '0 8px 24px rgba(0,212,170,0.35)' }}
+                  _hover={{ transform: 'translateY(-2px)', boxShadow: '0 8px 24px rgba(212,168,83,0.3)' }}
                   _active={{ transform: 'translateY(0)' }}
                   transition="all 0.3s ease"
                 >
@@ -332,13 +332,13 @@ export default function Login() {
                   <Button
                     size="sm"
                     variant="ghost"
-                    color="abyss.500"
+                    color="rgba(245,240,232,0.2)"
                     onClick={() => setShowLogin(false)}
                   >
                     记事本
                   </Button>
                 )}
-                <Text color="abyss.600" fontSize="xs" textAlign="center">
+                <Text color="rgba(245,240,232,0.15)" fontSize="xs" textAlign="center">
                   如需账号请联系管理员创建
                 </Text>
               </VStack>
@@ -348,14 +348,14 @@ export default function Login() {
           {/* 伪装模式 - 记事本 */}
           {!effectiveShowLogin && (
             <VStack spacing={4} className="stagger-2" opacity={0}>
-              <Text color="abyss.500" fontSize="sm">记事本功能开发中...</Text>
+              <Text color="rgba(245,240,232,0.2)" fontSize="sm">记事本功能开发中...</Text>
               {disguiseMode && (
                 <Button
                   size="sm"
                   variant="ghost"
-                  color="abyss.500"
+                  color="rgba(245,240,232,0.2)"
                   onClick={() => setShowLogin(true)}
-                  _hover={{ color: 'abyss.300' }}
+                  _hover={{ color: 'rgba(245,240,232,0.6)' }}
                 >
                   登录
                 </Button>
