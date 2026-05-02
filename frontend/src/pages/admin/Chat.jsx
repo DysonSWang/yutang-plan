@@ -924,90 +924,96 @@ export default function AdminChat() {
                   </Box>
                 )}
 
-                <HStack>
-                  <IconButton
-                    icon={<Text>📷</Text>}
-                    variant="ghost"
-                    size="sm"
-                    color="gray.400"
-                    onClick={() => fileInputRef.current?.click()}
-                    aria-label="发送图片/视频"
-                    isDisabled={sending || !!previewFile}
-                  />
-                  <input
-                    type="file"
-                    accept="image/*,video/*"
-                    multiple
-                    style={{ display: 'none' }}
-                    ref={fileInputRef}
-                    onChange={handleFileSelect}
-                  />
-                  <IconButton
-                    icon={<Text>🎤</Text>}
-                    variant="ghost"
-                    size="sm"
-                    color={recording ? 'red.400' : 'gray.400'}
-                    onClick={recording ? stopRecording : startRecording}
-                    aria-label="录制语音"
-                    isDisabled={sending || !!previewFile}
-                  />
-                  <Menu placement="top">
-                    <MenuButton
-                      as={IconButton}
-                      icon={<Text>🔥{burnMode ? `${burnSeconds}s` : ''}</Text>}
+                <Stack direction={{ base: 'column', md: 'row' }} spacing={{ base: 2, md: 0 }} w="full">
+                  {/* 工具栏按钮 — 移动端独占一行 */}
+                  <HStack spacing={1} justify={{ base: 'space-around', md: 'start' }}>
+                    <IconButton
+                      icon={<Text>📷</Text>}
                       variant="ghost"
                       size="sm"
-                      color={burnMode ? 'orange.400' : 'gray.500'}
-                      aria-label="阅后即焚模式"
-                      isDisabled={sending || !!previewFile || flashMode}
-                      title={burnMode ? `阅后即焚：${burnSeconds}s后自动销毁` : '阅后即焚：关'}
+                      color="gray.400"
+                      onClick={() => fileInputRef.current?.click()}
+                      aria-label="发送图片/视频"
+                      isDisabled={sending || !!previewFile}
                     />
-                    <MenuList bg="gray.700" borderColor="gray.600">
-                      <MenuItem bg="gray.700" _hover={{ bg: 'gray.600' }} onClick={() => { setBurnMode(false); setBurnSeconds(5); }}>
-                        <HStack><Text color="gray.400">关闭</Text></HStack>
-                      </MenuItem>
-                      {[3, 5, 10, 15, 30, 60].map(s => (
-                        <MenuItem key={s} bg="gray.700" _hover={{ bg: 'gray.600' }} onClick={() => { setBurnMode(true); setBurnSeconds(s); }}>
-                          <HStack>
-                            <Text color="orange.300">🔥</Text>
-                            <Text color="white">{s}秒</Text>
-                            {s === 5 && <Badge colorScheme="orange" size="sm">默认</Badge>}
-                          </HStack>
+                    <input
+                      type="file"
+                      accept="image/*,video/*"
+                      multiple
+                      style={{ display: 'none' }}
+                      ref={fileInputRef}
+                      onChange={handleFileSelect}
+                    />
+                    <IconButton
+                      icon={<Text>🎤</Text>}
+                      variant="ghost"
+                      size="sm"
+                      color={recording ? 'red.400' : 'gray.400'}
+                      onClick={recording ? stopRecording : startRecording}
+                      aria-label="录制语音"
+                      isDisabled={sending || !!previewFile}
+                    />
+                    <Menu placement="top">
+                      <MenuButton
+                        as={IconButton}
+                        icon={<Text>🔥{burnMode ? `${burnSeconds}s` : ''}</Text>}
+                        variant="ghost"
+                        size="sm"
+                        color={burnMode ? 'orange.400' : 'gray.500'}
+                        aria-label="阅后即焚模式"
+                        isDisabled={sending || !!previewFile || flashMode}
+                        title={burnMode ? `阅后即焚：${burnSeconds}s后自动销毁` : '阅后即焚：关'}
+                      />
+                      <MenuList bg="gray.700" borderColor="gray.600">
+                        <MenuItem bg="gray.700" _hover={{ bg: 'gray.600' }} onClick={() => { setBurnMode(false); setBurnSeconds(5); }}>
+                          <HStack><Text color="gray.400">关闭</Text></HStack>
                         </MenuItem>
-                      ))}
-                    </MenuList>
-                  </Menu>
-                  <IconButton
-                    icon={<Text>⚡{flashMode ? '闪图' : ''}</Text>}
-                    variant="ghost"
-                    color={flashMode ? 'yellow.400' : 'gray.500'}
-                    aria-label="闪图模式"
-                    isDisabled={sending || !!previewFile || burnMode}
-                    title={flashMode ? '闪图：查阅后5秒自动销毁' : '闪图模式'}
-                    onClick={() => {
-                      const newMode = !flashMode;
-                      setFlashMode(newMode);
-                      setBurnMode(false);
-                      if (newMode) fileInputRef.current?.click();
-                    }}
-                    size="sm"
-                  />
-                  <EmojiPanel onSelect={handleEmojiSelect} isDisabled={sending || !!previewFile} variant="admin" />
-                  <Input
-                    ref={inputRef}
-                    value={input}
-                    onChange={e => setInput(e.target.value)}
-                    onKeyPress={e => e.key === 'Enter' && sendMessage()}
-                    placeholder="输入回复..."
-                    flex={1}
-                    minW="0"
-                    bg="gray.700"
-                    border="none"
-                    color="white"
-                    _placeholder={{ color: 'gray.400' }}
-                  />
-                  <Button colorScheme="teal" onClick={sendMessage} isLoading={sending} size="sm">发送</Button>
-                </HStack>
+                        {[3, 5, 10, 15, 30, 60].map(s => (
+                          <MenuItem key={s} bg="gray.700" _hover={{ bg: 'gray.600' }} onClick={() => { setBurnMode(true); setBurnSeconds(s); }}>
+                            <HStack>
+                              <Text color="orange.300">🔥</Text>
+                              <Text color="white">{s}秒</Text>
+                              {s === 5 && <Badge colorScheme="orange" size="sm">默认</Badge>}
+                            </HStack>
+                          </MenuItem>
+                        ))}
+                      </MenuList>
+                    </Menu>
+                    <IconButton
+                      icon={<Text>⚡{flashMode ? '闪图' : ''}</Text>}
+                      variant="ghost"
+                      color={flashMode ? 'yellow.400' : 'gray.500'}
+                      aria-label="闪图模式"
+                      isDisabled={sending || !!previewFile || burnMode}
+                      title={flashMode ? '闪图：查阅后5秒自动销毁' : '闪图模式'}
+                      onClick={() => {
+                        const newMode = !flashMode;
+                        setFlashMode(newMode);
+                        setBurnMode(false);
+                        if (newMode) fileInputRef.current?.click();
+                      }}
+                      size="sm"
+                    />
+                    <EmojiPanel onSelect={handleEmojiSelect} isDisabled={sending || !!previewFile} variant="admin" />
+                  </HStack>
+                  {/* 输入框 + 发送 — 移动端独占第二行 */}
+                  <HStack flex={1} spacing={1}>
+                    <Input
+                      ref={inputRef}
+                      value={input}
+                      onChange={e => setInput(e.target.value)}
+                      onKeyPress={e => e.key === 'Enter' && sendMessage()}
+                      placeholder="输入回复..."
+                      flex={1}
+                      minW="0"
+                      bg="gray.700"
+                      border="none"
+                      color="white"
+                      _placeholder={{ color: 'gray.400' }}
+                    />
+                    <Button colorScheme="teal" onClick={sendMessage} isLoading={sending} size="sm">发送</Button>
+                  </HStack>
+                </Stack>
               </Box>
             </>
           ) : (

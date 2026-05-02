@@ -694,106 +694,112 @@ export default function ClientChat() {
             </Box>
           )}
 
-          <HStack spacing={{ base: 1, md: 2 }}>
-            <IconButton
-              icon={<Text>📷</Text>}
-              variant="ghost"
-              size="sm"
-              color="rgba(245,240,232,0.4)"
-              onClick={() => fileInputRef.current?.click()}
-              aria-label="发送图片/视频"
-              isDisabled={sending || !!previewFile}
-            />
-            <input
-              type="file"
-              accept="image/*,video/*"
-              multiple
-              style={{ display: 'none' }}
-              ref={fileInputRef}
-              onChange={handleFileSelect}
-            />
-            <IconButton
-              icon={<Text>{recording ? '⏹' : '🎤'}</Text>}
-              variant="ghost"
-              size="sm"
-              color={recording ? 'red.400' : 'rgba(245,240,232,0.4)'}
-              onClick={recording ? stopRecording : startRecording}
-              aria-label="录制语音"
-              isDisabled={sending || !!previewFile}
-            />
-            <Box position="relative">
-              <Button
-                size="sm"
+          <Stack direction={{ base: 'column', md: 'row' }} spacing={{ base: 2, md: 2 }} w="full">
+            {/* 工具栏按钮 — 移动端独占一行 */}
+            <HStack spacing={1} justify={{ base: 'space-around', md: 'start' }}>
+              <IconButton
+                icon={<Text>📷</Text>}
                 variant="ghost"
-                color={burnMode ? 'orange.400' : 'rgba(245,240,232,0.4)'}
-                onClick={() => setBurnMode(!burnMode)}
-                isDisabled={!!previewFile || flashMode}
-              >
-                🔥{burnMode ? `${burnSeconds}s` : ''}
-              </Button>
-              {burnMode && (
-                <Box
-                  position="absolute"
-                  bottom="100%"
-                  left="50%"
-                  transform="translateX(-50%)"
-                  mb={2}
-                  bg="warm.800"
-                  p={2}
-                  borderRadius="md"
-                  border="1px solid rgba(255,255,255,0.1)"
-                  whiteSpace="nowrap"
+                size="sm"
+                color="rgba(245,240,232,0.4)"
+                onClick={() => fileInputRef.current?.click()}
+                aria-label="发送图片/视频"
+                isDisabled={sending || !!previewFile}
+              />
+              <input
+                type="file"
+                accept="image/*,video/*"
+                multiple
+                style={{ display: 'none' }}
+                ref={fileInputRef}
+                onChange={handleFileSelect}
+              />
+              <IconButton
+                icon={<Text>{recording ? '⏹' : '🎤'}</Text>}
+                variant="ghost"
+                size="sm"
+                color={recording ? 'red.400' : 'rgba(245,240,232,0.4)'}
+                onClick={recording ? stopRecording : startRecording}
+                aria-label="录制语音"
+                isDisabled={sending || !!previewFile}
+              />
+              <Box position="relative">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  color={burnMode ? 'orange.400' : 'rgba(245,240,232,0.4)'}
+                  onClick={() => setBurnMode(!burnMode)}
+                  isDisabled={!!previewFile || flashMode}
                 >
-                  <HStack spacing={1}>
-                    {[3, 5, 10, 15].map(s => (
-                      <Button
-                        key={s}
-                        size="xs"
-                        variant={burnSeconds === s ? 'solid' : 'ghost'}
-                        colorScheme="orange"
-                        onClick={() => setBurnSeconds(s)}
-                      >
-                        {s}s
-                      </Button>
-                    ))}
-                  </HStack>
-                </Box>
-              )}
-            </Box>
-            <IconButton
-              icon={<Text>⚡{flashMode ? '闪图' : ''}</Text>}
-              variant="ghost"
-              color={flashMode ? 'yellow.400' : 'rgba(245,240,232,0.4)'}
-              aria-label="闪图模式"
-              isDisabled={sending || !!previewFile || burnMode}
-              title={flashMode ? '闪图：查阅后5秒自动销毁' : '闪图模式'}
-              onClick={() => {
-                const newMode = !flashMode;
-                setFlashMode(newMode);
-                setBurnMode(false);
-                if (newMode) fileInputRef.current?.click();
-              }}
-              size="sm"
-            />
-            <EmojiPanel onSelect={handleEmojiSelect} isDisabled={sending || !!previewFile} variant="client" />
-            <Input
-              ref={inputRef}
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyPress={e => e.key === 'Enter' && sendMessage()}
-              placeholder="输入消息..."
-              flex={1}
-              minW="0"
-              bg="rgba(255,255,255,0.05)"
-              border="1px solid rgba(255,255,255,0.1)"
-              color="white"
-              _placeholder={{ color: 'rgba(245,240,232,0.2)' }}
-              _focus={{ borderColor: 'gold.500' }}
-            />
-            <Button colorScheme="gold" onClick={sendMessage} isLoading={sending} isDisabled={!input.trim()} size="sm">
-              发送
-            </Button>
-          </HStack>
+                  🔥{burnMode ? `${burnSeconds}s` : ''}
+                </Button>
+                {burnMode && (
+                  <Box
+                    position="absolute"
+                    bottom="100%"
+                    left="50%"
+                    transform="translateX(-50%)"
+                    mb={2}
+                    bg="warm.800"
+                    p={2}
+                    borderRadius="md"
+                    border="1px solid rgba(255,255,255,0.1)"
+                    whiteSpace="nowrap"
+                  >
+                    <HStack spacing={1}>
+                      {[3, 5, 10, 15].map(s => (
+                        <Button
+                          key={s}
+                          size="xs"
+                          variant={burnSeconds === s ? 'solid' : 'ghost'}
+                          colorScheme="orange"
+                          onClick={() => setBurnSeconds(s)}
+                        >
+                          {s}s
+                        </Button>
+                      ))}
+                    </HStack>
+                  </Box>
+                )}
+              </Box>
+              <IconButton
+                icon={<Text>⚡{flashMode ? '闪图' : ''}</Text>}
+                variant="ghost"
+                color={flashMode ? 'yellow.400' : 'rgba(245,240,232,0.4)'}
+                aria-label="闪图模式"
+                isDisabled={sending || !!previewFile || burnMode}
+                title={flashMode ? '闪图：查阅后5秒自动销毁' : '闪图模式'}
+                onClick={() => {
+                  const newMode = !flashMode;
+                  setFlashMode(newMode);
+                  setBurnMode(false);
+                  if (newMode) fileInputRef.current?.click();
+                }}
+                size="sm"
+              />
+              <EmojiPanel onSelect={handleEmojiSelect} isDisabled={sending || !!previewFile} variant="client" />
+            </HStack>
+            {/* 输入框 + 发送 — 移动端独占第二行 */}
+            <HStack flex={1} spacing={1}>
+              <Input
+                ref={inputRef}
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyPress={e => e.key === 'Enter' && sendMessage()}
+                placeholder="输入消息..."
+                flex={1}
+                minW="0"
+                bg="rgba(255,255,255,0.05)"
+                border="1px solid rgba(255,255,255,0.1)"
+                color="white"
+                _placeholder={{ color: 'rgba(245,240,232,0.2)' }}
+                _focus={{ borderColor: 'gold.500' }}
+              />
+              <Button colorScheme="gold" onClick={sendMessage} isLoading={sending} isDisabled={!input.trim()} size="sm">
+                发送
+              </Button>
+            </HStack>
+          </Stack>
         </Box>
       </Box>
       <FlashImageViewer
