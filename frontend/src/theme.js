@@ -1,6 +1,5 @@
 import { extendTheme } from '@chakra-ui/react';
 
-// Mobile-first responsive design tokens
 const breakpoints = {
   base: '0px',
   sm: '640px',
@@ -16,47 +15,72 @@ const theme = extendTheme({
     useSystemColorMode: false,
   },
   fonts: {
-    heading: "'Syne', sans-serif",
-    body: "'Noto Sans SC', sans-serif",
+    heading: "'DM Serif Display', 'Noto Serif SC', 'STSong', serif",
+    body: "'Inter', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif",
+    mono: "'JetBrains Mono', 'Consolas', monospace",
   },
   breakpoints,
   colors: {
-    brand: {
-      50: '#e6fff9',
-      100: '#b3ffea',
-      200: '#80ffdb',
-      300: '#4dffcc',
-      400: '#1affbd',
-      500: '#00d4aa', // primary glow
-      600: '#00a888',
-      700: '#007c66',
-      800: '#005044',
-      900: '#002422',
+    gold: {
+      50: '#fdf8ec',
+      100: '#f9edcc',
+      200: '#f3d999',
+      300: '#ecc566',
+      400: '#e3b33f',
+      500: '#d4a853',  // primary
+      600: '#bf9530',
+      700: '#a07d28',
+      800: '#7d6220',
+      900: '#5a4718',
     },
-    ocean: {
-      50: '#f0f9ff',
-      100: '#e0f2fe',
-      200: '#bae6fd',
-      300: '#7dd3fc',
-      400: '#38bdf8',
-      500: '#0ea5e9',
-      600: '#0284c7',
-      700: '#0369a1',
-      800: '#075985',
-      900: '#0c4a6e',
+    rose: {
+      50: '#fdf5f1',
+      100: '#f9e5db',
+      200: '#f0c9b3',
+      300: '#e5a885',
+      400: '#d48b5e',
+      500: '#c17f59',  // accent
+      600: '#a86845',
+      700: '#8a5538',
+      800: '#6b422b',
+      900: '#4d2f1e',
     },
-    abyss: {
-      50: '#f8fafc',
-      100: '#f1f5f9',
-      200: '#e2e8f0',
-      300: '#cbd5e1',
-      400: '#94a3b8',
-      500: '#64748b',
-      600: '#475569',
-      700: '#334155',
-      800: '#1e293b',
-      900: '#0f172a',
-      950: '#0a0f1a', // deep ocean floor
+    warm: {
+      50: '#f5f0e8',
+      100: '#e8dfcf',
+      200: '#d1c4a8',
+      300: '#baa981',
+      400: '#a38e5a',
+      500: '#8c7333',
+      600: '#6b5828',
+      700: '#4a3d1c',
+      800: '#2d2d28',
+      900: '#1a1a18',
+      950: '#111110',
+    },
+    success: {
+      50: '#f0fdf4',
+      100: '#dcfce7',
+      200: '#bbf7d0',
+      300: '#86efac',
+      400: '#4ade80',
+      500: '#22c55e',
+    },
+    warning: {
+      50: '#fffbeb',
+      100: '#fef3c7',
+      200: '#fde68a',
+      300: '#fcd34d',
+      400: '#fbbf24',
+      500: '#f59e0b',
+    },
+    error: {
+      50: '#fef2f2',
+      100: '#fee2e2',
+      200: '#fecaca',
+      300: '#fca5a5',
+      400: '#f87171',
+      500: '#ef4444',
     },
   },
   styles: {
@@ -65,129 +89,104 @@ const theme = extendTheme({
         scrollBehavior: 'smooth',
       },
       'html, body': {
-        bg: 'abyss.950',
-        color: 'white',
+        bg: 'warm.950',
+        color: 'warm.50',
         fontFamily: 'body',
         fontSize: { base: '14px', md: '15px', lg: '16px' },
       },
       'option': {
-        bg: 'abyss.800',
-        color: 'white',
+        bg: 'warm.800',
+        color: 'warm.50',
       },
       '::selection': {
-        bg: 'brand.500',
-        color: 'abyss.950',
+        bg: 'gold.500',
+        color: 'warm.950',
       },
       '::-webkit-scrollbar': {
         width: '6px',
         height: '6px',
       },
       '::-webkit-scrollbar-track': {
-        bg: 'abyss.900',
+        bg: 'warm.900',
       },
       '::-webkit-scrollbar-thumb': {
-        bg: 'abyss.700',
+        bg: 'warm.800',
         borderRadius: '3px',
       },
       '::-webkit-scrollbar-thumb:hover': {
-        bg: 'abyss.600',
+        bg: 'warm.700',
       },
     },
   },
   shadows: {
-    glow: '0 0 20px rgba(0, 212, 170, 0.3)',
-    glowLg: '0 0 40px rgba(0, 212, 170, 0.4)',
-    glowSm: '0 0 10px rgba(0, 212, 170, 0.2)',
-    glass: '0 4px 24px rgba(0, 0, 0, 0.4)',
-    card: '0 8px 32px rgba(0, 0, 0, 0.3)',
+    card: '0 4px 24px rgba(0, 0, 0, 0.4)',
+    elevated: '0 8px 40px rgba(0, 0, 0, 0.5)',
+    'glow-gold': '0 0 24px rgba(212, 168, 83, 0.2)',
+    'glow-gold-lg': '0 0 40px rgba(212, 168, 83, 0.3)',
+    'glow-rose': '0 0 20px rgba(193, 127, 89, 0.15)',
   },
   components: {
     Select: {
       baseStyle: {
         field: {
-          color: 'white',
-          bg: 'abyss.800',
-          borderColor: 'abyss.700',
-          _hover: {
-            bg: 'abyss.700',
-          },
+          color: 'warm.50',
+          bg: 'warm.800',
+          borderColor: 'rgba(245, 240, 232, 0.08)',
+          _hover: { bg: 'warm.700' },
         },
-      },
-      defaultProps: {
-        bg: 'abyss.800',
-        color: 'white',
       },
       variants: {
         filled: {
           field: {
-            bg: 'abyss.800',
-            color: 'white',
-            borderColor: 'abyss.700',
-            _hover: {
-              bg: 'abyss.700',
-            },
-            _focus: {
-              bg: 'abyss.700',
-              borderColor: 'brand.500',
-            },
+            bg: 'warm.800',
+            color: 'warm.50',
+            borderColor: 'rgba(245, 240, 232, 0.08)',
+            _hover: { bg: 'warm.700' },
+            _focus: { bg: 'warm.700', borderColor: 'gold.500' },
           },
         },
       },
     },
     Input: {
       defaultProps: {
-        bg: 'rgba(255,255,255,0.04)',
-        color: 'white',
+        bg: 'rgba(255,255,255,0.03)',
+        color: 'warm.50',
         borderColor: 'rgba(255,255,255,0.08)',
       },
       variants: {
         filled: {
           field: {
-            bg: 'rgba(255,255,255,0.04)',
-            color: 'white',
+            bg: 'rgba(255,255,255,0.03)',
+            color: 'warm.50',
             borderColor: 'rgba(255,255,255,0.08)',
-            _hover: {
-              bg: 'rgba(255,255,255,0.07)',
-            },
-            _focus: {
-              bg: 'rgba(255,255,255,0.07)',
-              borderColor: 'brand.500',
-            },
-            _placeholder: {
-              color: 'abyss.500',
-            },
+            _hover: { bg: 'rgba(255,255,255,0.05)' },
+            _focus: { bg: 'rgba(255,255,255,0.05)', borderColor: 'gold.500', boxShadow: '0 0 0 3px rgba(212,168,83,0.12)' },
+            _placeholder: { color: 'rgba(245,240,232,0.2)' },
           },
         },
       },
     },
     Textarea: {
       defaultProps: {
-        bg: 'rgba(255,255,255,0.04)',
-        color: 'white',
+        bg: 'rgba(255,255,255,0.03)',
+        color: 'warm.50',
         borderColor: 'rgba(255,255,255,0.08)',
       },
       variants: {
         filled: {
-          bg: 'rgba(255,255,255,0.04)',
-          color: 'white',
+          bg: 'rgba(255,255,255,0.03)',
+          color: 'warm.50',
           borderColor: 'rgba(255,255,255,0.08)',
-          _hover: {
-            bg: 'rgba(255,255,255,0.07)',
-          },
-          _focus: {
-            bg: 'rgba(255,255,255,0.07)',
-            borderColor: 'brand.500',
-          },
-          _placeholder: {
-            color: 'abyss.500',
-          },
+          _hover: { bg: 'rgba(255,255,255,0.05)' },
+          _focus: { bg: 'rgba(255,255,255,0.05)', borderColor: 'gold.500', boxShadow: '0 0 0 3px rgba(212,168,83,0.12)' },
+          _placeholder: { color: 'rgba(245,240,232,0.2)' },
         },
       },
     },
     Modal: {
       baseStyle: {
         dialog: {
-          bg: 'abyss.900',
+          bg: 'warm.900',
           border: '1px solid',
           borderColor: 'rgba(255,255,255,0.08)',
           mx: { base: 2, md: 0 },
@@ -195,13 +194,13 @@ const theme = extendTheme({
           maxH: { base: 'calc(100vh - 60px)', md: '85vh' },
         },
         header: {
-          color: 'white',
+          color: 'warm.50',
           fontSize: { base: 'md', md: 'lg' },
           px: { base: 4, md: 6 },
           py: { base: 3, md: 4 },
         },
         body: {
-          color: 'abyss.300',
+          color: 'rgba(245,240,232,0.6)',
           px: { base: 4, md: 6 },
           py: { base: 3, md: 4 },
         },
@@ -216,150 +215,94 @@ const theme = extendTheme({
             whiteSpace: { base: 'nowrap', md: 'normal' },
           },
           th: {
-            color: 'abyss.400',
-            borderColor: 'abyss.800',
+            color: 'rgba(245,240,232,0.4)',
+            borderColor: 'warm.800',
             fontSize: { base: '12px', md: '13px' },
             px: { base: 2, md: 4 },
             py: { base: 2, md: 3 },
           },
           td: {
-            color: 'white',
-            borderColor: 'abyss.800',
+            color: 'warm.50',
+            borderColor: 'warm.800',
             fontSize: { base: '12px', md: '14px' },
             px: { base: 2, md: 4 },
             py: { base: 2, md: 3 },
           },
-          tr: {
-            _hover: {
-              bg: 'rgba(255,255,255,0.03)',
-            },
-          },
+          tr: { _hover: { bg: 'rgba(255,255,255,0.03)' } },
         },
       },
     },
     Card: {
       baseStyle: {
         container: {
-          bg: 'rgba(255,255,255,0.03)',
+          bg: 'warm.900',
           border: '1px solid',
           borderColor: 'rgba(255,255,255,0.08)',
-          backdropFilter: 'blur(12px)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
           borderRadius: { base: 'md', md: 'lg' },
           p: { base: 3, md: 4 },
         },
-      },
-    },
-    ModalContent: {
-      baseStyle: {
-        bg: 'abyss.900',
-        border: '1px solid',
-        borderColor: 'rgba(255,255,255,0.08)',
       },
     },
     Tabs: {
       variants: {
         line: {
           tab: {
-            color: 'abyss.400',
-            _selected: {
-              color: 'brand.500',
-              borderColor: 'brand.500',
-            },
+            color: 'rgba(245,240,232,0.4)',
+            _selected: { color: 'gold.500', borderColor: 'gold.500' },
           },
         },
         'soft-rounded': {
           tab: {
-            color: 'abyss.400',
-            _selected: {
-              color: 'white',
-              bg: 'brand.500',
-            },
+            color: 'rgba(245,240,232,0.4)',
+            _selected: { color: 'warm.950', bg: 'gold.500' },
           },
         },
       },
     },
     Badge: {
-      baseStyle: {
-        color: 'white',
-      },
+      baseStyle: { color: 'warm.50' },
     },
     Button: {
       variants: {
         solid: {
-          bg: 'brand.500',
-          color: 'abyss.950',
+          bgGradient: 'linear(135deg, gold.500, gold.600)',
+          color: 'warm.950',
           fontWeight: 'bold',
-          _hover: {
-            bg: 'brand.400',
-            boxShadow: '0 0 20px rgba(0, 212, 170, 0.4)',
-          },
-          _active: {
-            bg: 'brand.600',
-          },
+          _hover: { bgGradient: 'linear(135deg, gold.400, gold.500)', boxShadow: '0 0 28px rgba(212,168,83,0.22)' },
+          _active: { bg: 'gold.700' },
         },
         ghost: {
-          color: 'abyss.300',
-          _hover: {
-            bg: 'rgba(255,255,255,0.06)',
-            color: 'white',
-          },
+          color: 'rgba(245,240,232,0.6)',
+          _hover: { bg: 'rgba(255,255,255,0.06)', color: 'warm.50' },
         },
         outline: {
-          borderColor: 'brand.500',
-          color: 'brand.500',
-          _hover: {
-            bg: 'rgba(0, 212, 170, 0.1)',
-          },
+          borderColor: 'gold.500',
+          color: 'gold.500',
+          _hover: { bg: 'rgba(212,168,83,0.1)' },
         },
       },
     },
     Progress: {
-      baseStyle: {
-        track: {
-          bg: 'abyss.800',
-        },
-      },
-      variants: {
-        brand: {
-          filledTrack: {
-            bg: 'brand.500',
-          },
-        },
-      },
+      baseStyle: { track: { bg: 'warm.800' } },
+      variants: { brand: { filledTrack: { bg: 'gold.500' } } },
     },
     Popover: {
       baseStyle: {
-        content: {
-          bg: 'abyss.900',
-          borderColor: 'rgba(255,255,255,0.08)',
-        },
+        content: { bg: 'warm.900', borderColor: 'rgba(255,255,255,0.08)' },
       },
     },
     Tooltip: {
       baseStyle: {
-        bg: 'abyss.800',
-        color: 'white',
-        borderRadius: 'md',
-        px: 3,
-        py: 2,
+        bg: 'warm.800', color: 'warm.50', borderRadius: 'md', px: 3, py: 2,
       },
     },
     Menu: {
       baseStyle: {
-        list: {
-          bg: 'abyss.900',
-          borderColor: 'rgba(255,255,255,0.08)',
-        },
+        list: { bg: 'warm.900', borderColor: 'rgba(255,255,255,0.08)' },
         item: {
-          bg: 'abyss.900',
-          color: 'white',
-          _hover: {
-            bg: 'rgba(255,255,255,0.06)',
-          },
-          _focus: {
-            bg: 'rgba(255,255,255,0.06)',
-          },
+          bg: 'warm.900', color: 'warm.50',
+          _hover: { bg: 'rgba(255,255,255,0.06)' },
+          _focus: { bg: 'rgba(255,255,255,0.06)' },
         },
       },
     },
