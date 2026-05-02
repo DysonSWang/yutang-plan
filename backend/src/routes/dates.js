@@ -447,7 +447,7 @@ router.get('/', authMiddleware, async (req, res) => {
             personality: true, communicationStyle: true, emotionalTriggers: true, thingsToAvoid: true,
             interests: true, dietPreferences: true, dietRestrictions: true, relationshipAttitude: true, emotionalWounds: true,
             tensionScore: true, intimacyLevel: true, bestApproach: true, familyBackground: true,
-            familyAtmosphere: true
+            familyAtmosphere: true, avatar: true, photos: true
           }
         }
       },
@@ -587,7 +587,7 @@ router.get('/client-pending', authMiddleware, async (req, res) => {
         status: { in: ['pending_plan', 'planned', 'pending_client_confirm', 'confirmed'] }
       },
       include: {
-        girl: { select: { id: true, name: true, age: true, stage: true, personality: true } }
+        girl: { select: { id: true, name: true, age: true, stage: true, personality: true, avatar: true, photos: true } }
       },
       orderBy: { dateTime: 'asc' }
     });
@@ -613,7 +613,7 @@ router.get('/client-interviews', authMiddleware, async (req, res) => {
         postDateInterview: { not: null }
       },
       include: {
-        girl: { select: { id: true, name: true, stage: true } }
+        girl: { select: { id: true, name: true, stage: true, avatar: true, photos: true } }
       },
       orderBy: { dateTime: 'desc' }
     });
@@ -652,7 +652,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
           select: { id: true, nickname: true, username: true, interactionStyle: true, communicationStyle: true, strengths: true, emotionalWounds: true, age: true, occupation: true, residence: true }
         },
         girl: {
-          select: { id: true, name: true, age: true, occupation: true, residence: true, stage: true, personality: true, communicationStyle: true, emotionalTriggers: true, thingsToAvoid: true, interests: true, dietPreferences: true, dietRestrictions: true, relationshipAttitude: true, emotionalWounds: true, tensionScore: true, intimacyLevel: true, bestApproach: true, familyBackground: true, familyAtmosphere: true }
+          select: { id: true, name: true, age: true, occupation: true, residence: true, stage: true, personality: true, communicationStyle: true, emotionalTriggers: true, thingsToAvoid: true, interests: true, dietPreferences: true, dietRestrictions: true, relationshipAttitude: true, emotionalWounds: true, tensionScore: true, intimacyLevel: true, bestApproach: true, familyBackground: true, familyAtmosphere: true, avatar: true, photos: true }
         }
       }
     });
