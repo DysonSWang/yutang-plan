@@ -7,6 +7,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useSocket } from '../../contexts/SocketContext';
 import { DashboardIcon, UsersIcon, FemaleIcon, ChatIcon, BrainIcon, ChartIcon, FishIcon, CalendarIcon, MembershipIcon, BookIcon } from '../../components/Icons';
 import { FiActivity, FiLogOut } from 'react-icons/fi';
+import AppLogo from '../../components/AppLogo';
 
 const navItems = [
   { path: '/admin', label: '工作台', icon: DashboardIcon },
@@ -42,14 +43,7 @@ function DesktopSidebar() {
     >
       <VStack spacing={2} align="stretch">
         <Flex align="center" gap={3} mb={6} py={2}>
-          <Box
-            bg="linear-gradient(135deg, var(--gold), var(--rose))"
-            p={2}
-            borderRadius="xl"
-            boxShadow="0 4px 20px rgba(226, 176, 68, 0.2)"
-          >
-            <Icon as={FishIcon} color="white" boxSize={6} />
-          </Box>
+          <AppLogo size={40} />
           <Box>
             <Text
               fontSize="2xl"

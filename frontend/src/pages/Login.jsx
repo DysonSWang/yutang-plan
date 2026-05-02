@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Box, Button, FormControl, FormLabel, Input, VStack, Text, Heading, HStack, IconButton, Popover, PopoverTrigger, PopoverContent, PopoverBody, PopoverHeader, Switch, Flex, useToast, Link, Image } from '@chakra-ui/react';
 import { useAuth } from '../contexts/AuthContext';
 import { auth } from '../utils/api';
+import AppLogo from '../components/AppLogo';
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -145,18 +146,7 @@ export default function Login() {
       >
         {/* Logo 区域 */}
         <VStack spacing={3} mb={10} className="stagger-1" opacity={0}>
-          <Box
-            w="64px"
-            h="64px"
-            borderRadius="20px"
-            bgGradient="linear(135deg, gold.500, gold.400)"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            boxShadow="0 8px 32px rgba(226, 176, 68, 0.25)"
-          >
-            <Text fontSize="2xl">💕</Text>
-          </Box>
+          <AppLogo size={64} />
           <Heading
             size="lg"
             fontFamily="heading"

@@ -2,7 +2,7 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -33,11 +33,16 @@
       #app-splash.hidden { opacity: 0; pointer-events: none; }
       #app-splash .logo {
         width: 80px; height: 80px;
-        background: linear-gradient(135deg, #e2b044, #c9974a);
-        border-radius: 22px;
+        background: linear-gradient(135deg, #e2b044, #c17f59);
+        border-radius: 20px;
         display: flex; align-items: center; justify-content: center;
         margin-bottom: 24px;
         animation: splash-pulse 2s ease-in-out infinite;
+        box-shadow: 0 4px 24px rgba(226,176,68,0.25);
+      }
+      #app-splash .logo svg {
+        width: 48px;
+        height: 48px;
       }
       #app-splash .logo-text {
         font-size: 32px;
@@ -73,7 +78,11 @@
   <body>
     <div id="app-splash">
       <div class="logo">
-        <span style="font-size:38px;line-height:1">💕</span>
+        <svg viewBox="0 0 52 52" fill="none">
+          <g transform="translate(18,22) rotate(-12)"><path d="M0,-4 C-12,-16 -22,-4 -22,8 C-22,20 -4,30 0,36 C4,30 22,20 22,8 C22,-4 12,-16 0,-4Z" fill="url(#splash-heart)"/></g>
+          <g transform="translate(36,25) rotate(8) scale(0.82)"><path d="M0,-4 C-12,-16 -22,-4 -22,8 C-22,20 -4,30 0,36 C4,30 22,20 22,8 C22,-4 12,-16 0,-4Z" fill="url(#splash-heart)"/></g>
+          <defs><linearGradient id="splash-heart" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fff"/><stop offset="100%" stop-color="#f5efe5"/></linearGradient></defs>
+        </svg>
       </div>
       <div class="logo-text">追爱AI</div>
       <div class="sub-text">AI智能恋爱助手</div>

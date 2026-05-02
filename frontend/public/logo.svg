@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e2b044"/>
+      <stop offset="100%" stop-color="#c17f59"/>
+    </linearGradient>
+    <linearGradient id="heartGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f5efe5"/>
+    </linearGradient>
+  </defs>
+
+  <!-- background: rounded square -->
+  <rect x="0" y="0" width="80" height="80" rx="20" fill="url(#bg)"/>
+
+  <!-- left heart (larger) — tilted left -->
+  <g transform="translate(26, 32) rotate(-12) scale(1.00)">
+    <path d="M 0,-4 C -12,-16 -22,-4 -22,8 C -22,20 -4,30 0,36 C 4,30 22,20 22,8 C 22,-4 12,-16 0,-4 Z"
+          fill="url(#heartGrad)"/>
+  </g>
+
+  <!-- right heart (smaller) — tilted right, sits slightly lower -->
+  <g transform="translate(52, 36) rotate(8) scale(0.85)">
+    <path d="M 0,-4 C -12,-16 -22,-4 -22,8 C -22,20 -4,30 0,36 C 4,30 22,20 22,8 C 22,-4 12,-16 0,-4 Z"
+          fill="url(#heartGrad)"/>
+  </g>
+</svg>
