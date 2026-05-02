@@ -473,6 +473,36 @@ const OptimizeReplyPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
   );
 });
 
+// 分析思考过程组件 — 内嵌在女生分析气泡顶部，可折叠
+const AnalysisReasoning = memo(({ reasoning, loading }) => {
+  const [open, setOpen] = useState(true);
+  if (!reasoning) return null;
+  return (
+    <>
+      <Flex
+        as="button" onClick={() => setOpen(!open)}
+        w="100%" px={4} py={2} align="center" gap={2}
+        _hover={{ bg: 'whiteAlpha.50' }}
+      >
+        <Text fontSize="xs" color="yellow.300">
+          {open ? '▼' : '▶'} 思考过程{loading ? ' · 生成中...' : ''}
+        </Text>
+        {loading && (
+          <Box w="6px" h="6px" bg="yellow.400" borderRadius="full"
+            animation="pulse 1s infinite"
+            sx={{ '@keyframes pulse': { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.3 } } }}
+          />
+        )}
+      </Flex>
+      {open && (
+        <Box px={4} py={3} maxH="260px" overflowY="auto" borderBottom="1px solid" borderColor="whiteAlpha.200">
+          <Text fontSize="13px" color="gray.300" lineHeight="1.8" whiteSpace="pre-wrap">{reasoning}</Text>
+        </Box>
+      )}
+    </>
+  );
+});
+
 // 消息气泡组件
 function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, copiedId, helpfulId, reasoning, reasoningLoading }) {
   const isUser = message.role === 'user';
@@ -1054,6 +1084,8 @@ export default function AICoach() {
   const [lastDraftText, setLastDraftText] = useState('');
   // Girl-selected AI教练 state
   const [girlAnalysisContent, setGirlAnalysisContent] = useState('');
+  const [girlAnalysisReasoning, setGirlAnalysisReasoning] = useState(''); // DeepSeek 思考过程
+  const girlAnalysisReasoningRef = useRef('');
   const [girlAnalysisLoading, setGirlAnalysisLoading] = useState(false);
   // Track active tab (0 = AI教练, 1 = 聊天实战/回复建议)
   const [activeTabIndex, setActiveTabIndex] = useState(0);
@@ -1230,14 +1262,17 @@ export default function AICoach() {
   const handleGirlChange = (girlId) => {
     setSelectedGirlId(girlId);
     if (girlId) {
-      // 选中女生：清空 AI教练消息，加载分析
+      // 切换上下文：先清空避免混入旧上下文消息，再加载女生专属会话历史
       setMessages([]);
       setActiveSessionId(null);
       setActiveTabIndex(0);
       setGirlAnalysisContent('');
       loadGirlAnalysis(girlId);
+      loadHistory(girlId);
     } else {
-      // 取消选择：回到通用咨询，加载历史
+      // 取消选择：清空后加载通用咨询历史（无 girlId）
+      setMessages([]);
+      setActiveSessionId(null);
       loadHistory('');
     }
   };
@@ -1519,6 +1554,7 @@ export default function AICoach() {
       const cached = coachCacheRef.current[girlId];
       if (cached && cached.girlDataHash === currentGirlHash) {
         setGirlAnalysisContent(cached.content);
+        setGirlAnalysisReasoning(cached.reasoning || '');
         setGirlAnalysisLoading(false);
         return;
       }
@@ -1526,6 +1562,8 @@ export default function AICoach() {
 
     setGirlAnalysisLoading(true);
     setGirlAnalysisContent('');
+    setGirlAnalysisReasoning('');
+    girlAnalysisReasoningRef.current = '';
     const token = localStorage.getItem('zhuiai_token');
     try {
       // 带上 hash 参数，让后端也可判断缓存命中
@@ -1562,6 +1600,12 @@ export default function AICoach() {
                 }
                 continue;
               }
+              // DeepSeek 思考过程（reasoning_content，先于 content 到达）
+              if (parsed.reasoning) {
+                girlAnalysisReasoningRef.current += parsed.reasoning;
+                setGirlAnalysisReasoning(prev => prev + parsed.reasoning);
+                continue;
+              }
               if (parsed.content) { accumulated += parsed.content; setGirlAnalysisContent(accumulated); }
             } catch {}
           }
@@ -1572,6 +1616,7 @@ export default function AICoach() {
       if (accumulated) {
         coachCacheRef.current[girlId] = {
           content: accumulated,
+          reasoning: girlAnalysisReasoningRef.current || '',
           girlDataHash: currentGirlHash,
           timestamp: Date.now()
         };
@@ -1947,46 +1992,8 @@ export default function AICoach() {
       <>
         <Box flex="1" minH="0" display="flex" flexDirection="column" bg="gray.800" borderRadius="md" mb={2} overflow="hidden">
           <Box id="chat-scroll-container" flex="1" overflowY="auto" p={4} ref={scrollContainerRef} overflowAnchor="none">
-            {/* 女生分析内容 — 内容优先于 loading，实现实时流式显示 */}
-            {girlAnalysisContent ? (
-              <Flex justify="flex-start" mb={4}>
-                <HStack align="flex-start" spacing={3}>
-                  <Avatar size="sm" bg="teal.500" icon={<span>🤖</span>} />
-                  <Box bg="gray.700" px={4} py={3} borderRadius="2xl" borderTopLeftRadius="sm" maxW="90%">
-                    <Box fontSize="13px" lineHeight="1.7" color="gray.100">
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                          strong: ({ children }) => <Text as="strong" color="teal.300" fontWeight="bold">{children}</Text>,
-                          p: ({ children }) => <Text mb={2}>{children}</Text>,
-                          ul: ({ children }) => <Text as="ul" pl={4} mb={2}>{children}</Text>,
-                          li: ({ children }) => <Text as="li" mb={1}>{children}</Text>,
-                        }}
-                      >{fixMarkdown(girlAnalysisContent)}</ReactMarkdown>
-                    </Box>
-                    {/* 流式输出中显示光标闪烁 */}
-                    {girlAnalysisLoading && (
-                      <Box as="span" display="inline-block" w="2px" h="16px" bg="teal.400" ml="2px"
-                        animation="blink 1s infinite" verticalAlign="text-bottom"
-                        sx={{ '@keyframes blink': { '0%,100%': { opacity: 1 }, '50%': { opacity: 0 } } }}
-                      />
-                    )}
-                  </Box>
-                </HStack>
-              </Flex>
-            ) : girlAnalysisLoading ? (
-              <Flex justify="flex-start" mb={4}>
-                <HStack bg="gray.700" px={4} py={3} borderRadius="2xl" spacing={2}>
-                  {[0, 150, 300].map((delay) => (
-                    <Box key={delay} w="8px" h="8px" bg="teal.400" borderRadius="full"
-                      animation={`bounce 1.4s infinite ease-in-out ${delay}ms`}
-                      sx={{ '@keyframes bounce': { '0%,80%,100%': { transform: 'scale(0)' }, '40%': { transform: 'scale(1)' } } }}
-                    />
-                  ))}
-                  <Text color="gray.400" fontSize="sm">正在分析{selectedGirl?.name || '女生'}...</Text>
-                </HStack>
-              </Flex>
-            ) : (
+            {/* 空状态：无消息且无分析内容时显示引导 */}
+            {messages.length === 0 && !girlAnalysisContent && !girlAnalysisLoading && (
               <VStack spacing={4} py={8} justify="center" minH="200px">
                 <Text color="gray.400" textAlign="center">
                   围绕{selectedGirl?.name || '女生'}的情况，向我提问
@@ -2004,7 +2011,7 @@ export default function AICoach() {
               </VStack>
             )}
 
-            {/* 对话消息 */}
+            {/* 对话消息（历史 + 新对话） */}
             {messages.length > 0 && messages.map((message, index) => {
               const isLastMessage = index === messages.length - 1;
               const prevIsUser = index > 0 && messages[index - 1]?.role === 'user';

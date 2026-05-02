@@ -8,11 +8,11 @@ const router = express.Router();
 // 版本配置（每次发版时更新）
 // upgradeType: 'force' | 'suggest' | 'none'
 const VERSION_CONFIG = {
-  latestVersion: '1.0.6',
-  minVersion: '1.0.5',      // 强制升级版本，低于此版本必须更新
+  latestVersion: '1.0.7',
+  minVersion: '1.0.7',      // 强制升级版本，低于此版本必须更新
   downloadUrl: 'https://www.pgyer.com/zhuiaiai',
-  updateDescription: '优化体验',
-  buildNumber: 13
+  updateDescription: '体验升级',
+  buildNumber: 14
 };
 
 router.get('/check', (req, res) => {
@@ -52,9 +52,10 @@ router.get('/check', (req, res) => {
     (current.major === latest.major && current.minor === latest.minor && current.patch < latest.patch)
   );
 
-  const isForced = parseVersion(version).major < parseVersion(VERSION_CONFIG.minVersion).major ||
-    (parseVersion(version).major === parseVersion(VERSION_CONFIG.minVersion).major &&
-     parseVersion(version).minor < parseVersion(VERSION_CONFIG.minVersion).minor);
+  const min = parseVersion(VERSION_CONFIG.minVersion);
+  const isForced = current.major < min.major ||
+    (current.major === min.major && current.minor < min.minor) ||
+    (current.major === min.major && current.minor === min.minor && current.patch < min.patch);
 
   let upgradeType = 'none';
   if (isNewer) {

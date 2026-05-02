@@ -266,7 +266,7 @@ async function processStreamResponse(response, opts = {}) {
  * @param {object} opts - { deduplicator, onChunk, onDone, onError }
  */
 async function callAIFetchWithRetry(url, key, body, opts = {}) {
-  const { onChunk, onDone, onError, deduplicator } = opts;
+  const { onChunk, onReasoning, onDone, onError, deduplicator } = opts;
   const model = body.model;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -293,7 +293,7 @@ async function callAIFetchWithRetry(url, key, body, opts = {}) {
         continue;
       }
 
-      await processStreamResponse(response, { deduplicator, onChunk, onDone, onError });
+      await processStreamResponse(response, { deduplicator, onChunk, onReasoning, onDone, onError });
       return;
     } catch (err) {
       logger.error(`[AICoach] 流式调用异常 (attempt ${attempt + 1}): ${err.message}`, { attempt, error: err.message });
@@ -2447,7 +2447,6 @@ router.get('/girl-summary/:girlId', authMiddleware, async (req, res) => {
       where: { id: girlId },
       include: {
         client: { select: { id: true, nickname: true, username: true, age: true } },
-        signals: { orderBy: { createdAt: 'desc' }, take: 5 },
         chatLogs: { orderBy: { createdAt: 'desc' }, take: 5 }
       }
     });
@@ -2559,9 +2558,11 @@ router.get('/girl-summary/:girlId', authMiddleware, async (req, res) => {
       try { personality = typeof girl.personality === 'string' ? JSON.parse(girl.personality) : girl.personality; } catch (e) {}
     }
 
-    // 获取近期信号
-    const signalsText = girl.signals.length > 0
-      ? girl.signals.map(s => {
+    // 获取近期信号（signals 存储为 JSON 字符串，需 parse）
+    const signalsArray = parseJson(girl.signals);
+    const recentSignals = signalsArray.slice(0, 5);
+    const signalsText = recentSignals.length > 0
+      ? recentSignals.map(s => {
           const icon = s.type === 'positive' ? '[+]' : s.type === 'negative' ? '[-]' : '[*]';
           return `${icon} ${s.event} — ${new Date(s.createdAt).toLocaleDateString()}`;
         }).join('\n')
@@ -2662,15 +2663,22 @@ ${girl.notes || '暂无'}
       const deduplicator = createChunkDeduplicator();
       let fullContent = '';
 
-      await callAIFetchWithRetry(aiConfig.url, aiConfig.key, {
+      const reqBody = {
         model: aiConfig.model,
         messages: [{ role: 'user', content: systemPrompt }],
         temperature: 0.7,
         max_tokens: 600,
         stream: true
-      }, {
+      };
+      // deepseek-v4-pro 启用思考过程
+      if (aiConfig.model === 'deepseek-v4-pro') {
+        reqBody.thinking = { type: 'enabled' };
+      }
+
+      await callAIFetchWithRetry(aiConfig.url, aiConfig.key, reqBody, {
         deduplicator,
         onChunk: (content) => { fullContent += content; res.write(`data: ${JSON.stringify({ content })}\n\n`); },
+        onReasoning: (reasoning) => { res.write(`data: ${JSON.stringify({ reasoning })}\n\n`); },
         onDone: () => { res.write('data: [DONE]\n\n'); res.end(); },
         onError: (msg) => { logger.error(`[AICoach] 女生专项分析失败: ${msg}`); res.write(`data: ${JSON.stringify({ error: msg })}\n\n`); res.end(); }
       });
