@@ -15,23 +15,23 @@ import { FireIcon, CalendarIcon, PlusIcon, TrashIcon, EditIcon, CheckIcon } from
 
 const DATE_STATUS_CONFIG = {
   pending_plan: { label: '待策划', color: 'orange' },
-  planned: { label: '已策划', color: 'teal' },
-  pending_client_confirm: { label: '待确认', color: 'purple' },
+  planned: { label: '已策划', color: 'gold' },
+  pending_client_confirm: { label: '待确认', color: 'gold' },
   confirmed: { label: '已确认', color: 'green' },
-  completed: { label: '已完成', color: 'cyan' },
+  completed: { label: '已完成', color: 'gold' },
   cancelled: { label: '已取消', color: 'gray' }
 };
 
 const EVENT_STATUS_CONFIG = {
-  pending: { label: '待办', color: 'blue' },
+  pending: { label: '待办', color: 'gold' },
   completed: { label: '已完成', color: 'green' },
   cancelled: { label: '已取消', color: 'gray' }
 };
 
 const TYPE_CONFIG = {
-  date: { label: '约会', defaultColor: '#38a169' },
-  action: { label: '行动项', defaultColor: '#dd6b20' },
-  manual: { label: '手动', defaultColor: '#3182ce' }
+  date: { label: '约会', defaultColor: '#4ade80' },
+  action: { label: '行动项', defaultColor: '#f59e0b' },
+  manual: { label: '手动', defaultColor: '#d4a853' }
 };
 
 function toLocalDatetimeString(date) {
@@ -119,7 +119,7 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
       if (ev.status === 'completed') {
         bgColor = '#2d3748'; borderColor = '#4a5568';
       } else if (ev.status === 'cancelled') {
-        bgColor = '#4a5568'; borderColor = '#718096';
+        bgColor = '#4a5568'; borderColor = 'rgba(245,240,232,0.4)';
       } else {
         const cfg = TYPE_CONFIG[ev.type] || TYPE_CONFIG.manual;
         bgColor = ev.color || cfg.defaultColor;
@@ -147,10 +147,10 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
 
   const getStatusBg = (color) => {
     const map = {
-      orange: '#dd6b20', teal: '#319795', purple: '#805ad5',
-      green: '#38a169', cyan: '#00b5d8', gray: '#718096', blue: '#3182ce', red: '#e53e3e'
+      orange: '#f59e0b', teal: '#d4a853', purple: '#c17f59',
+      green: '#4ade80', cyan: '#d4a853', gray: 'rgba(245,240,232,0.4)', blue: '#d4a853', red: '#ef4444'
     };
-    return map[color] || '#718096';
+    return map[color] || 'rgba(245,240,232,0.4)';
   };
 
   const getStatusBorder = (color) => {
@@ -418,7 +418,7 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
           '.fc .fc-button-primary:hover': { backgroundColor: 'teal.500 !important' },
           '.fc .fc-col-header-cell-cushion': { color: 'gray.400', fontSize: 'xs' },
           '.fc .fc-daygrid-day-number': { color: 'gray.300', fontSize: 'xs' },
-          '.fc .fc-daygrid-day.fc-day-today': { backgroundColor: 'rgba(49,151,149,0.1) !important' },
+          '.fc .fc-daygrid-day.fc-day-today': { backgroundColor: 'rgba(212,168,83,0.1) !important' },
           '.fc .fc-daygrid-event': { fontSize: '11px', borderRadius: '3px', padding: '1px 3px' },
           '.fc .fc-timegrid-event': { fontSize: '11px', borderRadius: '3px' },
           '.fc .fc-event-dot': { display: 'none' },
