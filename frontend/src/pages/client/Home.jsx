@@ -128,13 +128,13 @@ export default function ClientHome() {
             border="1px solid rgba(255,255,255,0.08)"
             backdropFilter="blur(12px)"
             cursor="pointer"
-            _hover={{ bg: 'rgba(0, 212, 170, 0.06)', borderColor: 'rgba(0, 212, 170, 0.2)', transform: 'translateY(-3px)' }}
+            _hover={{ bg: 'rgba(212,168,83,0.06)', borderColor: 'rgba(212,168,83,0.2)', transform: 'translateY(-3px)' }}
             transition="all 0.25s ease"
           >
             <CardBody>
-              <Icon as={ChatIcon} w={8} h={8} color="brand.500" mb={3} />
+              <Icon as={ChatIcon} w={8} h={8} color="gold.500" mb={3} />
               <Text color="white" mt={2} fontWeight="500">联系专属顾问</Text>
-              <Text color="abyss.500" fontSize="sm">人工沟通，更私密</Text>
+              <Text color="rgba(245,240,232,0.2)" fontSize="sm">人工沟通，更私密</Text>
             </CardBody>
           </Card>
           <Card
@@ -143,13 +143,13 @@ export default function ClientHome() {
             border="1px solid rgba(255,255,255,0.08)"
             backdropFilter="blur(12px)"
             cursor="pointer"
-            _hover={{ bg: 'rgba(0, 212, 170, 0.06)', borderColor: 'rgba(0, 212, 170, 0.2)', transform: 'translateY(-3px)' }}
+            _hover={{ bg: 'rgba(212,168,83,0.06)', borderColor: 'rgba(212,168,83,0.2)', transform: 'translateY(-3px)' }}
             transition="all 0.25s ease"
           >
             <CardBody>
-              <Icon as={SparklesIcon} w={8} h={8} color="brand.500" mb={3} />
+              <Icon as={SparklesIcon} w={8} h={8} color="gold.500" mb={3} />
               <Text color="white" mt={2} fontWeight="500">AI教练咨询</Text>
-              <Text color="abyss.500" fontSize="sm">24小时在线</Text>
+              <Text color="rgba(245,240,232,0.2)" fontSize="sm">24小时在线</Text>
             </CardBody>
           </Card>
           <Card
@@ -158,13 +158,13 @@ export default function ClientHome() {
             border="1px solid rgba(255,255,255,0.08)"
             backdropFilter="blur(12px)"
             cursor="pointer"
-            _hover={{ bg: 'rgba(0, 212, 170, 0.06)', borderColor: 'rgba(0, 212, 170, 0.2)', transform: 'translateY(-3px)' }}
+            _hover={{ bg: 'rgba(212,168,83,0.06)', borderColor: 'rgba(212,168,83,0.2)', transform: 'translateY(-3px)' }}
             transition="all 0.25s ease"
           >
             <CardBody>
-              <Icon as={FishIcon} w={8} h={8} color="brand.500" mb={3} />
+              <Icon as={FishIcon} w={8} h={8} color="gold.500" mb={3} />
               <Text color="white" mt={2} fontWeight="500">查看我的缘分</Text>
-              <Text color="abyss.500" fontSize="sm">管理女生资源</Text>
+              <Text color="rgba(245,240,232,0.2)" fontSize="sm">管理女生资源</Text>
             </CardBody>
           </Card>
           <Card
@@ -173,13 +173,13 @@ export default function ClientHome() {
             border="1px solid rgba(255,255,255,0.08)"
             backdropFilter="blur(12px)"
             cursor="pointer"
-            _hover={{ bg: 'rgba(0, 212, 170, 0.06)', borderColor: 'rgba(0, 212, 170, 0.2)', transform: 'translateY(-3px)' }}
+            _hover={{ bg: 'rgba(212,168,83,0.06)', borderColor: 'rgba(212,168,83,0.2)', transform: 'translateY(-3px)' }}
             transition="all 0.25s ease"
           >
             <CardBody>
-              <Icon as={BookIcon} w={8} h={8} color="brand.500" mb={3} />
+              <Icon as={BookIcon} w={8} h={8} color="gold.500" mb={3} />
               <Text color="white" mt={2} fontWeight="500">学习中心</Text>
-              <Text color="abyss.500" fontSize="sm">Mo哥宝典章节学习</Text>
+              <Text color="rgba(245,240,232,0.2)" fontSize="sm">Mo哥宝典章节学习</Text>
             </CardBody>
           </Card>
           <Card
@@ -189,13 +189,13 @@ export default function ClientHome() {
             backdropFilter="blur(12px)"
             cursor="pointer"
             onClick={() => navigate('/dates')}
-            _hover={{ bg: 'rgba(0, 212, 170, 0.06)', borderColor: 'rgba(0, 212, 170, 0.2)', transform: 'translateY(-3px)' }}
+            _hover={{ bg: 'rgba(212,168,83,0.06)', borderColor: 'rgba(212,168,83,0.2)', transform: 'translateY(-3px)' }}
             transition="all 0.25s ease"
           >
             <CardBody>
-              <Icon as={GiftIcon} w={8} h={8} color="brand.500" mb={3} />
+              <Icon as={GiftIcon} w={8} h={8} color="gold.500" mb={3} />
               <Text color="white" mt={2} fontWeight="500">约会与方案</Text>
-              <Text color="abyss.500" fontSize="sm">约会确认和AI方案</Text>
+              <Text color="rgba(245,240,232,0.2)" fontSize="sm">约会确认和AI方案</Text>
             </CardBody>
           </Card>
           <Card
@@ -205,13 +205,13 @@ export default function ClientHome() {
             backdropFilter="blur(12px)"
             cursor="pointer"
             onClick={() => navigate('/dates#calendar')}
-            _hover={{ bg: 'rgba(0, 212, 170, 0.06)', borderColor: 'rgba(0, 212, 170, 0.2)', transform: 'translateY(-3px)' }}
+            _hover={{ bg: 'rgba(212,168,83,0.06)', borderColor: 'rgba(212,168,83,0.2)', transform: 'translateY(-3px)' }}
             transition="all 0.25s ease"
           >
             <CardBody>
-              <Icon as={CalendarIcon} w={8} h={8} color="brand.500" mb={3} />
+              <Icon as={CalendarIcon} w={8} h={8} color="gold.500" mb={3} />
               <Text color="white" mt={2} fontWeight="500">我的日历</Text>
-              <Text color="abyss.500" fontSize="sm">查看约会与活动</Text>
+              <Text color="rgba(245,240,232,0.2)" fontSize="sm">查看约会与活动</Text>
             </CardBody>
           </Card>
         </SimpleGrid>
@@ -220,11 +220,11 @@ export default function ClientHome() {
       {/* 定价方案弹窗 */}
       <Modal isOpen={isPricingOpen} onClose={onPricingClose} size="2xl">
         <ModalOverlay backdropFilter="blur(4px)" />
-        <ModalContent bg="gray.800" color="white" borderRadius="xl">
+        <ModalContent bg="warm.900" color="white" borderRadius="xl">
           <ModalHeader textAlign="center" pb={2}>
-            <Icon as={CrownIcon} w={6} h={6} color="brand.400" mb={2} />
+            <Icon as={CrownIcon} w={6} h={6} color="gold.400" mb={2} />
             <Text color="white">选择专属方案</Text>
-            <Text color="gray.400" fontSize="sm" fontWeight="normal" mt={1}>联系客服，获取您的专属定制方案</Text>
+            <Text color="rgba(245,240,232,0.4)" fontSize="sm" fontWeight="normal" mt={1}>联系客服，获取您的专属定制方案</Text>
           </ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={6}>
@@ -232,45 +232,45 @@ export default function ClientHome() {
               {PRICING_DATA.map(plan => (
                 <Card
                   key={plan.type}
-                  bg="gray.700"
+                  bg="warm.800"
                   border="1px solid"
-                  borderColor={plan.type === 'premium' ? 'purple.500' : plan.type === 'yearly' ? 'blue.500' : 'gray.600'}
+                  borderColor={plan.type === 'premium' ? 'gold.500' : plan.type === 'yearly' ? 'gold.500' : 'rgba(245,240,232,0.08)'}
                   borderRadius="xl"
                   position="relative"
                   overflow="hidden"
                 >
                   {plan.type === 'premium' && (
-                    <Box position="absolute" top={0} left={0} right={0} bg="purple.600" textAlign="center" py={1} fontSize="xs" fontWeight="bold">
+                    <Box position="absolute" top={0} left={0} right={0} bg="gold.600" textAlign="center" py={1} fontSize="xs" fontWeight="bold">
                       最高端
                     </Box>
                   )}
                   {plan.type === 'yearly' && (
-                    <Box position="absolute" top={0} left={0} right={0} bg="blue.600" textAlign="center" py={1} fontSize="xs" fontWeight="bold">
+                    <Box position="absolute" top={0} left={0} right={0} bg="gold.500" textAlign="center" py={1} fontSize="xs" fontWeight="bold">
                       推荐
                     </Box>
                   )}
                   <CardBody pt={plan.type !== 'monthly' ? 8 : 4}>
                     <VStack spacing={2} align="start">
-                      <Text color="gray.300" fontWeight="600">{plan.label}</Text>
+                      <Text color="rgba(245,240,232,0.6)" fontWeight="600">{plan.label}</Text>
                       <HStack align="baseline" spacing={1}>
                         <Text color="white" fontSize="3xl" fontWeight="700">
                           {plan.price.toLocaleString()}
                         </Text>
-                        <Text color="gray.400" fontSize="sm">元/{plan.period}</Text>
+                        <Text color="rgba(245,240,232,0.4)" fontSize="sm">元/{plan.period}</Text>
                       </HStack>
-                      <Text color="gray.500" fontSize="xs">约{Math.round(plan.perMonth).toLocaleString()}元/月</Text>
-                      <Divider borderColor="gray.600" my={2} />
+                      <Text color="rgba(245,240,232,0.2)" fontSize="xs">约{Math.round(plan.perMonth).toLocaleString()}元/月</Text>
+                      <Divider borderColor="rgba(245,240,232,0.08)" my={2} />
                       {plan.features.map((f, i) => (
                         <HStack key={i} spacing={2}>
-                          <Icon as={CheckIcon} color="brand.400" w={4} h={4} />
-                          <Text color="gray.300" fontSize="sm">{f}</Text>
+                          <Icon as={CheckIcon} color="gold.400" w={4} h={4} />
+                          <Text color="rgba(245,240,232,0.6)" fontSize="sm">{f}</Text>
                         </HStack>
                       ))}
                     </VStack>
                     <Button
                       mt={4}
                       w="full"
-                      colorScheme={plan.type === 'premium' ? 'purple' : plan.type === 'yearly' ? 'blue' : 'teal'}
+                      colorScheme="gold"
                       variant="outline"
                       size="sm"
                       onClick={onPricingClose}
@@ -282,18 +282,18 @@ export default function ClientHome() {
               ))}
             </SimpleGrid>
 
-            <Box mt={5} p={4} bg="gray.700" borderRadius="lg">
-              <Text color="gray.300" fontWeight="600" mb={2}>邀请机制</Text>
-              <Text color="gray.400" fontSize="sm" mb={2}>每成功邀请一位新用户付费，双方均可获得优惠：</Text>
+            <Box mt={5} p={4} bg="warm.800" borderRadius="lg">
+              <Text color="rgba(245,240,232,0.6)" fontWeight="600" mb={2}>邀请机制</Text>
+              <Text color="rgba(245,240,232,0.4)" fontSize="sm" mb={2}>每成功邀请一位新用户付费，双方均可获得优惠：</Text>
               <SimpleGrid columns={3} spacing={3}>
                 {Object.entries(TYPE_POINTS).map(([type, pts]) => (
-                  <Box key={type} textAlign="center" p={2} bg="gray.600" borderRadius="md">
-                    <Text color="brand.400" fontSize="sm" fontWeight="600">{TYPE_LABEL[type]}</Text>
-                    <Text color="gray.300" fontSize="xs">邀请人得 {pts} 积分</Text>
+                  <Box key={type} textAlign="center" p={2} bg="warm.700" borderRadius="md">
+                    <Text color="gold.400" fontSize="sm" fontWeight="600">{TYPE_LABEL[type]}</Text>
+                    <Text color="rgba(245,240,232,0.6)" fontSize="xs">邀请人得 {pts} 积分</Text>
                   </Box>
                 ))}
               </SimpleGrid>
-              <Text color="gray.500" fontSize="xs" mt={2}>
+              <Text color="rgba(245,240,232,0.2)" fontSize="xs" mt={2}>
                 积分只能用于续费抵扣，无有效期限制。被邀请人首单可享8折优惠
               </Text>
             </Box>
