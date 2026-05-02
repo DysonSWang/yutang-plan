@@ -84,6 +84,8 @@ export default function ClientDates() {
     relationshipStage: '初次见面', specialRequirements: ''
   });
   const [saving, setSaving] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [showAiFields, setShowAiFields] = useState(false);
   const [filterGirlId, setFilterGirlId] = useState('');
   const toast = useToast();
   // 加载记忆的偏好设置
@@ -180,6 +182,42 @@ export default function ClientDates() {
     return `${date.getMonth() + 1}月${date.getDate()}日`;
   };
 
+  // 保存约会并自动生成AI方案
+  const handleGenerateWithPlan = async () => {
+    if (!selectedGirlForDate) {
+      toast({ title: '请先选择约会对象', status: 'warning' });
+      return;
+    }
+    try {
+      const res = await dates.create({
+        girlId: selectedGirlForDate.id,
+        dateTime: dateForm.dateTime || undefined,
+        location: dateForm.location,
+        title: dateForm.title || '新约会',
+        notes: dateForm.notes
+      });
+      if (res.success) {
+        setShowAddModal(false);
+        resetDateForm();
+        // 找到新建的约会，打开详情并触发AI生成
+        const created = res.date || res;
+        const dateId = created?.id;
+        if (dateId) {
+          setSelected(created);
+          onOpen();
+          // 等 selected 状态更新后触发 AI 生成
+          setTimeout(() => handleReoptimizeDate(), 100);
+        }
+        loadAll();
+      } else {
+        toast({ title: res.error || '创建失败', status: 'error' });
+      }
+    } catch (e) {
+      toast({ title: '创建失败', status: 'error' });
+    }
+    setGenerating(false);
+  };
+
   const handleSaveDate = async () => {
     if (!selectedGirlForDate) {
       toast({ title: '请选择约会对象', status: 'warning' });
@@ -214,6 +252,7 @@ export default function ClientDates() {
       scene: '', budget: '', duration: '半天', transportMode: localStorage.getItem('dating_transportMode') || '地铁/打车',
       relationshipStage: '初次见面', specialRequirements: ''
     });
+    setShowAiFields(false);
     setSelectedGirlForDate(null);
     setAddStep(1);
   };
@@ -777,15 +816,7 @@ export default function ClientDates() {
                       onClick={() => openDetail(d)}
                       transition="all 0.2s"
                     >
-                      <CardBody py={4} px={5} position="relative">
-                        <Button
-                          position="absolute" top={2} right={2} zIndex={2}
-                          size="xs" colorScheme="red" variant="ghost"
-                          onClick={(e) => { e.stopPropagation(); handleDeleteDate(d.id); }}
-                          isLoading={deleting}
-                        >
-                          删除
-                        </Button>
+                      <CardBody py={4} px={5}>
                         <Flex gap={4} align="flex-start">
                           <Avatar size="lg" name={d.girl?.name} src={getAvatar(d.girl)} />
                           <Box flex={1}>
@@ -1237,17 +1268,133 @@ export default function ClientDates() {
                 </FormControl>
 
                 {/* --- 操作按钮 --- */}
-                <Button
-                  colorScheme="green"
-                  size="lg"
-                  isLoading={saving}
-                  onClick={handleSaveDate}
-                  mb={4}
-                >
-                  保存约会
-                </Button>
+                <HStack mt={4} spacing={3}>
+                  <Button
+                    colorScheme="green"
+                    flex={1}
+                    size="lg"
+                    isLoading={saving}
+                    onClick={handleSaveDate}
+                  >
+                    保存约会
+                  </Button>
+                  <Button
+                    variant={showAiFields ? 'solid' : 'outline'}
+                    colorScheme={showAiFields ? 'brand' : 'gray'}
+                    leftIcon={<SparklesIcon />}
+                    flex={1}
+                    size="lg"
+                    onClick={() => setShowAiFields(!showAiFields)}
+                  >
+                    {showAiFields ? '收起 AI 策划' : 'AI 智能策划'}
+                  </Button>
+                </HStack>
 
-                <Button variant="outline" colorScheme="gray" onClick={() => setAddStep(1)}>
+                {/* --- AI 智能策划区域（可展开） --- */}
+                {showAiFields && (
+                  <VStack spacing={4} align="stretch" mt={2}>
+                    <Divider />
+                    <Text color="gold.400" fontWeight="bold" fontSize="sm">✨ AI 增强信息（可选填，填得越详细方案越精准）</Text>
+
+                    <FormControl>
+                      <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">出行方式</FormLabel>
+                      <Select
+                        value={dateForm.transportMode}
+                        onChange={e => {
+                          setDateForm({ ...dateForm, transportMode: e.target.value });
+                          localStorage.setItem('dating_transportMode', e.target.value);
+                        }}
+                        bg="warm.700" borderColor="warm.600"
+                      >
+                        <option value="地铁/打车">地铁/打车</option>
+                        <option value="开车">开车</option>
+                        <option value="步行">步行</option>
+                        <option value="骑车">骑车</option>
+                      </Select>
+                    </FormControl>
+
+                    <FormControl>
+                      <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">当前关系阶段</FormLabel>
+                      <Select
+                        value={dateForm.relationshipStage}
+                        onChange={e => setDateForm({ ...dateForm, relationshipStage: e.target.value })}
+                        bg="warm.700" borderColor="warm.600"
+                      >
+                        <option value="初次见面">初次见面</option>
+                        <option value="已聊过几次">已聊过几次</option>
+                        <option value="暧昧中">暧昧中</option>
+                        <option value="确定关系">确定关系</option>
+                      </Select>
+                    </FormControl>
+
+                    <FormControl>
+                      <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">特殊要求（选填）</FormLabel>
+                      <Input
+                        placeholder="如：她吃素/过敏/不吃辣等"
+                        value={dateForm.specialRequirements}
+                        onChange={e => setDateForm({ ...dateForm, specialRequirements: e.target.value })}
+                        bg="warm.700" borderColor="warm.600"
+                        _placeholder={{ color: 'rgba(245,240,232,0.2)' }}
+                      />
+                    </FormControl>
+
+                    <FormControl>
+                      <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">约会场景描述</FormLabel>
+                      <Textarea
+                        placeholder="描述你的约会想法，例如：想和女生去一家有氛围的餐厅吃饭，她喜欢粤菜"
+                        value={dateForm.scene}
+                        onChange={e => setDateForm({ ...dateForm, scene: e.target.value })}
+                        bg="warm.700" borderColor="warm.600"
+                        _placeholder={{ color: 'rgba(245,240,232,0.2)' }}
+                        rows={3}
+                      />
+                    </FormControl>
+
+                    <HStack>
+                      <FormControl>
+                        <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">预算</FormLabel>
+                        <Input
+                          placeholder="如：1000元左右"
+                          value={dateForm.budget}
+                          onChange={e => setDateForm({ ...dateForm, budget: e.target.value })}
+                          bg="warm.700" borderColor="warm.600"
+                          _placeholder={{ color: 'rgba(245,240,232,0.2)' }}
+                        />
+                      </FormControl>
+                      <FormControl>
+                        <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">时长</FormLabel>
+                        <Select
+                          value={dateForm.duration}
+                          onChange={e => setDateForm({ ...dateForm, duration: e.target.value })}
+                          bg="warm.700" borderColor="warm.600"
+                        >
+                          <option value="2小时内">2小时内</option>
+                          <option value="半天">半天</option>
+                          <option value="一天">一天</option>
+                          <option value="多天">多天</option>
+                        </Select>
+                      </FormControl>
+                    </HStack>
+
+                    <Button
+                      colorScheme="gold"
+                      leftIcon={<SparklesIcon />}
+                      size="lg"
+                      mt={2}
+                      onClick={() => {
+                        setGenerating(true);
+                        toast({ title: 'AI 正在精心策划中...', status: 'info', duration: 2000 });
+                        handleGenerateWithPlan();
+                      }}
+                      isLoading={generating}
+                      loadingText="策划中..."
+                    >
+                      生成精细化方案
+                    </Button>
+                  </VStack>
+                )}
+
+                <Button variant="outline" colorScheme="gray" onClick={() => setAddStep(1)} mt={4}>
                   上一步
                 </Button>
               </VStack>
