@@ -1686,6 +1686,7 @@ export default function ClientDates() {
                       borderColor={selectedGirlForDate?.id === girl.id ? 'brand.500' : 'gray.600'}
                       onClick={() => {
                         setSelectedGirlForDate(girl);
+                        setAddStep(2);
                         const stageMap = {
                           '陌生': '初次见面', '朋友': '已聊过几次',
                           '暧昧': '暧昧中', '亲密': '确定关系',

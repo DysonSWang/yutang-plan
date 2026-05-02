@@ -927,6 +927,7 @@ export default function AdminChat() {
                   <IconButton
                     icon={<Text>📷</Text>}
                     variant="ghost"
+                    size="sm"
                     color="gray.400"
                     onClick={() => fileInputRef.current?.click()}
                     aria-label="发送图片/视频"
@@ -943,6 +944,7 @@ export default function AdminChat() {
                   <IconButton
                     icon={<Text>🎤</Text>}
                     variant="ghost"
+                    size="sm"
                     color={recording ? 'red.400' : 'gray.400'}
                     onClick={recording ? stopRecording : startRecording}
                     aria-label="录制语音"
@@ -953,6 +955,7 @@ export default function AdminChat() {
                       as={IconButton}
                       icon={<Text>🔥{burnMode ? `${burnSeconds}s` : ''}</Text>}
                       variant="ghost"
+                      size="sm"
                       color={burnMode ? 'orange.400' : 'gray.500'}
                       aria-label="阅后即焚模式"
                       isDisabled={sending || !!previewFile || flashMode}
@@ -995,12 +998,14 @@ export default function AdminChat() {
                     onChange={e => setInput(e.target.value)}
                     onKeyPress={e => e.key === 'Enter' && sendMessage()}
                     placeholder="输入回复..."
+                    flex={1}
+                    minW="0"
                     bg="gray.700"
                     border="none"
                     color="white"
                     _placeholder={{ color: 'gray.400' }}
                   />
-                  <Button colorScheme="teal" onClick={sendMessage} isLoading={sending}>发送</Button>
+                  <Button colorScheme="teal" onClick={sendMessage} isLoading={sending} size="sm">发送</Button>
                 </HStack>
               </Box>
             </>

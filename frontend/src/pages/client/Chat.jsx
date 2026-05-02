@@ -693,10 +693,11 @@ export default function ClientChat() {
             </Box>
           )}
 
-          <HStack spacing={2}>
+          <HStack spacing={{ base: 1, md: 2 }}>
             <IconButton
               icon={<Text>📷</Text>}
               variant="ghost"
+              size="sm"
               color="abyss.400"
               onClick={() => fileInputRef.current?.click()}
               aria-label="发送图片/视频"
@@ -713,6 +714,7 @@ export default function ClientChat() {
             <IconButton
               icon={<Text>{recording ? '⏹' : '🎤'}</Text>}
               variant="ghost"
+              size="sm"
               color={recording ? 'red.400' : 'abyss.400'}
               onClick={recording ? stopRecording : startRecording}
               aria-label="录制语音"
@@ -779,13 +781,15 @@ export default function ClientChat() {
               onChange={e => setInput(e.target.value)}
               onKeyPress={e => e.key === 'Enter' && sendMessage()}
               placeholder="输入消息..."
+              flex={1}
+              minW="0"
               bg="rgba(255,255,255,0.05)"
               border="1px solid rgba(255,255,255,0.1)"
               color="white"
               _placeholder={{ color: 'abyss.500' }}
               _focus={{ borderColor: 'brand.500' }}
             />
-            <Button colorScheme="brand" onClick={sendMessage} isLoading={sending} isDisabled={!input.trim()}>
+            <Button colorScheme="brand" onClick={sendMessage} isLoading={sending} isDisabled={!input.trim()} size="sm">
               发送
             </Button>
           </HStack>
