@@ -117,7 +117,7 @@ const InputArea = memo(({ onSubmit, loading, deepMode, onNewConversation, placeh
   const defaultPlaceholder = deepMode ? '描述当前情况，深度分析会调用工具...' : '描述你的情况...';
 
   return (
-    <Box bg="gray.800" borderRadius="md" p={3} flexShrink={0}>
+    <Box bg="warm.800" borderRadius="md" p={3} flexShrink={0}>
       <Flex gap={2} align="center">
         <textarea
           ref={textareaRef}
@@ -131,10 +131,10 @@ const InputArea = memo(({ onSubmit, loading, deepMode, onNewConversation, placeh
           autoCapitalize="off"
           spellCheck="false"
           style={{
-            backgroundColor: '#2d3748',
+            backgroundColor: 'var(--warm-matte)',
             border: 'none',
             borderRadius: '6px',
-            color: 'white',
+            color: 'var(--w80)',
             width: '100%',
             height: '40px',
             minHeight: '40px',
@@ -151,7 +151,7 @@ const InputArea = memo(({ onSubmit, loading, deepMode, onNewConversation, placeh
         />
         <Button
           type="button"
-          colorScheme="teal"
+          colorScheme="gold"
           isLoading={loading}
           disabled={!input.trim()}
           onClick={handleSubmitClick}
@@ -162,7 +162,7 @@ const InputArea = memo(({ onSubmit, loading, deepMode, onNewConversation, placeh
         {showNewConvBtn && (
           <Button
             variant="ghost"
-            colorScheme="gray"
+            colorScheme="gold"
             size="sm"
             onClick={onNewConversation}
           >
@@ -199,8 +199,8 @@ const SessionBar = memo(({
   };
 
   return (
-    <Flex align="center" gap={2} mb={1} flexShrink={0} bg="gray.800" px={3} py={1.5} borderRadius="md" border="1px solid" borderColor="whiteAlpha.100">
-      <Text color="gray.500" fontSize="xs" flexShrink={0}>会话</Text>
+    <Flex align="center" gap={2} mb={1} flexShrink={0} bg="warm.800" px={3} py={1.5} borderRadius="md" border="1px solid" borderColor="whiteAlpha.100">
+      <Text color="rgba(245,240,232,0.2)" fontSize="xs" flexShrink={0}>会话</Text>
       <Select
         value={activeSessionId || ''}
         onChange={e => {
@@ -212,7 +212,7 @@ const SessionBar = memo(({
             onSelectSession(val);
           }
         }}
-        bg="gray.700" border="none" color="white" size="xs"
+        bg="warm.700" border="none" color="white" size="xs"
         flex={1} maxW="240px"
         borderRadius="md"
         isDisabled={loading}
@@ -223,12 +223,12 @@ const SessionBar = memo(({
         ))}
       </Select>
       {activeSession && (
-        <Badge colorScheme="teal" variant="subtle" fontSize="xs" flexShrink={0}>
+        <Badge colorScheme="gold" variant="subtle" fontSize="xs" flexShrink={0}>
           {(activeSession.messages || []).length}条
         </Badge>
       )}
       <Button
-        size="xs" variant="ghost" colorScheme="teal"
+        size="xs" variant="ghost" colorScheme="gold"
         onClick={onNewSession} isLoading={loading}
         isDisabled={!activeSessionId}
         flexShrink={0}
@@ -290,11 +290,11 @@ const ReplySuggestionsPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
 
   return (
     <>
-      <Card bg="gray.800">
+      <Card bg="warm.800">
         <CardBody>
           <VStack spacing={4} align="stretch">
             <Box>
-              <Text color="gray.300" fontSize="sm" mb={2}>女生最后一条消息</Text>
+              <Text color="rgba(245,240,232,0.6)" fontSize="sm" mb={2}>女生最后一条消息</Text>
               <textarea
                 ref={textareaRef}
                 value={replyInput}
@@ -306,7 +306,7 @@ const ReplySuggestionsPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
                 autoCapitalize="off"
                 spellCheck="false"
                 style={{
-                  backgroundColor: '#374151', border: 'none', borderRadius: '6px', color: 'white',
+                  backgroundColor: 'var(--warm-matte)', border: 'none', borderRadius: '6px', color: 'var(--w80)',
                   width: '100%', height: '72px', minHeight: '72px', maxHeight: '100px',
                   padding: '8px 12px', resize: 'none', overflowY: 'hidden', outline: 'none',
                   fontSize: '14px', fontFamily: 'inherit', lineHeight: '1.4', boxSizing: 'border-box'
@@ -315,36 +315,36 @@ const ReplySuggestionsPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
             </Box>
             <HStack spacing={3}>
               <Box flex={1}>
-                <Text color="gray.300" fontSize="sm" mb={2}>回复风格（可选）</Text>
-                <Select value={replyStyle} onChange={e => { setReplyStyle(e.target.value); setReplyStyleCustom(''); }} bg="gray.700" border="none" color="white" placeholder="不选则返回多种风格">
+                <Text color="rgba(245,240,232,0.6)" fontSize="sm" mb={2}>回复风格（可选）</Text>
+                <Select value={replyStyle} onChange={e => { setReplyStyle(e.target.value); setReplyStyleCustom(''); }} bg="warm.700" border="none" color="white" placeholder="不选则返回多种风格">
                   <option value="稳妥型">稳妥型</option>
                   <option value="推进型">推进型</option>
                   <option value="调侃型">调侃型</option>
                 </Select>
               </Box>
               <Box flex={1}>
-                <Text color="gray.300" fontSize="sm" mb={2}>或自定义风格</Text>
-                <Input value={replyStyleCustom} onChange={e => { setReplyStyleCustom(e.target.value); setReplyStyle(''); }} placeholder="如：更幽默、更直接" bg="gray.700" border="none" color="white" />
+                <Text color="rgba(245,240,232,0.6)" fontSize="sm" mb={2}>或自定义风格</Text>
+                <Input value={replyStyleCustom} onChange={e => { setReplyStyleCustom(e.target.value); setReplyStyle(''); }} placeholder="如：更幽默、更直接" bg="warm.700" border="none" color="white" />
               </Box>
             </HStack>
-            <Button colorScheme="teal" onClick={handleGetReplySuggestions} isLoading={replyLoading} isDisabled={!replyInput.trim()} leftIcon={<Icon as={BrainIcon} />}>
+            <Button colorScheme="gold" onClick={handleGetReplySuggestions} isLoading={replyLoading} isDisabled={!replyInput.trim()} leftIcon={<Icon as={BrainIcon} />}>
               获取回复建议
             </Button>
             {replySuggestions && (
               <VStack spacing={3} align="stretch" mt={2}>
                 <Flex justify="space-between" align="center">
-                  <Text color="gray.400" fontSize="sm">生成 {replySuggestions.options?.length || 0} 个回复方案</Text>
-                  {replySuggestions.relationshipStageLabel && <Badge colorScheme="teal">{replySuggestions.relationshipStageLabel}</Badge>}
+                  <Text color="rgba(245,240,232,0.4)" fontSize="sm">生成 {replySuggestions.options?.length || 0} 个回复方案</Text>
+                  {replySuggestions.relationshipStageLabel && <Badge colorScheme="gold">{replySuggestions.relationshipStageLabel}</Badge>}
                 </Flex>
                 {(replySuggestions.options || []).map((opt, idx) => (
-                  <Box key={idx} bg="gray.700" p={4} borderRadius="md">
+                  <Box key={idx} bg="warm.700" p={4} borderRadius="md">
                     <Flex justify="space-between" align="center" mb={2}>
                       <Badge colorScheme={opt.type === '稳妥型' ? 'blue' : opt.type === '推进型' ? 'red' : opt.type === '调侃型' ? 'orange' : 'gray'}>{opt.type}</Badge>
-                      <Button size="xs" variant="ghost" colorScheme="teal" onClick={() => copyToClipboard(opt.reply)}>复制</Button>
+                      <Button size="xs" variant="ghost" colorScheme="gold" onClick={() => copyToClipboard(opt.reply)}>复制</Button>
                     </Flex>
                     <Text color="white" mb={2}>{opt.reply}</Text>
-                    {opt.intention && <Text color="gray.500" fontSize="xs" mb={1}>目的：{opt.intention}</Text>}
-                    {opt.stageAdvice && <Text color="gray.400" fontSize="xs" mb={1}>📍 {opt.stageAdvice}</Text>}
+                    {opt.intention && <Text color="rgba(245,240,232,0.2)" fontSize="xs" mb={1}>目的：{opt.intention}</Text>}
+                    {opt.stageAdvice && <Text color="rgba(245,240,232,0.4)" fontSize="xs" mb={1}>📍 {opt.stageAdvice}</Text>}
                     {opt.riskNote && opt.riskNote !== '无' && <Text color="orange.400" fontSize="xs">⚠️ {opt.riskNote}</Text>}
                   </Box>
                 ))}
@@ -408,11 +408,11 @@ const OptimizeReplyPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
 
   return (
     <>
-      <Card bg="gray.800">
+      <Card bg="warm.800">
         <CardBody>
           <VStack spacing={4} align="stretch">
             <Box>
-              <Text color="gray.300" fontSize="sm" mb={2}>你想说的话</Text>
+              <Text color="rgba(245,240,232,0.6)" fontSize="sm" mb={2}>你想说的话</Text>
               <textarea
                 ref={textareaRef}
                 value={optimizeInput}
@@ -424,7 +424,7 @@ const OptimizeReplyPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
                 autoCapitalize="off"
                 spellCheck="false"
                 style={{
-                  backgroundColor: '#374151', border: 'none', borderRadius: '6px', color: 'white',
+                  backgroundColor: 'var(--warm-matte)', border: 'none', borderRadius: '6px', color: 'var(--w80)',
                   width: '100%', height: '72px', minHeight: '72px', maxHeight: '100px',
                   padding: '8px 12px', resize: 'none', overflowY: 'hidden', outline: 'none',
                   fontSize: '14px', fontFamily: 'inherit', lineHeight: '1.4', boxSizing: 'border-box'
@@ -433,8 +433,8 @@ const OptimizeReplyPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
             </Box>
             <HStack spacing={3}>
               <Box flex={1}>
-                <Text color="gray.300" fontSize="sm" mb={2}>优化方向（可选）</Text>
-                <Select value={optimizeGoal} onChange={e => { setOptimizeGoal(e.target.value); setOptimizeGoalCustom(''); }} bg="gray.700" border="none" color="white" placeholder="不选则自动优化">
+                <Text color="rgba(245,240,232,0.6)" fontSize="sm" mb={2}>优化方向（可选）</Text>
+                <Select value={optimizeGoal} onChange={e => { setOptimizeGoal(e.target.value); setOptimizeGoalCustom(''); }} bg="warm.700" border="none" color="white" placeholder="不选则自动优化">
                   <option value="更幽默">更幽默</option>
                   <option value="更暧昧">更暧昧</option>
                   <option value="更自然">更自然</option>
@@ -442,25 +442,25 @@ const OptimizeReplyPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
                 </Select>
               </Box>
               <Box flex={1}>
-                <Text color="gray.300" fontSize="sm" mb={2}>或自定义方向</Text>
-                <Input value={optimizeGoalCustom} onChange={e => { setOptimizeGoalCustom(e.target.value); setOptimizeGoal(''); }} placeholder="如：更俏皮、更温柔" bg="gray.700" border="none" color="white" />
+                <Text color="rgba(245,240,232,0.6)" fontSize="sm" mb={2}>或自定义方向</Text>
+                <Input value={optimizeGoalCustom} onChange={e => { setOptimizeGoalCustom(e.target.value); setOptimizeGoal(''); }} placeholder="如：更俏皮、更温柔" bg="warm.700" border="none" color="white" />
               </Box>
             </HStack>
-            <Button colorScheme="teal" onClick={handleOptimizeReply} isLoading={optimizeLoading} isDisabled={!optimizeInput.trim()} leftIcon={<Icon as={SparklesIcon} />}>
+            <Button colorScheme="gold" onClick={handleOptimizeReply} isLoading={optimizeLoading} isDisabled={!optimizeInput.trim()} leftIcon={<Icon as={SparklesIcon} />}>
               优化话术
             </Button>
             {optimizedReplies && (
               <VStack spacing={3} align="stretch" mt={2}>
-                <Text color="gray.400" fontSize="sm">原始：<Text as="span" color="gray.300">{optimizeInput}</Text></Text>
+                <Text color="rgba(245,240,232,0.4)" fontSize="sm">原始：<Text as="span" color="rgba(245,240,232,0.6)">{optimizeInput}</Text></Text>
                 {(optimizedReplies || []).map((opt, idx) => (
-                  <Box key={idx} bg="gray.700" p={4} borderRadius="md">
+                  <Box key={idx} bg="warm.700" p={4} borderRadius="md">
                     <Flex justify="space-between" align="center" mb={2}>
-                      <Badge colorScheme="teal">{opt.style}</Badge>
-                      <Button size="xs" variant="ghost" colorScheme="teal" onClick={() => copyToClipboard(opt.text)}>复制</Button>
+                      <Badge colorScheme="gold">{opt.style}</Badge>
+                      <Button size="xs" variant="ghost" colorScheme="gold" onClick={() => copyToClipboard(opt.text)}>复制</Button>
                     </Flex>
                     <Text color="white" mb={2}>{opt.text}</Text>
-                    <Text color="gray.500" fontSize="xs" mb={1}>{opt.point}</Text>
-                    {opt.stageAdvice && <Text color="gray.400" fontSize="xs" mb={1}>📍 {opt.stageAdvice}</Text>}
+                    <Text color="rgba(245,240,232,0.2)" fontSize="xs" mb={1}>{opt.point}</Text>
+                    {opt.stageAdvice && <Text color="rgba(245,240,232,0.4)" fontSize="xs" mb={1}>📍 {opt.stageAdvice}</Text>}
                     {opt.riskLevel && opt.riskLevel !== '低' && <Badge colorScheme={opt.riskLevel === '高' ? 'red' : 'orange'}>风险: {opt.riskLevel}</Badge>}
                   </Box>
                 ))}
@@ -513,7 +513,7 @@ const AnalysisReasoning = memo(({ reasoning, loading }) => {
       </Flex>
       {open && (
         <Box px={4} py={3} maxH="260px" overflowY="auto" borderBottom="1px solid" borderColor="whiteAlpha.200">
-          <Text fontSize="13px" color="gray.300" lineHeight="1.8" whiteSpace="pre-wrap">{filterReasoning(reasoning)}</Text>
+          <Text fontSize="13px" color="rgba(245,240,232,0.6)" lineHeight="1.8" whiteSpace="pre-wrap">{filterReasoning(reasoning)}</Text>
         </Box>
       )}
     </>
@@ -532,7 +532,7 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
         <Avatar
           size="sm"
           name="AI教练"
-          bg="teal.500"
+          bg="gold.500"
           color="white"
           mr={2}
           icon={<Icon as={SparklesIcon} />}
@@ -540,8 +540,8 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
       )}
       <Box
         maxW="75%"
-        bg={isUser ? 'teal.600' : 'gray.700'}
-        color={isUser ? 'white' : 'gray.100'}
+        bg={isUser ? 'gold.600' : 'warm.700'}
+        color={isUser ? 'white' : 'warm.50'}
         px={hasReasoning ? 0 : 4}
         py={hasReasoning ? 0 : 3}
         borderRadius="2xl"
@@ -571,13 +571,13 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
             </Flex>
             {reasoningOpen && (
               <Box px={4} py={3} maxH="260px" overflowY="auto" borderBottom="1px solid" borderColor="whiteAlpha.200">
-                <Text fontSize="13px" color="gray.300" lineHeight="1.8" whiteSpace="pre-wrap">{filterReasoning(reasoning)}</Text>
+                <Text fontSize="13px" color="rgba(245,240,232,0.6)" lineHeight="1.8" whiteSpace="pre-wrap">{filterReasoning(reasoning)}</Text>
               </Box>
             )}
             {/* 正式回复内容 */}
             <Box px={4} py={3}>
               {message.content ? (
-                <Box className="ai-coach-markdown" fontSize="14px" lineHeight="1.8" color="gray.100">
+                <Box className="ai-coach-markdown" fontSize="14px" lineHeight="1.8" color="warm.50">
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
@@ -585,11 +585,11 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
                       h2: ({ children }) => <Text as="h2" color="white" fontWeight="bold" fontSize="md" mt={3} mb={1}>{children}</Text>,
                       h3: ({ children }) => <Text as="h3" color="white" fontWeight="bold" fontSize="md" mt={3} mb={1}>{children}</Text>,
                       p: ({ children }) => <Text mb={2}>{children}</Text>,
-                      strong: ({ children }) => <Text as="strong" color="teal.200" fontWeight="bold">{children}</Text>,
+                      strong: ({ children }) => <Text as="strong" color="gold.200" fontWeight="bold">{children}</Text>,
                       ul: ({ children }) => <Text as="ul" pl={4} mb={2}>{children}</Text>,
                       ol: ({ children }) => <Text as="ol" pl={4} mb={2}>{children}</Text>,
                       li: ({ children }) => <Text as="li" mb={1}>{children}</Text>,
-                      blockquote: ({ children }) => <Box borderLeft="3px solid" borderColor="whiteAlpha.400" pl={3} py={1} color="gray.300">{children}</Box>,
+                      blockquote: ({ children }) => <Box borderLeft="3px solid" borderColor="whiteAlpha.400" pl={3} py={1} color="rgba(245,240,232,0.6)">{children}</Box>,
                       hr: () => <Box borderTop="1px solid" borderColor="whiteAlpha.300" my={2} />,
                       code: ({ children }) => <Text as="code" bg="whiteAlpha.200" px={1} py={0.5} borderRadius="sm" fontSize="0.9em">{children}</Text>,
                     }}
@@ -601,12 +601,12 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
                 reasoningLoading && (
                   <HStack spacing={2}>
                     {[0, 150, 300].map((delay) => (
-                      <Box key={delay} w="8px" h="8px" bg="teal.400" borderRadius="full"
+                      <Box key={delay} w="8px" h="8px" bg="gold.400" borderRadius="full"
                         animation={`bounce 1.4s infinite ease-in-out ${delay}ms`}
                         sx={{ '@keyframes bounce': { '0%,80%,100%': { transform: 'scale(0)' }, '40%': { transform: 'scale(1)' } } }}
                       />
                     ))}
-                    <Text color="gray.400" fontSize="sm">思考中...</Text>
+                    <Text color="rgba(245,240,232,0.4)" fontSize="sm">思考中...</Text>
                   </HStack>
                 )
               )}
@@ -620,7 +620,7 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
             {isUser ? (
               <Text whiteSpace="pre-wrap">{message.content}</Text>
             ) : (
-              <Box className="ai-coach-markdown" fontSize="14px" lineHeight="1.8" color="gray.100">
+              <Box className="ai-coach-markdown" fontSize="14px" lineHeight="1.8" color="warm.50">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
@@ -628,11 +628,11 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
                     h2: ({ children }) => <Text as="h2" color="white" fontWeight="bold" fontSize="md" mt={3} mb={1}>{children}</Text>,
                     h3: ({ children }) => <Text as="h3" color="white" fontWeight="bold" fontSize="md" mt={3} mb={1}>{children}</Text>,
                     p: ({ children }) => <Text mb={2}>{children}</Text>,
-                    strong: ({ children }) => <Text as="strong" color="teal.200" fontWeight="bold">{children}</Text>,
+                    strong: ({ children }) => <Text as="strong" color="gold.200" fontWeight="bold">{children}</Text>,
                     ul: ({ children }) => <Text as="ul" pl={4} mb={2}>{children}</Text>,
                     ol: ({ children }) => <Text as="ol" pl={4} mb={2}>{children}</Text>,
                     li: ({ children }) => <Text as="li" mb={1}>{children}</Text>,
-                    blockquote: ({ children }) => <Box borderLeft="3px solid" borderColor="whiteAlpha.400" pl={3} py={1} color="gray.300">{children}</Box>,
+                    blockquote: ({ children }) => <Box borderLeft="3px solid" borderColor="whiteAlpha.400" pl={3} py={1} color="rgba(245,240,232,0.6)">{children}</Box>,
                     hr: () => <Box borderTop="1px solid" borderColor="whiteAlpha.300" my={2} />,
                     code: ({ children }) => <Text as="code" bg="whiteAlpha.200" px={1} py={0.5} borderRadius="sm" fontSize="0.9em">{children}</Text>,
                   }}
@@ -651,9 +651,9 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
               <Button
                 size="xs"
                 variant="ghost"
-                color="gray.400"
+                color="rgba(245,240,232,0.4)"
                 onClick={() => onCopy(message.content, message.id)}
-                _hover={{ color: 'teal.400' }}
+                _hover={{ color: 'gold.400' }}
               >
                 {copiedId === message.id ? '已复制' : '复制'}
               </Button>
@@ -662,10 +662,10 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
               <Button
                 size="xs"
                 variant="ghost"
-                color="gray.400"
+                color="rgba(245,240,232,0.4)"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => onRegenerate(message.content)}
-                _hover={{ color: 'teal.400' }}
+                _hover={{ color: 'gold.400' }}
               >
                 重新生成
               </Button>
@@ -674,7 +674,7 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
               <Button
                 size="xs"
                 variant="ghost"
-                color="gray.400"
+                color="rgba(245,240,232,0.4)"
                 onClick={() => onHelpful(message.id, true)}
                 _hover={{ color: 'green.400' }}
               >
@@ -685,7 +685,7 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
               <Button
                 size="xs"
                 variant="ghost"
-                color="gray.400"
+                color="rgba(245,240,232,0.4)"
                 onClick={() => onHelpful(message.id, false)}
                 _hover={{ color: 'red.400' }}
               >
@@ -693,7 +693,7 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
               </Button>
             </Tooltip>
             {helpfulId === message.id && (
-              <Text fontSize="xs" color="gray.500" align="center">感谢反馈</Text>
+              <Text fontSize="xs" color="rgba(245,240,232,0.2)" align="center">感谢反馈</Text>
             )}
           </Flex>
         )}
@@ -701,8 +701,8 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
         {/* 思考中动画 */}
         {isStreaming && message.role === 'assistant' && !message.content && (
           <HStack spacing={1} mt={2}>
-            <Spinner size="xs" color="teal.400" />
-            <Text fontSize="xs" color="gray.400">AI思考中...</Text>
+            <Spinner size="xs" color="gold.400" />
+            <Text fontSize="xs" color="rgba(245,240,232,0.4)">AI思考中...</Text>
           </HStack>
         )}
       </Box>
@@ -710,7 +710,7 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
         <Avatar
           size="sm"
           name="用户"
-          bg="gray.500"
+          bg="warm.600"
           color="white"
           ml={2}
         />
@@ -727,11 +727,11 @@ const CombatChatMessage = memo(({ msg, girlName }) => {
   return (
     <Flex justify={isGirl ? 'flex-start' : 'flex-end'} mb={3}>
       <Box maxW="85%">
-        <Text fontSize="11px" color="gray.400" mb={1} textAlign={isGirl ? 'left' : 'right'}>
+        <Text fontSize="11px" color="rgba(245,240,232,0.4)" mb={1} textAlign={isGirl ? 'left' : 'right'}>
           {isGirl ? (girlName || '女生') : '我'}
         </Text>
         <Box
-          bg={isGirl ? 'gray.700' : 'teal.700'}
+          bg={isGirl ? 'warm.700' : 'warm.700'}
           px={3} py={2}
           borderRadius="xl"
           borderBottomLeftRadius={isGirl ? 'sm' : undefined}
@@ -761,9 +761,9 @@ const SuggestionCard = memo(({ item, index, isSelected, isDismissed, onSelect })
   return (
     <Box
       onClick={() => !isSelected && !isDismissed && onSelect(index)}
-      bg={isSelected ? 'rgba(16,185,129,0.1)' : 'gray.700'}
+      bg={isSelected ? 'rgba(16,185,129,0.1)' : 'warm.700'}
       border="1px solid"
-      borderColor={isSelected ? 'green.500' : (isDismissed ? 'gray.600' : 'gray.600')}
+      borderColor={isSelected ? 'green.500' : 'rgba(245,240,232,0.08)'}
       borderRadius="lg"
       p={3}
       cursor={isSelected || isDismissed ? 'default' : 'pointer'}
@@ -771,7 +771,7 @@ const SuggestionCard = memo(({ item, index, isSelected, isDismissed, onSelect })
       transform={isDismissed ? 'scale(0.95)' : 'none'}
       transition="all 0.2s"
       position="relative"
-      _hover={!isSelected && !isDismissed ? { borderColor: 'teal.400', bg: 'whiteAlpha.50' } : {}}
+      _hover={!isSelected && !isDismissed ? { borderColor: 'gold.400', bg: 'whiteAlpha.50' } : {}}
     >
       {isSelected && (
         <Badge colorScheme="green" fontSize="10px" position="absolute" top={2} right={2}>
@@ -789,7 +789,7 @@ const SuggestionCard = memo(({ item, index, isSelected, isDismissed, onSelect })
         </Badge>
       )}
       <Text fontSize="13px" lineHeight="1.6">{text}</Text>
-      {subtext && <Text fontSize="11px" color="gray.400" mt={1}>{subtext}</Text>}
+      {subtext && <Text fontSize="11px" color="rgba(245,240,232,0.4)" mt={1}>{subtext}</Text>}
       {risk && <Text fontSize="11px" color="orange.300" mt={1}>⚠ {risk}</Text>}
     </Box>
   );
@@ -807,16 +807,16 @@ const SuggestionGroup = memo(({
 
   return (
     <Box
-      borderLeft="2px solid" borderColor="teal.500"
+      borderLeft="2px solid" borderColor="gold.500"
       pl={3} my={4}
     >
       {/* Header */}
       <Flex align="center" gap={2} mb={2}>
-        <Text fontSize="11px" color="gray.400" letterSpacing=".5px">
+        <Text fontSize="11px" color="rgba(245,240,232,0.4)" letterSpacing=".5px">
           {type === 'suggestions' ? `💡 回复建议 (${girlName || '女生'})` : '⚡ 话术优化'}
         </Text>
         <Flex gap={1} ml="auto">
-          <Button size="xs" variant="ghost" fontSize="10px" color="gray.400"
+          <Button size="xs" variant="ghost" fontSize="10px" color="rgba(245,240,232,0.4)"
             onClick={onRegenerate} isLoading={loading}
           >🔄 重新生成</Button>
           {mode === 'optimize' && onSendDirect && (
@@ -824,7 +824,7 @@ const SuggestionGroup = memo(({
               onClick={onSendDirect}
             >📤 直接发送原文</Button>
           )}
-          <Button size="xs" variant="ghost" fontSize="10px" color="gray.400"
+          <Button size="xs" variant="ghost" fontSize="10px" color="rgba(245,240,232,0.4)"
             onClick={onDismissAll}
           >✕ 全部删除</Button>
         </Flex>
@@ -835,7 +835,7 @@ const SuggestionGroup = memo(({
         <Flex justify="center" py={4}>
           <HStack spacing={2}>
             {[0, 150, 300].map((delay) => (
-              <Box key={delay} w="8px" h="8px" bg="teal.400" borderRadius="full"
+              <Box key={delay} w="8px" h="8px" bg="gold.400" borderRadius="full"
                 animation={`bounce 1.4s infinite ease-in-out ${delay}ms`}
                 sx={{ '@keyframes bounce': { '0%,80%,100%': { transform: 'scale(0)' }, '40%': { transform: 'scale(1)' } } }}
               />
@@ -856,7 +856,7 @@ const SuggestionGroup = memo(({
           ))}
         </VStack>
       ) : (
-        <Text fontSize="12px" color="gray.500" textAlign="center" py={3}>
+        <Text fontSize="12px" color="rgba(245,240,232,0.2)" textAlign="center" py={3}>
           AI 暂未生成建议，请重试
         </Text>
       )}
@@ -883,22 +883,22 @@ const CombatInputBar = memo(({ mode, onModeChange, value, onChange, onSubmit, lo
   useEffect(() => { autoResize(); }, [value, autoResize]);
 
   return (
-    <Box bg="gray.800" borderTop="1px solid" borderColor="gray.700" px={4} py={3} flexShrink={0}>
+    <Box bg="warm.800" borderTop="1px solid" borderColor="rgba(245,240,232,0.08)" px={4} py={3} flexShrink={0}>
       {/* Mode toggle */}
       <Flex gap={1} mb={2}>
         <Button
           size="xs"
           variant={mode === 'suggest' ? 'solid' : 'ghost'}
-          colorScheme={mode === 'suggest' ? 'blue' : undefined}
-          color={mode !== 'suggest' ? 'gray.400' : undefined}
+          colorScheme={mode === 'suggest' ? 'gold' : undefined}
+          color={mode !== 'suggest' ? 'rgba(245,240,232,0.4)' : undefined}
           onClick={() => onModeChange('suggest')}
           fontSize="12px"
         >💡 回复建议</Button>
         <Button
           size="xs"
           variant={mode === 'optimize' ? 'solid' : 'ghost'}
-          colorScheme={mode === 'optimize' ? 'orange' : undefined}
-          color={mode !== 'optimize' ? 'gray.400' : undefined}
+          colorScheme={mode === 'optimize' ? 'gold' : undefined}
+          color={mode !== 'optimize' ? 'rgba(245,240,232,0.4)' : undefined}
           onClick={() => onModeChange('optimize')}
           fontSize="12px"
         >⚡ 话术优化</Button>
@@ -912,7 +912,7 @@ const CombatInputBar = memo(({ mode, onModeChange, value, onChange, onSubmit, lo
           onChange={(e) => { onChange(e.target.value); autoResize(); }}
           onKeyDown={handleKeyDown}
           placeholder={mode === 'suggest' ? `粘贴${girlName || '女生'}说的消息...` : '粘贴你要优化的回复草稿...'}
-          bg="gray.700"
+          bg="warm.700"
           border="none"
           color="white"
           fontSize="13px"
@@ -922,11 +922,11 @@ const CombatInputBar = memo(({ mode, onModeChange, value, onChange, onSubmit, lo
           minH="40px"
           maxH="360px"
           isDisabled={loading}
-          _focus={{ outline: 'none', boxShadow: '0 0 0 2px #319795' }}
+          _focus={{ outline: 'none', boxShadow: '0 0 0 3px rgba(212,168,83,0.12)' }}
           sx={{ fontFamily: 'inherit' }}
         />
         <Button
-          colorScheme={mode === 'suggest' ? 'blue' : 'orange'}
+          colorScheme="gold"
           onClick={onSubmit}
           isLoading={loading}
           isDisabled={!value.trim()}
@@ -961,39 +961,39 @@ const GirlContextSidebar = memo(({ girl, analysisContent }) => {
   return (
     <Box w="320px" flexShrink={0} display={{ base: 'none', lg: 'flex' }} flexDirection="column" overflowY="auto" minH="0" px={3} py={2}>
       {/* 女生上下文 */}
-      <Card bg="gray.800" border="1px solid" borderColor="gray.700" mb={3}>
+      <Card bg="warm.800" border="1px solid" borderColor="rgba(245,240,232,0.08)" mb={3}>
         <CardHeader pb={0}>
           <Flex align="center" gap={2}>
-            <Box w="6px" h="6px" borderRadius="full" bg="teal.400" />
-            <Text fontSize="12px" fontWeight="bold" color="gray.300" letterSpacing=".5px">
+            <Box w="6px" h="6px" borderRadius="full" bg="gold.400" />
+            <Text fontSize="12px" fontWeight="bold" color="rgba(245,240,232,0.6)" letterSpacing=".5px">
               女生上下文
             </Text>
           </Flex>
         </CardHeader>
         <CardBody>
           <VStack spacing={1} align="stretch" fontSize="13px">
-            <Flex justify="space-between"><Text color="gray.400">姓名</Text><Text fontWeight="bold">{girl.name}</Text></Flex>
-            <Flex justify="space-between"><Text color="gray.400">年龄/职业</Text><Text>{[girl.age, girl.occupation].filter(Boolean).join('岁 · ') || '未知'}</Text></Flex>
-            <Flex justify="space-between"><Text color="gray.400">关系阶段</Text>
+            <Flex justify="space-between"><Text color="rgba(245,240,232,0.4)">姓名</Text><Text fontWeight="bold">{girl.name}</Text></Flex>
+            <Flex justify="space-between"><Text color="rgba(245,240,232,0.4)">年龄/职业</Text><Text>{[girl.age, girl.occupation].filter(Boolean).join('岁 · ') || '未知'}</Text></Flex>
+            <Flex justify="space-between"><Text color="rgba(245,240,232,0.4)">关系阶段</Text>
               <Badge colorScheme={stageColor}>{girl.stage || '未知'}</Badge>
             </Flex>
-            <Flex justify="space-between"><Text color="gray.400">热度</Text>
+            <Flex justify="space-between"><Text color="rgba(245,240,232,0.4)">热度</Text>
               <Text color={heatColor} fontWeight="bold">{(girl.tensionScore || 5).toFixed(1)} / 10</Text>
             </Flex>
-            <Flex justify="space-between"><Text color="gray.400">亲密度</Text><Text>{girl.intimacyLevel || 1} / 5</Text></Flex>
+            <Flex justify="space-between"><Text color="rgba(245,240,232,0.4)">亲密度</Text><Text>{girl.intimacyLevel || 1} / 5</Text></Flex>
             {(girl.mbti || (girl.personality && typeof girl.personality === 'object' && girl.personality.mbti)) && (
-              <Flex justify="space-between"><Text color="gray.400">MBTI</Text><Text>{girl.mbti || (girl.personality && girl.personality.mbti)}</Text></Flex>
+              <Flex justify="space-between"><Text color="rgba(245,240,232,0.4)">MBTI</Text><Text>{girl.mbti || (girl.personality && girl.personality.mbti)}</Text></Flex>
             )}
           </VStack>
         </CardBody>
       </Card>
 
       {/* 阶段策略 */}
-      <Card bg="gray.800" border="1px solid" borderColor="gray.700">
+      <Card bg="warm.800" border="1px solid" borderColor="rgba(245,240,232,0.08)">
         <CardHeader pb={0}>
           <Flex align="center" gap={2}>
             <Box w="6px" h="6px" borderRadius="full" bg="orange.400" />
-            <Text fontSize="12px" fontWeight="bold" color="gray.300" letterSpacing=".5px">
+            <Text fontSize="12px" fontWeight="bold" color="rgba(245,240,232,0.6)" letterSpacing=".5px">
               阶段策略 · {girl.stage || '未知'}
             </Text>
           </Flex>
@@ -1002,9 +1002,9 @@ const GirlContextSidebar = memo(({ girl, analysisContent }) => {
           <VStack spacing={2} align="stretch">
             {tips.map((t, i) => (
               <Flex key={i} align="flex-start" gap={2} fontSize="12px" pb={i < tips.length - 1 ? 2 : 0}
-                borderBottom={i < tips.length - 1 ? '1px solid' : 'none'} borderColor="gray.700">
+                borderBottom={i < tips.length - 1 ? '1px solid' : 'none'} borderColor="rgba(245,240,232,0.08)">
                 <Text>{t[0]}</Text>
-                <Text color="gray.300">{t[1]}</Text>
+                <Text color="rgba(245,240,232,0.6)">{t[1]}</Text>
               </Flex>
             ))}
           </VStack>
@@ -1034,7 +1034,7 @@ const CombatChatPanel = memo(({
   return (
     <Box flex="1" minH="0" overflowY="auto" p={4} ref={scrollRef}>
       {isEmpty ? (
-        <Flex direction="column" align="center" justify="center" py={16} color="gray.400">
+        <Flex direction="column" align="center" justify="center" py={16} color="rgba(245,240,232,0.4)">
           <Text fontSize="36px" mb={3}>💬</Text>
           <Text fontSize="14px">在下方粘贴女生的消息，点击发送</Text>
           <Text fontSize="12px" mt={1}>AI 会生成回复建议，选中后自动成为你的回复</Text>
@@ -1992,8 +1992,8 @@ export default function AICoach() {
   if (loadingHistory) {
     return (
       <Box p={8} textAlign="center">
-        <Spinner size="xl" color="teal.400" />
-        <Text color="gray.400" mt={4}>加载聊天历史...</Text>
+        <Spinner size="xl" color="gold.400" />
+        <Text color="rgba(245,240,232,0.4)" mt={4}>加载聊天历史...</Text>
       </Box>
     );
   }
@@ -2007,18 +2007,18 @@ export default function AICoach() {
     // AI教练 with girl — 聊天面板（内联 JSX，避免每次渲染重置 DOM）
     const girlCoachChatContent = (
       <>
-        <Box flex="1" minH="0" display="flex" flexDirection="column" bg="gray.800" borderRadius="md" mb={2} overflow="hidden">
+        <Box flex="1" minH="0" display="flex" flexDirection="column" bg="warm.800" borderRadius="md" mb={2} overflow="hidden">
           <Box id="chat-scroll-container" flex="1" overflowY="auto" p={4} ref={scrollContainerRef} overflowAnchor="none">
             {/* 空状态：无消息且无分析内容时显示引导 */}
             {messages.length === 0 && !girlAnalysisContent && !girlAnalysisLoading && (
               <VStack spacing={4} py={8} justify="center" minH="200px">
-                <Text color="gray.400" textAlign="center">
+                <Text color="rgba(245,240,232,0.4)" textAlign="center">
                   围绕{selectedGirl?.name || '女生'}的情况，向我提问
                 </Text>
                 <Wrap spacing={2} justify="center">
                   {QUICK_QUESTIONS.map((q, i) => (
                     <WrapItem key={i}>
-                      <Button size="sm" variant="outline" colorScheme="teal"
+                      <Button size="sm" variant="outline" colorScheme="gold"
                         onClick={() => handleSubmitInternal(q)} isDisabled={loading}>
                         {q}
                       </Button>
@@ -2053,22 +2053,22 @@ export default function AICoach() {
             {/* 女生分析 — 作为对话的一部分，在最底部，像正常消息一样流式输出 */}
             {girlAnalysisLoading && !girlAnalysisContent && (
               <Flex justify="flex-start" mb={4}>
-                <HStack bg="gray.700" px={4} py={3} borderRadius="2xl" spacing={2}>
+                <HStack bg="warm.700" px={4} py={3} borderRadius="2xl" spacing={2}>
                   {[0, 150, 300].map((delay) => (
-                    <Box key={delay} w="8px" h="8px" bg="teal.400" borderRadius="full"
+                    <Box key={delay} w="8px" h="8px" bg="gold.400" borderRadius="full"
                       animation={`bounce 1.4s infinite ease-in-out ${delay}ms`}
                       sx={{ '@keyframes bounce': { '0%,80%,100%': { transform: 'scale(0)' }, '40%': { transform: 'scale(1)' } } }}
                     />
                   ))}
-                  <Text color="gray.400" fontSize="sm">正在分析{selectedGirl?.name || '女生'}...</Text>
+                  <Text color="rgba(245,240,232,0.4)" fontSize="sm">正在分析{selectedGirl?.name || '女生'}...</Text>
                 </HStack>
               </Flex>
             )}
             {girlAnalysisContent && (
               <Flex justify="flex-start" mb={4}>
                 <HStack align="flex-start" spacing={3}>
-                  <Avatar size="sm" bg="teal.500" icon={<span>🤖</span>} />
-                  <Box bg="gray.700" borderRadius="2xl" borderTopLeftRadius="sm" maxW="90%" overflow="hidden">
+                  <Avatar size="sm" bg="gold.500" icon={<span>🤖</span>} />
+                  <Box bg="warm.700" borderRadius="2xl" borderTopLeftRadius="sm" maxW="90%" overflow="hidden">
                     {girlAnalysisReasoning && (
                       <AnalysisReasoning
                         reasoning={girlAnalysisReasoning}
@@ -2076,11 +2076,11 @@ export default function AICoach() {
                       />
                     )}
                     <Box px={4} py={3}>
-                      <Box fontSize="13px" lineHeight="1.7" color="gray.100">
+                      <Box fontSize="13px" lineHeight="1.7" color="warm.50">
                         <ReactMarkdown
                           remarkPlugins={[remarkGfm]}
                           components={{
-                            strong: ({ children }) => <Text as="strong" color="teal.300" fontWeight="bold">{children}</Text>,
+                            strong: ({ children }) => <Text as="strong" color="gold.300" fontWeight="bold">{children}</Text>,
                             p: ({ children }) => <Text mb={2}>{children}</Text>,
                             ul: ({ children }) => <Text as="ul" pl={4} mb={2}>{children}</Text>,
                             li: ({ children }) => <Text as="li" mb={1}>{children}</Text>,
@@ -2088,7 +2088,7 @@ export default function AICoach() {
                         >{fixMarkdown(girlAnalysisContent)}</ReactMarkdown>
                       </Box>
                       {girlAnalysisLoading && (
-                        <Box as="span" display="inline-block" w="2px" h="16px" bg="teal.400" ml="2px"
+                        <Box as="span" display="inline-block" w="2px" h="16px" bg="gold.400" ml="2px"
                           animation="blink 1s infinite" verticalAlign="text-bottom"
                           sx={{ '@keyframes blink': { '0%,100%': { opacity: 1 }, '50%': { opacity: 0 } } }}
                         />
@@ -2127,7 +2127,7 @@ export default function AICoach() {
             <Select
               value={selectedGirlId}
               onChange={e => handleGirlChange(e.target.value)}
-              bg="gray.700" border="none" color="white" size="sm" maxW="180px" borderRadius="md"
+              bg="warm.700" border="none" color="white" size="sm" maxW="180px" borderRadius="md"
               placeholder="关联女生"
             >
               {(girls || []).map(g => (
@@ -2137,18 +2137,18 @@ export default function AICoach() {
             <Tooltip label={deepMode ? '深度分析：调用工具链，全面分析' : '快速分析：流式输出，快'}>
               <button type="button" onClick={handleDeepModeToggle}
                 style={{
-                  background: deepMode ? '#553c9a' : '#374151',
-                  border: deepMode ? '1px solid #805ad5' : '1px solid transparent',
+                  background: deepMode ? 'var(--warm-rose)' : 'var(--warm-matte)',
+                  border: deepMode ? '1px solid var(--warm-rose)' : '1px solid transparent',
                   borderRadius: '6px', padding: '6px 10px', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', gap: '6px',
-                  color: deepMode ? '#d6bcfa' : '#a0aec0', whiteSpace: 'nowrap'
+                  color: deepMode ? 'var(--w80)' : 'rgba(245,240,232,0.4)', whiteSpace: 'nowrap'
                 }}>
                 <span style={{ fontSize: '14px' }}><SparklesIcon /></span>
                 <span style={{ fontSize: '11px', fontWeight: 'bold' }}>{deepMode ? '深度' : '快速'}</span>
               </button>
             </Tooltip>
             {selectedGirl && (
-              <HStack bg="gray.700" px={2} py={1} borderRadius="md" spacing={2} flexShrink={0}>
+              <HStack bg="warm.700" px={2} py={1} borderRadius="md" spacing={2} flexShrink={0}>
                 <Badge colorScheme={STAGE_COLORS[selectedGirl.stage] || 'gray'} fontSize="xs">
                   {selectedGirl.stage || '未知'}
                 </Badge>
@@ -2165,15 +2165,15 @@ export default function AICoach() {
           {/* Left side */}
           <Box flex="1" minW="0" display="flex" flexDirection="column">
             <Tabs
-              variant="soft-rounded" colorScheme="teal"
+              variant="soft-rounded" colorScheme="gold"
               index={activeTabIndex} onChange={setActiveTabIndex}
               sx={{ display: 'flex', flexDirection: 'column', flex: 1, minH: 0, overflow: 'hidden' }}
             >
-              <TabList bg="gray.800" borderRadius="lg" p={1} flexShrink={0}>
-                <Tab color="gray.400" _selected={{ color: 'white', bg: 'teal.600' }} fontSize="sm">
+              <TabList bg="warm.800" borderRadius="lg" p={1} flexShrink={0}>
+                <Tab color="rgba(245,240,232,0.4)" _selected={{ color: 'white', bg: 'gold.600' }} fontSize="sm">
                   🤖 AI教练
                 </Tab>
-                <Tab color="gray.400" _selected={{ color: 'white', bg: 'teal.600' }} fontSize="sm">
+                <Tab color="rgba(245,240,232,0.4)" _selected={{ color: 'white', bg: 'gold.600' }} fontSize="sm">
                   💬 聊天实战
                 </Tab>
               </TabList>
@@ -2235,12 +2235,12 @@ export default function AICoach() {
         onNewSession={handleNewConversation}
       />
       {/* 固定高度的消息容器，flex布局 */}
-      <Box flex="1" minH="0" display="flex" flexDirection="column" bg="gray.800" borderRadius="md" mb={2} overflow="hidden">
+      <Box flex="1" minH="0" display="flex" flexDirection="column" bg="warm.800" borderRadius="md" mb={2} overflow="hidden">
         {/* 消息列表区域 - 可滚动 */}
         <Box id="chat-scroll-container" flex="1" overflowY="auto" p={4} ref={scrollContainerRef} overflowAnchor="none">
           {messages.length === 0 ? (
             <VStack spacing={4} py={8} justify="center" minH="200px">
-              <Text color="gray.400" textAlign="center">
+              <Text color="rgba(245,240,232,0.4)" textAlign="center">
                 描述你的情况，AI 教练为你分析
               </Text>
               <Wrap spacing={2} justify="center">
@@ -2249,7 +2249,7 @@ export default function AICoach() {
                     <Button
                       size="sm"
                       variant="outline"
-                      colorScheme="teal"
+                      colorScheme="gold"
                       onClick={() => handleSubmitInternal(q)}
                       isDisabled={loading}
                     >
@@ -2310,7 +2310,7 @@ export default function AICoach() {
           <Select
             value={selectedGirlId}
             onChange={e => handleGirlChange(e.target.value)}
-            bg="gray.700" border="none" color="white" size="sm" maxW="180px" borderRadius="md"
+            bg="warm.700" border="none" color="white" size="sm" maxW="180px" borderRadius="md"
             placeholder="关联女生"
           >
             {(girls || []).map(g => (
@@ -2320,18 +2320,18 @@ export default function AICoach() {
           <Tooltip label={deepMode ? '深度分析：调用工具链，全面分析' : '快速分析：流式输出，快'}>
             <button type="button" onClick={handleDeepModeToggle}
               style={{
-                background: deepMode ? '#553c9a' : '#374151',
-                border: deepMode ? '1px solid #805ad5' : '1px solid transparent',
+                background: deepMode ? 'var(--warm-rose)' : 'var(--warm-matte)',
+                border: deepMode ? '1px solid var(--warm-rose)' : '1px solid transparent',
                 borderRadius: '6px', padding: '6px 10px', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', gap: '6px',
-                color: deepMode ? '#d6bcfa' : '#a0aec0', whiteSpace: 'nowrap'
+                color: deepMode ? 'var(--w80)' : 'rgba(245,240,232,0.4)', whiteSpace: 'nowrap'
               }}>
               <span style={{ fontSize: '14px' }}><SparklesIcon /></span>
               <span style={{ fontSize: '11px', fontWeight: 'bold' }}>{deepMode ? '深度' : '快速'}</span>
             </button>
           </Tooltip>
           {selectedGirl && (
-            <HStack bg="gray.700" px={2} py={1} borderRadius="md" spacing={2} flexShrink={0}>
+            <HStack bg="warm.700" px={2} py={1} borderRadius="md" spacing={2} flexShrink={0}>
               <Badge colorScheme={STAGE_COLORS[selectedGirl.stage] || 'gray'} fontSize="xs">
                 {selectedGirl.stage || '未知'}
               </Badge>
@@ -2343,15 +2343,15 @@ export default function AICoach() {
         </HStack>
       </Flex>
 
-      <Tabs variant="soft-rounded" colorScheme="teal" sx={{ display: 'flex', flexDirection: 'column', flex: 1, minH: 0, overflow: 'hidden' }}>
-        <TabList bg="gray.800" borderRadius="lg" p={1} flexShrink={0}>
-          <Tab color="gray.400" _selected={{ color: 'white', bg: 'teal.600' }} fontSize="sm">
+      <Tabs variant="soft-rounded" colorScheme="gold" sx={{ display: 'flex', flexDirection: 'column', flex: 1, minH: 0, overflow: 'hidden' }}>
+        <TabList bg="warm.800" borderRadius="lg" p={1} flexShrink={0}>
+          <Tab color="rgba(245,240,232,0.4)" _selected={{ color: 'white', bg: 'gold.600' }} fontSize="sm">
             🤖 AI教练
           </Tab>
-          <Tab color="gray.400" _selected={{ color: 'white', bg: 'teal.600' }} fontSize="sm">
+          <Tab color="rgba(245,240,232,0.4)" _selected={{ color: 'white', bg: 'gold.600' }} fontSize="sm">
             💡 回复建议
           </Tab>
-          <Tab color="gray.400" _selected={{ color: 'white', bg: 'teal.600' }} fontSize="sm">
+          <Tab color="rgba(245,240,232,0.4)" _selected={{ color: 'white', bg: 'gold.600' }} fontSize="sm">
             ✨ 话术优化
           </Tab>
         </TabList>
