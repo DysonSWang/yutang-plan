@@ -452,19 +452,19 @@ export default function ClientChat() {
         >
           {msg.isFlashImage && !msg.burnedAt && !msg.flashBurnedByMe ? (
             <Box
-              w="120px"
-              h="90px"
-              bg="warm.800"
+              w="100px"
+              h="70px"
+              bg="rgba(0,0,0,0.6)"
               borderRadius="md"
               display="flex"
               flexDirection="column"
               alignItems="center"
               justifyContent="center"
               border="1px dashed"
-              borderColor="yellow.500"
+              borderColor="rgba(255,200,0,0.5)"
             >
-              <Text fontSize="xl">⚡</Text>
-              <Text fontSize="xs" color="yellow.300" mt={1}>闪图</Text>
+              <Text fontSize="lg">⚡</Text>
+              <Text fontSize="xs" color="rgba(255,200,0,0.9)" mt={0.5}>闪图</Text>
             </Box>
           ) : (
             <Image src={getMediaUrl(msg)} alt="图片消息" borderRadius="md" maxH="200px" objectFit="cover" loading="lazy" />
@@ -477,21 +477,21 @@ export default function ClientChat() {
       if (msg.isFlashImage && !msg.burnedAt && !msg.flashBurnedByMe) {
         return (
           <Box
-            w="120px"
-            h="90px"
-            bg="rgba(255,255,255,0.05)"
+            w="100px"
+            h="70px"
+            bg="rgba(0,0,0,0.6)"
             borderRadius="md"
             display="flex"
             flexDirection="column"
             alignItems="center"
             justifyContent="center"
             border="1px dashed"
-            borderColor="yellow.500"
+            borderColor="rgba(255,200,0,0.5)"
             cursor="pointer"
             onClick={() => openFlashViewer({ imageUrl: videoUrl, messageId: msg.id, senderRole: msg.senderRole, isFlashMode: true, mediaType: 'video' })}
           >
-            <Text fontSize="xl">⚡</Text>
-            <Text fontSize="xs" color="yellow.300" mt={1}>闪图</Text>
+            <Text fontSize="lg">⚡</Text>
+            <Text fontSize="xs" color="rgba(255,200,0,0.9)" mt={0.5}>闪图</Text>
           </Box>
         );
       }
