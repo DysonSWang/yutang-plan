@@ -1,10 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --gold: #d4a853;
-  --gold-hover: #e3c06b;
-  --gold-pale: rgba(212,168,83,0.12);
-  --gold-glow: rgba(212,168,83,0.22);
+  --gold: #e2b044;
+  --gold-hover: #f0c030;
+  --gold-pale: rgba(226,176,68,0.12);
+  --gold-glow: rgba(226,176,68,0.22);
+  --gold-metallic: linear-gradient(135deg, #f0c030 0%, #e2b044 40%, #c99a30 100%);
   --rose: #c17f59;
   --rose-pale: rgba(193,127,89,0.10);
   --warm-black: #111110;
@@ -39,7 +40,7 @@ body::before {
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(ellipse 70% 50% at 25% 0%, rgba(212,168,83,0.04) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 50% at 25% 0%, rgba(226,176,68,0.04) 0%, transparent 55%),
     radial-gradient(ellipse 55% 45% at 75% 90%, rgba(193,127,89,0.03) 0%, transparent 50%);
   pointer-events: none;
   z-index: 0;
@@ -50,7 +51,7 @@ body::after {
   position: fixed;
   width: 300px;
   height: 300px;
-  background: radial-gradient(circle, rgba(212,168,83,0.03) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(226,176,68,0.03) 0%, transparent 70%);
   border-radius: 50%;
   top: 20%;
   right: 10%;
@@ -113,8 +114,8 @@ body::after {
 
 /* Glow pulse for active elements */
 @keyframes glowPulse {
-  0%, 100% { box-shadow: 0 0 15px rgba(212, 168, 83, 0.25); }
-  50% { box-shadow: 0 0 25px rgba(212, 168, 83, 0.45); }
+  0%, 100% { box-shadow: 0 0 15px rgba(226, 176, 68, 0.25); }
+  50% { box-shadow: 0 0 25px rgba(226, 176, 68, 0.45); }
 }
 
 .glow-pulse {
@@ -150,7 +151,7 @@ body::after {
   color: var(--w80) !important;
 }
 .react-datepicker__day:hover {
-  background-color: rgba(212,168,83,0.2) !important;
+  background-color: rgba(226,176,68,0.2) !important;
 }
 .react-datepicker__day--selected,
 .react-datepicker__day--keyboard-selected {
@@ -169,7 +170,7 @@ body::after {
   color: var(--w80) !important;
 }
 .react-datepicker__time-list-item:hover {
-  background-color: rgba(212,168,83,0.2) !important;
+  background-color: rgba(226,176,68,0.2) !important;
 }
 .react-datepicker__time-list-item--selected {
   background-color: var(--gold) !important;

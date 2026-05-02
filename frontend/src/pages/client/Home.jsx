@@ -128,7 +128,7 @@ export default function ClientHome() {
             border="1px solid rgba(255,255,255,0.08)"
             backdropFilter="blur(12px)"
             cursor="pointer"
-            _hover={{ bg: 'rgba(212,168,83,0.06)', borderColor: 'rgba(212,168,83,0.2)', transform: 'translateY(-3px)' }}
+            _hover={{ bg: 'rgba(226,176,68,0.06)', borderColor: 'rgba(226,176,68,0.2)', transform: 'translateY(-3px)' }}
             transition="all 0.25s ease"
           >
             <CardBody>
@@ -143,7 +143,7 @@ export default function ClientHome() {
             border="1px solid rgba(255,255,255,0.08)"
             backdropFilter="blur(12px)"
             cursor="pointer"
-            _hover={{ bg: 'rgba(212,168,83,0.06)', borderColor: 'rgba(212,168,83,0.2)', transform: 'translateY(-3px)' }}
+            _hover={{ bg: 'rgba(226,176,68,0.06)', borderColor: 'rgba(226,176,68,0.2)', transform: 'translateY(-3px)' }}
             transition="all 0.25s ease"
           >
             <CardBody>
@@ -158,7 +158,7 @@ export default function ClientHome() {
             border="1px solid rgba(255,255,255,0.08)"
             backdropFilter="blur(12px)"
             cursor="pointer"
-            _hover={{ bg: 'rgba(212,168,83,0.06)', borderColor: 'rgba(212,168,83,0.2)', transform: 'translateY(-3px)' }}
+            _hover={{ bg: 'rgba(226,176,68,0.06)', borderColor: 'rgba(226,176,68,0.2)', transform: 'translateY(-3px)' }}
             transition="all 0.25s ease"
           >
             <CardBody>
@@ -173,7 +173,7 @@ export default function ClientHome() {
             border="1px solid rgba(255,255,255,0.08)"
             backdropFilter="blur(12px)"
             cursor="pointer"
-            _hover={{ bg: 'rgba(212,168,83,0.06)', borderColor: 'rgba(212,168,83,0.2)', transform: 'translateY(-3px)' }}
+            _hover={{ bg: 'rgba(226,176,68,0.06)', borderColor: 'rgba(226,176,68,0.2)', transform: 'translateY(-3px)' }}
             transition="all 0.25s ease"
           >
             <CardBody>
@@ -189,7 +189,7 @@ export default function ClientHome() {
             backdropFilter="blur(12px)"
             cursor="pointer"
             onClick={() => navigate('/dates')}
-            _hover={{ bg: 'rgba(212,168,83,0.06)', borderColor: 'rgba(212,168,83,0.2)', transform: 'translateY(-3px)' }}
+            _hover={{ bg: 'rgba(226,176,68,0.06)', borderColor: 'rgba(226,176,68,0.2)', transform: 'translateY(-3px)' }}
             transition="all 0.25s ease"
           >
             <CardBody>
@@ -205,7 +205,7 @@ export default function ClientHome() {
             backdropFilter="blur(12px)"
             cursor="pointer"
             onClick={() => navigate('/dates#calendar')}
-            _hover={{ bg: 'rgba(212,168,83,0.06)', borderColor: 'rgba(212,168,83,0.2)', transform: 'translateY(-3px)' }}
+            _hover={{ bg: 'rgba(226,176,68,0.06)', borderColor: 'rgba(226,176,68,0.2)', transform: 'translateY(-3px)' }}
             transition="all 0.25s ease"
           >
             <CardBody>

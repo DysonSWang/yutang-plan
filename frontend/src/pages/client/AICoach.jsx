@@ -922,7 +922,7 @@ const CombatInputBar = memo(({ mode, onModeChange, value, onChange, onSubmit, lo
           minH="40px"
           maxH="360px"
           isDisabled={loading}
-          _focus={{ outline: 'none', boxShadow: '0 0 0 3px rgba(212,168,83,0.12)' }}
+          _focus={{ outline: 'none', boxShadow: '0 0 0 3px rgba(226,176,68,0.12)' }}
           sx={{ fontFamily: 'inherit' }}
         />
         <Button

@@ -5,14 +5,12 @@ import {
   SimpleGrid, Flex, Divider, Tag, Wrap, WrapItem, useToast, Textarea, FormControl,
   FormLabel, Icon, Alert, AlertIcon, AlertDescription, Spinner, Progress, Tabs, TabList, TabPanels, Tab, TabPanel, Input, Select, Center, Avatar, Link, Table
 } from '@chakra-ui/react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import { zhCN } from 'date-fns/locale/zh-CN';
 import 'react-datepicker/dist/react-datepicker.css';
-import { CalendarIcon, SparklesIcon, QuestionIcon, CopyIcon, MapPinIcon, ClockIcon, FireIcon } from '../../components/Icons';
+import { CalendarIcon, SparklesIcon, QuestionIcon, MapPinIcon, ClockIcon } from '../../components/Icons';
 import ClientCalendar from '../../components/ClientCalendar';
-import { dates, membership as membershipApi, clients, getMediaUrl } from '../../utils/api';
+import { dates, clients, getMediaUrl } from '../../utils/api';
 import { captureError } from '../../utils/frontendErrorCapture';
 
 function formatLocalDateTime(date) {
@@ -102,23 +100,16 @@ const STATUS_LABELS = {
 export default function ClientDates() {
   const [datesList, setDatesList] = useState([]);
   const [allDates, setAllDates] = useState([]);
-  const [aiPlans, setAiPlans] = useState([]);
   const [clientId, setClientId] = useState(null);
   const [girlList, setGirlList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const [feedbackText, setFeedbackText] = useState('');
-  const [feedbackReason, setFeedbackReason] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [confirming, setConfirming] = useState(false);
   const [pendingInterviews, setPendingInterviews] = useState([]);
   const [interviewModal, setInterviewModal] = useState(null);
   const [interviewOpen, setInterviewOpen] = useState(false);
   const [interviewAnswers, setInterviewAnswers] = useState({});
   const [interviewSubmitting, setInterviewSubmitting] = useState(false);
-  const [selectedAiPlan, setSelectedAiPlan] = useState(null);
-  const [generating, setGenerating] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [addStep, setAddStep] = useState(1); // 1=选择女生 2=填写信息
   const [selectedGirlForDate, setSelectedGirlForDate] = useState(null);
@@ -127,10 +118,8 @@ export default function ClientDates() {
     scene: '', budget: '', duration: '半天', transportMode: '地铁/打车',
     relationshipStage: '初次见面', specialRequirements: ''
   });
-  const [showAiFields, setShowAiFields] = useState(false);
   const [saving, setSaving] = useState(false);
   const [filterGirlId, setFilterGirlId] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
   const toast = useToast();
   // 加载记忆的偏好设置
   useEffect(() => {
@@ -176,13 +165,19 @@ export default function ClientDates() {
     .filter(d => d.dateTime && d.status !== 'completed' && d.status !== 'cancelled')
     .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))[0] || null;
 
-  // 过滤后的列表
+  // 过滤后的列表，按时间从近到远排序
   const filteredDates = useMemo(() => {
-    return datesList.filter(d => {
-      if (filterGirlId && d.girlId !== filterGirlId) return false;
-      if (filterStatus && d.status !== filterStatus) return false;
-      return true;
-    });
+    return datesList
+      .filter(d => {
+        if (filterGirlId && d.girlId !== filterGirlId) return false;
+        if (filterStatus && d.status !== filterStatus) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        if (!a.dateTime) return 1;
+        if (!b.dateTime) return -1;
+        return new Date(a.dateTime) - new Date(b.dateTime);
+      });
   }, [datesList, filterGirlId, filterStatus]);
 
   const filteredAiPlans = useMemo(() => {
@@ -843,21 +838,9 @@ export default function ClientDates() {
               </Box>
             )}
 
-            {/* 统计栏 — 客户视角：我的进度、待办、活跃度 */}
-            {!loading && (allDates.length > 0 || aiPlans.length > 0 || pendingInterviews.length > 0) && (
-              <SimpleGrid columns={{ base: 2, md: 5 }} spacing={3} mb={6}>
-                <Card bg="gray.800" border="1px solid" borderColor="yellow.600">
-                  <CardBody py={4} px={4}>
-                    <Flex align="center" gap={3}>
-                      <Box w="40px" h="40px" borderRadius="10px" bg="rgba(234,179,8,0.2)" display="flex" alignItems="center" justifyContent="center" fontSize="20px">⏳</Box>
-                      <Box>
-                        <Text fontSize="2xl" fontWeight="bold" color="yellow.400">{stats.pending}</Text>
-                        <Text fontSize="xs" color="gray.400">待确认</Text>
-                        <Text fontSize="10px" color="gray.600">需你确认</Text>
-                      </Box>
-                    </Flex>
-                  </CardBody>
-                </Card>
+            {/* 统计栏 */}
+            {!loading && (allDates.length > 0 || pendingInterviews.length > 0) && (
+              <SimpleGrid columns={{ base: 2, md: 4 }} spacing={3} mb={6}>
                 <Card bg="gray.800" border="1px solid" borderColor="orange.600">
                   <CardBody py={4} px={4}>
                     <Flex align="center" gap={3}>
@@ -974,38 +957,18 @@ export default function ClientDates() {
             {/* 约会列表 */}
             {loading ? (
               <Flex justify="center" py={12}><Spinner /></Flex>
-            ) : filteredDates.length === 0 && filteredAiPlans.length === 0 && pendingInterviews.length === 0 ? (
+            ) : filteredDates.length === 0 && pendingInterviews.length === 0 ? (
               <Card bg="gray.800">
                 <CardBody>
                   <Flex direction="column" align="center" py={12} gap={3}>
                     <Icon as={CalendarIcon} color="gray.500" boxSize={12} />
-                    <Text color="gray.400">暂无约会方案</Text>
+                    <Text color="gray.400">暂无约会</Text>
                     <Text color="gray.500" fontSize="sm">点击右上角"添加约会"开始</Text>
                   </Flex>
                 </CardBody>
               </Card>
             ) : (
               <VStack spacing={4} align="stretch">
-                {/* 图例 */}
-                <HStack spacing={4} p={3} bg="rgba(255,255,255,0.02)" borderRadius="md" flexWrap="wrap">
-                  <HStack spacing={2}>
-                    <Box w="10px" h="10px" borderRadius="full" bg="gold.500"></Box>
-                    <Text fontSize="xs" color="gray.500">AI 策划</Text>
-                  </HStack>
-                  <HStack spacing={2}>
-                    <Box w="10px" h="10px" borderRadius="full" bg="purple.500"></Box>
-                    <Text fontSize="xs" color="gray.500">顾问策划</Text>
-                  </HStack>
-                  <HStack spacing={2}>
-                    <Box w="10px" h="10px" borderRadius="full" bg="yellow.500"></Box>
-                    <Text fontSize="xs" color="gray.500">待确认</Text>
-                  </HStack>
-                  <HStack spacing={2}>
-                    <Box w="10px" h="10px" borderRadius="full" bg="green.500"></Box>
-                    <Text fontSize="xs" color="gray.500">已确认</Text>
-                  </HStack>
-                </HStack>
-
                 {/* 过滤栏 */}
                 <Flex gap={3} wrap="wrap">
                   <Select
@@ -1022,88 +985,19 @@ export default function ClientDates() {
                       <option key={g.id} value={g.id}>{g.name}{g.stage ? ` · ${g.stage}` : ''}</option>
                     ))}
                   </Select>
-                  <Select
-                    placeholder="全部状态"
-                    w="150px"
-                    size="sm"
-                    bg="gray.800"
-                    color="white"
-                    borderColor="gray.600"
-                    value={filterStatus}
-                    onChange={e => setFilterStatus(e.target.value)}
-                  >
-                    <option value="pending_plan">待策划</option>
-                    <option value="planned">已策划</option>
-                    <option value="pending_client_confirm">待确认</option>
-                    <option value="confirmed">已确认</option>
-                    <option value="completed">已完成</option>
-                    <option value="cancelled">已取消</option>
-                  </Select>
-                  {(filterGirlId || filterStatus) && (
+                  {filterGirlId && (
                     <Button
                       size="sm"
                       variant="ghost"
                       color="gray.400"
-                      onClick={() => { setFilterGirlId(''); setFilterStatus(''); }}
+                      onClick={() => setFilterGirlId('')}
                     >
                       清除过滤
                     </Button>
                   )}
                 </Flex>
 
-                {/* AI 方案列表 - 新卡片设计 */}
-                {filteredAiPlans.map(plan => (
-                  <Card
-                    key={plan.id}
-                    bg="gray.800"
-                    border="1px solid"
-                    borderColor="gold.500"
-                    cursor="pointer"
-                    _hover={{ borderColor: 'gold.400', transform: 'translateY(-2px)' }}
-                    onClick={() => setSelectedAiPlan(plan)}
-                    transition="all 0.2s"
-                  >
-                    <CardBody py={4} px={5}>
-                      <Flex gap={4} align="flex-start">
-                        {/* 头像区域 */}
-                        <Avatar size="lg" name={plan.girl?.name} src={getAvatar(plan.girl)} />
-                        {/* 内容区域 */}
-                        <Box flex={1}>
-                          <Flex justify="space-between" align="flex-start" mb={2}>
-                            <Box>
-                              <HStack spacing={2} mb={1}>
-                                <Icon as={SparklesIcon} color="gold.400" />
-                                <Heading size="md" color="white">{plan.title || 'AI 约会方案'}</Heading>
-                              </HStack>
-                              {plan.scene && <Text color="gray.400" fontSize="sm">{plan.scene}</Text>}
-                              {plan.budget && <Text color="gray.500" fontSize="xs" mt={1}>预算：{plan.budget} · 时长：{plan.duration}</Text>}
-                            </Box>
-                            <Badge colorScheme={plan.planStatus === 'generated' ? 'green' : plan.planStatus === 'generating' ? 'blue' : 'gray'}>
-                              {plan.planStatus === 'generated' ? '已生成' : plan.planStatus === 'generating' ? '生成中' : '草稿'}
-                            </Badge>
-                          </Flex>
-                          {/* 进度条 */}
-                          <Box mt={3}>
-                            <Flex justify="space-between" mb={1}>
-                              <Text fontSize="xs" color="gray.500">
-                                {plan.planStatus === 'generated' ? '方案已生成' : '生成中...'}
-                              </Text>
-                              <Text fontSize="xs" color="gray.500">{plan.planStatus === 'generated' ? '100%' : '50%'}</Text>
-                            </Flex>
-                            <Progress
-                              value={plan.planStatus === 'generated' ? 100 : 50}
-                              size="xs"
-                              colorScheme="gold"
-                              borderRadius="full"
-                              bg="gray.700"
-                            />
-                          </Box>
-                        </Box>
-                      </Flex>
-                    </CardBody>
-                  </Card>
-                ))}
-                {/* 顾问方案列表 - 新卡片设计 */}
+                {/* 顾问方案列表 - 新卡片设计  (AI Plan cards removed for MVP) */}
                 {filteredDates.map(d => {
                   const plan = parseJSON(d.aiPlan);
                   const progress = getProgress(d);
@@ -1128,36 +1022,36 @@ export default function ClientDates() {
                           删除
                         </Button>
                         <Flex gap={4} align="flex-start">
-                          {/* 头像区域 */}
                           <Avatar size="lg" name={d.girl?.name} src={getAvatar(d.girl)} />
-                          {/* 内容区域 */}
                           <Box flex={1}>
                             <Flex justify="space-between" align="flex-start" mb={2}>
                               <Box>
                                 <HStack spacing={2} mb={1}>
                                   <Heading size="md" color="white">{d.girl?.name}</Heading>
-                                  <Badge colorScheme="purple">顾问</Badge>
                                 </HStack>
-                                <Text color="gray.300" fontSize="sm">{d.title || '约会方案'}</Text>
+                                <Text color="gray.300" fontSize="sm">{d.title || '约会'}</Text>
                               </Box>
                               <Badge
                                 colorScheme={
                                   d.status === 'completed' ? 'cyan' :
                                   d.status === 'confirmed' || d.status === 'planned' ? 'green' :
-                                  d.status === 'pending_client_confirm' ? 'yellow' : 'gray'
+                                  'yellow'
                                 }
                               >
                                 {d.status === 'completed' ? '已完成' :
                                  d.status === 'confirmed' ? '已确认' :
-                                 d.status === 'planned' ? '已策划' :
-                                 d.status === 'pending_client_confirm' ? '待确认' : '待策划'}
+                                 d.status === 'planned' ? '已策划' : '待策划'}
                               </Badge>
                             </Flex>
-                            {/* 元信息 */}
-                            <HStack spacing={4} color="gray.400" fontSize="xs" mb={3}>
+                            {/* 日期时间 */}
+                            <HStack spacing={4} color="gray.300" fontSize="sm" mb={3}>
                               <HStack spacing={1}>
                                 <ClockIcon />
-                                <Text>{formatDateRelative(d.dateTime)}</Text>
+                                <Text fontWeight="bold">
+                                  {d.dateTime
+                                    ? `${new Date(d.dateTime).getMonth() + 1}月${new Date(d.dateTime).getDate()}日 周${'日一二三四五六'[new Date(d.dateTime).getDay()]} ${new Date(d.dateTime).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`
+                                    : '-'}
+                                </Text>
                               </HStack>
                               {d.location && (
                                 <HStack spacing={1}>
@@ -1166,24 +1060,6 @@ export default function ClientDates() {
                                 </HStack>
                               )}
                             </HStack>
-                            {/* 进度条 */}
-                            <Box>
-                              <Flex justify="space-between" mb={1}>
-                                <Text fontSize="xs" color="gray.500">{progress.label}</Text>
-                                <Text fontSize="xs" color="gray.500">{progress.percent}%</Text>
-                              </Flex>
-                              <Progress
-                                value={progress.percent}
-                                size="xs"
-                                colorScheme={
-                                  d.status === 'completed' ? 'cyan' :
-                                  d.status === 'confirmed' || d.status === 'planned' ? 'green' :
-                                  'yellow'
-                                }
-                                borderRadius="full"
-                                bg="gray.700"
-                              />
-                            </Box>
                           </Box>
                         </Flex>
                       </CardBody>
@@ -1476,166 +1352,7 @@ export default function ClientDates() {
         </ModalContent>
       </Modal>
 
-      {/* AI 方案详情 — trapFocus=false 防止方案更新时 FocusLock 自动聚焦关闭按钮导致滚回顶部 */}
-      <Modal isOpen={!!selectedAiPlan} onClose={() => { setSelectedAiPlan(null); }} size="3xl" trapFocus={false}>
-        <ModalOverlay />
-        <ModalContent bg="gray.800" maxH="85vh" overflow="auto">
-          <ModalHeader color="white">
-            {selectedAiPlan?.title || 'AI 约会方案'}
-            <Badge ml={2} colorScheme="gold">AI</Badge>
-          </ModalHeader>
-          <ModalCloseButton />
-          <ModalBody pb={6}>
-            {/* 顶部生成状态提示 */}
-            {(reoptimizingAi || selectedAiPlan?.planStatus === 'generating') && (
-              <Box mb={4} p={4} bg="teal.900" border="1px solid" borderColor="teal.600" borderRadius="md">
-                <HStack spacing={3} justify="center">
-                  <Spinner size="sm" color="teal.300" />
-                  <Text color="teal.200" fontWeight="bold" fontSize="md">
-                    {reoptimizingAi ? 'AI 正在重新优化方案...' : 'AI 正在生成方案...'}
-                  </Text>
-                  <Progress size="xs" isIndeterminate colorScheme="teal" w="100px" borderRadius="full" />
-                </HStack>
-              </Box>
-            )}
-
-            {selectedAiPlan && (
-              <Box>
-                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} mb={4}>
-                  {selectedAiPlan.scene && (
-                    <Box bg="gray.750" p={3} borderRadius="md">
-                      <Text color="gray.400" fontSize="sm">约会场景</Text>
-                      <Text color="teal.300">{selectedAiPlan.scene}</Text>
-                    </Box>
-                  )}
-                  {selectedAiPlan.budget && (
-                    <Box bg="gray.750" p={3} borderRadius="md">
-                      <Text color="gray.400" fontSize="sm">预算</Text>
-                      <Text color="white">{selectedAiPlan.budget}</Text>
-                    </Box>
-                  )}
-                  {selectedAiPlan.duration && (
-                    <Box bg="gray.750" p={3} borderRadius="md">
-                      <Text color="gray.400" fontSize="sm">时长</Text>
-                      <Text color="white">{selectedAiPlan.duration}</Text>
-                    </Box>
-                  )}
-                  <Box bg="gray.750" p={3} borderRadius="md">
-                    <Text color="gray.400" fontSize="sm">状态</Text>
-                    <Badge colorScheme={selectedAiPlan.planStatus === 'generated' ? 'green' : selectedAiPlan.planStatus === 'generating' ? 'blue' : 'gray'}>
-                      {selectedAiPlan.planStatus === 'generated' ? '已生成' : selectedAiPlan.planStatus === 'generating' ? '生成中' : '草稿'}
-                    </Badge>
-                  </Box>
-                </SimpleGrid>
-
-                {selectedAiPlan.planStatus === 'generating' ? (
-                  <Center py={16}>
-                    <VStack spacing={4}>
-                      <Box position="relative">
-                        <Spinner size="xl" color="teal.400" thickness="3px" />
-                        <Box position="absolute" top="50%" left="50%" transform="translate(-50%, -50%)" fontSize="2xl">✨</Box>
-                      </Box>
-                      <Text color="teal.300" fontSize="lg" fontWeight="bold">大师团精心策划中</Text>
-                      <Text color="gray.400" fontSize="sm">正在为你生成专属约会方案，请稍候...</Text>
-                      <Progress size="sm" isIndeterminate colorScheme="teal" w="200px" borderRadius="full" />
-                    </VStack>
-                  </Center>
-                ) : selectedAiPlan.content ? (
-                  <Box
-                    className="markdown-content"
-                    p={6}
-                    bg="rgba(255,255,255,0.03)"
-                    border="1px solid rgba(255,255,255,0.08)"
-                    borderRadius="2xl"
-                    color="gray.200"
-                    fontSize="sm"
-                    lineHeight="1.9"
-                    position="relative"
-                    overflow="hidden"
-                    sx={{
-                      '& h1': { fontSize: '22px', fontWeight: 'bold', color: 'var(--gold)', mb: 4, mt: 6, pb: 2, borderBottom: '1px solid rgba(255,255,255,0.1)' },
-                      '& h2': { fontSize: '18px', fontWeight: 'bold', color: 'var(--rose)', mb: 3, mt: 5 },
-                      '& h3': { fontSize: '16px', fontWeight: 'bold', color: 'var(--w80)', mb: 2, mt: 4 },
-                      '& p': { mb: 4, color: 'var(--w80)', lineHeight: '1.8' },
-                      '& ul': { pl: 5, mb: 4, '& li': { mb: 2, color: 'var(--w60)' } },
-                      '& ol': { pl: 5, mb: 4, counterReset: 'item', '& li': { mb: 2, color: 'var(--w60)' } },
-                      '& li': { mb: 1 },
-                      '& strong': { fontWeight: 'bold', color: 'var(--gold)' },
-                      '& em': { fontStyle: 'italic', color: 'var(--w40)' },
-                      '& blockquote': { borderLeft: '3px solid var(--gold)', pl: 4, py: 2, my: 3, bg: 'rgba(212,168,83,0.08)', color: 'var(--w40)', fontStyle: 'italic', borderRadius: '0 8px 8px 0' },
-                      '& table': { width: '100%', my: 4, borderCollapse: 'collapse' },
-                      '& thead': { bg: 'rgba(212,168,83,0.15)' },
-                      '& th': { color: 'var(--gold)', fontWeight: 'bold', py: 2, px: 4, textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.1)' },
-                      '& td': { color: 'var(--w80)', py: 2, px: 4, borderBottom: '1px solid rgba(255,255,255,0.05)' },
-                      '& tr': { '&:hover': { bg: 'rgba(255,255,255,0.02)' } },
-                      '& code': { bg: 'rgba(193,127,89,0.12)', color: 'var(--rose)', px: 2, py: 0.5, borderRadius: '4px', fontSize: '13px', fontFamily: 'mono' },
-                      '& pre': { bg: 'var(--warm-matte)', p: 4, borderRadius: '8px', overflowX: 'auto', my: 4, border: '1px solid rgba(255,255,255,0.05)' },
-                      '& hr': { my: 6, borderColor: 'rgba(255,255,255,0.1)' },
-                      '& a': { color: 'var(--gold)', textDecoration: 'underline', '&:hover': { color: 'var(--gold-hover)' } },
-                    }}
-                  >
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        h1: ({ node, ...props }) => <Text as="h1" fontSize="22px" fontWeight="bold" color="var(--gold)" mb={4} mt={6} pb={2} borderBottom="1px solid rgba(255,255,255,0.1)" {...props} />,
-                        h2: ({ node, ...props }) => <Text as="h2" fontSize="18px" fontWeight="bold" color="var(--rose)" mb={3} mt={5} {...props} />,
-                        h3: ({ node, ...props }) => <Text as="h3" fontSize="16px" fontWeight="bold" color="var(--w80)" mb={2} mt={4} {...props} />,
-                        p: ({ node, ...props }) => <Text mb={4} color="var(--w80)" lineHeight="1.8" {...props} />,
-                        ul: ({ node, ...props }) => <Box as="ul" pl={5} mb={4} {...props} />,
-                        ol: ({ node, ...props }) => <Box as="ol" pl={5} mb={4} {...props} />,
-                        li: ({ node, ...props }) => <Text as="li" mb={2} color="var(--w60)" {...props} />,
-                        strong: ({ node, ...props }) => <Text as="strong" fontWeight="bold" color="var(--gold)" {...props} />,
-                        em: ({ node, ...props }) => <Text as="em" fontStyle="italic" color="var(--w40)" {...props} />,
-                        blockquote: ({ node, ...props }) => <Box as="blockquote" borderLeft="3px solid var(--gold)" pl={4} py={2} my={3} bg="rgba(212,168,83,0.08)" color="var(--w40)" fontStyle="italic" borderRadius="0 8px 8px 0" {...props} />,
-                        table: ({ node, ...props }) => <Box as="table" width="100%" my={4} borderCollapse="collapse" {...props} />,
-                        thead: ({ node, ...props }) => <Box as="thead" bg="rgba(212,168,83,0.15)" {...props} />,
-                        th: ({ node, ...props }) => <Text as="th" color="var(--gold)" fontWeight="bold" py={2} px={4} textAlign="left" borderBottom="1px solid rgba(255,255,255,0.1)" {...props} />,
-                        td: ({ node, ...props }) => <Text as="td" color="var(--w80)" py={2} px={4} borderBottom="1px solid rgba(255,255,255,0.05)" {...props} />,
-                        tr: ({ node, ...props }) => <Box as="tr" _hover={{ bg: 'rgba(255,255,255,0.02)' }} {...props} />,
-                        code: ({ node, inline, ...props }) => inline
-                          ? <Text as="code" bg="rgba(193,127,89,0.12)" color="var(--rose)" px={2} py={0.5} borderRadius="4px" fontSize="13px" fontFamily="monospace" {...props} />
-                          : <Box as="code" display="block" bg="var(--warm-matte)" p={4} borderRadius="8px" overflowX="auto" my={4} border="1px solid rgba(255,255,255,0.05)" fontFamily="monospace" fontSize="13px" color="var(--w80)" {...props} />,
-                        pre: ({ node, ...props }) => <Box as="pre" bg="var(--warm-matte)" p={4} borderRadius="8px" overflowX="auto" my={4} border="1px solid rgba(255,255,255,0.05)" fontSize="13px" color="var(--w80)" whiteSpace="pre-wrap" {...props} />,
-                        hr: ({ node, ...props }) => <Divider my={6} borderColor="rgba(255,255,255,0.1)" {...props} />,
-                        a: ({ node, ...props }) => <Link color="var(--gold)" textDecoration="underline" {...props} />,
-                      }}
-                    >
-                      {unwrapMarkdown(selectedAiPlan.content)}
-                    </ReactMarkdown>
-                  </Box>
-                ) : (
-                  <Text color="gray.400">暂无方案内容</Text>
-                )}
-
-                <HStack mt={6} justify="flex-end" spacing={3}>
-                  <Button
-                    leftIcon={<SparklesIcon />}
-                    colorScheme="teal"
-                    onClick={handleReoptimizeAiPlan}
-                  >
-                    AI 再次优化
-                  </Button>
-                  <Button
-                    leftIcon={<CopyIcon />}
-                    variant="outline"
-                    colorScheme="gold"
-                    onClick={() => {
-                      if (selectedAiPlan.content) {
-                        navigator.clipboard.writeText(unwrapMarkdown(selectedAiPlan.content));
-                        toast({ title: '已复制', status: 'success', duration: 2000 });
-                      }
-                    }}
-                  >
-                    复制方案
-                  </Button>
-                </HStack>
-              </Box>
-            )}
-          </ModalBody>
-        </ModalContent>
-      </Modal>
-
-            {/* 添加约会 Modal - 双步统一流程 */}
+      {/* 添加约会 Modal - 双步统一流程 */}
       <Modal isOpen={showAddModal} onClose={() => { setShowAddModal(false); resetDateForm(); }} size="lg">
         <ModalOverlay />
         <ModalContent bg="gray.800" maxH="85vh" overflow="auto">

@@ -31,7 +31,7 @@ const EVENT_STATUS_CONFIG = {
 const TYPE_CONFIG = {
   date: { label: '约会', defaultColor: '#4ade80' },
   action: { label: '行动项', defaultColor: '#f59e0b' },
-  manual: { label: '手动', defaultColor: '#d4a853' }
+  manual: { label: '手动', defaultColor: '#e2b044' }
 };
 
 function toLocalDatetimeString(date) {
@@ -147,8 +147,8 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
 
   const getStatusBg = (color) => {
     const map = {
-      orange: '#f59e0b', teal: '#d4a853', purple: '#c17f59',
-      green: '#4ade80', cyan: '#d4a853', gray: 'rgba(245,240,232,0.4)', blue: '#d4a853', red: '#ef4444'
+      orange: '#f59e0b', teal: '#e2b044', purple: '#c17f59',
+      green: '#4ade80', cyan: '#e2b044', gray: 'rgba(245,240,232,0.4)', blue: '#e2b044', red: '#ef4444'
     };
     return map[color] || 'rgba(245,240,232,0.4)';
   };
@@ -418,7 +418,7 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
           '.fc .fc-button-primary:hover': { backgroundColor: 'teal.500 !important' },
           '.fc .fc-col-header-cell-cushion': { color: 'gray.400', fontSize: 'xs' },
           '.fc .fc-daygrid-day-number': { color: 'gray.300', fontSize: 'xs' },
-          '.fc .fc-daygrid-day.fc-day-today': { backgroundColor: 'rgba(212,168,83,0.1) !important' },
+          '.fc .fc-daygrid-day.fc-day-today': { backgroundColor: 'rgba(226,176,68,0.1) !important' },
           '.fc .fc-daygrid-event': { fontSize: '11px', borderRadius: '3px', padding: '1px 3px' },
           '.fc .fc-timegrid-event': { fontSize: '11px', borderRadius: '3px' },
           '.fc .fc-event-dot': { display: 'none' },

@@ -95,7 +95,7 @@ export default function Login() {
         width="400px"
         height="400px"
         borderRadius="full"
-        bg="radial-gradient(circle, rgba(212,168,83,0.1) 0%, transparent 70%)"
+        bg="radial-gradient(circle, rgba(226,176,68,0.1) 0%, transparent 70%)"
         filter="blur(100px)"
         animation="float1 8s ease-in-out infinite"
         pointerEvents="none"
@@ -153,7 +153,7 @@ export default function Login() {
             display="flex"
             alignItems="center"
             justifyContent="center"
-            boxShadow="0 8px 32px rgba(212, 168, 83, 0.25)"
+            boxShadow="0 8px 32px rgba(226, 176, 68, 0.25)"
           >
             <Text fontSize="2xl">💕</Text>
           </Box>
@@ -281,7 +281,7 @@ export default function Login() {
                     border="1px solid rgba(255,255,255,0.08)"
                     borderRadius="12px"
                     _hover={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)' }}
-                    _focus={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'gold.500', boxShadow: '0 0 0 3px rgba(212,168,83,0.12)' }}
+                    _focus={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'gold.500', boxShadow: '0 0 0 3px rgba(226,176,68,0.12)' }}
                     _placeholder={{ color: 'rgba(245,240,232,0.15)' }}
                   />
                 </FormControl>
@@ -298,7 +298,7 @@ export default function Login() {
                     border="1px solid rgba(255,255,255,0.08)"
                     borderRadius="12px"
                     _hover={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)' }}
-                    _focus={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'gold.500', boxShadow: '0 0 0 3px rgba(212,168,83,0.12)' }}
+                    _focus={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'gold.500', boxShadow: '0 0 0 3px rgba(226,176,68,0.12)' }}
                     _placeholder={{ color: 'rgba(245,240,232,0.15)' }}
                   />
                 </FormControl>
@@ -322,7 +322,7 @@ export default function Login() {
                   fontWeight="500"
                   borderRadius="12px"
                   isLoading={loading}
-                  _hover={{ transform: 'translateY(-2px)', boxShadow: '0 8px 24px rgba(212,168,83,0.3)' }}
+                  _hover={{ transform: 'translateY(-2px)', boxShadow: '0 8px 24px rgba(226,176,68,0.3)' }}
                   _active={{ transform: 'translateY(0)' }}
                   transition="all 0.3s ease"
                 >

@@ -99,7 +99,7 @@ function DesktopSidebar({ chatUnread, unreadCount, notifications, showNotificati
             <Flex
               p={3}
               borderRadius="md"
-              bg={location.pathname === item.path ? 'rgba(212,168,83,0.12)' : 'transparent'}
+              bg={location.pathname === item.path ? 'rgba(226,176,68,0.12)' : 'transparent'}
               color={location.pathname === item.path ? 'gold.400' : 'rgba(245,240,232,0.6)'}
               _hover={{ bg: 'rgba(255,255,255,0.06)', color: 'white' }}
               align="center"

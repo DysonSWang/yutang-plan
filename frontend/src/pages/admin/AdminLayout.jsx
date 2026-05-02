@@ -46,7 +46,7 @@ function DesktopSidebar() {
             bg="linear-gradient(135deg, var(--gold), var(--rose))"
             p={2}
             borderRadius="xl"
-            boxShadow="0 4px 20px rgba(212, 168, 83, 0.2)"
+            boxShadow="0 4px 20px rgba(226, 176, 68, 0.2)"
           >
             <Icon as={FishIcon} color="white" boxSize={6} />
           </Box>
