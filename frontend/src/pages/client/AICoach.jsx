@@ -2043,10 +2043,10 @@ export default function AICoach() {
   }
 
   const hasGirl = !!(selectedGirlId && selectedGirl);
+  const currentCombatHistory = combatHistories[combatHistoryKey] || [];
 
   // ====== State 2: 选中女生 — 双 Tab 布局 ======
   if (hasGirl) {
-    const currentCombatHistory = combatHistories[combatHistoryKey] || [];
 
     // AI教练 with girl — 聊天面板（内联 JSX，避免每次渲染重置 DOM）
     const girlCoachChatContent = (
