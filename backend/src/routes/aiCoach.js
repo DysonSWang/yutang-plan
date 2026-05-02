@@ -1259,6 +1259,70 @@ ${goal ? `用户指定了优化方向「${goal}」，请按该方向优化。` :
   }
 });
 
+// ========== 聊天实战历史持久化 ==========
+
+/**
+ * GET /api/ai-coach/combat-history/:girlId
+ * 获取指定女生的聊天实战历史
+ */
+router.get('/combat-history/:girlId', authMiddleware, async (req, res) => {
+  try {
+    const { girlId } = req.params;
+    const userId = req.user.id;
+
+    const messages = await prisma.girlCombatMessage.findMany({
+      where: { girlId, userId },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, role: true, content: true, createdAt: true }
+    });
+
+    res.json({
+      success: true,
+      messages: messages.map(m => ({
+        id: m.id,
+        role: m.role,
+        content: m.content,
+        timestamp: m.createdAt
+      }))
+    });
+  } catch (error) {
+    logger.error(`[AICoach] 获取聊天实战历史失败: ${error.message}`);
+    res.status(500).json({ error: '获取历史失败' });
+  }
+});
+
+/**
+ * POST /api/ai-coach/combat-history/:girlId
+ * 批量追加聊天实战消息（因为一次交互会同时产生 girl + user 两条）
+ */
+router.post('/combat-history/:girlId', authMiddleware, async (req, res) => {
+  try {
+    const { girlId } = req.params;
+    const userId = req.user.id;
+    const { messages } = req.body; // [{ role, content }]
+
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return res.status(400).json({ error: '消息数组不能为空' });
+    }
+
+    const created = await Promise.all(
+      messages.map(msg =>
+        prisma.girlCombatMessage.create({
+          data: { girlId, userId, role: msg.role, content: msg.content }
+        })
+      )
+    );
+
+    res.json({
+      success: true,
+      messages: created.map(m => ({ id: m.id, role: m.role, content: m.content, timestamp: m.createdAt }))
+    });
+  } catch (error) {
+    logger.error(`[AICoach] 保存聊天实战历史失败: ${error.message}`);
+    res.status(500).json({ error: '保存失败' });
+  }
+});
+
 // ============================================================
 // 管理员监控 API（仅 admin）
 // ============================================================

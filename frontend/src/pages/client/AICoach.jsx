@@ -1276,6 +1276,40 @@ export default function AICoach() {
     }
   };
 
+  // 聊天实战 - 加载持久化历史
+  const loadCombatHistory = useCallback(async (girlId) => {
+    if (!girlId) return;
+    const token = localStorage.getItem('zhuiai_token');
+    try {
+      const res = await fetch(`${apiUrl}/api/ai-coach/combat-history/${girlId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.messages) {
+          setCombatHistories(prev => ({
+            ...prev,
+            [girlId]: data.messages.map(m => ({
+              id: m.id, role: m.role, content: m.content, timestamp: m.timestamp
+            }))
+          }));
+        }
+      }
+    } catch (e) {
+      console.warn('[AICoach] load combat history failed:', e.message);
+    }
+  }, [apiUrl]);
+
+  // 聊天实战 - 持久化消息到后端（静默，不阻塞 UI）
+  const persistCombatMessages = useCallback((girlId, msgs) => {
+    const token = localStorage.getItem('zhuiai_token');
+    fetch(`${apiUrl}/api/ai-coach/combat-history/${girlId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ messages: msgs.map(m => ({ role: m.role, content: m.content })) })
+    }).catch(e => console.warn('[AICoach] persist combat message failed:', e.message));
+  }, [apiUrl]);
+
   const handleGirlChange = (girlId) => {
     setSelectedGirlId(girlId);
     if (girlId) {
@@ -1286,6 +1320,7 @@ export default function AICoach() {
       setGirlAnalysisContent('');
       loadGirlAnalysis(girlId);
       loadHistory(girlId);
+      loadCombatHistory(girlId);
     } else {
       // 取消选择：清空后加载通用咨询历史（无 girlId）
       setMessages([]);
@@ -1661,6 +1696,7 @@ export default function AICoach() {
         ...prev,
         [selectedGirlId]: [...(prev[selectedGirlId] || []), herMsg]
       }));
+      persistCombatMessages(selectedGirlId, [herMsg]);
       setCombatSuggestions(null);
       setSelectedSuggestionIndex(null);
       setCombatLoading(true);
@@ -1725,7 +1761,10 @@ export default function AICoach() {
       ...prev,
       [selectedGirlId]: [...(prev[selectedGirlId] || []), myMsg]
     }));
-  }, [selectedSuggestionIndex, combatSuggestions, selectedGirlId]);
+    persistCombatMessages(selectedGirlId, [myMsg]);
+    // 选中后清除建议卡片
+    setCombatSuggestions(null);
+  }, [selectedSuggestionIndex, combatSuggestions, selectedGirlId, persistCombatMessages]);
 
   // 聊天实战 - 全部删除
   const handleDismissAllSuggestions = useCallback(() => {
@@ -1780,10 +1819,11 @@ export default function AICoach() {
       ...prev,
       [selectedGirlId]: [...(prev[selectedGirlId] || []), myMsg]
     }));
+    persistCombatMessages(selectedGirlId, [myMsg]);
     setCombatSuggestions(null);
     setSelectedSuggestionIndex(null);
     setLastDraftText('');
-  }, [lastDraftText, selectedGirlId]);
+  }, [lastDraftText, selectedGirlId, persistCombatMessages]);
 
   // 聊天实战 - 模式切换
   const handleCombatModeChange = useCallback((mode) => {

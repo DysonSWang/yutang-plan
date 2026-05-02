@@ -812,6 +812,19 @@ model GirlSummaryCache {
   @@map("girl_summary_caches")
 }
 
+// ========== 聊天实战消息持久化 ==========
+model GirlCombatMessage {
+  id        String   @id @default(uuid())
+  girlId    String
+  userId    String   // 操盘手 ID
+  role      String   // 'girl' | 'user'
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([girlId, userId])
+  @@map("girl_combat_messages")
+}
+
 // ========== 每周复盘报告（M007 S04新增）==========
 model WeeklyReview {
   id        String   @id @default(uuid())
