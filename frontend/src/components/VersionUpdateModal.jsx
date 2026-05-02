@@ -1,23 +1,39 @@
 import { Modal, ModalOverlay, ModalContent, ModalBody, ModalFooter, Button, Text, VStack, Flex, Progress, Box } from '@chakra-ui/react';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capawesome-team/capacitor-file-opener';
+import { Browser } from '@capacitor/browser';
 import { captureError } from '../utils/frontendErrorCapture';
+
+function isDirectApkUrl(url) {
+  return url && (url.endsWith('.apk') || url.includes('/download/') || url.includes('cdn-'));
+}
 
 export default function VersionUpdateModal({ isOpen, onClose, upgradeType, latestVersion, updateDescription, downloadUrl, onForceUpdate }) {
   const isForce = upgradeType === 'force';
   const [downloading, setDownloading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState(null);
+  const abortRef = useRef(null);
 
   const handleUpdate = async () => {
+    // 蒲公英等非直链 URL → 用系统浏览器打开
+    if (!isDirectApkUrl(downloadUrl)) {
+      await Browser.open({ url: downloadUrl });
+      if (!isForce) onClose();
+      return;
+    }
+
     setDownloading(true);
     setError(null);
     setProgress(0);
 
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     try {
-      // 1. fetch 下载 APK 为 blob
-      const response = await fetch(downloadUrl, { method: 'GET' });
+      // 1. fetch 下载 APK 为 stream
+      const response = await fetch(downloadUrl, { method: 'GET', signal: controller.signal });
       if (!response.ok) throw new Error(`下载失败 (${response.status})`);
 
       const contentLength = response.headers.get('content-length');
@@ -67,9 +83,22 @@ export default function VersionUpdateModal({ isOpen, onClose, upgradeType, lates
       setDownloading(false);
     } catch (err) {
       setDownloading(false);
+      if (err.name === 'AbortError') {
+        setError('下载已取消');
+        return;
+      }
       setError(err.message || '下载失败，请稍后重试');
       captureError(err, { context: 'apk_download_install' });
     }
+  };
+
+  const handleCancel = () => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+    }
+    setDownloading(false);
+    setError(null);
+    setProgress(0);
   };
 
   const handleLater = () => {
@@ -143,10 +172,11 @@ export default function VersionUpdateModal({ isOpen, onClose, upgradeType, lates
             {downloading && (
               <VStack w="100%" spacing={2}>
                 <Text color="rgba(245,240,232,0.5)" fontSize="xs">
-                  正在下载 {progress}%
+                  正在下载{progress > 0 ? ` ${progress}%` : '...'}
                 </Text>
                 <Progress
                   value={progress}
+                  isIndeterminate={progress === 0}
                   w="100%"
                   size="sm"
                   colorScheme="gold"
@@ -196,13 +226,15 @@ export default function VersionUpdateModal({ isOpen, onClose, upgradeType, lates
               color="warm.950"
               fontWeight="500"
               borderRadius="12px"
-              _hover={{ transform: 'translateY(-2px)', boxShadow: '0 4px 12px rgba(0,212,170,0.3)' }}
-              onClick={handleUpdate}
-              isLoading={downloading}
-              loadingText={downloading ? `下载中 ${progress}%` : ''}
-              disabled={downloading}
+              _hover={{ transform: 'translateY(-2px)', boxShadow: '0 4px 12px rgba(226,176,68,0.3)' }}
+              onClick={downloading ? handleCancel : handleUpdate}
+              isLoading={false}
             >
-              {isForce ? '立即下载并安装' : '直接下载 APK'}
+              {downloading
+                ? '取消下载'
+                : isDirectApkUrl(downloadUrl)
+                  ? '直接下载 APK'
+                  : '前往下载页面'}
             </Button>
 
             {!isForce && !downloading && (
