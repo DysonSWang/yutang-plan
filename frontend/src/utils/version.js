@@ -1,10 +1,12 @@
 /**
  * 版本检测工具
  */
+import { App } from '@capacitor/app';
 import { captureError } from './frontendErrorCapture';
 
-const VERSION = '1.0.10';  // 当前 App 版本，需与后端 VERSION_CONFIG.latestVersion 保持一致
-const BUILD = 14;
+// 降级版本号（浏览器环境用，实际 App 走 Capacitor 获取原生版本）
+const VERSION = '1.0.10';
+const BUILD = 17;
 
 export { VERSION, BUILD };
 
@@ -19,18 +21,29 @@ export async function checkVersion() {
     return null;
   }
 
+  // 从原生层获取实际 APK 版本（build.gradle versionName / versionCode）
+  let appVersion = VERSION;
+  let appBuild = BUILD;
+  try {
+    const info = await App.getInfo();
+    appVersion = info.version;
+    appBuild = info.build;
+  } catch {
+    // 降级使用硬编码值
+  }
+
   const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3005';
   let res;
   try {
-    res = await fetch(`${apiBase}/api/version/check?version=${VERSION}&build=${BUILD}`);
+    res = await fetch(`${apiBase}/api/version/check?version=${appVersion}&build=${appBuild}`);
   } catch (err) {
-    captureError(err, { context: 'version_check_fetch', version: VERSION, build: BUILD });
+    captureError(err, { context: 'version_check_fetch', version: appVersion, build: appBuild });
     throw err;
   }
 
   if (!res.ok) {
     const err = new Error(`Version check HTTP ${res.status}`);
-    captureError(err, { context: 'version_check_status', status: res.status, version: VERSION, build: BUILD });
+    captureError(err, { context: 'version_check_status', status: res.status, version: appVersion, build: appBuild });
     throw err;
   }
 
@@ -38,13 +51,13 @@ export async function checkVersion() {
   try {
     data = await res.json();
   } catch (err) {
-    captureError(err, { context: 'version_check_parse', version: VERSION, build: BUILD });
+    captureError(err, { context: 'version_check_parse', version: appVersion, build: appBuild });
     throw err;
   }
 
   if (data.code !== 0) {
     const err = new Error(`Version check API code ${data.code}`);
-    captureError(err, { context: 'version_check_api_code', apiCode: data.code, version: VERSION, build: BUILD });
+    captureError(err, { context: 'version_check_api_code', apiCode: data.code, version: appVersion, build: appBuild });
     throw err;
   }
 
