@@ -635,14 +635,41 @@ export default function GirlDetail() {
       {/* ---- 返回按钮 ---- */}
       <HStack mb={4}>
         <IconButton icon={<Icon as={FiArrowLeft} />} variant="ghost" color="gray.400" onClick={() => navigate('/my-pond')} aria-label="返回" size="sm" />
-        <Text color="gray.500" fontSize="sm">我的鱼塘</Text>
+        <Text color="gray.500" fontSize="sm">我的缘分</Text>
       </HStack>
 
       {/* ---- Hero 身份卡片 ---- */}
       <Box bg="gray.750" bgGradient="linear(to-b, gray.700, gray.750)" p={5} borderRadius="lg" mb={6}>
         <Flex direction={{ base: 'column', md: 'row' }} align={{ base: 'start', md: 'center' }} gap={4}>
           {/* 头像 + 身份 */}
-          <Avatar size="xl" name={girl.name} src={getMediaUrl(girl.avatar) || undefined} bg="teal.500" flexShrink={0} />
+          <Box position="relative" flexShrink={0}>
+            <Avatar size="xl" name={girl.name} src={getMediaUrl(girl.avatar) || undefined} bg="teal.500" />
+            <IconButton
+              aria-label="编辑头像"
+              icon={<Icon as={FiCamera} />}
+              size="xs"
+              colorScheme="teal"
+              position="absolute"
+              bottom={0}
+              right={0}
+              borderRadius="full"
+              onClick={() => setEditingAvatar(!editingAvatar)}
+            />
+            {editingAvatar && (
+              <Box position="absolute" top="100%" left={0} mt={2} p={3} bg="gray.700" borderRadius="md" border="1px solid" borderColor="gray.600" zIndex={10} w="240px">
+                <VStack spacing={2} align="stretch">
+                  <Input type="file" accept="image/*" onChange={handleAvatarFileChange} bg="gray.600" color="white" border="1px solid" borderColor="gray.500" p={1} size="sm"
+                    sx={{ '::file-selector-button': { bg: 'teal.600', color: 'white', border: 'none', borderRadius: 'md', px: 2, py: 0.5, mr: 2, cursor: 'pointer', _hover: { bg: 'teal.500' } } }}
+                  />
+                  {avatarPreview && <Avatar size="sm" src={avatarPreview} />}
+                  <HStack spacing={2}>
+                    <Button size="xs" colorScheme="teal" onClick={handleSaveAvatar} isLoading={savingAvatar} isDisabled={!avatarFile}>保存</Button>
+                    <Button size="xs" variant="ghost" onClick={() => { setEditingAvatar(false); setAvatarFile(null); setAvatarPreview(''); }}>取消</Button>
+                  </HStack>
+                </VStack>
+              </Box>
+            )}
+          </Box>
           <VStack align="start" spacing={1} flex={1}>
             <HStack spacing={2} wrap="wrap">
               <Heading color="white" size="lg">{girl.name}</Heading>
@@ -789,53 +816,23 @@ export default function GirlDetail() {
       {/* ---- 照片与媒体（档案信息区内）---- */}
       <Box mt={0}>
         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-          {/* 头像 + 主页链接 */}
+          {/* 主页与来源 */}
           <Box bg="gray.700" p={4} borderRadius="md">
-            <Text color="teal.400" fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">头像与主页</Text>
-            <HStack spacing={4} align="start">
-              <Box position="relative" flexShrink={0}>
-                <Avatar size="lg" name={girl.name} src={getMediaUrl(girl.avatar) || undefined} bg="teal.500" />
-                <IconButton
-                  aria-label="编辑头像"
-                  icon={<Icon as={FiEdit2} />}
-                  size="xs"
-                  colorScheme="teal"
-                  position="absolute"
-                  bottom={0}
-                  right={0}
-                  borderRadius="full"
-                  onClick={() => setEditingAvatar(!editingAvatar)}
-                />
-              </Box>
-              <VStack spacing={2} flex={1} align="stretch">
-                {editingAvatar && (
-                  <Box p={2} bg="gray.600" borderRadius="md">
-                    <VStack align="stretch" spacing={2}>
-                      <Input type="file" accept="image/*" onChange={handleAvatarFileChange} bg="gray.700" color="white" border="1px solid" borderColor="gray.500" p={1} size="sm"
-                        sx={{ '::file-selector-button': { bg: 'teal.600', color: 'white', border: 'none', borderRadius: 'md', px: 2, py: 0.5, mr: 2, cursor: 'pointer', _hover: { bg: 'teal.500' } } }}
-                      />
-                      {avatarPreview && <Avatar size="sm" src={avatarPreview} />}
-                      <HStack spacing={2}>
-                        <Button size="xs" colorScheme="teal" onClick={handleSaveAvatar} isLoading={savingAvatar} isDisabled={!avatarFile}>保存</Button>
-                        <Button size="xs" variant="ghost" onClick={() => { setEditingAvatar(false); setAvatarFile(null); setAvatarPreview(''); }}>取消</Button>
-                      </HStack>
-                    </VStack>
-                  </Box>
-                )}
-                <EmptyValue value={girl.homepageUrl}>
-                  <Text color="gray.500" fontSize="xs">主页链接</Text>
-                  <Text color="teal.300" fontSize="sm" noOfLines={1} wordBreak="break-all">{girl.homepageUrl}</Text>
-                </EmptyValue>
-                <EmptyValue value={girl.sourcePlatform}>
-                  <Text color="gray.500" fontSize="xs">来源平台</Text>
-                  <Text color="gray.200" fontSize="sm">{girl.sourcePlatform}</Text>
-                </EmptyValue>
-                <EmptyValue value={girl.sourceUrl}>
-                  <Text color="gray.500" fontSize="xs">来源链接</Text>
-                  <Text color="gray.400" fontSize="xs" noOfLines={1} wordBreak="break-all">{girl.sourceUrl}</Text>
-                </EmptyValue>
-              </VStack>
-            </HStack>
+            <Text color="teal.400" fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">主页与来源</Text>
+            <VStack spacing={3} align="stretch">
+              <EmptyValue value={girl.homepageUrl}>
+                <Text color="gray.500" fontSize="xs">主页链接</Text>
+                <Text color="teal.300" fontSize="sm" noOfLines={1} wordBreak="break-all">{girl.homepageUrl}</Text>
+              </EmptyValue>
+              <EmptyValue value={girl.sourcePlatform}>
+                <Text color="gray.500" fontSize="xs">来源平台</Text>
+                <Text color="gray.200" fontSize="sm">{girl.sourcePlatform}</Text>
+              </EmptyValue>
+              <EmptyValue value={girl.sourceUrl}>
+                <Text color="gray.500" fontSize="xs">来源链接</Text>
+                <Text color="gray.400" fontSize="xs" noOfLines={1} wordBreak="break-all">{girl.sourceUrl}</Text>
+              </EmptyValue>
+            </VStack>
           </Box>
 
           {/* 照片 */}

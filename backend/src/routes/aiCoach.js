@@ -793,7 +793,7 @@ ${context.observations.length > 0
     const relStageLabel = relStage ? STAGE_LABELS[relStage] || relStage : null;
     const stageContext = addStageContext(relStage);
 
-    const systemPrompt = `你是鱼塘AI情感教练，分析聊天记录，识别对话双方的意图、情绪和关系状态。
+    const systemPrompt = `你是缘分AI情感教练，分析聊天记录，识别对话双方的意图、情绪和关系状态。
 
 【分析框架】
 ${skills.map(s => {
@@ -1006,7 +1006,7 @@ ${fullContext.pendingActions.length > 0
    - ⚠️ 禁止涉及对方外貌、身高、体重、年龄等敏感话题
    - ⚠️ 禁止使用可能引起误解的暧昧表达`;
 
-    const systemPrompt = `你是鱼塘AI情感教练，根据以下信息生成回复选项。
+    const systemPrompt = `你是缘分AI情感教练，根据以下信息生成回复选项。
 
 ${girlContextInfo}
 ${stageContext}
@@ -1163,7 +1163,7 @@ router.post('/optimize-reply', authMiddleware, async (req, res) => {
     const stageContext = addStageContext(relStage);
 
     // 统一教练：综合多位大师视角 — 话术策略优化
-    const systemPrompt = `你是鱼塘AI情感教练，专注话术策略优化。不是简单润色文字，而是从沟通策略、推拉节奏、关系阶段适配的角度，把一段话术打磨得更有效。
+    const systemPrompt = `你是缘分AI情感教练，专注话术策略优化。不是简单润色文字，而是从沟通策略、推拉节奏、关系阶段适配的角度，把一段话术打磨得更有效。
 
 【女生档案】
 昵称：${fullContext?.girlInfo?.name || '未知'}
@@ -1478,7 +1478,7 @@ router.post('/moment', authMiddleware, async (req, res) => {
     if (momentImage) contentDesc += '【朋友圈图片】\n（见下方图片）\n';
 
     // 构建系统prompt
-    const systemPrompt = `你是鱼塘AI情感教练，帮助分析女生朋友圈，给出评论和私聊切入建议。
+    const systemPrompt = `你是缘分AI情感教练，帮助分析女生朋友圈，给出评论和私聊切入建议。
 
 回答要求：
 - 简洁口语化，像朋友聊天
@@ -2042,7 +2042,7 @@ router.get('/overview', authMiddleware, async (req, res) => {
       res.flushHeaders();
       res.write(`data: ${JSON.stringify({ cached: false, userDataHash: '', changeReason: null, staleAlerts: [], isEmpty: true })}\n\n`);
       if (hasClients) {
-        res.write(`data: ${JSON.stringify({ content: `你有 ${allClients.length} 个客户，但鱼塘是空的。去「女生资源」里添加第一个女生吧～` })}\n\n`);
+        res.write(`data: ${JSON.stringify({ content: `你有 ${allClients.length} 个客户，但缘分是空的。去「女生资源」里添加第一个女生吧～` })}\n\n`);
       } else {
         res.write(`data: ${JSON.stringify({ content: '还没有客户，先去「客户管理」添加第一个客户吧～' })}\n\n`);
       }
@@ -2125,7 +2125,7 @@ router.get('/overview', authMiddleware, async (req, res) => {
 6. 今晚给客户发一条什么样的每日计划提醒？`;
     }
 
-    const systemPrompt = `你是鱼塘AI情感教练，帮操盘手分析当前全局情况，主动给出学习和行动建议。
+    const systemPrompt = `你是缘分AI情感教练，帮操盘手分析当前全局情况，主动给出学习和行动建议。
 
 要求：
 - 简洁口语化，像朋友聊天
@@ -2308,7 +2308,7 @@ router.get('/client-pool/:clientId', authMiddleware, async (req, res) => {
     const coldGirls = clientGirls.filter(g => (g.tensionScore || 5) < 5);
     const staleAlerts = clientGirls.map(g => computeStaleAlert(g)).filter(Boolean);
 
-    const systemPrompt = `你是鱼塘AI情感教练，帮操盘手分析当前选中客户的女生池情况，给出针对这个客户的整体建议。
+    const systemPrompt = `你是缘分AI情感教练，帮操盘手分析当前选中客户的女生池情况，给出针对这个客户的整体建议。
 
 要求：
 - 简洁口语化，像朋友聊天
@@ -2587,7 +2587,7 @@ router.get('/girl-summary/:girlId', authMiddleware, async (req, res) => {
       responsePattern: girl.responsePattern || '',
     };
 
-    const systemPrompt = `你是鱼塘AI情感教练，帮操盘手分析当前选中的女生，给出针对这个女生的具体、可操作的行动建议。
+    const systemPrompt = `你是缘分AI情感教练，帮操盘手分析当前选中的女生，给出针对这个女生的具体、可操作的行动建议。
 
 要求：
 - 简洁口语化，像朋友聊天
@@ -2835,7 +2835,7 @@ function parseJson(value) {
  * @returns {Promise<object|null>}
  */
 async function extractGirlProfileFromConversation(clientId, girlId, conversationText, situation) {
-  const prompt = `你是鱼塘AI教练，从以下对话分析中提取女生档案的更新信息。
+  const prompt = `你是缘分AI教练，从以下对话分析中提取女生档案的更新信息。
 
 【原始问题】
 ${situation}

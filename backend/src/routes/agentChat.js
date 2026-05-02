@@ -267,7 +267,7 @@ async function handleChatAnalysis(input, ctx, res) {
     } catch {}
   }
 
-  const systemPrompt = `你是鱼塘AI情感教练，分析聊天记录，识别对话双方的意图、情绪和关系状态。
+  const systemPrompt = `你是缘分AI情感教练，分析聊天记录，识别对话双方的意图、情绪和关系状态。
 
 【分析框架】
 请结合当前关系阶段(${relStageLabel})给出针对性分析。
@@ -406,7 +406,7 @@ async function handleReply(input, ctx, res, mode = 'suggest') {
 
   let systemPrompt;
   if (isOptimizeMode) {
-    systemPrompt = `你是鱼塘AI情感教练，把平淡或生硬的回复优化成有温度、有情商、有吸引力的聊天内容。
+    systemPrompt = `你是缘分AI情感教练，把平淡或生硬的回复优化成有温度、有情商、有吸引力的聊天内容。
 
 【女生档案】
 昵称：${ctx.girlProfile?.name || '未知'}
@@ -435,7 +435,7 @@ ${personaSection}
 
 只输出 JSON，不要其他内容。`;
   } else {
-    systemPrompt = `你是鱼塘AI情感教练，根据以下信息生成回复选项。
+    systemPrompt = `你是缘分AI情感教练，根据以下信息生成回复选项。
 
 【女生档案】
 昵称：${ctx.girlProfile?.name || '未知'}
@@ -545,7 +545,7 @@ async function handleMoment(input, ctx, res) {
       }).join('\n')
     : '暂无';
 
-  const systemPrompt = `你是鱼塘AI情感教练，帮助分析女生朋友圈，给出评论和私聊切入建议。
+  const systemPrompt = `你是缘分AI情感教练，帮助分析女生朋友圈，给出评论和私聊切入建议。
 
 回答要求：
 - 简洁口语化，像朋友聊天
