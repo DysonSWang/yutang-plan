@@ -296,11 +296,11 @@ export default function Login() {
                   <Box
                     w="100%"
                     p={3}
-                    bg="rgba(248,113,113,0.1)"
-                    border="1px solid rgba(248,113,113,0.3)"
+                    bg="rgba(220,80,60,0.08)"
+                    border="1px solid rgba(220,80,60,0.25)"
                     borderRadius="12px"
                   >
-                    <Text color="red.400" fontSize="sm">{loginError}</Text>
+                    <Text color="rgba(240,120,100,0.9)" fontSize="sm">{loginError}</Text>
                   </Box>
                 )}
                 <Button

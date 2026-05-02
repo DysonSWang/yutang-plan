@@ -183,13 +183,13 @@ const FIELD_HELP = {
 // 帮助函数：在标签旁显示问号图标
 const FieldLabel = ({ fieldKey, isEditing }) => {
   const field = FIELD_HELP[fieldKey];
-  if (!field) return isEditing ? <FormLabel color="gray.400" fontSize="sm">{fieldKey}</FormLabel> : null;
+  if (!field) return isEditing ? <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">{fieldKey}</FormLabel> : null;
   if (!isEditing) return null;
   return (
     <HStack spacing={1}>
       <FormLabel color="gray.300" fontSize="sm" mb={0}>{field.label}</FormLabel>
       <Tooltip label={`${field.help}${field.example ? ' 示例：' + field.example : ''}`} fontSize="xs" placement="top" hasArrow>
-        <IconButton icon={<HelpIcon />} size="xs" variant="ghost" color="gray.500" aria-label="help" />
+        <IconButton icon={<HelpIcon />} size="xs" variant="ghost" color="rgba(245,240,232,0.2)" aria-label="help" />
       </Tooltip>
     </HStack>
   );
@@ -197,7 +197,7 @@ const FieldLabel = ({ fieldKey, isEditing }) => {
 
 // 字段卡片组件
 const FieldCard = ({ children, title, icon: Icon, colorScheme = 'teal' }) => (
-  <Box bg="gray.750" borderRadius="lg" p={4} borderLeft="3px solid" borderLeftColor={`${colorScheme}.500`}>
+  <Box bg="warm.800" borderRadius="lg" p={4} borderLeft="3px solid" borderLeftColor={`${colorScheme}.500`}>
     <HStack mb={3}>
       {Icon && <Box color={`${colorScheme}.400`}><Icon /></Box>}
       <Text color="gray.200" fontWeight="600" fontSize="sm">{title}</Text>
@@ -213,10 +213,10 @@ const ScoreIndicator = ({ label, value, max = 10, colorScheme = 'teal' }) => {
   return (
     <Box>
       <HStack justify="space-between" mb={1}>
-        <Text color="gray.400" fontSize="xs">{label}</Text>
+        <Text color="rgba(245,240,232,0.4)" fontSize="xs">{label}</Text>
         <Text color={color} fontSize="xs" fontWeight="bold">{value}/{max}</Text>
       </HStack>
-      <Progress value={percentage} size="xs" colorScheme={colorScheme} bg="gray.700" borderRadius="full" />
+      <Progress value={percentage} size="xs" colorScheme={colorScheme} bg="warm.700" borderRadius="full" />
     </Box>
   );
 };
@@ -764,7 +764,7 @@ export default function AdminClients() {
   const getHeatColor = (score) => {
     if (score >= 7) return 'red.400';
     if (score >= 5) return 'orange.400';
-    return 'gray.400';
+    return 'rgba(245,240,232,0.4)';
   };
 
   const getCooperationColor = (coop) => {
@@ -793,10 +793,10 @@ export default function AdminClients() {
           <Icon as={UsersIcon} color="teal.400" boxSize={{ base: 6, md: 8 }} />
           <Box>
             <Heading color="white" size={{ base: 'md', md: 'lg' }}>客户管理</Heading>
-            <Text color="gray.500" fontSize="sm">共 {filteredClients.length} / {clientList.length} 位客户</Text>
+            <Text color="rgba(245,240,232,0.2)" fontSize="sm">共 {filteredClients.length} / {clientList.length} 位客户</Text>
           </Box>
         </HStack>
-        <Button colorScheme="teal" size="sm" onClick={() => { setFormData(getInitialFormData()); onCreateOpen(); }} transition="all 0.15s ease" _hover={{ transform: 'translateY(-1px)' }}>
+        <Button colorScheme="gold" size="sm" onClick={() => { setFormData(getInitialFormData()); onCreateOpen(); }} transition="all 0.15s ease" _hover={{ transform: 'translateY(-1px)' }}>
           + 新建
         </Button>
       </Flex>
@@ -808,9 +808,9 @@ export default function AdminClients() {
           value={searchKeyword}
           onChange={(e) => setSearchKeyword(e.target.value)}
           maxW={{ base: '100%', sm: '300px' }}
-          bg="gray.700"
-          border="gray.600"
-          _placeholder={{ color: 'gray.400' }}
+          bg="warm.700"
+          border="warm.600"
+          _placeholder={{ color: 'rgba(245,240,232,0.4)' }}
           size="md"
         />
         <Select
@@ -818,8 +818,8 @@ export default function AdminClients() {
           value={filterStage}
           onChange={(e) => setFilterStage(e.target.value)}
           maxW={{ base: '100%', sm: '150px' }}
-          bg="gray.700"
-          border="gray.600"
+          bg="warm.700"
+          border="warm.600"
           size="md"
         >
           {SERVICE_STAGES.map(stage => (
@@ -830,7 +830,7 @@ export default function AdminClients() {
           <Button
             variant="ghost"
             size="sm"
-            color="gray.400"
+            color="rgba(245,240,232,0.4)"
             onClick={() => { setSearchKeyword(''); setFilterStage(''); }}
           >
             清除
@@ -839,49 +839,49 @@ export default function AdminClients() {
       </Flex>
 
       {/* 客户列表卡片 */}
-      <Card bg="gray.800" borderRadius="xl" overflow="hidden">
+      <Card bg="warm.800" borderRadius="xl" overflow="hidden">
         {/* 桌面端表格 */}
         <Box display={{ base: 'none', lg: 'block' }}>
           <Table variant="simple" color="gray.300">
-            <Thead bg="gray.750">
+            <Thead bg="warm.800">
               <Tr>
-                <Th color="gray.400" borderColor="gray.700">客户</Th>
-                <Th color="gray.400" borderColor="gray.700" isNumeric>年龄</Th>
-                <Th color="gray.400" borderColor="gray.700">职业</Th>
-                <Th color="gray.400" borderColor="gray.700">阶段</Th>
-                <Th color="gray.400" borderColor="gray.700">配合度</Th>
-                <Th color="gray.400" borderColor="gray.700" isNumeric>热度</Th>
-                <Th color="gray.400" borderColor="gray.700" isNumeric>女生</Th>
-                <Th color="gray.400" borderColor="gray.700">操作</Th>
+                <Th color="rgba(245,240,232,0.4)" borderColor="warm.700">客户</Th>
+                <Th color="rgba(245,240,232,0.4)" borderColor="warm.700" isNumeric>年龄</Th>
+                <Th color="rgba(245,240,232,0.4)" borderColor="warm.700">职业</Th>
+                <Th color="rgba(245,240,232,0.4)" borderColor="warm.700">阶段</Th>
+                <Th color="rgba(245,240,232,0.4)" borderColor="warm.700">配合度</Th>
+                <Th color="rgba(245,240,232,0.4)" borderColor="warm.700" isNumeric>热度</Th>
+                <Th color="rgba(245,240,232,0.4)" borderColor="warm.700" isNumeric>女生</Th>
+                <Th color="rgba(245,240,232,0.4)" borderColor="warm.700">操作</Th>
               </Tr>
             </Thead>
             <Tbody>
               {filteredClients.map(client => (
-                <Tr key={client.id} _hover={{ bg: 'gray.750' }} cursor="pointer" onClick={() => viewClient(client)}>
-                  <Td fontWeight="600" color="white" borderColor="gray.700">
+                <Tr key={client.id} _hover={{ bg: 'warm.800' }} cursor="pointer" onClick={() => viewClient(client)}>
+                  <Td fontWeight="600" color="white" borderColor="warm.700">
                     <HStack spacing={3}>
                       <Avatar size="sm" name={client.nickname || client.username} bg="teal.500" color="white" />
                       <Box>
                         <Text color="white">{client.nickname || client.username}</Text>
-                        <Text color="gray.500" fontSize="xs">{client.username}</Text>
+                        <Text color="rgba(245,240,232,0.2)" fontSize="xs">{client.username}</Text>
                       </Box>
                     </HStack>
                   </Td>
-                  <Td color="gray.300" borderColor="gray.700" isNumeric>{client.age || '-'}</Td>
-                  <Td color="gray.300" borderColor="gray.700">{client.occupation || '-'}</Td>
-                  <Td borderColor="gray.700">
-                    <Badge colorScheme="teal" borderRadius="md" px={2}>{client.serviceStage || '未开始'}</Badge>
+                  <Td color="gray.300" borderColor="warm.700" isNumeric>{client.age || '-'}</Td>
+                  <Td color="gray.300" borderColor="warm.700">{client.occupation || '-'}</Td>
+                  <Td borderColor="warm.700">
+                    <Badge colorScheme="gold" borderRadius="md" px={2}>{client.serviceStage || '未开始'}</Badge>
                   </Td>
-                  <Td borderColor="gray.700">
+                  <Td borderColor="warm.700">
                     <Badge colorScheme={getCooperationColor(client.coachCooperation)} borderRadius="md" px={2}>
                       {client.coachCooperation || '-'}
                     </Badge>
                   </Td>
-                  <Td color={getHeatColor(client.interactionHeat)} fontWeight="bold" borderColor="gray.700" isNumeric>
+                  <Td color={getHeatColor(client.interactionHeat)} fontWeight="bold" borderColor="warm.700" isNumeric>
                     {client.interactionHeat?.toFixed(1) || '5.0'}
                   </Td>
-                  <Td color="gray.300" borderColor="gray.700" isNumeric>{client.girlCount || 0}</Td>
-                  <Td borderColor="gray.700">
+                  <Td color="gray.300" borderColor="warm.700" isNumeric>{client.girlCount || 0}</Td>
+                  <Td borderColor="warm.700">
                     <HStack spacing={2}>
                       <Tooltip label="日历" hasArrow>
                         <IconButton
@@ -896,7 +896,7 @@ export default function AdminClients() {
                       <Button size="sm" colorScheme="blue" variant="ghost" onClick={(e) => { e.stopPropagation(); navigate('/admin/chat', { state: { clientId: client.id, clientName: client.nickname || client.username } }); }}>
                         交流
                       </Button>
-                      <Button size="sm" colorScheme="teal" variant="ghost" onClick={(e) => { e.stopPropagation(); viewClient(client); }}>
+                      <Button size="sm" colorScheme="gold" variant="ghost" onClick={(e) => { e.stopPropagation(); viewClient(client); }}>
                         查看
                       </Button>
                     </HStack>
@@ -904,7 +904,7 @@ export default function AdminClients() {
                 </Tr>
               ))}
               {filteredClients.length === 0 && (
-                <Tr><Td colSpan={8} textAlign="center" color="gray.500" py={8}>
+                <Tr><Td colSpan={8} textAlign="center" color="rgba(245,240,232,0.2)" py={8}>
                   {clientList.length === 0 ? '暂无客户，点击上方按钮新建' : '未找到匹配的客户'}
                 </Td></Tr>
               )}
@@ -915,30 +915,30 @@ export default function AdminClients() {
         {/* 移动端卡片列表 */}
         <Box display={{ base: 'block', lg: 'none' }}>
           {filteredClients.length === 0 ? (
-            <Text color="gray.500" textAlign="center" py={8}>
+            <Text color="rgba(245,240,232,0.2)" textAlign="center" py={8}>
               {clientList.length === 0 ? '暂无客户，点击上方按钮新建' : '未找到匹配的客户'}
             </Text>
           ) : (
             <VStack spacing={2} align="stretch" p={2}>
               {filteredClients.map(client => (
-                <Card key={client.id} bg="gray.750" size="sm" cursor="pointer" onClick={() => viewClient(client)} _hover={{ bg: 'gray.700' }}>
+                <Card key={client.id} bg="warm.800" size="sm" cursor="pointer" onClick={() => viewClient(client)} _hover={{ bg: 'warm.700' }}>
                   <CardBody py={3} px={4}>
                     <Flex justify="space-between" align="center" mb={2}>
                       <HStack spacing={2}>
                         <Avatar size="sm" name={client.nickname || client.username} bg="teal.500" color="white" />
                         <Box>
                           <Text color="white" fontSize="sm" fontWeight="bold">{client.nickname || client.username}</Text>
-                          <Text color="gray.500" fontSize="xs">{client.username}</Text>
+                          <Text color="rgba(245,240,232,0.2)" fontSize="xs">{client.username}</Text>
                         </Box>
                       </HStack>
-                      <Button size="sm" colorScheme="teal" variant="ghost">查看</Button>
+                      <Button size="sm" colorScheme="gold" variant="ghost">查看</Button>
                     </Flex>
                     <HStack spacing={3} wrap="wrap">
-                      <Badge colorScheme="teal" fontSize="xs">{client.serviceStage || '未开始'}</Badge>
+                      <Badge colorScheme="gold" fontSize="xs">{client.serviceStage || '未开始'}</Badge>
                       <Badge colorScheme={getCooperationColor(client.coachCooperation)} fontSize="xs">{client.coachCooperation || '-'}</Badge>
                       <Text color={getHeatColor(client.interactionHeat)} fontSize="xs">{client.interactionHeat?.toFixed(1) || '5.0'}</Text>
-                      <Text color="gray.400" fontSize="xs">{client.occupation || '-'}</Text>
-                      <Text color="gray.400" fontSize="xs">{client.girlCount || 0}人</Text>
+                      <Text color="rgba(245,240,232,0.4)" fontSize="xs">{client.occupation || '-'}</Text>
+                      <Text color="rgba(245,240,232,0.4)" fontSize="xs">{client.girlCount || 0}人</Text>
                     </HStack>
                   </CardBody>
                 </Card>
@@ -951,37 +951,37 @@ export default function AdminClients() {
       {/* 新建客户弹窗 */}
       <Modal isOpen={isCreateOpen} onClose={onCreateClose} size="lg">
         <ModalOverlay bg="blackAlpha.700" />
-        <ModalContent bg="gray.800" borderRadius="xl" border="1px solid" borderColor="gray.700">
-          <ModalHeader borderBottom="1px solid" borderColor="gray.700" color="white">
+        <ModalContent bg="warm.800" borderRadius="xl" border="1px solid" borderColor="warm.700">
+          <ModalHeader borderBottom="1px solid" borderColor="warm.700" color="white">
             <HStack spacing={2}>
               <Box color="teal.400"><EditIcon /></Box>
               <Text>新建客户</Text>
             </HStack>
           </ModalHeader>
-          <ModalCloseButton color="gray.400" />
+          <ModalCloseButton color="rgba(245,240,232,0.4)" />
           <ModalBody py={6}>
             <VStack spacing={4}>
               <FormControl isRequired>
                 <FieldLabel fieldKey="username" isEditing={true} />
-                <Input value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} placeholder="用于登录" bg="gray.700" color="white" border="1px solid" borderColor="gray.600" _hover={{ borderColor: 'gray.500' }} _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }} />
+                <Input value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} placeholder="用于登录" bg="warm.700" color="white" border="1px solid" borderColor="warm.600" _hover={{ borderColor: 'rgba(245,240,232,0.2)' }} _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }} />
               </FormControl>
               <FormControl isRequired>
                 <FieldLabel fieldKey="password" isEditing={true} />
-                <Input type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} placeholder="登录密码" bg="gray.700" color="white" border="1px solid" borderColor="gray.600" _hover={{ borderColor: 'gray.500' }} _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }} />
+                <Input type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} placeholder="登录密码" bg="warm.700" color="white" border="1px solid" borderColor="warm.600" _hover={{ borderColor: 'rgba(245,240,232,0.2)' }} _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }} />
               </FormControl>
               <FormControl>
                 <FieldLabel fieldKey="nickname" isEditing={true} />
-                <Input value={formData.nickname} onChange={e => setFormData({...formData, nickname: e.target.value})} placeholder="客户昵称" bg="gray.700" color="white" border="1px solid" borderColor="gray.600" _hover={{ borderColor: 'gray.500' }} _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }} />
+                <Input value={formData.nickname} onChange={e => setFormData({...formData, nickname: e.target.value})} placeholder="客户昵称" bg="warm.700" color="white" border="1px solid" borderColor="warm.600" _hover={{ borderColor: 'rgba(245,240,232,0.2)' }} _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }} />
               </FormControl>
               <FormControl>
                 <FieldLabel fieldKey="phone" isEditing={true} />
-                <Input value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} placeholder="联系方式" bg="gray.700" color="white" border="1px solid" borderColor="gray.600" _hover={{ borderColor: 'gray.500' }} _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }} />
+                <Input value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} placeholder="联系方式" bg="warm.700" color="white" border="1px solid" borderColor="warm.600" _hover={{ borderColor: 'rgba(245,240,232,0.2)' }} _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }} />
               </FormControl>
             </VStack>
           </ModalBody>
-          <ModalFooter borderTop="1px solid" borderColor="gray.700" gap={3}>
-            <Button variant="ghost" color="gray.400" onClick={onCreateClose}>取消</Button>
-            <Button colorScheme="teal" onClick={createClient} isLoading={creating} borderRadius="md">
+          <ModalFooter borderTop="1px solid" borderColor="warm.700" gap={3}>
+            <Button variant="ghost" color="rgba(245,240,232,0.4)" onClick={onCreateClose}>取消</Button>
+            <Button colorScheme="gold" onClick={createClient} isLoading={creating} borderRadius="md">
               创建客户
             </Button>
 </ModalFooter>
@@ -991,17 +991,17 @@ export default function AdminClients() {
       {/* 文本导入弹窗 */}
       <Modal isOpen={isExtractOpen} onClose={onExtractClose} size="lg">
         <ModalOverlay bg="blackAlpha.700" />
-        <ModalContent bg="gray.800" borderRadius="xl" border="1px solid" borderColor="gray.700">
-          <ModalHeader borderBottom="1px solid" borderColor="gray.700" color="white">
+        <ModalContent bg="warm.800" borderRadius="xl" border="1px solid" borderColor="warm.700">
+          <ModalHeader borderBottom="1px solid" borderColor="warm.700" color="white">
             <HStack spacing={2}>
               <Box color="teal.400"><EditIcon /></Box>
               <Text>从文本导入客户档案</Text>
             </HStack>
           </ModalHeader>
-          <ModalCloseButton color="gray.400" />
+          <ModalCloseButton color="rgba(245,240,232,0.4)" />
           <ModalBody py={6}>
             <VStack spacing={4} align="stretch">
-              <Text color="gray.400" fontSize="sm">
+              <Text color="rgba(245,240,232,0.4)" fontSize="sm">
                 粘贴客户发来的自我介绍文本，系统将自动提取关键信息填充到档案中。
               </Text>
               <FormControl>
@@ -1009,16 +1009,16 @@ export default function AdminClients() {
                   value={extractText}
                   onChange={e => setExtractText(e.target.value)}
                   placeholder={`示例：\n我今年38岁，制造业老板，本科学历，年收入100-300万。身高175，微胖，戴眼镜，商务休闲风格。\n上海人，城市家庭，双亲健在，家庭和睦。ENFP性格，直接沟通，社交达人。\n认真找对象，想谈一段长期的恋爱。配合度高，学习能力强。资产A8水平。\n优点是有钱幽默真诚，缺点是情商低不太会聊天。稳健型节奏，喜欢独立女性。`}
-                  bg="gray.700" color="white" border="1px solid" borderColor="gray.600"
-                  _hover={{ borderColor: 'gray.500' }}
+                  bg="warm.700" color="white" border="1px solid" borderColor="warm.600"
+                  _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
                   _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }}
                   rows={10}
                   fontSize="sm"
                 />
               </FormControl>
               <HStack justify="flex-end" spacing={3}>
-                <Button variant="ghost" color="gray.400" onClick={onExtractClose}>取消</Button>
-                <Button colorScheme="teal" onClick={handleExtractProfile} isLoading={extracting} borderRadius="md">
+                <Button variant="ghost" color="rgba(245,240,232,0.4)" onClick={onExtractClose}>取消</Button>
+                <Button colorScheme="gold" onClick={handleExtractProfile} isLoading={extracting} borderRadius="md">
                   开始提取
                 </Button>
               </HStack>
@@ -1030,7 +1030,7 @@ export default function AdminClients() {
       {/* 提取结果预览弹窗 */}
       <Modal isOpen={isPreviewOpen} onClose={handleCancelExtract} size="md">
         <ModalOverlay />
-        <ModalContent bg="gray.800">
+        <ModalContent bg="warm.800">
           <ModalHeader color="white">
             确认录入信息
             <Button
@@ -1055,14 +1055,14 @@ export default function AdminClients() {
             </Text>
             <VStack spacing={3} align="stretch">
               {Object.entries(pendingFields || {}).map(([key, { label, value }]) => (
-                <Flex key={key} align="center" gap={3} bg="gray.700" p={3} borderRadius="md">
+                <Flex key={key} align="center" gap={3} bg="warm.700" p={3} borderRadius="md">
                   <Switch
-                    colorScheme="teal"
+                    colorScheme="gold"
                     isChecked={!!confirmSelections[key]}
                     onChange={(e) => setConfirmSelections(prev => ({ ...prev, [key]: e.target.checked }))}
                   />
                   <Box flex={1}>
-                    <Text color="gray.400" fontSize="sm">{label}</Text>
+                    <Text color="rgba(245,240,232,0.4)" fontSize="sm">{label}</Text>
                     <Text color="white" fontSize="md">{value}</Text>
                   </Box>
                 </Flex>
@@ -1070,7 +1070,7 @@ export default function AdminClients() {
             </VStack>
             <HStack mt={6} spacing={4} justify="flex-end">
               <Button variant="ghost" colorScheme="gray" onClick={handleCancelExtract}>取消</Button>
-              <Button colorScheme="teal" onClick={handleConfirmExtract}>
+              <Button colorScheme="gold" onClick={handleConfirmExtract}>
                 确认并填充 ({Object.values(confirmSelections).filter(Boolean).length})
               </Button>
             </HStack>
@@ -1081,44 +1081,44 @@ export default function AdminClients() {
       {/* 客户详情/编辑弹窗 */}
       <Modal isOpen={isOpen} onClose={onClose} size="5xl" scrollBehavior="outside">
         <ModalOverlay bg="blackAlpha.700" />
-        <ModalContent bg="gray.800" borderRadius="xl" border="1px solid" borderColor="gray.700">
-          <ModalHeader borderBottom="1px solid" borderColor="gray.700" pb={4}>
+        <ModalContent bg="warm.800" borderRadius="xl" border="1px solid" borderColor="warm.700">
+          <ModalHeader borderBottom="1px solid" borderColor="warm.700" pb={4}>
             <Flex justify="space-between" align="center">
               <HStack spacing={4}>
                 <Avatar size="lg" name={selectedClient?.nickname || selectedClient?.username} bg="teal.500" color="white" />
                 <Box>
                   <HStack spacing={2}>
                     <Text color="white" fontSize="xl" fontWeight="bold">{selectedClient?.nickname || selectedClient?.username}</Text>
-                    <Badge colorScheme="teal" borderRadius="md">{selectedClient?.serviceStage}</Badge>
+                    <Badge colorScheme="gold" borderRadius="md">{selectedClient?.serviceStage}</Badge>
                   </HStack>
-                  <Text color="gray.400" fontSize="sm">{selectedClient?.username}</Text>
+                  <Text color="rgba(245,240,232,0.4)" fontSize="sm">{selectedClient?.username}</Text>
                 </Box>
               </HStack>
               <HStack spacing={4} flexWrap="wrap">
                 {/* 快速指标 */}
-                <HStack spacing={6} bg="gray.750" px={4} py={2} borderRadius="lg">
+                <HStack spacing={6} bg="warm.800" px={4} py={2} borderRadius="lg">
                   <Box textAlign="center">
-                    <Text color="gray.400" fontSize="xs">热度</Text>
+                    <Text color="rgba(245,240,232,0.4)" fontSize="xs">热度</Text>
                     <Text color={getHeatColor(selectedClient?.interactionHeat)} fontWeight="bold" fontSize="lg">
                       {selectedClient?.interactionHeat?.toFixed(1) || '5.0'}
                     </Text>
                   </Box>
-                  <Divider orientation="vertical" h={8} borderColor="gray.600" />
+                  <Divider orientation="vertical" h={8} borderColor="warm.600" />
                   <Box textAlign="center">
-                    <Text color="gray.400" fontSize="xs">信任</Text>
+                    <Text color="rgba(245,240,232,0.4)" fontSize="xs">信任</Text>
                     <HStack spacing={1}>
                       {[1,2,3,4,5].map(i => (
-                        <Box key={i} color={i <= (selectedClient?.trustLevel || 1) ? 'teal.400' : 'gray.600'}>●</Box>
+                        <Box key={i} color={i <= (selectedClient?.trustLevel || 1) ? 'teal.400' : 'warm.600'}>●</Box>
                       ))}
                     </HStack>
                   </Box>
-                  <Divider orientation="vertical" h={8} borderColor="gray.600" />
+                  <Divider orientation="vertical" h={8} borderColor="warm.600" />
                   <Box textAlign="center">
-                    <Text color="gray.400" fontSize="xs">女生</Text>
+                    <Text color="rgba(245,240,232,0.4)" fontSize="xs">女生</Text>
                     <Text color="white" fontWeight="bold" fontSize="lg">{selectedClient?.girlCount || 0}</Text>
                   </Box>
                 </HStack>
-                <Button size="md" colorScheme="teal" variant="outline" onClick={() => { startEdit(); onExtractOpen(); }} borderRadius="md">
+                <Button size="md" colorScheme="gold" variant="outline" onClick={() => { startEdit(); onExtractOpen(); }} borderRadius="md">
                   从文本导入
                 </Button>
                 <Button size="md" colorScheme="orange" variant="outline" onClick={onScreenshotExtractOpen} borderRadius="md">
@@ -1133,33 +1133,33 @@ export default function AdminClients() {
               </HStack>
             </Flex>
           </ModalHeader>
-          <ModalCloseButton color="gray.400" />
+          <ModalCloseButton color="rgba(245,240,232,0.4)" />
           <ModalBody py={4}>
-            <Tabs colorScheme="teal" variant="enclosed">
-              <TabList bg="gray.750" borderRadius="lg" p={1} overflowX="auto">
-                <Tab _selected={{ bg: 'teal.600', color: 'white' }} color="gray.400" borderRadius="md" fontSize="sm">基础信息</Tab>
-                <Tab _selected={{ bg: 'teal.600', color: 'white' }} color="gray.400" borderRadius="md" fontSize="sm">资源评估</Tab>
-                <Tab _selected={{ bg: 'teal.600', color: 'white' }} color="gray.400" borderRadius="md" fontSize="sm">家庭背景</Tab>
-                <Tab _selected={{ bg: 'teal.600', color: 'white' }} color="gray.400" borderRadius="md" fontSize="sm">性格画像</Tab>
-                <Tab _selected={{ bg: 'teal.600', color: 'white' }} color="gray.400" borderRadius="md" fontSize="sm">情感状态</Tab>
-                <Tab _selected={{ bg: 'teal.600', color: 'white' }} color="gray.400" borderRadius="md" fontSize="sm">学习能力</Tab>
-                <Tab _selected={{ bg: 'orange.600', color: 'white' }} color="gray.400" borderRadius="md" fontSize="sm">代聊风格</Tab>
-                <Tab _selected={{ bg: 'purple.600', color: 'white' }} color="gray.400" borderRadius="md" fontSize="sm">价值画像</Tab>
-                <Tab _selected={{ bg: 'red.600', color: 'white' }} color="gray.400" borderRadius="md" fontSize="sm">依恋分析</Tab>
-<Tab _selected={{ bg: 'cyan.600', color: 'white' }} color="gray.400" borderRadius="md" fontSize="sm">AI战略</Tab>
-                <Tab _selected={{ bg: 'blue.600', color: 'white' }} color="gray.400" borderRadius="md" fontSize="sm">约会日历</Tab>
+            <Tabs colorScheme="gold" variant="enclosed">
+              <TabList bg="warm.800" borderRadius="lg" p={1} overflowX="auto">
+                <Tab _selected={{ bg: 'teal.600', color: 'white' }} color="rgba(245,240,232,0.4)" borderRadius="md" fontSize="sm">基础信息</Tab>
+                <Tab _selected={{ bg: 'teal.600', color: 'white' }} color="rgba(245,240,232,0.4)" borderRadius="md" fontSize="sm">资源评估</Tab>
+                <Tab _selected={{ bg: 'teal.600', color: 'white' }} color="rgba(245,240,232,0.4)" borderRadius="md" fontSize="sm">家庭背景</Tab>
+                <Tab _selected={{ bg: 'teal.600', color: 'white' }} color="rgba(245,240,232,0.4)" borderRadius="md" fontSize="sm">性格画像</Tab>
+                <Tab _selected={{ bg: 'teal.600', color: 'white' }} color="rgba(245,240,232,0.4)" borderRadius="md" fontSize="sm">情感状态</Tab>
+                <Tab _selected={{ bg: 'teal.600', color: 'white' }} color="rgba(245,240,232,0.4)" borderRadius="md" fontSize="sm">学习能力</Tab>
+                <Tab _selected={{ bg: 'orange.600', color: 'white' }} color="rgba(245,240,232,0.4)" borderRadius="md" fontSize="sm">代聊风格</Tab>
+                <Tab _selected={{ bg: 'purple.600', color: 'white' }} color="rgba(245,240,232,0.4)" borderRadius="md" fontSize="sm">价值画像</Tab>
+                <Tab _selected={{ bg: 'red.600', color: 'white' }} color="rgba(245,240,232,0.4)" borderRadius="md" fontSize="sm">依恋分析</Tab>
+<Tab _selected={{ bg: 'cyan.600', color: 'white' }} color="rgba(245,240,232,0.4)" borderRadius="md" fontSize="sm">AI战略</Tab>
+                <Tab _selected={{ bg: 'blue.600', color: 'white' }} color="rgba(245,240,232,0.4)" borderRadius="md" fontSize="sm">约会日历</Tab>
               </TabList>
 
               <TabPanels>
                 {/* 基础信息 */}
                 <TabPanel px={0} pt={4}>
                   <SimpleGrid columns={2} spacing={4}>
-                    <FieldCard title="基本信息" icon={InfoIcon} colorScheme="teal">
+                    <FieldCard title="基本信息" icon={InfoIcon} colorScheme="gold">
                       <VStack spacing={3} align="stretch">
                         <FormControl>
                           <FieldLabel fieldKey="age" isEditing={isEditing} />
                           {isEditing ? (
-                            <NumberInput value={formData.age} onChange={(_, v) => setFormData({...formData, age: v})} bg="gray.700" min={20} max={80}>
+                            <NumberInput value={formData.age} onChange={(_, v) => setFormData({...formData, age: v})} bg="warm.700" min={20} max={80}>
                               <NumberInputField color="white" />
                             </NumberInput>
                           ) : (
@@ -1169,7 +1169,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="occupation" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.occupation} onChange={e => setFormData({...formData, occupation: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.occupation} onChange={e => setFormData({...formData, occupation: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {OCCUPATIONS.map(o => <option key={o} value={o}>{o}</option>)}
                             </Select>
@@ -1180,7 +1180,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="education" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.education} onChange={e => setFormData({...formData, education: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.education} onChange={e => setFormData({...formData, education: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {EDUCATIONS.map(e => <option key={e} value={e}>{e}</option>)}
                             </Select>
@@ -1191,7 +1191,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="income" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.income} onChange={e => setFormData({...formData, income: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.income} onChange={e => setFormData({...formData, income: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {BUDGET_RANGES.map(b => <option key={b} value={b}>{b}</option>)}
                             </Select>
@@ -1202,7 +1202,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="height" isEditing={isEditing} />
                           {isEditing ? (
-                            <NumberInput value={formData.height} onChange={(_, v) => setFormData({...formData, height: v})} bg="gray.700" min={150} max={200}>
+                            <NumberInput value={formData.height} onChange={(_, v) => setFormData({...formData, height: v})} bg="warm.700" min={150} max={200}>
                               <NumberInputField color="white" />
                             </NumberInput>
                           ) : (
@@ -1216,7 +1216,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="residence" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.residence} onChange={e => setFormData({...formData, residence: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.residence} onChange={e => setFormData({...formData, residence: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
                             </Select>
@@ -1227,7 +1227,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="hometown" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.hometown} onChange={e => setFormData({...formData, hometown: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.hometown} onChange={e => setFormData({...formData, hometown: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
                             </Select>
@@ -1238,7 +1238,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="source" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.source} onChange={e => setFormData({...formData, source: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.source} onChange={e => setFormData({...formData, source: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {CLIENT_SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
                             </Select>
@@ -1255,7 +1255,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="matchPreferences" isEditing={isEditing} />
                           {isEditing ? (
-                            <Textarea value={formData.matchPreferences} onChange={e => setFormData({...formData, matchPreferences: e.target.value})} bg="gray.700" rows={2} color="white" />
+                            <Textarea value={formData.matchPreferences} onChange={e => setFormData({...formData, matchPreferences: e.target.value})} bg="warm.700" rows={2} color="white" />
                           ) : (
                             <Text color="white">{selectedClient?.matchPreferences || '-'}</Text>
                           )}
@@ -1263,7 +1263,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="dealbreakers" isEditing={isEditing} />
                           {isEditing ? (
-                            <Textarea value={formData.dealbreakers} onChange={e => setFormData({...formData, dealbreakers: e.target.value})} bg="gray.700" rows={2} color="white" />
+                            <Textarea value={formData.dealbreakers} onChange={e => setFormData({...formData, dealbreakers: e.target.value})} bg="warm.700" rows={2} color="white" />
                           ) : (
                             <Text color="white">{selectedClient?.dealbreakers || '-'}</Text>
                           )}
@@ -1281,7 +1281,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="assetsLevel" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.assetsLevel} onChange={e => setFormData({...formData, assetsLevel: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.assetsLevel} onChange={e => setFormData({...formData, assetsLevel: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {ASSETS_LEVELS.map(a => <option key={a} value={a}>{a}</option>)}
                             </Select>
@@ -1292,7 +1292,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="budgetRange" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.budgetRange} onChange={e => setFormData({...formData, budgetRange: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.budgetRange} onChange={e => setFormData({...formData, budgetRange: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {BUDGET_RANGES.map(b => <option key={b} value={b}>{b}</option>)}
                             </Select>
@@ -1303,7 +1303,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="timeInvestment" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.timeInvestment} onChange={e => setFormData({...formData, timeInvestment: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.timeInvestment} onChange={e => setFormData({...formData, timeInvestment: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {TIME_INVESTMENTS.map(t => <option key={t} value={t}>{t}</option>)}
                             </Select>
@@ -1313,27 +1313,27 @@ export default function AdminClients() {
                         </FormControl>
                       </VStack>
                     </FieldCard>
-                    <FieldCard title="服务状态" icon={InfoIcon} colorScheme="teal">
+                    <FieldCard title="服务状态" icon={InfoIcon} colorScheme="gold">
                       <VStack spacing={3} align="stretch">
                         <FormControl>
                           <FieldLabel fieldKey="serviceStage" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.serviceStage} onChange={e => setFormData({...formData, serviceStage: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.serviceStage} onChange={e => setFormData({...formData, serviceStage: e.target.value})} bg="warm.700" color="white">
                               {SERVICE_STAGES.map(s => <option key={s} value={s}>{s}</option>)}
                             </Select>
                           ) : (
-                            <Badge colorScheme="teal">{selectedClient?.serviceStage || '背调'}</Badge>
+                            <Badge colorScheme="gold">{selectedClient?.serviceStage || '背调'}</Badge>
                           )}
                         </FormControl>
                         <FormControl>
                           <HStack justify="space-between">
-                            <Text color="gray.400" fontSize="sm">女生额度</Text>
+                            <Text color="rgba(245,240,232,0.4)" fontSize="sm">女生额度</Text>
                             <Text color={selectedClient?.girlCount >= selectedClient?.girlQuota ? 'red.400' : 'green.400'} fontSize="sm">
                               {selectedClient?.girlCount || 0} / {selectedClient?.girlQuota || 10}
                             </Text>
                           </HStack>
                           {isEditing ? (
-                            <NumberInput value={formData.girlQuota} onChange={(_, v) => setFormData({...formData, girlQuota: v})} bg="gray.700" min={1} max={100}>
+                            <NumberInput value={formData.girlQuota} onChange={(_, v) => setFormData({...formData, girlQuota: v})} bg="warm.700" min={1} max={100}>
                               <NumberInputField color="white" />
                             </NumberInput>
                           ) : null}
@@ -1341,7 +1341,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="interactionHeat" isEditing={isEditing} />
                           {isEditing ? (
-                            <NumberInput value={formData.interactionHeat} onChange={(_, v) => setFormData({...formData, interactionHeat: v})} bg="gray.700" min={1} max={10} step={0.1}>
+                            <NumberInput value={formData.interactionHeat} onChange={(_, v) => setFormData({...formData, interactionHeat: v})} bg="warm.700" min={1} max={10} step={0.1}>
                               <NumberInputField color="white" />
                             </NumberInput>
                           ) : (
@@ -1353,13 +1353,13 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="trustLevel" isEditing={isEditing} />
                           {isEditing ? (
-                            <NumberInput value={formData.trustLevel} onChange={(_, v) => setFormData({...formData, trustLevel: v})} bg="gray.700" min={1} max={5}>
+                            <NumberInput value={formData.trustLevel} onChange={(_, v) => setFormData({...formData, trustLevel: v})} bg="warm.700" min={1} max={5}>
                               <NumberInputField color="white" />
                             </NumberInput>
                           ) : (
                             <HStack spacing={1}>
                               {[1,2,3,4,5].map(i => (
-                                <Box key={i} color={i <= (selectedClient?.trustLevel || 1) ? 'teal.400' : 'gray.600'}>●</Box>
+                                <Box key={i} color={i <= (selectedClient?.trustLevel || 1) ? 'teal.400' : 'warm.600'}>●</Box>
                               ))}
                             </HStack>
                           )}
@@ -1373,7 +1373,7 @@ export default function AdminClients() {
                         <Box>
                           <FieldLabel fieldKey="emotionalStable" isEditing={isEditing} />
                           {isEditing ? (
-                            <NumberInput value={formData.emotionalStable} onChange={(_, v) => setFormData({...formData, emotionalStable: v})} bg="gray.700" min={1} max={10}>
+                            <NumberInput value={formData.emotionalStable} onChange={(_, v) => setFormData({...formData, emotionalStable: v})} bg="warm.700" min={1} max={10}>
                               <NumberInputField color="white" />
                             </NumberInput>
                           ) : (
@@ -1383,7 +1383,7 @@ export default function AdminClients() {
                         <Box>
                           <FieldLabel fieldKey="eqLevel" isEditing={isEditing} />
                           {isEditing ? (
-                            <NumberInput value={formData.eqLevel} onChange={(_, v) => setFormData({...formData, eqLevel: v})} bg="gray.700" min={1} max={10}>
+                            <NumberInput value={formData.eqLevel} onChange={(_, v) => setFormData({...formData, eqLevel: v})} bg="warm.700" min={1} max={10}>
                               <NumberInputField color="white" />
                             </NumberInput>
                           ) : (
@@ -1393,7 +1393,7 @@ export default function AdminClients() {
                         <Box>
                           <FieldLabel fieldKey="commitmentWillingness" isEditing={isEditing} />
                           {isEditing ? (
-                            <NumberInput value={formData.commitmentWillingness} onChange={(_, v) => setFormData({...formData, commitmentWillingness: v})} bg="gray.700" min={1} max={10}>
+                            <NumberInput value={formData.commitmentWillingness} onChange={(_, v) => setFormData({...formData, commitmentWillingness: v})} bg="warm.700" min={1} max={10}>
                               <NumberInputField color="white" />
                             </NumberInput>
                           ) : (
@@ -1403,7 +1403,7 @@ export default function AdminClients() {
                         <Box>
                           <FieldLabel fieldKey="antiFrustrationLevel" isEditing={isEditing} />
                           {isEditing ? (
-                            <NumberInput value={formData.antiFrustrationLevel} onChange={(_, v) => setFormData({...formData, antiFrustrationLevel: v})} bg="gray.700" min={1} max={10}>
+                            <NumberInput value={formData.antiFrustrationLevel} onChange={(_, v) => setFormData({...formData, antiFrustrationLevel: v})} bg="warm.700" min={1} max={10}>
                               <NumberInputField color="white" />
                             </NumberInput>
                           ) : (
@@ -1423,7 +1423,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="familyBackground" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.familyBackground} onChange={e => setFormData({...formData, familyBackground: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.familyBackground} onChange={e => setFormData({...formData, familyBackground: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {FAMILY_BACKGROUNDS.map(f => <option key={f} value={f}>{f}</option>)}
                             </Select>
@@ -1434,7 +1434,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="familyStructure" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.familyStructure} onChange={e => setFormData({...formData, familyStructure: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.familyStructure} onChange={e => setFormData({...formData, familyStructure: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {FAMILY_STRUCTURES.map(f => <option key={f} value={f}>{f}</option>)}
                             </Select>
@@ -1445,7 +1445,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="familyAtmosphere" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.familyAtmosphere} onChange={e => setFormData({...formData, familyAtmosphere: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.familyAtmosphere} onChange={e => setFormData({...formData, familyAtmosphere: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {FAMILY_ATMOSPHERES.map(f => <option key={f} value={f}>{f}</option>)}
                             </Select>
@@ -1460,7 +1460,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="familyBurden" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.familyBurden} onChange={e => setFormData({...formData, familyBurden: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.familyBurden} onChange={e => setFormData({...formData, familyBurden: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {FAMILY_BURDENS.map(f => <option key={f} value={f}>{f}</option>)}
                             </Select>
@@ -1471,7 +1471,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="familyMembers" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.familyMembers} onChange={e => setFormData({...formData, familyMembers: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.familyMembers} onChange={e => setFormData({...formData, familyMembers: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {FAMILY_MEMBERS_OPTIONS.map(f => <option key={f} value={f}>{f}</option>)}
                             </Select>
@@ -1492,7 +1492,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="personality" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.personality} onChange={e => setFormData({...formData, personality: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.personality} onChange={e => setFormData({...formData, personality: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {PERSONALITY_TYPES.map(p => <option key={p} value={p}>{p}</option>)}
                             </Select>
@@ -1503,7 +1503,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="communicationStyle" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.communicationStyle} onChange={e => setFormData({...formData, communicationStyle: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.communicationStyle} onChange={e => setFormData({...formData, communicationStyle: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {COMMUNICATION_STYLES.map(c => <option key={c} value={c}>{c}</option>)}
                             </Select>
@@ -1514,7 +1514,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="socialStyle" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.socialStyle} onChange={e => setFormData({...formData, socialStyle: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.socialStyle} onChange={e => setFormData({...formData, socialStyle: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {SOCIAL_STYLES.map(s => <option key={s} value={s}>{s}</option>)}
                             </Select>
@@ -1525,7 +1525,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="emotionalMaturityLevel" isEditing={isEditing} />
                           {isEditing ? (
-                            <NumberInput value={formData.emotionalMaturityLevel} onChange={(_, v) => setFormData({...formData, emotionalMaturityLevel: v})} bg="gray.700" min={1} max={10}>
+                            <NumberInput value={formData.emotionalMaturityLevel} onChange={(_, v) => setFormData({...formData, emotionalMaturityLevel: v})} bg="warm.700" min={1} max={10}>
                               <NumberInputField color="white" />
                             </NumberInput>
                           ) : (
@@ -1539,7 +1539,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="emotionalStable" isEditing={isEditing} />
                           {isEditing ? (
-                            <NumberInput value={formData.emotionalStable} onChange={(_, v) => setFormData({...formData, emotionalStable: v})} bg="gray.700" min={1} max={10}>
+                            <NumberInput value={formData.emotionalStable} onChange={(_, v) => setFormData({...formData, emotionalStable: v})} bg="warm.700" min={1} max={10}>
                               <NumberInputField color="white" />
                             </NumberInput>
                           ) : (
@@ -1549,7 +1549,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="eqLevel" isEditing={isEditing} />
                           {isEditing ? (
-                            <NumberInput value={formData.eqLevel} onChange={(_, v) => setFormData({...formData, eqLevel: v})} bg="gray.700" min={1} max={10}>
+                            <NumberInput value={formData.eqLevel} onChange={(_, v) => setFormData({...formData, eqLevel: v})} bg="warm.700" min={1} max={10}>
                               <NumberInputField color="white" />
                             </NumberInput>
                           ) : (
@@ -1569,7 +1569,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="relationshipAttitude" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.relationshipAttitude} onChange={e => setFormData({...formData, relationshipAttitude: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.relationshipAttitude} onChange={e => setFormData({...formData, relationshipAttitude: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {RELATIONSHIP_ATTITUDES.map(r => <option key={r} value={r}>{r}</option>)}
                             </Select>
@@ -1580,7 +1580,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="marriageHistory" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.marriageHistory} onChange={e => setFormData({...formData, marriageHistory: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.marriageHistory} onChange={e => setFormData({...formData, marriageHistory: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {MARRIAGE_HISTORIES.map(m => <option key={m} value={m}>{m}</option>)}
                             </Select>
@@ -1591,7 +1591,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="emotionalGoal" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.emotionalGoal} onChange={e => setFormData({...formData, emotionalGoal: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.emotionalGoal} onChange={e => setFormData({...formData, emotionalGoal: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {EMOTIONAL_GOALS.map(g => <option key={g} value={g}>{g}</option>)}
                             </Select>
@@ -1602,7 +1602,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="relationshipGoal" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.relationshipGoal} onChange={e => setFormData({...formData, relationshipGoal: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.relationshipGoal} onChange={e => setFormData({...formData, relationshipGoal: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {RELATIONSHIP_GOALS.map(g => <option key={g} value={g}>{g}</option>)}
                             </Select>
@@ -1617,7 +1617,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="pastRelationshipSummary" isEditing={isEditing} />
                           {isEditing ? (
-                            <Textarea value={formData.pastRelationshipSummary} onChange={e => setFormData({...formData, pastRelationshipSummary: e.target.value})} bg="gray.700" rows={2} color="white" />
+                            <Textarea value={formData.pastRelationshipSummary} onChange={e => setFormData({...formData, pastRelationshipSummary: e.target.value})} bg="warm.700" rows={2} color="white" />
                           ) : (
                             <Text color="white">{selectedClient?.pastRelationshipSummary || '-'}</Text>
                           )}
@@ -1625,7 +1625,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="emotionalWounds" isEditing={isEditing} />
                           {isEditing ? (
-                            <Textarea value={formData.emotionalWounds} onChange={e => setFormData({...formData, emotionalWounds: e.target.value})} bg="gray.700" rows={2} color="white" />
+                            <Textarea value={formData.emotionalWounds} onChange={e => setFormData({...formData, emotionalWounds: e.target.value})} bg="warm.700" rows={2} color="white" />
                           ) : (
                             <Text color="red.300">{selectedClient?.emotionalWounds || '-'}</Text>
                           )}
@@ -1633,7 +1633,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="exPartnerTaboos" isEditing={isEditing} />
                           {isEditing ? (
-                            <Input value={formData.exPartnerTaboos} onChange={e => setFormData({...formData, exPartnerTaboos: e.target.value})} bg="gray.700" color="white" />
+                            <Input value={formData.exPartnerTaboos} onChange={e => setFormData({...formData, exPartnerTaboos: e.target.value})} bg="warm.700" color="white" />
                           ) : (
                             <Text color="white">{selectedClient?.exPartnerTaboos || '-'}</Text>
                           )}
@@ -1647,7 +1647,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="selfValuePerception" isEditing={isEditing} />
                           {isEditing ? (
-                            <Input value={formData.selfValuePerception} onChange={e => setFormData({...formData, selfValuePerception: e.target.value})} bg="gray.700" color="white" />
+                            <Input value={formData.selfValuePerception} onChange={e => setFormData({...formData, selfValuePerception: e.target.value})} bg="warm.700" color="white" />
                           ) : (
                             <Text color="white">{selectedClient?.selfValuePerception || '-'}</Text>
                           )}
@@ -1655,7 +1655,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="cognitiveAccuracy" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.cognitiveAccuracy} onChange={e => setFormData({...formData, cognitiveAccuracy: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.cognitiveAccuracy} onChange={e => setFormData({...formData, cognitiveAccuracy: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {COGNITIVE_ACCURACIES.map(c => <option key={c} value={c}>{c}</option>)}
                             </Select>
@@ -1666,7 +1666,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="emotionalMaturity" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.emotionalMaturity} onChange={e => setFormData({...formData, emotionalMaturity: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.emotionalMaturity} onChange={e => setFormData({...formData, emotionalMaturity: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {EMOTIONAL_MATURITIES.map(m => <option key={m} value={m}>{m}</option>)}
                             </Select>
@@ -1677,7 +1677,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="comfortZone" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.comfortZone} onChange={e => setFormData({...formData, comfortZone: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.comfortZone} onChange={e => setFormData({...formData, comfortZone: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {COMFORT_ZONES.map(c => <option key={c} value={c}>{c}</option>)}
                             </Select>
@@ -1689,7 +1689,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="loveStyle" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.loveStyle} onChange={e => setFormData({...formData, loveStyle: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.loveStyle} onChange={e => setFormData({...formData, loveStyle: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {LOVE_STYLES.map(l => <option key={l} value={l}>{l}</option>)}
                             </Select>
@@ -1700,7 +1700,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="moneyDatingPattern" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.moneyDatingPattern} onChange={e => setFormData({...formData, moneyDatingPattern: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.moneyDatingPattern} onChange={e => setFormData({...formData, moneyDatingPattern: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {MONEY_DATING_PATTERNS.map(m => <option key={m} value={m}>{m}</option>)}
                             </Select>
@@ -1712,7 +1712,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="pastRelationshipPattern" isEditing={isEditing} />
                           {isEditing ? (
-                            <Textarea value={formData.pastRelationshipPattern} onChange={e => setFormData({...formData, pastRelationshipPattern: e.target.value})} bg="gray.700" rows={2} color="white" />
+                            <Textarea value={formData.pastRelationshipPattern} onChange={e => setFormData({...formData, pastRelationshipPattern: e.target.value})} bg="warm.700" rows={2} color="white" />
                           ) : (
                             <Text color="red.300">{selectedClient?.pastRelationshipPattern || '-'}</Text>
                           )}
@@ -1727,7 +1727,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="appearanceSelfAssessment" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.appearanceSelfAssessment} onChange={e => setFormData({...formData, appearanceSelfAssessment: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.appearanceSelfAssessment} onChange={e => setFormData({...formData, appearanceSelfAssessment: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {APPEARANCE_SELF_ASSESSMENTS.map(a => <option key={a} value={a}>{a}</option>)}
                             </Select>
@@ -1738,7 +1738,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="appearanceSelfRequirement" isEditing={isEditing} />
                           {isEditing ? (
-                            <Textarea value={formData.appearanceSelfRequirement} onChange={e => setFormData({...formData, appearanceSelfRequirement: e.target.value})} bg="gray.700" rows={2} color="white" />
+                            <Textarea value={formData.appearanceSelfRequirement} onChange={e => setFormData({...formData, appearanceSelfRequirement: e.target.value})} bg="warm.700" rows={2} color="white" />
                           ) : (
                             <Text color="white">{selectedClient?.appearanceSelfRequirement || '-'}</Text>
                           )}
@@ -1746,7 +1746,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="appearanceMinAcceptable" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.appearanceMinAcceptable} onChange={e => setFormData({...formData, appearanceMinAcceptable: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.appearanceMinAcceptable} onChange={e => setFormData({...formData, appearanceMinAcceptable: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {APPEARANCE_MIN_ACCEPTABLES.map(a => <option key={a} value={a}>{a}</option>)}
                             </Select>
@@ -1767,7 +1767,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="learningAbility" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.learningAbility} onChange={e => setFormData({...formData, learningAbility: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.learningAbility} onChange={e => setFormData({...formData, learningAbility: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {LEARNING_ABILITIES.map(l => <option key={l} value={l}>{l}</option>)}
                             </Select>
@@ -1778,7 +1778,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="coachCooperation" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.coachCooperation} onChange={e => setFormData({...formData, coachCooperation: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.coachCooperation} onChange={e => setFormData({...formData, coachCooperation: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {COOPERATION_LEVELS.map(c => <option key={c} value={c}>{c}</option>)}
                             </Select>
@@ -1789,7 +1789,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="coachCooperationLevel" isEditing={isEditing} />
                           {isEditing ? (
-                            <NumberInput value={formData.coachCooperationLevel} onChange={(_, v) => setFormData({...formData, coachCooperationLevel: v})} bg="gray.700" min={1} max={10}>
+                            <NumberInput value={formData.coachCooperationLevel} onChange={(_, v) => setFormData({...formData, coachCooperationLevel: v})} bg="warm.700" min={1} max={10}>
                               <NumberInputField color="white" />
                             </NumberInput>
                           ) : (
@@ -1799,7 +1799,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="feedbackQuality" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.feedbackQuality} onChange={e => setFormData({...formData, feedbackQuality: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.feedbackQuality} onChange={e => setFormData({...formData, feedbackQuality: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {FEEDBACK_QUALITIES.map(f => <option key={f} value={f}>{f}</option>)}
                             </Select>
@@ -1809,12 +1809,12 @@ export default function AdminClients() {
                         </FormControl>
                       </VStack>
                     </FieldCard>
-                    <FieldCard title="阶段进度" icon={InfoIcon} colorScheme="teal">
+                    <FieldCard title="阶段进度" icon={InfoIcon} colorScheme="gold">
                       <VStack spacing={3} align="stretch">
                         <FormControl>
                           <FieldLabel fieldKey="currentStage" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.currentStage} onChange={e => setFormData({...formData, currentStage: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.currentStage} onChange={e => setFormData({...formData, currentStage: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {STAGE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
                             </Select>
@@ -1825,20 +1825,20 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="stageProgress" isEditing={isEditing} />
                           {isEditing ? (
-                            <NumberInput value={formData.stageProgress} onChange={(_, v) => setFormData({...formData, stageProgress: v})} bg="gray.700" min={0} max={100}>
+                            <NumberInput value={formData.stageProgress} onChange={(_, v) => setFormData({...formData, stageProgress: v})} bg="warm.700" min={0} max={100}>
                               <NumberInputField color="white" />
                             </NumberInput>
                           ) : (
                             <Box>
                               <Text color="white">{selectedClient?.stageProgress || 0}%</Text>
-                              <Progress value={selectedClient?.stageProgress || 0} size="sm" colorScheme="teal" bg="gray.700" borderRadius="full" mt={1} />
+                              <Progress value={selectedClient?.stageProgress || 0} size="sm" colorScheme="gold" bg="warm.700" borderRadius="full" mt={1} />
                             </Box>
                           )}
                         </FormControl>
                         <FormControl>
                           <FieldLabel fieldKey="lastMilestone" isEditing={isEditing} />
                           {isEditing ? (
-                            <Input value={formData.lastMilestone} onChange={e => setFormData({...formData, lastMilestone: e.target.value})} bg="gray.700" color="white" />
+                            <Input value={formData.lastMilestone} onChange={e => setFormData({...formData, lastMilestone: e.target.value})} bg="warm.700" color="white" />
                           ) : (
                             <Text color="white">{selectedClient?.lastMilestone || '-'}</Text>
                           )}
@@ -1850,7 +1850,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="investmentWillingness" isEditing={isEditing} />
                           {isEditing ? (
-                            <Input value={formData.investmentWillingness} onChange={e => setFormData({...formData, investmentWillingness: e.target.value})} bg="gray.700" color="white" />
+                            <Input value={formData.investmentWillingness} onChange={e => setFormData({...formData, investmentWillingness: e.target.value})} bg="warm.700" color="white" />
                           ) : (
                             <Text color="white">{selectedClient?.investmentWillingness || '-'}</Text>
                           )}
@@ -1858,7 +1858,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="pacePreference" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.pacePreference} onChange={e => setFormData({...formData, pacePreference: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.pacePreference} onChange={e => setFormData({...formData, pacePreference: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {PACE_PREFERENCES.map(p => <option key={p} value={p}>{p}</option>)}
                             </Select>
@@ -1879,7 +1879,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="attachmentStyle" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.attachmentStyle} onChange={e => setFormData({...formData, attachmentStyle: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.attachmentStyle} onChange={e => setFormData({...formData, attachmentStyle: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {ATTACHMENT_STYLES.map(a => <option key={a} value={a}>{a}</option>)}
                             </Select>
@@ -1892,7 +1892,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="intimacyBoundary" isEditing={isEditing} />
                           {isEditing ? (
-                            <Textarea value={formData.intimacyBoundary} onChange={e => setFormData({...formData, intimacyBoundary: e.target.value})} bg="gray.700" rows={2} color="white" />
+                            <Textarea value={formData.intimacyBoundary} onChange={e => setFormData({...formData, intimacyBoundary: e.target.value})} bg="warm.700" rows={2} color="white" />
                           ) : (
                             <Text color="white">{selectedClient?.intimacyBoundary || '-'}</Text>
                           )}
@@ -1904,7 +1904,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="empathy" isEditing={isEditing} />
                           {isEditing ? (
-                            <NumberInput value={formData.empathy} onChange={(_, v) => setFormData({...formData, empathy: v})} bg="gray.700" min={1} max={10}>
+                            <NumberInput value={formData.empathy} onChange={(_, v) => setFormData({...formData, empathy: v})} bg="warm.700" min={1} max={10}>
                               <NumberInputField color="white" />
                             </NumberInput>
                           ) : (
@@ -1914,7 +1914,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="communication" isEditing={isEditing} />
                           {isEditing ? (
-                            <NumberInput value={formData.communication} onChange={(_, v) => setFormData({...formData, communication: v})} bg="gray.700" min={1} max={10}>
+                            <NumberInput value={formData.communication} onChange={(_, v) => setFormData({...formData, communication: v})} bg="warm.700" min={1} max={10}>
                               <NumberInputField color="white" />
                             </NumberInput>
                           ) : (
@@ -1924,7 +1924,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="conflictRes" isEditing={isEditing} />
                           {isEditing ? (
-                            <NumberInput value={formData.conflictRes} onChange={(_, v) => setFormData({...formData, conflictRes: v})} bg="gray.700" min={1} max={10}>
+                            <NumberInput value={formData.conflictRes} onChange={(_, v) => setFormData({...formData, conflictRes: v})} bg="warm.700" min={1} max={10}>
                               <NumberInputField color="white" />
                             </NumberInput>
                           ) : (
@@ -1939,7 +1939,7 @@ export default function AdminClients() {
                       <FormControl>
                         <FieldLabel fieldKey="dateTaboos" isEditing={isEditing} />
                         {isEditing ? (
-                          <Textarea value={formData.dateTaboos} onChange={e => setFormData({...formData, dateTaboos: e.target.value})} bg="gray.700" rows={3} color="white" placeholder="如：不能太快推进/不能AA/不能问职业/不能提及婚姻等" />
+                          <Textarea value={formData.dateTaboos} onChange={e => setFormData({...formData, dateTaboos: e.target.value})} bg="warm.700" rows={3} color="white" placeholder="如：不能太快推进/不能AA/不能问职业/不能提及婚姻等" />
                         ) : (
                           <Text color="red.300">{selectedClient?.dateTaboos || '-'}</Text>
                         )}
@@ -1956,7 +1956,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="clientBestApproach" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.clientBestApproach} onChange={e => setFormData({...formData, clientBestApproach: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.clientBestApproach} onChange={e => setFormData({...formData, clientBestApproach: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               <option value="幽默">幽默</option>
                               <option value="真诚">真诚</option>
@@ -1971,7 +1971,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="clientRecommendedTopics" isEditing={isEditing} />
                           {isEditing ? (
-                            <Textarea value={formData.clientRecommendedTopics} onChange={e => setFormData({...formData, clientRecommendedTopics: e.target.value})} bg="gray.700" rows={2} color="white" />
+                            <Textarea value={formData.clientRecommendedTopics} onChange={e => setFormData({...formData, clientRecommendedTopics: e.target.value})} bg="warm.700" rows={2} color="white" />
                           ) : (
                             <Text color="white">{selectedClient?.clientRecommendedTopics || '-'}</Text>
                           )}
@@ -1983,7 +1983,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="clientUpgradeConditions" isEditing={isEditing} />
                           {isEditing ? (
-                            <Textarea value={formData.clientUpgradeConditions} onChange={e => setFormData({...formData, clientUpgradeConditions: e.target.value})} bg="gray.700" rows={3} color="white" />
+                            <Textarea value={formData.clientUpgradeConditions} onChange={e => setFormData({...formData, clientUpgradeConditions: e.target.value})} bg="warm.700" rows={3} color="white" />
                           ) : (
                             <Text color="white">{selectedClient?.clientUpgradeConditions || '-'}</Text>
                           )}
@@ -1996,7 +1996,7 @@ export default function AdminClients() {
                       <FormControl>
                         <FieldLabel fieldKey="clientRiskFactors" isEditing={isEditing} />
                         {isEditing ? (
-                          <Textarea value={formData.clientRiskFactors} onChange={e => setFormData({...formData, clientRiskFactors: e.target.value})} bg="gray.700" rows={3} color="white" />
+                          <Textarea value={formData.clientRiskFactors} onChange={e => setFormData({...formData, clientRiskFactors: e.target.value})} bg="warm.700" rows={3} color="white" />
                         ) : (
                           <Text color="red.300">{selectedClient?.clientRiskFactors || '-'}</Text>
                         )}
@@ -2008,7 +2008,7 @@ export default function AdminClients() {
                       <FormControl>
                         <FieldLabel fieldKey="clientStrategicNotes" isEditing={isEditing} />
                         {isEditing ? (
-                          <Textarea value={formData.clientStrategicNotes} onChange={e => setFormData({...formData, clientStrategicNotes: e.target.value})} bg="gray.700" rows={3} color="white" />
+                          <Textarea value={formData.clientStrategicNotes} onChange={e => setFormData({...formData, clientStrategicNotes: e.target.value})} bg="warm.700" rows={3} color="white" />
                         ) : (
                           <Text color="gray.300">{selectedClient?.clientStrategicNotes || '-'}</Text>
                         )}
@@ -2025,7 +2025,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="interactionStyle" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.interactionStyle} onChange={e => setFormData({...formData, interactionStyle: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.interactionStyle} onChange={e => setFormData({...formData, interactionStyle: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               <option value="主动型">主动型</option>
                               <option value="调理型">调理型</option>
@@ -2038,7 +2038,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="pacePreference" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.pacePreference} onChange={e => setFormData({...formData, pacePreference: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.pacePreference} onChange={e => setFormData({...formData, pacePreference: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {PACE_PREFERENCES.map(p => <option key={p} value={p}>{p}</option>)}
                             </Select>
@@ -2049,7 +2049,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="humorStyle" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.humorStyle} onChange={e => setFormData({...formData, humorStyle: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.humorStyle} onChange={e => setFormData({...formData, humorStyle: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {HUMOR_STYLES.map(h => <option key={h} value={h}>{h}</option>)}
                             </Select>
@@ -2064,7 +2064,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="selfEsteemLevel" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.selfEsteemLevel} onChange={e => setFormData({...formData, selfEsteemLevel: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.selfEsteemLevel} onChange={e => setFormData({...formData, selfEsteemLevel: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {SELF_ESTEEM_LEVELS.map(s => <option key={s} value={s}>{s}</option>)}
                             </Select>
@@ -2075,7 +2075,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="antiFrustrationLevel" isEditing={isEditing} />
                           {isEditing ? (
-                            <NumberInput value={formData.antiFrustrationLevel} onChange={(_, v) => setFormData({...formData, antiFrustrationLevel: v})} bg="gray.700" min={1} max={10}>
+                            <NumberInput value={formData.antiFrustrationLevel} onChange={(_, v) => setFormData({...formData, antiFrustrationLevel: v})} bg="warm.700" min={1} max={10}>
                               <NumberInputField color="white" />
                             </NumberInput>
                           ) : (
@@ -2091,7 +2091,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="openingTemplates" isEditing={isEditing} />
                           {isEditing ? (
-                            <Textarea value={formData.openingTemplates} onChange={e => setFormData({...formData, openingTemplates: e.target.value})} bg="gray.700" rows={2} color="white" />
+                            <Textarea value={formData.openingTemplates} onChange={e => setFormData({...formData, openingTemplates: e.target.value})} bg="warm.700" rows={2} color="white" />
                           ) : (
                             <Text color="gray.300" fontSize="sm" fontFamily="mono">{selectedClient?.openingTemplates || '-'}</Text>
                           )}
@@ -2099,7 +2099,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="petPhrases" isEditing={isEditing} />
                           {isEditing ? (
-                            <Textarea value={formData.petPhrases} onChange={e => setFormData({...formData, petPhrases: e.target.value})} bg="gray.700" rows={2} color="white" />
+                            <Textarea value={formData.petPhrases} onChange={e => setFormData({...formData, petPhrases: e.target.value})} bg="warm.700" rows={2} color="white" />
                           ) : (
                             <Text color="gray.300" fontSize="sm" fontFamily="mono">{selectedClient?.petPhrases || '-'}</Text>
                           )}
@@ -2107,7 +2107,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="chatTaboos" isEditing={isEditing} />
                           {isEditing ? (
-                            <Textarea value={formData.chatTaboos} onChange={e => setFormData({...formData, chatTaboos: e.target.value})} bg="gray.700" rows={2} color="white" />
+                            <Textarea value={formData.chatTaboos} onChange={e => setFormData({...formData, chatTaboos: e.target.value})} bg="warm.700" rows={2} color="white" />
                           ) : (
                             <Text color="red.300" fontSize="sm">{selectedClient?.chatTaboos || '-'}</Text>
                           )}
@@ -2125,7 +2125,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="strengths" isEditing={isEditing} />
                           {isEditing ? (
-                            <Input value={formData.strengths} onChange={e => setFormData({...formData, strengths: e.target.value})} bg="gray.700" color="white" />
+                            <Input value={formData.strengths} onChange={e => setFormData({...formData, strengths: e.target.value})} bg="warm.700" color="white" />
                           ) : (
                             <HStack spacing={2} flexWrap="wrap">
                               {(selectedClient?.strengths || '').split('/').filter(Boolean).map((s, i) => (
@@ -2137,7 +2137,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="weaknesses" isEditing={isEditing} />
                           {isEditing ? (
-                            <Input value={formData.weaknesses} onChange={e => setFormData({...formData, weaknesses: e.target.value})} bg="gray.700" color="white" />
+                            <Input value={formData.weaknesses} onChange={e => setFormData({...formData, weaknesses: e.target.value})} bg="warm.700" color="white" />
                           ) : (
                             <HStack spacing={2} flexWrap="wrap">
                               {(selectedClient?.weaknesses || '').split('/').filter(Boolean).map((w, i) => (
@@ -2153,7 +2153,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="clientType" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.clientType} onChange={e => setFormData({...formData, clientType: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.clientType} onChange={e => setFormData({...formData, clientType: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {CLIENT_TYPES.map(c => <option key={c} value={c}>{c}</option>)}
                             </Select>
@@ -2164,7 +2164,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="appearance" isEditing={isEditing} />
                           {isEditing ? (
-                            <Textarea value={formData.appearance} onChange={e => setFormData({...formData, appearance: e.target.value})} bg="gray.700" rows={2} color="white" />
+                            <Textarea value={formData.appearance} onChange={e => setFormData({...formData, appearance: e.target.value})} bg="warm.700" rows={2} color="white" />
                           ) : (
                             <Text color="gray.300" fontSize="sm">{selectedClient?.appearance || '-'}</Text>
                           )}
@@ -2172,7 +2172,7 @@ export default function AdminClients() {
                         <FormControl>
                           <FieldLabel fieldKey="dressingStyle" isEditing={isEditing} />
                           {isEditing ? (
-                            <Select value={formData.dressingStyle} onChange={e => setFormData({...formData, dressingStyle: e.target.value})} bg="gray.700" color="white">
+                            <Select value={formData.dressingStyle} onChange={e => setFormData({...formData, dressingStyle: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {DRESSING_STYLES.map(d => <option key={d} value={d}>{d}</option>)}
                             </Select>
@@ -2188,7 +2188,7 @@ export default function AdminClients() {
                       <FormControl>
                         <FieldLabel fieldKey="notes" isEditing={isEditing} />
                         {isEditing ? (
-                          <Textarea value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} bg="gray.700" rows={3} color="white" />
+                          <Textarea value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} bg="warm.700" rows={3} color="white" />
                         ) : (
                           <Text color="gray.300" whiteSpace="pre-wrap">{selectedClient?.notes || '-'}</Text>
                         )}
@@ -2213,8 +2213,8 @@ export default function AdminClients() {
       {/* 截图提取弹窗：上传微信聊天截图提取客户档案 */}
       <Modal isOpen={isScreenshotExtractOpen} onClose={handleCancelScreenshotExtract} size="xl">
         <ModalOverlay bg="blackAlpha.700" />
-        <ModalContent bg="gray.800" borderRadius="xl" border="1px solid" borderColor="gray.700">
-          <ModalHeader borderBottom="1px solid" borderColor="gray.700" color="white" pb={3}>
+        <ModalContent bg="warm.800" borderRadius="xl" border="1px solid" borderColor="warm.700">
+          <ModalHeader borderBottom="1px solid" borderColor="warm.700" color="white" pb={3}>
             <HStack spacing={2}>
               <Text>📸</Text>
               <Text>从截图导入档案</Text>
@@ -2223,16 +2223,16 @@ export default function AdminClients() {
               )}
             </HStack>
           </ModalHeader>
-          <ModalCloseButton color="gray.400" />
+          <ModalCloseButton color="rgba(245,240,232,0.4)" />
           <ModalBody py={6}>
             {!screenshotResult && Object.keys(screenshotPendingFields).length === 0 ? (
               /* 上传界面 */
               <VStack spacing={6} align="stretch">
-                <Box bg="gray.750" borderRadius="lg" p={4}>
+                <Box bg="warm.800" borderRadius="lg" p={4}>
                   <Text color="gray.300" fontSize="sm" mb={3}>
                     上传客户的微信聊天截图，AI 自动识别并提取档案信息。
                   </Text>
-                  <Text color="gray.500" fontSize="xs" mb={3}>
+                  <Text color="rgba(245,240,232,0.2)" fontSize="xs" mb={3}>
                     支持识别：年龄、职业、学历、性格、情感状态等
                   </Text>
                   <Input
@@ -2240,8 +2240,8 @@ export default function AdminClients() {
                     accept="image/*"
                     onChange={handleScreenshotFileSelect}
                     ref={screenshotInputRef}
-                    bg="gray.700"
-                    border="gray.600"
+                    bg="warm.700"
+                    border="warm.600"
                   />
                   {screenshotPreview && (
                     <Box mt={4} textAlign="center">
@@ -2274,14 +2274,14 @@ export default function AdminClients() {
                 </Text>
                 <VStack spacing={2} align="stretch" maxH="400px" overflowY="auto">
                   {Object.entries(screenshotPendingFields).map(([key, { label, value }]) => (
-                    <Flex key={key} align="center" gap={3} bg="gray.700" p={3} borderRadius="md">
+                    <Flex key={key} align="center" gap={3} bg="warm.700" p={3} borderRadius="md">
                       <Checkbox
                         colorScheme="orange"
                         isChecked={!!screenshotConfirmSelections[key]}
                         onChange={(e) => setScreenshotConfirmSelections(prev => ({ ...prev, [key]: e.target.checked }))}
                       />
                       <Box flex={1}>
-                        <Text color="gray.400" fontSize="sm">{label}</Text>
+                        <Text color="rgba(245,240,232,0.4)" fontSize="sm">{label}</Text>
                         <Text color="white" fontSize="md">{value}</Text>
                       </Box>
                     </Flex>
@@ -2315,8 +2315,8 @@ export default function AdminClients() {
       {/* 交流提取弹窗：操盘手交流后从聊天记录提取档案更新 */}
       <Modal isOpen={isChatExtractOpen} onClose={handleCancelChatExtract} size="4xl">
         <ModalOverlay bg="blackAlpha.700" />
-        <ModalContent bg="gray.800" borderRadius="xl" border="1px solid" borderColor="gray.700" maxH="85vh" overflow="hidden" display="flex" flexDirection="column">
-          <ModalHeader borderBottom="1px solid" borderColor="gray.700" color="white" pb={3}>
+        <ModalContent bg="warm.800" borderRadius="xl" border="1px solid" borderColor="warm.700" maxH="85vh" overflow="hidden" display="flex" flexDirection="column">
+          <ModalHeader borderBottom="1px solid" borderColor="warm.700" color="white" pb={3}>
             <HStack spacing={2}>
               <Box color="purple.400"><HeartIcon /></Box>
               <Text>交流提取 · 更新档案</Text>
@@ -2325,21 +2325,21 @@ export default function AdminClients() {
               )}
             </HStack>
           </ModalHeader>
-          <ModalCloseButton color="gray.400" />
+          <ModalCloseButton color="rgba(245,240,232,0.4)" />
           <ModalBody p={0} overflow="auto" flex="1">
             {!chatAnalysis ? (
               /* 提取界面 */
               <VStack spacing={6} p={6} align="stretch">
-                <Box bg="gray.750" borderRadius="lg" p={4}>
+                <Box bg="warm.800" borderRadius="lg" p={4}>
                   <Text color="gray.300" fontSize="sm" mb={3}>
                     将分析你与该客户的聊天记录，AI 自动提取档案更新建议。
                   </Text>
                   <HStack spacing={4} align="center">
-                    <Text color="gray.400" fontSize="sm" whiteSpace="nowrap">分析最近</Text>
+                    <Text color="rgba(245,240,232,0.4)" fontSize="sm" whiteSpace="nowrap">分析最近</Text>
                     <Select
                       value={chatMessageCount}
                       onChange={e => setChatMessageCount(parseInt(e.target.value))}
-                      bg="gray.700"
+                      bg="warm.700"
                       color="white"
                       w="120px"
                       size="sm"
@@ -2349,11 +2349,11 @@ export default function AdminClients() {
                       <option value={30}>30 条</option>
                       <option value={50}>50 条</option>
                     </Select>
-                    <Text color="gray.400" fontSize="sm" whiteSpace="nowrap">条聊天记录</Text>
+                    <Text color="rgba(245,240,232,0.4)" fontSize="sm" whiteSpace="nowrap">条聊天记录</Text>
                   </HStack>
                 </Box>
                 <SimpleGrid columns={2} spacing={4}>
-                  <Box bg="gray.750" borderRadius="lg" p={4}>
+                  <Box bg="warm.800" borderRadius="lg" p={4}>
                     <Text color="purple.300" fontWeight="600" mb={2} fontSize="sm">提取内容</Text>
                     <VStack align="start" spacing={1}>
                       {[
@@ -2369,7 +2369,7 @@ export default function AdminClients() {
                       ))}
                     </VStack>
                   </Box>
-                  <Box bg="gray.750" borderRadius="lg" p={4}>
+                  <Box bg="warm.800" borderRadius="lg" p={4}>
                     <Text color="purple.300" fontWeight="600" mb={2} fontSize="sm">适用场景</Text>
                     <VStack align="start" spacing={1}>
                       {[
@@ -2379,15 +2379,15 @@ export default function AdminClients() {
                         '更新战略分析维度',
                       ].map((item, i) => (
                         <HStack key={i} spacing={2}>
-                          <Box w={2} h={2} borderRadius="full" bg="gray.500" flexShrink={0} />
-                          <Text color="gray.400" fontSize="sm">{item}</Text>
+                          <Box w={2} h={2} borderRadius="full" bg="rgba(245,240,232,0.2)" flexShrink={0} />
+                          <Text color="rgba(245,240,232,0.4)" fontSize="sm">{item}</Text>
                         </HStack>
                       ))}
                     </VStack>
                   </Box>
                 </SimpleGrid>
                 <HStack justify="flex-end" spacing={4}>
-                  <Button variant="ghost" color="gray.400" onClick={handleCancelChatExtract}>取消</Button>
+                  <Button variant="ghost" color="rgba(245,240,232,0.4)" onClick={handleCancelChatExtract}>取消</Button>
                   <Button
                     colorScheme="purple"
                     onClick={handleExtractFromChat}
@@ -2403,13 +2403,13 @@ export default function AdminClients() {
               /* 分析结果界面 */
               <VStack spacing={0} align="stretch">
                 {/* 置信度 & 消息预览 */}
-                <Box bg="gray.750" p={4} borderBottom="1px solid" borderColor="gray.700">
+                <Box bg="warm.800" p={4} borderBottom="1px solid" borderColor="warm.700">
                   <HStack justify="space-between" mb={3}>
                     <HStack spacing={3}>
                       <Badge colorScheme={chatAnalysis.confidence >= 0.7 ? 'green' : chatAnalysis.confidence >= 0.4 ? 'yellow' : 'red'} borderRadius="full">
                         置信度 {(chatAnalysis.confidence * 100).toFixed(0)}%
                       </Badge>
-                      <Text color="gray.400" fontSize="xs">基于 {chatAnalysis.messageCount} 条聊天记录</Text>
+                      <Text color="rgba(245,240,232,0.4)" fontSize="xs">基于 {chatAnalysis.messageCount} 条聊天记录</Text>
                     </HStack>
                     <Button
                       size="xs"
@@ -2443,7 +2443,7 @@ export default function AdminClients() {
                 <Box p={4} overflow="auto" maxH="400px">
                   {Object.keys(chatPendingUpdates).length === 0 ? (
                     <Box textAlign="center" py={8}>
-                      <Text color="gray.500">本次分析未发现需要更新的档案字段</Text>
+                      <Text color="rgba(245,240,232,0.2)">本次分析未发现需要更新的档案字段</Text>
                     </Box>
                   ) : (
                     <VStack spacing={3} align="stretch">
@@ -2456,7 +2456,7 @@ export default function AdminClients() {
                             key={key}
                             align="center"
                             gap={3}
-                            bg={isStrategic ? 'purple.900' : 'gray.700'}
+                            bg={isStrategic ? 'purple.900' : 'warm.700'}
                             opacity={chatConfirmSelections[key] === false ? 0.5 : 1}
                             p={3}
                             borderRadius="md"
@@ -2483,10 +2483,10 @@ export default function AdminClients() {
                 </Box>
 
                 {/* 底部操作栏 */}
-                <HStack justify="space-between" p={4} borderTop="1px solid" borderColor="gray.700" bg="gray.750">
+                <HStack justify="space-between" p={4} borderTop="1px solid" borderColor="warm.700" bg="warm.800">
                   <Button
                     variant="ghost"
-                    color="gray.400"
+                    color="rgba(245,240,232,0.4)"
                     size="sm"
                     onClick={() => {
                       setChatAnalysis(null);
@@ -2497,7 +2497,7 @@ export default function AdminClients() {
                     重新分析
                   </Button>
                   <HStack spacing={4}>
-                    <Button variant="ghost" color="gray.400" onClick={handleCancelChatExtract}>取消</Button>
+                    <Button variant="ghost" color="rgba(245,240,232,0.4)" onClick={handleCancelChatExtract}>取消</Button>
                     <Button
                       colorScheme="purple"
                       onClick={handleConfirmChatExtract}
@@ -2516,12 +2516,12 @@ export default function AdminClients() {
       {/* 客户日历弹窗 */}
       <Modal isOpen={isCalendarOpen} onClose={onCalendarClose} size="5xl">
         <ModalOverlay bg="blackAlpha.700" />
-        <ModalContent bg="gray.800" borderRadius="xl">
-          <ModalHeader borderBottom="1px solid" borderColor="gray.700">
+        <ModalContent bg="warm.800" borderRadius="xl">
+          <ModalHeader borderBottom="1px solid" borderColor="warm.700">
             <HStack spacing={3}>
               <Icon as={CalendarIcon} color="blue.400" boxSize={5} />
               <Text color="white">{calendarClient?.nickname || calendarClient?.username} 的约会日历</Text>
-              <Badge colorScheme="teal">{calendarClient?.serviceStage}</Badge>
+              <Badge colorScheme="gold">{calendarClient?.serviceStage}</Badge>
             </HStack>
           </ModalHeader>
           <ModalCloseButton />

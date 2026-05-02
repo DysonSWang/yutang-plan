@@ -1140,9 +1140,9 @@ export default function AdminWorkbench() {
       <Flex gap={4} h="calc(100vh - 130px)">
         {/* 左侧：客户和女生选择 */}
         <Box w="280px">
-          <Card bg="gray.800" h="100%">
+          <Card bg="warm.800" h="100%">
             <CardHeader pb={2}>
-              <Text color="gray.400" fontSize="sm">选择客户</Text>
+              <Text color="rgba(245,240,232,0.4)" fontSize="sm">选择客户</Text>
             </CardHeader>
             <CardBody pt={0}>
               <Select
@@ -1152,7 +1152,7 @@ export default function AdminWorkbench() {
                   const c = clientList.find(c => c.id === e.target.value);
                   if (c) selectClient(c);
                 }}
-                bg="gray.700"
+                bg="warm.700"
                 mb={4}
               >
                 {clientList.map(c => (
@@ -1160,15 +1160,15 @@ export default function AdminWorkbench() {
                 ))}
               </Select>
 
-              <Divider borderColor="gray.700" my={4} />
+              <Divider borderColor="warm.700" my={4} />
 
-              <Text color="gray.400" fontSize="sm" mb={2}>女生资源 ({girlsList.length})</Text>
+              <Text color="rgba(245,240,232,0.4)" fontSize="sm" mb={2}>女生资源 ({girlsList.length})</Text>
               <VStack spacing={2} align="stretch">
                 {girlsList.map(girl => (
                   <Box
                     key={girl.id}
                     p={3}
-                    bg={selectedGirl?.id === girl.id ? 'teal.600' : 'gray.700'}
+                    bg={selectedGirl?.id === girl.id ? 'teal.600' : 'warm.700'}
                     borderRadius="md"
                     cursor="pointer"
                     onClick={() => selectGirl(girl)}
@@ -1178,13 +1178,13 @@ export default function AdminWorkbench() {
                       <Badge fontSize="xs">{girl.stage}</Badge>
                       <HStack spacing={1}>
                         <Icon as={HeartIcon} color="red.400" boxSize={3} />
-                        <Text color="gray.400" fontSize="xs">{girl.intimacyLevel}</Text>
+                        <Text color="rgba(245,240,232,0.4)" fontSize="xs">{girl.intimacyLevel}</Text>
                       </HStack>
                     </HStack>
                   </Box>
                 ))}
                 {girlsList.length === 0 && (
-                  <Text color="gray.500" fontSize="sm">暂无女生</Text>
+                  <Text color="rgba(245,240,232,0.2)" fontSize="sm">暂无女生</Text>
                 )}
               </VStack>
             </CardBody>
@@ -1193,7 +1193,7 @@ export default function AdminWorkbench() {
 
         {/* 中间：工具区域 */}
         <Box flex={1}>
-          <Tabs variant="soft-rounded" colorScheme="teal">
+          <Tabs variant="soft-rounded" colorScheme="gold">
             <TabList>
               <Tab>情况咨询</Tab>
               <Tab>实战聊天</Tab>
@@ -1202,7 +1202,7 @@ export default function AdminWorkbench() {
             <TabPanels>
               {/* 情况咨询 */}
               <TabPanel p={0} pt={4}>
-                <Card bg="gray.800" h="calc(100vh - 280px)">
+                <Card bg="warm.800" h="calc(100vh - 280px)">
                   <CardBody>
                     <HStack mb={4} justify="space-between">
                       <Text color="teal.400" fontSize="sm" fontWeight="bold">
@@ -1210,7 +1210,7 @@ export default function AdminWorkbench() {
                       </Text>
 
                       <HStack
-                        bg={deepMode ? 'purple.900' : 'gray.700'}
+                        bg={deepMode ? 'purple.900' : 'warm.700'}
                         px={3}
                         py={2}
                         borderRadius="md"
@@ -1219,12 +1219,12 @@ export default function AdminWorkbench() {
                         border={deepMode ? '1px solid' : 'none'}
                         borderColor="purple.500"
                       >
-                        <Icon as={FiZap} color={deepMode ? 'purple.300' : 'gray.400'} boxSize={4} />
+                        <Icon as={FiZap} color={deepMode ? 'purple.300' : 'rgba(245,240,232,0.4)'} boxSize={4} />
                         <Box>
                           <Text color={deepMode ? 'purple.300' : 'gray.300'} fontSize="xs" fontWeight="bold">
                             {deepMode ? '深度分析' : '快速分析'}
                           </Text>
-                          <Text color="gray.500" fontSize="xs">
+                          <Text color="rgba(245,240,232,0.2)" fontSize="xs">
                             {deepMode ? '含工具调用，可记录信号' : '流式输出，快'}
                           </Text>
                         </Box>
@@ -1235,7 +1235,7 @@ export default function AdminWorkbench() {
                       value={situation}
                       onChange={e => setSituation(e.target.value)}
                       placeholder={deepMode ? '描述当前情况，深度分析会调用工具记录信号、调整热度...' : '描述当前情况...'}
-                      bg="gray.700"
+                      bg="warm.700"
                       border="none"
                       color="white"
                       rows={4}
@@ -1255,7 +1255,7 @@ export default function AdminWorkbench() {
                     </HStack>
 
                     {(loading || response || aiAnalysis) && (
-                      <Box mt={4} p={4} bg="gray.700" borderRadius="md">
+                      <Box mt={4} p={4} bg="warm.700" borderRadius="md">
                         <HStack mb={2}>
                           <Text color="teal.400" fontSize="sm">
                             {(response || {}).coachName || 'AI统一教练'}的建议
@@ -1276,10 +1276,10 @@ export default function AdminWorkbench() {
 
               {/* 实战聊天 */}
               <TabPanel p={0} pt={4}>
-                <Card bg="gray.800" h="calc(100vh - 280px)">
+                <Card bg="warm.800" h="calc(100vh - 280px)">
                   <CardBody display="flex" flexDirection="column" gap={3}>
                     {/* 顶部：模式切换 */}
-                    <HStack mb={1} bg="gray.700" p={1} borderRadius="md" w="fit-content">
+                    <HStack mb={1} bg="warm.700" p={1} borderRadius="md" w="fit-content">
                       <Box
                         px={4}
                         py={2}
@@ -1330,7 +1330,7 @@ export default function AdminWorkbench() {
                     {/* 朋友圈互动模式 */}
                     {workbenchChatMode === 'moment' && !selectedGirl && (
                       <Flex flex={1} align="center" justify="center">
-                        <Text color="gray.500">先在左侧选择一个女生开始分析朋友圈</Text>
+                        <Text color="rgba(245,240,232,0.2)">先在左侧选择一个女生开始分析朋友圈</Text>
                       </Flex>
                     )}
 
@@ -1339,7 +1339,7 @@ export default function AdminWorkbench() {
                         {/* 输入区：朋友圈文字 */}
                         <HStack mb={2}>
                           <Icon as={FiMessageSquare} color="purple.400" />
-                          <Text color="gray.400" fontSize="sm">
+                          <Text color="rgba(245,240,232,0.4)" fontSize="sm">
                             粘贴朋友圈文字，或上传截图（可选）
                           </Text>
                         </HStack>
@@ -1347,26 +1347,26 @@ export default function AdminWorkbench() {
                           value={momentText}
                           onChange={e => setMomentText(e.target.value)}
                           placeholder="粘贴朋友圈文字内容..."
-                          bg="gray.700"
+                          bg="warm.700"
                           color="white"
                           rows={3}
                           mb={2}
-                          _placeholder={{ color: 'gray.400' }}
+                          _placeholder={{ color: 'rgba(245,240,232,0.4)' }}
                         />
 
                         {/* 图片上传 */}
                         <HStack mb={3}>
                           <FormControl>
-                            <FormLabel color="gray.400" fontSize="sm" mb={0}>上传朋友圈截图</FormLabel>
+                            <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm" mb={0}>上传朋友圈截图</FormLabel>
                             <Input
                               type="file"
                               accept="image/*"
                               onChange={handleMomentImageSelect}
-                              bg="gray.700"
+                              bg="warm.700"
                               color="white"
                               size="sm"
                               pt={1}
-                              _placeholder={{ color: 'gray.400' }}
+                              _placeholder={{ color: 'rgba(245,240,232,0.4)' }}
                             />
                           </FormControl>
                           {momentImagePreview && (
@@ -1392,7 +1392,7 @@ export default function AdminWorkbench() {
                           </Button>
                           <Button
                             variant="ghost"
-                            color="gray.400"
+                            color="rgba(245,240,232,0.4)"
                             size="sm"
                             onClick={handleClearMoment}
                           >
@@ -1439,14 +1439,14 @@ export default function AdminWorkbench() {
                     {/* 和客户聊天模式 */}
                     {workbenchChatMode === 'client' && !selectedClient && (
                       <Flex flex={1} align="center" justify="center">
-                        <Text color="gray.500">先在左侧选择一个客户</Text>
+                        <Text color="rgba(245,240,232,0.2)">先在左侧选择一个客户</Text>
                       </Flex>
                     )}
 
                     {workbenchChatMode === 'client' && selectedClient && (
                       <>
                         {/* 顶部：AI模式切换 tabs */}
-                        <HStack mb={1} bg="gray.700" p={1} borderRadius="md" w="fit-content">
+                        <HStack mb={1} bg="warm.700" p={1} borderRadius="md" w="fit-content">
                           <Box
                             px={4}
                             py={2}
@@ -1474,7 +1474,7 @@ export default function AdminWorkbench() {
                           <Box>
                             <HStack mb={2}>
                               <Icon as={FiMessageSquare} color="blue.400" />
-                              <Text color="gray.400" fontSize="sm">
+                              <Text color="rgba(245,240,232,0.4)" fontSize="sm">
                                 粘贴客户的消息，AI 分析意图并给出回复建议
                               </Text>
                             </HStack>
@@ -1490,10 +1490,10 @@ export default function AdminWorkbench() {
                                   }
                                 }}
                                 placeholder="粘贴客户的消息..."
-                                bg="gray.700"
+                                bg="warm.700"
                                 border="none"
                                 color="white"
-                                _placeholder={{ color: 'gray.400' }}
+                                _placeholder={{ color: 'rgba(245,240,232,0.4)' }}
                               />
                               <Button
                                 colorScheme="blue"
@@ -1512,7 +1512,7 @@ export default function AdminWorkbench() {
                           <Box>
                             <HStack mb={2}>
                               <Icon as={FiZap} color="orange.400" />
-                              <Text color="gray.400" fontSize="sm">
+                              <Text color="rgba(245,240,232,0.4)" fontSize="sm">
                                 粘贴你想发的话，AI 帮你优化得更专业、更有温度
                               </Text>
                             </HStack>
@@ -1528,10 +1528,10 @@ export default function AdminWorkbench() {
                                   }
                                 }}
                                 placeholder="粘贴你想发给客户的话..."
-                                bg="gray.700"
+                                bg="warm.700"
                                 border="none"
                                 color="white"
-                                _placeholder={{ color: 'gray.400' }}
+                                _placeholder={{ color: 'rgba(245,240,232,0.4)' }}
                               />
                               <Button
                                 colorScheme="orange"
@@ -1550,7 +1550,7 @@ export default function AdminWorkbench() {
                           <VStack spacing={3} align="stretch">
                             {/* 多轮对话历史（和女生的类似风格） */}
                             {clientChatHistory.length === 0 && !clientAiAnalysis && (
-                              <Text color="gray.500" textAlign="center" fontSize="sm" py={4}>
+                              <Text color="rgba(245,240,232,0.2)" textAlign="center" fontSize="sm" py={4}>
                                 暂无对话记录，粘贴客户消息开始分析
                               </Text>
                             )}
@@ -1562,13 +1562,13 @@ export default function AdminWorkbench() {
                                 maxW="80%"
                                 p={3}
                                 borderRadius="lg"
-                                bg={msg.role === 'operator' ? 'teal.700' : 'gray.700'}
+                                bg={msg.role === 'operator' ? 'teal.700' : 'warm.700'}
                               >
                                 <HStack mb={1} spacing={1}>
                                   <Icon
                                     as={msg.role === 'operator' ? FiSend : FiMessageSquare}
                                     boxSize={3}
-                                    color={msg.role === 'operator' ? 'teal.300' : 'gray.400'}
+                                    color={msg.role === 'operator' ? 'teal.300' : 'rgba(245,240,232,0.4)'}
                                   />
                                   <Text fontSize="xs" color="gray.300">
                                     {msg.role === 'operator' ? '操盘手' : (selectedClient?.nickname || '客户')}
@@ -1601,7 +1601,7 @@ export default function AdminWorkbench() {
                                   {coachRecommendations.map((rec) => (
                                     <HStack
                                       key={rec.id}
-                                      bg="gray.700"
+                                      bg="warm.700"
                                       p={2}
                                       borderRadius="md"
                                       justify="space-between"
@@ -1610,7 +1610,7 @@ export default function AdminWorkbench() {
                                       <VStack align="start" spacing={0} flex={1}>
                                         <Text color="gray.200" fontSize="sm">{rec.action}</Text>
                                         {rec.girlName && (
-                                          <Text color="gray.400" fontSize="xs">
+                                          <Text color="rgba(245,240,232,0.4)" fontSize="xs">
                                             关联: {rec.girlName}
                                           </Text>
                                         )}
@@ -1633,7 +1633,7 @@ export default function AdminWorkbench() {
 
                             {/* AI 总结 */}
                             {clientAiSummary && (
-                              <Box p={3} bg="gray.700" borderRadius="md" borderLeft="2px solid" borderColor="teal.500">
+                              <Box p={3} bg="warm.700" borderRadius="md" borderLeft="2px solid" borderColor="teal.500">
                                 <HStack mb={1}>
                                   <Icon as={FiTarget} color="teal.400" boxSize={3} />
                                   <Text color="teal.300" fontSize="xs" fontWeight="bold">本轮总结</Text>
@@ -1656,7 +1656,7 @@ export default function AdminWorkbench() {
                                 </Alert>
                                 <SimpleGrid columns={2} spacing={2}>
                                   {Object.entries(clientProfilePendingFields).map(([key, { label, value }]) => (
-                                    <HStack key={key} bg="gray.700" p={2} borderRadius="md">
+                                    <HStack key={key} bg="warm.700" p={2} borderRadius="md">
                                       <Checkbox
                                         size="sm"
                                         isChecked={!!selectedClientProfileFields[key]}
@@ -1669,7 +1669,7 @@ export default function AdminWorkbench() {
                                         colorScheme="cyan"
                                       />
                                       <Box flex={1}>
-                                        <Text color="gray.400" fontSize="xs">{label}</Text>
+                                        <Text color="rgba(245,240,232,0.4)" fontSize="xs">{label}</Text>
                                         <Text color="cyan.200" fontSize="sm" wordBreak="break-all">{value}</Text>
                                       </Box>
                                     </HStack>
@@ -1690,7 +1690,7 @@ export default function AdminWorkbench() {
                                     <Box
                                       key={i}
                                       p={3}
-                                      bg="gray.700"
+                                      bg="warm.700"
                                       borderRadius="md"
                                       cursor="pointer"
                                       _hover={{ bg: 'teal.700', transform: 'translateX(4px)' }}
@@ -1700,10 +1700,10 @@ export default function AdminWorkbench() {
                                       <HStack justify="space-between" mb={1}>
                                         <Badge colorScheme="blue" fontSize="xs">{s.style || '建议'}</Badge>
                                         <HStack spacing={1}>
-                                          <Text color="gray.400" fontSize="xs">{s.intention || ''}</Text>
+                                          <Text color="rgba(245,240,232,0.4)" fontSize="xs">{s.intention || ''}</Text>
                                           <Icon
                                             as={FiCopy}
-                                            color="gray.500"
+                                            color="rgba(245,240,232,0.2)"
                                             boxSize={3}
                                             cursor="pointer"
                                             _hover={{ color: 'teal.400' }}
@@ -1735,7 +1735,7 @@ export default function AdminWorkbench() {
                                     <Box
                                       key={i}
                                       p={3}
-                                      bg="gray.700"
+                                      bg="warm.700"
                                       borderRadius="md"
                                       cursor="pointer"
                                       _hover={{ bg: 'teal.700', transform: 'translateX(4px)' }}
@@ -1745,10 +1745,10 @@ export default function AdminWorkbench() {
                                       <HStack justify="space-between" mb={1}>
                                         <Badge colorScheme="orange" fontSize="xs">{opt.style || '优化版'}</Badge>
                                         <HStack spacing={1}>
-                                          <Text color="gray.400" fontSize="xs">{opt.point || ''}</Text>
+                                          <Text color="rgba(245,240,232,0.4)" fontSize="xs">{opt.point || ''}</Text>
                                           <Icon
                                             as={FiCopy}
-                                            color="gray.500"
+                                            color="rgba(245,240,232,0.2)"
                                             boxSize={3}
                                             cursor="pointer"
                                             _hover={{ color: 'teal.400' }}
@@ -1769,19 +1769,19 @@ export default function AdminWorkbench() {
                             )}
 
                             {clientAnalyzing && (
-                              <Box p={3} bg="gray.700" borderRadius="lg" alignSelf="flex-start">
+                              <Box p={3} bg="warm.700" borderRadius="lg" alignSelf="flex-start">
                                 <HStack spacing={2}>
                                   <Spinner size="sm" color="teal.400" />
-                                  <Text color="gray.400" fontSize="sm">AI分析中...</Text>
+                                  <Text color="rgba(245,240,232,0.4)" fontSize="sm">AI分析中...</Text>
                                 </HStack>
                               </Box>
                             )}
 
                             {clientOptimizing && (
-                              <Box p={3} bg="gray.700" borderRadius="lg" alignSelf="flex-start">
+                              <Box p={3} bg="warm.700" borderRadius="lg" alignSelf="flex-start">
                                 <HStack spacing={2}>
                                   <Spinner size="sm" color="orange.400" />
-                                  <Text color="gray.400" fontSize="sm">话术优化中...</Text>
+                                  <Text color="rgba(245,240,232,0.4)" fontSize="sm">话术优化中...</Text>
                                 </HStack>
                               </Box>
                             )}
@@ -1793,7 +1793,7 @@ export default function AdminWorkbench() {
                         {/* 底部：发送/编辑区 */}
                         <Box>
                           <HStack mb={1}>
-                            <Text color="gray.500" fontSize="xs">
+                            <Text color="rgba(245,240,232,0.2)" fontSize="xs">
                               {clientChatMode === 'suggest' ? '采纳建议后可直接发送，或复制到其他平台' : '采纳优化后可直接发送，或复制到其他平台'}
                             </Text>
                           </HStack>
@@ -1809,13 +1809,13 @@ export default function AdminWorkbench() {
                                 }
                               }}
                               placeholder="编辑回复内容，或点击上方建议采纳..."
-                              bg="gray.700"
+                              bg="warm.700"
                               border="none"
                               color="white"
-                              _placeholder={{ color: 'gray.400' }}
+                              _placeholder={{ color: 'rgba(245,240,232,0.4)' }}
                             />
                             <Button
-                              colorScheme="teal"
+                              colorScheme="gold"
                               onClick={handleSendToClient}
                               isLoading={sendingClientMsg}
                               isDisabled={!clientInput.trim()}
@@ -1827,7 +1827,7 @@ export default function AdminWorkbench() {
                               variant="ghost"
                               size="sm"
                               onClick={handleClearClientChat}
-                              color="gray.400"
+                              color="rgba(245,240,232,0.4)"
                               isDisabled={clientChatHistory.length === 0}
                             >
                               清除
@@ -1840,7 +1840,7 @@ export default function AdminWorkbench() {
                     {/* 和女生聊天模式 */}
                     {workbenchChatMode === 'girl' && !selectedGirl && (
                       <Flex flex={1} align="center" justify="center">
-                        <Text color="gray.500">先在左侧选择一个女生开始实战聊天</Text>
+                        <Text color="rgba(245,240,232,0.2)">先在左侧选择一个女生开始实战聊天</Text>
                       </Flex>
                     )}
 
@@ -1850,7 +1850,7 @@ export default function AdminWorkbench() {
                         {battleMode === 'analyze' && (
                           <Box>
                             {/* 模式切换 tabs */}
-                            <HStack mb={3} bg="gray.700" p={1} borderRadius="md" w="fit-content">
+                            <HStack mb={3} bg="warm.700" p={1} borderRadius="md" w="fit-content">
                               <Box
                                 px={4}
                                 py={2}
@@ -1891,7 +1891,7 @@ export default function AdminWorkbench() {
                               <Box>
                                 <HStack mb={2}>
                                   <Icon as={FiMessageSquare} color="blue.400" />
-                                  <Text color="gray.400" fontSize="sm">
+                                  <Text color="rgba(245,240,232,0.4)" fontSize="sm">
                                     粘贴{selectedGirl.name}的消息，AI 分析意图并给出回复建议
                                   </Text>
                                 </HStack>
@@ -1907,10 +1907,10 @@ export default function AdminWorkbench() {
                                       }
                                     }}
                                     placeholder={`粘贴${selectedGirl.name}的消息...`}
-                                    bg="gray.700"
+                                    bg="warm.700"
                                     border="none"
                                     color="white"
-                                    _placeholder={{ color: 'gray.400' }}
+                                    _placeholder={{ color: 'rgba(245,240,232,0.4)' }}
                                   />
                                   <Button
                                     colorScheme="blue"
@@ -1929,7 +1929,7 @@ export default function AdminWorkbench() {
                               <Box>
                                 <HStack mb={2}>
                                   <Icon as={FiZap} color="orange.400" />
-                                  <Text color="gray.400" fontSize="sm">
+                                  <Text color="rgba(245,240,232,0.4)" fontSize="sm">
                                     粘贴你想发的话，AI 帮你优化得更自然、更有温度
                                   </Text>
                                 </HStack>
@@ -1945,10 +1945,10 @@ export default function AdminWorkbench() {
                                       }
                                     }}
                                     placeholder="粘贴你想发给她的话..."
-                                    bg="gray.700"
+                                    bg="warm.700"
                                     border="none"
                                     color="white"
-                                    _placeholder={{ color: 'gray.400' }}
+                                    _placeholder={{ color: 'rgba(245,240,232,0.4)' }}
                                   />
                                   <Button
                                     colorScheme="orange"
@@ -1984,7 +1984,7 @@ export default function AdminWorkbench() {
                               </HStack>
                               <HStack spacing={2}>
                                 <Badge colorScheme="purple" fontSize="xs">{pendingUpdates.length} 条待审核</Badge>
-                                <Text color="gray.400" fontSize="xs">{showUpdatePanel ? '▲ 收起' : '▼ 查看'}</Text>
+                                <Text color="rgba(245,240,232,0.4)" fontSize="xs">{showUpdatePanel ? '▲ 收起' : '▼ 查看'}</Text>
                               </HStack>
                             </HStack>
 
@@ -2008,11 +2008,11 @@ export default function AdminWorkbench() {
                                     const tensionDelta = fieldChanges?.tensionScore?.delta || 0;
 
                                     return (
-                                      <Box key={update.id} p={3} bg="gray.700" borderRadius="md">
+                                      <Box key={update.id} p={3} bg="warm.700" borderRadius="md">
                                         <HStack justify="space-between" mb={2}>
                                           <HStack spacing={2}>
                                             <Badge colorScheme="purple" fontSize="xs">{update.style}</Badge>
-                                            <Text color="gray.400" fontSize="xs">
+                                            <Text color="rgba(245,240,232,0.4)" fontSize="xs">
                                               {new Date(update.createdAt).toLocaleTimeString()}
                                             </Text>
                                           </HStack>
@@ -2044,11 +2044,11 @@ export default function AdminWorkbench() {
                                         {/* 热度变化 diff */}
                                         {tensionDelta !== 0 && (
                                           <HStack spacing={2} mb={1}>
-                                            <Text color="gray.400" fontSize="xs" w="60px">热度</Text>
+                                            <Text color="rgba(245,240,232,0.4)" fontSize="xs" w="60px">热度</Text>
                                             <Text color="gray.300" fontSize="xs">
                                               {current.tensionScore || 5} {getTensionEmoji(current.tensionScore || 5)}
                                             </Text>
-                                            <Text color="gray.500" fontSize="xs">→</Text>
+                                            <Text color="rgba(245,240,232,0.2)" fontSize="xs">→</Text>
                                             <Text color="green.300" fontSize="xs" fontWeight="bold">
                                               {newTension} {getTensionEmoji(newTension)}
                                             </Text>
@@ -2061,7 +2061,7 @@ export default function AdminWorkbench() {
                                         {/* 信号 diff */}
                                         {update.analysis?.newSignals?.map((signal, si) => (
                                           <HStack key={si} spacing={2}>
-                                            <Text color="gray.400" fontSize="xs" w="60px">信号</Text>
+                                            <Text color="rgba(245,240,232,0.4)" fontSize="xs" w="60px">信号</Text>
                                             <Badge
                                               colorScheme={signal.type === 'positive' ? 'green' : signal.type === 'negative' ? 'red' : 'gray'}
                                               fontSize="xs"
@@ -2084,7 +2084,7 @@ export default function AdminWorkbench() {
                         <Box flex={1} overflowY="auto">
                           <VStack spacing={3} align="stretch">
                             {chatHistory.length === 0 && (
-                              <Text color="gray.500" textAlign="center" fontSize="sm" py={4}>
+                              <Text color="rgba(245,240,232,0.2)" textAlign="center" fontSize="sm" py={4}>
                                 暂无对话记录
                               </Text>
                             )}
@@ -2096,13 +2096,13 @@ export default function AdminWorkbench() {
                                 maxW="80%"
                                 p={3}
                                 borderRadius="lg"
-                                bg={msg.role === 'user' ? 'teal.600' : 'gray.700'}
+                                bg={msg.role === 'user' ? 'teal.600' : 'warm.700'}
                               >
                                 <HStack mb={1} spacing={1}>
                                   <Icon
                                     as={msg.role === 'user' ? FiSend : FiMessageSquare}
                                     boxSize={3}
-                                    color={msg.role === 'user' ? 'teal.300' : 'gray.400'}
+                                    color={msg.role === 'user' ? 'teal.300' : 'rgba(245,240,232,0.4)'}
                                   />
                                   <Text fontSize="xs" color="gray.300">
                                     {msg.role === 'user'
@@ -2136,7 +2136,7 @@ export default function AdminWorkbench() {
                                   <Button
                                     size="xs"
                                     variant="ghost"
-                                    color="gray.400"
+                                    color="rgba(245,240,232,0.4)"
                                     onClick={() => setShowProfileFields(v => !v)}
                                   >
                                     {showProfileFields ? '收起' : '展开'}
@@ -2150,7 +2150,7 @@ export default function AdminWorkbench() {
                                   </Alert>
                                   <SimpleGrid columns={2} spacing={2}>
                                     {Object.entries(profilePendingFields).map(([key, { label, value }]) => (
-                                      <HStack key={key} bg="gray.700" p={2} borderRadius="md">
+                                      <HStack key={key} bg="warm.700" p={2} borderRadius="md">
                                         <Checkbox
                                           size="sm"
                                           isChecked={!!selectedProfileFields[key]}
@@ -2163,7 +2163,7 @@ export default function AdminWorkbench() {
                                           colorScheme="cyan"
                                         />
                                         <Box flex={1}>
-                                          <Text color="gray.400" fontSize="xs">{label}</Text>
+                                          <Text color="rgba(245,240,232,0.4)" fontSize="xs">{label}</Text>
                                           <Text color="cyan.200" fontSize="sm" wordBreak="break-all">{value}</Text>
                                         </Box>
                                       </HStack>
@@ -2184,7 +2184,7 @@ export default function AdminWorkbench() {
                                     <Box
                                       key={i}
                                       p={3}
-                                      bg="gray.700"
+                                      bg="warm.700"
                                       borderRadius="md"
                                       cursor="pointer"
                                       _hover={{ bg: 'teal.700', transform: 'translateX(4px)' }}
@@ -2194,10 +2194,10 @@ export default function AdminWorkbench() {
                                       <HStack justify="space-between" mb={1}>
                                         <Badge colorScheme="blue" fontSize="xs">{s.style || '建议'}</Badge>
                                         <HStack spacing={1}>
-                                          <Text color="gray.400" fontSize="xs">{s.intention || ''}</Text>
+                                          <Text color="rgba(245,240,232,0.4)" fontSize="xs">{s.intention || ''}</Text>
                                           <Icon
                                             as={FiCopy}
-                                            color="gray.500"
+                                            color="rgba(245,240,232,0.2)"
                                             boxSize={3}
                                             cursor="pointer"
                                             _hover={{ color: 'teal.400' }}
@@ -2225,7 +2225,7 @@ export default function AdminWorkbench() {
                                     <Box
                                       key={i}
                                       p={3}
-                                      bg="gray.700"
+                                      bg="warm.700"
                                       borderRadius="md"
                                       cursor="pointer"
                                       _hover={{ bg: 'teal.700', transform: 'translateX(4px)' }}
@@ -2235,10 +2235,10 @@ export default function AdminWorkbench() {
                                       <HStack justify="space-between" mb={1}>
                                         <Badge colorScheme="orange" fontSize="xs">{opt.style || '优化版'}</Badge>
                                         <HStack spacing={1}>
-                                          <Text color="gray.400" fontSize="xs">{opt.point || ''}</Text>
+                                          <Text color="rgba(245,240,232,0.4)" fontSize="xs">{opt.point || ''}</Text>
                                           <Icon
                                             as={FiCopy}
-                                            color="gray.500"
+                                            color="rgba(245,240,232,0.2)"
                                             boxSize={3}
                                             cursor="pointer"
                                             _hover={{ color: 'teal.400' }}
@@ -2255,19 +2255,19 @@ export default function AdminWorkbench() {
                             )}
 
                             {isOptimizing && (
-                              <Box p={3} bg="gray.700" borderRadius="lg" alignSelf="flex-start">
+                              <Box p={3} bg="warm.700" borderRadius="lg" alignSelf="flex-start">
                                 <HStack spacing={2}>
                                   <Spinner size="sm" color="orange.400" />
-                                  <Text color="gray.400" fontSize="sm">话术优化中...</Text>
+                                  <Text color="rgba(245,240,232,0.4)" fontSize="sm">话术优化中...</Text>
                                 </HStack>
                               </Box>
                             )}
 
                             {isAnalyzing && (
-                              <Box p={3} bg="gray.700" borderRadius="lg" alignSelf="flex-start">
+                              <Box p={3} bg="warm.700" borderRadius="lg" alignSelf="flex-start">
                                 <HStack spacing={2}>
                                   <Spinner size="sm" color="teal.400" />
-                                  <Text color="gray.400" fontSize="sm">AI分析中...</Text>
+                                  <Text color="rgba(245,240,232,0.4)" fontSize="sm">AI分析中...</Text>
                                 </HStack>
                               </Box>
                             )}
@@ -2282,17 +2282,17 @@ export default function AdminWorkbench() {
                             value={sendingContent}
                             onChange={e => setSendingContent(e.target.value)}
                             placeholder="输入回复内容，或点击上方建议采纳..."
-                            bg="gray.700"
+                            bg="warm.700"
                             border="none"
                             color="white"
                             rows={2}
                             mb={2}
-                            _placeholder={{ color: 'gray.400' }}
+                            _placeholder={{ color: 'rgba(245,240,232,0.4)' }}
                           />
 
                           <HStack>
                             <Button
-                              colorScheme="teal"
+                              colorScheme="gold"
                               onClick={handleSend}
                               isDisabled={!sendingContent.trim()}
                               leftIcon={<Icon as={FiSend} />}
@@ -2304,7 +2304,7 @@ export default function AdminWorkbench() {
                               variant="ghost"
                               size="sm"
                               onClick={handleClearChat}
-                              color="gray.400"
+                              color="rgba(245,240,232,0.4)"
                               isDisabled={chatHistory.length === 0 && !girlMessage.trim()}
                             >
                               清除
@@ -2331,7 +2331,7 @@ export default function AdminWorkbench() {
                           </HStack>
 
                           {optimized && (
-                            <Box mt={2} p={2} bg="gray.700" borderRadius="md">
+                            <Box mt={2} p={2} bg="warm.700" borderRadius="md">
                               <Text color="teal.400" fontSize="xs">优化说明：{optimized.reason}</Text>
                             </Box>
                           )}
@@ -2347,7 +2347,7 @@ export default function AdminWorkbench() {
 
         {/* 右侧：选中对象详情 */}
         <Box w="300px">
-          <Card bg="gray.800" h="100%">
+          <Card bg="warm.800" h="100%">
             <CardHeader pb={1}>
               <HStack justify="space-between" flexWrap="wrap" gap={1}>
                 <HStack spacing={2}>
@@ -2362,7 +2362,7 @@ export default function AdminWorkbench() {
                 <Button
                   size="xs"
                   variant="ghost"
-                  color="gray.400"
+                  color="rgba(245,240,232,0.4)"
                   onClick={() => fetchActiveCoach(true)}
                   isLoading={activeCoachLoading}
                   isDisabled={activeCoachLoading}
@@ -2394,7 +2394,7 @@ export default function AdminWorkbench() {
                       <Button
                         size="xs"
                         variant="ghost"
-                        color="gray.400"
+                        color="rgba(245,240,232,0.4)"
                         onClick={() => setCoachCollapsed(v => !v)}
                         rightIcon={coachCollapsed ? <FiChevronDown /> : <FiChevronUp />}
                         fontSize="xs"
@@ -2414,13 +2414,13 @@ export default function AdminWorkbench() {
                     </Box>
                   </>
                 ) : (
-                  <Text color="gray.500" fontSize="xs">选中女生或保持空白，AI教练自动给出建议</Text>
+                  <Text color="rgba(245,240,232,0.2)" fontSize="xs">选中女生或保持空白，AI教练自动给出建议</Text>
                 )}
               </Box>
             </CardBody>
-            <Divider borderColor="gray.700" />
+            <Divider borderColor="warm.700" />
             <CardHeader pb={2}>
-              <Text color="gray.400" fontSize="sm">
+              <Text color="rgba(245,240,232,0.4)" fontSize="sm">
                 {workbenchChatMode === 'client' ? '选中客户' : '选中女生'}
               </Text>
             </CardHeader>
@@ -2428,81 +2428,81 @@ export default function AdminWorkbench() {
               {/* 客户模式 */}
               {workbenchChatMode === 'client' && selectedClient ? (
                 <VStack spacing={3} align="stretch">
-                  <Box p={3} bg="gray.700" borderRadius="md">
+                  <Box p={3} bg="warm.700" borderRadius="md">
                     <HStack mb={2}>
                       <Icon as={FiUser} color="teal.300" boxSize={5} />
                       <Text color="white" fontWeight="bold" fontSize="lg">{selectedClient.nickname || selectedClient.username}</Text>
                     </HStack>
                     <HStack spacing={2}>
-                      <Badge colorScheme="teal">{selectedClient.serviceStage || '建池'}</Badge>
-                      <Text color="gray.400" fontSize="xs">{girlsList.length} 个女生</Text>
+                      <Badge colorScheme="gold">{selectedClient.serviceStage || '建池'}</Badge>
+                      <Text color="rgba(245,240,232,0.4)" fontSize="xs">{girlsList.length} 个女生</Text>
                     </HStack>
                   </Box>
 
                   <SimpleGrid columns={2} gap={2}>
-                    <Box p={2} bg="gray.700" borderRadius="md">
-                      <Text color="gray.400" fontSize="xs">年龄</Text>
+                    <Box p={2} bg="warm.700" borderRadius="md">
+                      <Text color="rgba(245,240,232,0.4)" fontSize="xs">年龄</Text>
                       <Text color="white">{selectedClient.age || '-'}</Text>
                     </Box>
-                    <Box p={2} bg="gray.700" borderRadius="md">
-                      <Text color="gray.400" fontSize="xs">职业</Text>
+                    <Box p={2} bg="warm.700" borderRadius="md">
+                      <Text color="rgba(245,240,232,0.4)" fontSize="xs">职业</Text>
                       <Text color="white">{selectedClient.occupation || '-'}</Text>
                     </Box>
                   </SimpleGrid>
 
-                  <Box p={3} bg="gray.700" borderRadius="md">
-                    <Text color="gray.400" fontSize="xs">所在地</Text>
+                  <Box p={3} bg="warm.700" borderRadius="md">
+                    <Text color="rgba(245,240,232,0.4)" fontSize="xs">所在地</Text>
                     <Text color="white" fontSize="sm">{selectedClient.residence || '-'}</Text>
                   </Box>
 
-                  <Box p={3} bg="gray.700" borderRadius="md">
-                    <Text color="gray.400" fontSize="xs">沟通风格</Text>
+                  <Box p={3} bg="warm.700" borderRadius="md">
+                    <Text color="rgba(245,240,232,0.4)" fontSize="xs">沟通风格</Text>
                     <Text color="white" fontSize="sm">{selectedClient.communicationStyle || '-'}</Text>
                   </Box>
 
-                  <Box p={3} bg="gray.700" borderRadius="md">
-                    <Text color="gray.400" fontSize="xs">当前会话</Text>
+                  <Box p={3} bg="warm.700" borderRadius="md">
+                    <Text color="rgba(245,240,232,0.4)" fontSize="xs">当前会话</Text>
                     <Text color="gray.300" fontSize="sm">{clientMessages.length} 条消息</Text>
                   </Box>
 
                   {selectedClient.notes && (
-                    <Box p={3} bg="gray.700" borderRadius="md">
-                      <Text color="gray.400" fontSize="xs">备注</Text>
+                    <Box p={3} bg="warm.700" borderRadius="md">
+                      <Text color="rgba(245,240,232,0.4)" fontSize="xs">备注</Text>
                       <Text color="gray.300" fontSize="sm">{selectedClient.notes}</Text>
                     </Box>
                   )}
                 </VStack>
               ) : workbenchChatMode === 'client' ? (
-                <Text color="gray.500" fontSize="sm">选择客户查看详情</Text>
+                <Text color="rgba(245,240,232,0.2)" fontSize="sm">选择客户查看详情</Text>
               ) : null}
 
               {/* 女生模式 */}
               {workbenchChatMode === 'girl' && selectedGirl ? (
                 <VStack spacing={3} align="stretch">
-                  <Box p={3} bg="gray.700" borderRadius="md">
+                  <Box p={3} bg="warm.700" borderRadius="md">
                     <Text color="white" fontWeight="bold" fontSize="lg">{selectedGirl.name}</Text>
                     <HStack mt={2} spacing={2}>
                       <Badge>{selectedGirl.stage}</Badge>
                       <HStack spacing={1}>
                         <Icon as={HeartIcon} color="red.400" boxSize={4} />
-                        <Text color="gray.400">{selectedGirl.intimacyLevel}</Text>
+                        <Text color="rgba(245,240,232,0.4)">{selectedGirl.intimacyLevel}</Text>
                       </HStack>
                     </HStack>
                   </Box>
 
                   <SimpleGrid columns={2} gap={2}>
-                    <Box p={2} bg="gray.700" borderRadius="md">
-                      <Text color="gray.400" fontSize="xs">年龄</Text>
+                    <Box p={2} bg="warm.700" borderRadius="md">
+                      <Text color="rgba(245,240,232,0.4)" fontSize="xs">年龄</Text>
                       <Text color="white">{selectedGirl.age || '-'}</Text>
                     </Box>
-                    <Box p={2} bg="gray.700" borderRadius="md">
-                      <Text color="gray.400" fontSize="xs">职业</Text>
+                    <Box p={2} bg="warm.700" borderRadius="md">
+                      <Text color="rgba(245,240,232,0.4)" fontSize="xs">职业</Text>
                       <Text color="white">{selectedGirl.occupation || '-'}</Text>
                     </Box>
                   </SimpleGrid>
 
-                  <Box p={3} bg="gray.700" borderRadius="md">
-                    <Text color="gray.400" fontSize="xs">关系热度</Text>
+                  <Box p={3} bg="warm.700" borderRadius="md">
+                    <Text color="rgba(245,240,232,0.4)" fontSize="xs">关系热度</Text>
                     <HStack mt={1}>
                       <Text color="white" fontWeight="bold">
                         {selectedGirl.tensionScore || 5}/10
@@ -2512,14 +2512,14 @@ export default function AdminWorkbench() {
                   </Box>
 
                   {selectedGirl.notes && (
-                    <Box p={3} bg="gray.700" borderRadius="md">
-                      <Text color="gray.400" fontSize="xs">备注</Text>
+                    <Box p={3} bg="warm.700" borderRadius="md">
+                      <Text color="rgba(245,240,232,0.4)" fontSize="xs">备注</Text>
                       <Text color="gray.300" fontSize="sm">{selectedGirl.notes}</Text>
                     </Box>
                   )}
                 </VStack>
               ) : workbenchChatMode === 'girl' && !selectedGirl ? (
-                <Text color="gray.500" fontSize="sm">选择女生查看详情</Text>
+                <Text color="rgba(245,240,232,0.2)" fontSize="sm">选择女生查看详情</Text>
               ) : null}
             </CardBody>
           </Card>

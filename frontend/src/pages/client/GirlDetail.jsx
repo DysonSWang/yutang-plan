@@ -119,9 +119,9 @@ function parseJSONField(val) {
 }
 function EmptyValue({ value, children, ...props }) {
   if (value !== null && value !== undefined && value !== '') {
-    return <Text color="white" fontSize="sm" {...props}>{children || String(value)}</Text>;
+    return <Box as="div" color="white" fontSize="sm" {...props}>{children || String(value)}</Box>;
   }
-  return <Text color="gray.600" fontSize="sm" {...props}>待填写</Text>;
+  return <Box as="div" color="warm.600" fontSize="sm" {...props}>待填写</Box>;
 }
 
 // ---- 子组件 ----
@@ -129,7 +129,7 @@ function FieldRow({ label, value }) {
   if (!value && value !== 0) return null;
   return (
     <Box>
-      <Text color="gray.500" fontSize="xs">{label}</Text>
+      <Text color="rgba(245,240,232,0.2)" fontSize="xs">{label}</Text>
       <Text color="gray.200" fontSize="sm">{String(value)}</Text>
     </Box>
   );
@@ -139,10 +139,10 @@ function TagRow({ label, value }) {
   const tags = String(value).split(/[,，、/]/).map(t => t.trim()).filter(Boolean);
   return (
     <Box>
-      <Text color="gray.500" fontSize="xs" mb={1}>{label}</Text>
+      <Text color="rgba(245,240,232,0.2)" fontSize="xs" mb={1}>{label}</Text>
       <Wrap spacing={1}>
         {tags.map((t, i) => (
-          <WrapItem key={i}><Tag size="sm" colorScheme="teal" variant="subtle" borderRadius="full"><TagLabel fontSize="xs">{t}</TagLabel></Tag></WrapItem>
+          <WrapItem key={i}><Tag size="sm" colorScheme="gold" variant="subtle" borderRadius="full"><TagLabel fontSize="xs">{t}</TagLabel></Tag></WrapItem>
         ))}
       </Wrap>
     </Box>
@@ -153,8 +153,8 @@ function EQBar({ label, value }) {
   const pct = Math.min(100, Math.max(0, (value / 10) * 100));
   return (
     <HStack spacing={3} mb={2}>
-      <Text color="gray.500" fontSize="xs" w="80px" flexShrink={0}>{label}</Text>
-      <Box flex={1} bg="gray.600" borderRadius="full" h="6px">
+      <Text color="rgba(245,240,232,0.2)" fontSize="xs" w="80px" flexShrink={0}>{label}</Text>
+      <Box flex={1} bg="warm.600" borderRadius="full" h="6px">
         <Box bg="teal.400" h="6px" borderRadius="full" w={`${pct}%`} transition="width 0.3s" />
       </Box>
       <Text color="teal.400" fontSize="xs" fontWeight="bold" w="30px" textAlign="right">{value}</Text>
@@ -163,7 +163,7 @@ function EQBar({ label, value }) {
 }
 function SectionCard({ title, children, color }) {
   return (
-    <Box bg="gray.700" p={4} borderRadius="md" mb={4}>
+    <Box bg="warm.700" p={4} borderRadius="md" mb={4}>
       <Text color={color || 'teal.400'} fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">{title}</Text>
       {children}
     </Box>
@@ -203,12 +203,12 @@ function MediaUploadField({ field, value, onChange }) {
 
   return (
     <FormControl>
-      <FormLabel color="gray.400" fontSize="sm">{field.label}</FormLabel>
+      <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">{field.label}</FormLabel>
       <VStack align="stretch" spacing={2}>
         {urls.length > 0 && (
           <VStack align="stretch" spacing={1} maxH="200px" overflowY="auto">
             {urls.map((url, i) => (
-              <HStack key={i} bg="gray.600" p={1} borderRadius="md" justify="space-between">
+              <HStack key={i} bg="warm.600" p={1} borderRadius="md" justify="space-between">
                 {url.match(/\.(mp4|mov|webm|avi)(\?|$)/i) ? (
                   <Text color="teal.300" fontSize="xs" flex={1} isTruncated>{url.split('/').pop()}</Text>
                 ) : (
@@ -224,7 +224,7 @@ function MediaUploadField({ field, value, onChange }) {
         )}
         {(!multi && urls.length > 0) ? null : (
           <Button
-            size="xs" variant="outline" colorScheme="teal"
+            size="xs" variant="outline" colorScheme="gold"
             leftIcon={<Icon as={FiCamera} />}
             isLoading={uploading}
             onClick={() => document.getElementById(`media-input-${field.key}`)?.click()}
@@ -253,12 +253,12 @@ function ProfileField({ field, value, onChange }) {
     const showCustomInput = hasOther && (value === '其他' || isCustom);
     return (
       <FormControl>
-        <FormLabel color="gray.400" fontSize="sm">{field.label}</FormLabel>
+        <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">{field.label}</FormLabel>
         <Select
           value={isCustom ? '其他' : (value || '')}
           onChange={e => onChange(field.key, e.target.value === '其他' ? '' : e.target.value)}
-          bg="gray.700" color="white" border="1px solid" borderColor="gray.600"
-          _hover={{ borderColor: 'gray.500' }}
+          bg="warm.700" color="white" border="1px solid" borderColor="warm.600"
+          _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
           _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }}
         >
           <option value="">请选择</option>
@@ -270,8 +270,8 @@ function ProfileField({ field, value, onChange }) {
             value={isCustom ? value : ''}
             placeholder="请输入自定义内容"
             onChange={e => onChange(field.key, e.target.value)}
-            bg="gray.700" color="white" border="1px solid" borderColor="gray.600"
-            _hover={{ borderColor: 'gray.500' }}
+            bg="warm.700" color="white" border="1px solid" borderColor="warm.600"
+            _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
             _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }}
           />
         )}
@@ -281,12 +281,12 @@ function ProfileField({ field, value, onChange }) {
   if (field.type === 'textarea') {
     return (
       <FormControl>
-        <FormLabel color="gray.400" fontSize="sm">{field.label}</FormLabel>
+        <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">{field.label}</FormLabel>
         <Textarea
           value={value || ''}
           onChange={e => onChange(field.key, e.target.value)}
-          bg="gray.700" color="white" border="1px solid" borderColor="gray.600"
-          _hover={{ borderColor: 'gray.500' }}
+          bg="warm.700" color="white" border="1px solid" borderColor="warm.600"
+          _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
           _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }}
           rows={3}
         />
@@ -295,12 +295,12 @@ function ProfileField({ field, value, onChange }) {
   }
   return (
     <FormControl>
-      <FormLabel color="gray.400" fontSize="sm">{field.label}</FormLabel>
+      <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">{field.label}</FormLabel>
       <Input
         value={value || ''}
         onChange={e => onChange(field.key, e.target.value)}
-        bg="gray.700" color="white" border="1px solid" borderColor="gray.600"
-        _hover={{ borderColor: 'gray.500' }}
+        bg="warm.700" color="white" border="1px solid" borderColor="warm.600"
+        _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
         _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }}
       />
     </FormControl>
@@ -675,7 +675,7 @@ export default function GirlDetail() {
   if (!girl) {
     return (
       <Flex flex={1} align="center" justify="center" minH="60vh">
-        <Text color="gray.500">女生不存在</Text>
+        <Text color="rgba(245,240,232,0.2)">女生不存在</Text>
       </Flex>
     );
   }
@@ -697,12 +697,12 @@ export default function GirlDetail() {
     <Box pb={8}>
       {/* ---- 返回按钮 ---- */}
       <HStack mb={4}>
-        <IconButton icon={<Icon as={FiArrowLeft} />} variant="ghost" color="gray.400" onClick={() => navigate('/my-pond')} aria-label="返回" size="sm" />
-        <Text color="gray.500" fontSize="sm">我的缘分</Text>
+        <IconButton icon={<Icon as={FiArrowLeft} />} variant="ghost" color="rgba(245,240,232,0.4)" onClick={() => navigate('/my-pond')} aria-label="返回" size="sm" />
+        <Text color="rgba(245,240,232,0.2)" fontSize="sm">我的缘分</Text>
       </HStack>
 
       {/* ---- Hero 身份卡片 ---- */}
-      <Box bg="gray.750" bgGradient="linear(to-b, gray.700, gray.750)" p={5} borderRadius="lg" mb={6}>
+      <Box bg="warm.800" bgGradient="linear(to-b, warm.700, warm.800)" p={5} borderRadius="lg" mb={6}>
         <Flex direction={{ base: 'column', md: 'row' }} align={{ base: 'start', md: 'center' }} gap={4}>
           {/* 头像 + 身份 */}
           <Box position="relative" flexShrink={0}>
@@ -711,7 +711,7 @@ export default function GirlDetail() {
               aria-label="编辑头像"
               icon={<Icon as={FiCamera} />}
               size="xs"
-              colorScheme="teal"
+              colorScheme="gold"
               position="absolute"
               bottom={0}
               right={0}
@@ -719,14 +719,14 @@ export default function GirlDetail() {
               onClick={() => setEditingAvatar(!editingAvatar)}
             />
             {editingAvatar && (
-              <Box position="absolute" top="100%" left={0} mt={2} p={3} bg="gray.700" borderRadius="md" border="1px solid" borderColor="gray.600" zIndex={10} w="240px">
+              <Box position="absolute" top="100%" left={0} mt={2} p={3} bg="warm.700" borderRadius="md" border="1px solid" borderColor="warm.600" zIndex={10} w="240px">
                 <VStack spacing={2} align="stretch">
-                  <Input type="file" accept="image/*" onChange={handleAvatarFileChange} bg="gray.600" color="white" border="1px solid" borderColor="gray.500" p={1} size="sm"
+                  <Input type="file" accept="image/*" onChange={handleAvatarFileChange} bg="warm.600" color="white" border="1px solid" borderColor="rgba(245,240,232,0.2)" p={1} size="sm"
                     sx={{ '::file-selector-button': { bg: 'teal.600', color: 'white', border: 'none', borderRadius: 'md', px: 2, py: 0.5, mr: 2, cursor: 'pointer', _hover: { bg: 'teal.500' } } }}
                   />
                   {avatarPreview && <Avatar size="sm" src={avatarPreview} />}
                   <HStack spacing={2}>
-                    <Button size="xs" colorScheme="teal" onClick={handleSaveAvatar} isLoading={savingAvatar} isDisabled={!avatarFile}>保存</Button>
+                    <Button size="xs" colorScheme="gold" onClick={handleSaveAvatar} isLoading={savingAvatar} isDisabled={!avatarFile}>保存</Button>
                     <Button size="xs" variant="ghost" onClick={() => { setEditingAvatar(false); setAvatarFile(null); setAvatarPreview(''); }}>取消</Button>
                   </HStack>
                 </VStack>
@@ -746,7 +746,7 @@ export default function GirlDetail() {
               )}
             </HStack>
             {girl.education && (
-              <Text color="gray.400" fontSize="sm">{[girl.education, girl.major, girl.residence].filter(Boolean).join(' · ')}</Text>
+              <Text color="rgba(245,240,232,0.4)" fontSize="sm">{[girl.education, girl.major, girl.residence].filter(Boolean).join(' · ')}</Text>
             )}
             {/* 内联完整度条 */}
             <HStack spacing={2} w="full" mt={1}>
@@ -756,22 +756,22 @@ export default function GirlDetail() {
             </HStack>
           </VStack>
           {/* 编辑按钮 */}
-          <Button colorScheme="teal" size="sm" leftIcon={<Icon as={FiEdit2} />} onClick={openEdit} flexShrink={0}>编辑档案</Button>
+          <Button colorScheme="gold" size="sm" leftIcon={<Icon as={FiEdit2} />} onClick={openEdit} flexShrink={0}>编辑档案</Button>
         </Flex>
         {/* 关系指标条 */}
-        <SimpleGrid columns={{ base: 2, md: 4 }} spacing={3} mt={4} pt={4} borderTop="1px solid" borderColor="gray.600">
-          <HStack spacing={2}><Icon as={HeartIcon} color="red.400" boxSize={4} /><Text color="gray.400" fontSize="xs">亲密度</Text><Text color="white" fontWeight="bold" fontSize="sm">Lv.{girl.intimacyLevel || 1}</Text></HStack>
-          <HStack spacing={2}><Text color="gray.500" fontSize="xs">热度</Text><Text color="white" fontWeight="bold" fontSize="sm">{girl.tensionScore?.toFixed(1) || '5.0'}<Text as="span" color="gray.500" fontSize="xs">/10</Text></Text></HStack>
-          <HStack spacing={2}><Text color="gray.500" fontSize="xs">最后联系</Text><Text color="white" fontSize="xs">{lastContact || '未记录'}</Text></HStack>
-          <HStack spacing={2}><Text color="gray.500" fontSize="xs">约会</Text><Text color="white" fontWeight="bold" fontSize="sm">{related?.dates?.length || 0} 次</Text></HStack>
+        <SimpleGrid columns={{ base: 2, md: 4 }} spacing={3} mt={4} pt={4} borderTop="1px solid" borderColor="warm.600">
+          <HStack spacing={2}><Icon as={HeartIcon} color="red.400" boxSize={4} /><Text color="rgba(245,240,232,0.4)" fontSize="xs">亲密度</Text><Text color="white" fontWeight="bold" fontSize="sm">Lv.{girl.intimacyLevel || 1}</Text></HStack>
+          <HStack spacing={2}><Text color="rgba(245,240,232,0.2)" fontSize="xs">热度</Text><Text color="white" fontWeight="bold" fontSize="sm">{girl.tensionScore?.toFixed(1) || '5.0'}<Text as="span" color="rgba(245,240,232,0.2)" fontSize="xs">/10</Text></Text></HStack>
+          <HStack spacing={2}><Text color="rgba(245,240,232,0.2)" fontSize="xs">最后联系</Text><Text color="white" fontSize="xs">{lastContact || '未记录'}</Text></HStack>
+          <HStack spacing={2}><Text color="rgba(245,240,232,0.2)" fontSize="xs">约会</Text><Text color="white" fontWeight="bold" fontSize="sm">{related?.dates?.length || 0} 次</Text></HStack>
         </SimpleGrid>
       </Box>
 
       {/* ====== 快速记录 ====== */}
-      <Box bg="gray.750" bgGradient="linear(to-b, gray.700, gray.750)" borderRadius="lg" p={5} mb={6}>
+      <Box bg="warm.800" bgGradient="linear(to-b, warm.700, warm.800)" borderRadius="lg" p={5} mb={6}>
         <Heading color="white" size="sm" mb={3}>
           ⚡ 快速记录
-          <Text as="span" color="gray.500" fontWeight="normal" fontSize="sm" ml={2}>输入文字或粘贴图片，AI 自动学习完善档案</Text>
+          <Text as="span" color="rgba(245,240,232,0.2)" fontWeight="normal" fontSize="sm" ml={2}>输入文字或粘贴图片，AI 自动学习完善档案</Text>
         </Heading>
         <VStack spacing={3} align="stretch">
           <Textarea
@@ -779,11 +779,11 @@ export default function GirlDetail() {
             onChange={e => setQuickText(e.target.value)}
             onPaste={handleQuickPaste}
             placeholder="粘贴关于她的信息，如：她身高165、喜欢瑜伽、是杭州人..."
-            bg="gray.800"
+            bg="warm.800"
             color="white"
             border="1px solid"
-            borderColor="gray.600"
-            _hover={{ borderColor: 'gray.500' }}
+            borderColor="warm.600"
+            _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
             _focus={{ borderColor: 'yellow.500', boxShadow: '0 0 0 1px var(--chakra-colors-yellow-500)' }}
             rows={3}
             maxLength={2000}
@@ -796,10 +796,10 @@ export default function GirlDetail() {
             onDragLeave={handleQuickDragLeave}
             onDrop={handleQuickDrop}
             border="1px dashed"
-            borderColor={isDragOver ? 'yellow.400' : 'gray.600'}
+            borderColor={isDragOver ? 'yellow.400' : 'warm.600'}
             borderRadius="md"
             p={3}
-            bg={isDragOver ? 'gray.600' : 'gray.800'}
+            bg={isDragOver ? 'warm.600' : 'warm.800'}
             transition="all 0.2s"
           >
             {quickImagePreviews.length > 0 ? (
@@ -829,7 +829,7 @@ export default function GirlDetail() {
                 ))}
               </SimpleGrid>
             ) : (
-              <Text color="gray.600" fontSize="xs" textAlign="center" py={2}>
+              <Text color="warm.600" fontSize="xs" textAlign="center" py={2}>
                 拖拽图片到此处，或点击下方按钮选择（最多 5 张）
               </Text>
             )}
@@ -853,16 +853,16 @@ export default function GirlDetail() {
               >
                 {quickImages.length > 0 ? `${quickImages.length}/5` : '添加图片'}
               </Button>
-              <Text color="gray.600" fontSize="xs">支持粘贴、拖拽或点击上传</Text>
+              <Text color="warm.600" fontSize="xs">支持粘贴、拖拽或点击上传</Text>
             </HStack>
           </Box>
 
           {/* 底部栏 */}
           <HStack justify="space-between" align="center">
             <HStack spacing={3}>
-              <Text color="gray.600" fontSize="xs">{quickText.length} / 2000</Text>
+              <Text color="warm.600" fontSize="xs">{quickText.length} / 2000</Text>
               {quickImages.length > 0 && (
-                <Text color="gray.500" fontSize="xs">{quickImages.length} 张图片</Text>
+                <Text color="rgba(245,240,232,0.2)" fontSize="xs">{quickImages.length} 张图片</Text>
               )}
             </HStack>
             <Button
@@ -909,12 +909,12 @@ export default function GirlDetail() {
         {/* 历史记录 */}
         {infoNotes.length > 0 && (
           <>
-            <Divider my={4} borderColor="gray.600" />
-            <Heading color="gray.400" size="xs" textTransform="uppercase" letterSpacing="wider" mb={3}>历史记录</Heading>
+            <Divider my={4} borderColor="warm.600" />
+            <Heading color="rgba(245,240,232,0.4)" size="xs" textTransform="uppercase" letterSpacing="wider" mb={3}>历史记录</Heading>
             <VStack spacing={3} align="stretch">
               {[...infoNotes].reverse().map(note => (
-                <Box key={note.id} bg="gray.800" p={3} borderRadius="md" borderLeft="3px solid" borderColor="gray.600">
-                  <Text color="gray.500" fontSize="xs" mb={1}>
+                <Box key={note.id} bg="warm.800" p={3} borderRadius="md" borderLeft="3px solid" borderColor="warm.600">
+                  <Text color="rgba(245,240,232,0.2)" fontSize="xs" mb={1}>
                     {new Date(note.createdAt).toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </Text>
                   {note.text ? (
@@ -941,7 +941,7 @@ export default function GirlDetail() {
                   {note.extractedFields?.length > 0 && (
                     <HStack wrap="wrap" spacing={1.5}>
                       {note.extractedFields.map(f => (
-                        <Tag key={f.key} size="sm" colorScheme="teal" variant="subtle">{f.label}: {f.value}</Tag>
+                        <Tag key={f.key} size="sm" colorScheme="gold" variant="subtle">{f.label}: {f.value}</Tag>
                       ))}
                     </HStack>
                   )}
@@ -960,7 +960,7 @@ export default function GirlDetail() {
 
       <SimpleGrid columns={{ base: 1, md: 2 }} spacing={0} gap={4} mb={4}>
         {Object.entries(FIELD_GROUPS).map(([groupKey, group]) => (
-          <Box key={groupKey} bg="gray.700" p={4} borderRadius="md">
+          <Box key={groupKey} bg="warm.700" p={4} borderRadius="md">
             <Text color={group.color} fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">{group.title}</Text>
             <SimpleGrid columns={2} spacing={3}>
               {group.fields.map(fk => {
@@ -969,7 +969,7 @@ export default function GirlDetail() {
                 if (fk === 'weight') return <FieldRow key={fk} label="体重" value={val ? `${val}kg` : null} />;
                 if (fk === 'age') return <FieldRow key={fk} label="年龄" value={val ? `${val}岁` : null} />;
                 return <EmptyValue key={fk} value={val}>
-                  <Box><Text color="gray.500" fontSize="xs">{getFieldLabel(fk)}</Text><Text color="gray.200" fontSize="sm">{val}</Text></Box>
+                  <Box><Text color="rgba(245,240,232,0.2)" fontSize="xs">{getFieldLabel(fk)}</Text><Text color="gray.200" fontSize="sm">{val}</Text></Box>
                 </EmptyValue>;
               })}
             </SimpleGrid>
@@ -983,26 +983,26 @@ export default function GirlDetail() {
       <Box mt={0}>
         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
           {/* 主页与来源 */}
-          <Box bg="gray.700" p={4} borderRadius="md">
+          <Box bg="warm.700" p={4} borderRadius="md">
             <Text color="teal.400" fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">主页与来源</Text>
             <VStack spacing={3} align="stretch">
               <EmptyValue value={girl.homepageUrl}>
-                <Text color="gray.500" fontSize="xs">主页链接</Text>
+                <Text color="rgba(245,240,232,0.2)" fontSize="xs">主页链接</Text>
                 <Text color="teal.300" fontSize="sm" noOfLines={1} wordBreak="break-all">{girl.homepageUrl}</Text>
               </EmptyValue>
               <EmptyValue value={girl.sourcePlatform}>
-                <Text color="gray.500" fontSize="xs">来源平台</Text>
+                <Text color="rgba(245,240,232,0.2)" fontSize="xs">来源平台</Text>
                 <Text color="gray.200" fontSize="sm">{girl.sourcePlatform}</Text>
               </EmptyValue>
               <EmptyValue value={girl.sourceUrl}>
-                <Text color="gray.500" fontSize="xs">来源链接</Text>
-                <Text color="gray.400" fontSize="xs" noOfLines={1} wordBreak="break-all">{girl.sourceUrl}</Text>
+                <Text color="rgba(245,240,232,0.2)" fontSize="xs">来源链接</Text>
+                <Text color="rgba(245,240,232,0.4)" fontSize="xs" noOfLines={1} wordBreak="break-all">{girl.sourceUrl}</Text>
               </EmptyValue>
             </VStack>
           </Box>
 
           {/* 照片 */}
-          <Box bg="gray.700" p={4} borderRadius="md">
+          <Box bg="warm.700" p={4} borderRadius="md">
             <Text color="teal.400" fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">
               照片{photos?.length ? ` (${photos.length})` : ''}
             </Text>
@@ -1013,12 +1013,12 @@ export default function GirlDetail() {
                 ))}
               </SimpleGrid>
             ) : (
-              <Text color="gray.600" fontSize="sm" textAlign="center" py={4}>暂无照片</Text>
+              <Text color="warm.600" fontSize="sm" textAlign="center" py={4}>暂无照片</Text>
             )}
           </Box>
 
           {/* 朋友圈截图 */}
-          <Box bg="gray.700" p={4} borderRadius="md">
+          <Box bg="warm.700" p={4} borderRadius="md">
             <Text color="purple.400" fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">
               朋友圈截图{momentPhotos?.length ? ` (${momentPhotos.length})` : ''}
             </Text>
@@ -1029,12 +1029,12 @@ export default function GirlDetail() {
                 ))}
               </SimpleGrid>
             ) : (
-              <Text color="gray.600" fontSize="sm" textAlign="center" py={4}>暂无截图</Text>
+              <Text color="warm.600" fontSize="sm" textAlign="center" py={4}>暂无截图</Text>
             )}
           </Box>
 
           {/* 视频 */}
-          <Box bg="gray.700" p={4} borderRadius="md">
+          <Box bg="warm.700" p={4} borderRadius="md">
             <Text color="teal.400" fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">
               视频{videos?.length ? ` (${videos.length})` : ''}
             </Text>
@@ -1052,7 +1052,7 @@ export default function GirlDetail() {
                 ))}
               </SimpleGrid>
             ) : (
-              <Text color="gray.600" fontSize="sm" textAlign="center" py={4}>暂无视频</Text>
+              <Text color="warm.600" fontSize="sm" textAlign="center" py={4}>暂无视频</Text>
             )}
           </Box>
         </SimpleGrid>
@@ -1083,7 +1083,7 @@ export default function GirlDetail() {
           <EQBar label="关系经营" value={girl.relationship} />
           <EQBar label="冲突解决" value={girl.conflictRes} />
           {(girl.empathy || girl.selfAwareness || girl.communication || girl.relationship || girl.conflictRes) ? null : (
-            <Text color="gray.600" fontSize="sm" textAlign="center" py={4}>暂无EQ评分数据</Text>
+            <Text color="warm.600" fontSize="sm" textAlign="center" py={4}>暂无EQ评分数据</Text>
           )}
         </SectionCard>
 
@@ -1101,11 +1101,11 @@ export default function GirlDetail() {
         <SectionCard title="匹配分析" color="orange.400">
           {girl.matchScore ? (
             <HStack mb={3}>
-              <Text color="gray.500" fontSize="xs">匹配度</Text>
+              <Text color="rgba(245,240,232,0.2)" fontSize="xs">匹配度</Text>
               <Text color="teal.400" fontSize="2xl" fontWeight="bold">{girl.matchScore}</Text>
-              <Text color="gray.500" fontSize="xs">/ 100</Text>
+              <Text color="rgba(245,240,232,0.2)" fontSize="xs">/ 100</Text>
             </HStack>
-          ) : <Text color="gray.600" fontSize="sm" mb={3}>暂无评分</Text>}
+          ) : <Text color="warm.600" fontSize="sm" mb={3}>暂无评分</Text>}
           <FieldRow label="计算依据" value={girl.matchScoreBasis} />
           <FieldRow label="择偶偏好" value={girl.matePreferences} />
         </SectionCard>
@@ -1134,10 +1134,10 @@ export default function GirlDetail() {
                     const event = s.event || s.text || s.signal || '';
                     const date = s.date || '';
                     return (
-                      <HStack key={i} spacing={2} bg="gray.600" p={2} borderRadius="md" align="start">
+                      <HStack key={i} spacing={2} bg="warm.600" p={2} borderRadius="md" align="start">
                         <Badge colorScheme={typeColor} fontSize="xs" mt="1px" flexShrink={0}>{typeLabel}</Badge>
                         <Text color="gray.200" fontSize="sm" flex={1}>{event}</Text>
-                        {date && <Text color="gray.500" fontSize="xs" flexShrink={0}>{date}</Text>}
+                        {date && <Text color="rgba(245,240,232,0.2)" fontSize="xs" flexShrink={0}>{date}</Text>}
                       </HStack>
                     );
                   })}
@@ -1171,18 +1171,18 @@ export default function GirlDetail() {
         {/* 约会记录 */}
         <SectionCard title={`约会记录 (${related?.dates?.length || 0})`} color="orange.400">
           {!related?.dates?.length ? (
-            <Text color="gray.600" fontSize="sm" textAlign="center" py={4}>暂无约会记录</Text>
+            <Text color="warm.600" fontSize="sm" textAlign="center" py={4}>暂无约会记录</Text>
           ) : (
             <VStack spacing={2} align="stretch">
               {related.dates.map(d => (
-                <Box key={d.id} p={2} bg="gray.600" borderRadius="md">
+                <Box key={d.id} p={2} bg="warm.600" borderRadius="md">
                   <HStack justify="space-between">
                     <Text color="gray.200" fontSize="sm">{d.title || d.location || '约会'}</Text>
                     <Badge colorScheme={d.status === 'confirmed' ? 'green' : d.status === 'pending' ? 'yellow' : 'gray'} fontSize="xs">
                       {d.status === 'confirmed' ? '已确认' : d.status === 'pending' ? '待确认' : d.status || '未知'}
                     </Badge>
                   </HStack>
-                  <Text color="gray.500" fontSize="xs">
+                  <Text color="rgba(245,240,232,0.2)" fontSize="xs">
                     {d.dateTime ? new Date(d.dateTime).toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
                     {d.location ? ` · ${d.location}` : ''}
                   </Text>
@@ -1195,19 +1195,19 @@ export default function GirlDetail() {
         {/* 阶段变更历史 */}
         <SectionCard title={`阶段历史 (${related?.stageHistory?.length || 0})`} color="blue.400">
           {!related?.stageHistory?.length ? (
-            <Text color="gray.600" fontSize="sm" textAlign="center" py={4}>暂无阶段变更</Text>
+            <Text color="warm.600" fontSize="sm" textAlign="center" py={4}>暂无阶段变更</Text>
           ) : (
             <VStack spacing={2} align="stretch">
               {related.stageHistory.map(h => (
-                <Box key={h.id} p={2} bg="gray.600" borderRadius="md">
+                <Box key={h.id} p={2} bg="warm.600" borderRadius="md">
                   <HStack justify="space-between">
                     <Text color="gray.200" fontSize="sm">
                       {h.fromStage ? `${RELATIONSHIP_STAGE_LABELS[h.fromStage] || h.fromStage} → ` : ''}
                       {RELATIONSHIP_STAGE_LABELS[h.toStage] || h.toStage}
                     </Text>
-                    <Text color="gray.500" fontSize="xs">{new Date(h.createdAt).toLocaleDateString('zh-CN')}</Text>
+                    <Text color="rgba(245,240,232,0.2)" fontSize="xs">{new Date(h.createdAt).toLocaleDateString('zh-CN')}</Text>
                   </HStack>
-                  {h.reason && <Text color="gray.500" fontSize="xs" mt={1}>{h.reason}</Text>}
+                  {h.reason && <Text color="rgba(245,240,232,0.2)" fontSize="xs" mt={1}>{h.reason}</Text>}
                 </Box>
               ))}
             </VStack>
@@ -1218,11 +1218,11 @@ export default function GirlDetail() {
       {/* ---- 编辑 Modal ---- */}
       <Modal isOpen={isEditOpen} onClose={onEditClose} size="4xl">
         <ModalOverlay />
-        <ModalContent bg="gray.800" maxH="85vh" overflowY="auto">
+        <ModalContent bg="warm.800" maxH="85vh" overflowY="auto">
           <ModalHeader color="white">
             <HStack spacing={3}>
               <Text>编辑档案 - {girl.name}</Text>
-              <HStack spacing={0} bg="gray.700" borderRadius="md" p="2px">
+              <HStack spacing={0} bg="warm.700" borderRadius="md" p="2px">
                 <Button
                   size="xs"
                   colorScheme={!aiMode ? 'teal' : 'gray'}
@@ -1253,7 +1253,7 @@ export default function GirlDetail() {
               /* ---- AI 模式 ---- */
               <VStack spacing={4} align="stretch">
                 {/* 子 tab 切换 */}
-                <HStack spacing={0} bg="gray.700" borderRadius="md" p="2px" w="fit-content">
+                <HStack spacing={0} bg="warm.700" borderRadius="md" p="2px" w="fit-content">
                   <Button
                     size="xs"
                     colorScheme={aiTab === 0 ? 'blue' : 'gray'}
@@ -1271,7 +1271,7 @@ export default function GirlDetail() {
                 {/* 文字描述模式 */}
                 {aiTab === 0 && (
                   <VStack spacing={3} align="stretch">
-                    <Text color="gray.400" fontSize="sm">
+                    <Text color="rgba(245,240,232,0.4)" fontSize="sm">
                       粘贴一段关于这位女生的描述文字，AI 将自动分析并提取档案字段。支持描述昵称、年龄、职业、学历、性格、兴趣爱好等。
                     </Text>
                     <Textarea
@@ -1279,9 +1279,9 @@ export default function GirlDetail() {
                       onChange={e => setAiText(e.target.value)}
                       placeholder="例如：她叫小美，25岁，在互联网公司做设计师，杭州人，浙江大学计算机系毕业，性格活泼开朗，喜欢健身和旅行..."
                       rows={5}
-                      bg="gray.700" color="white"
-                      border="1px solid" borderColor="gray.600"
-                      _hover={{ borderColor: 'gray.500' }}
+                      bg="warm.700" color="white"
+                      border="1px solid" borderColor="warm.600"
+                      _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
                       _focus={{ borderColor: 'blue.500', boxShadow: '0 0 0 1px var(--chakra-colors-blue-500)' }}
                     />
                     <Button
@@ -1297,7 +1297,7 @@ export default function GirlDetail() {
                 {/* 截图模式 */}
                 {aiTab === 1 && (
                   <VStack spacing={3} align="stretch">
-                    <Text color="gray.400" fontSize="sm">
+                    <Text color="rgba(245,240,232,0.4)" fontSize="sm">
                       上传聊天截图或社交主页截图，AI 将识别图片中的个人信息并提取档案字段。
                     </Text>
                     <Input type="file" accept="image/*" onChange={handleScreenshotSelect} display="none" id="girl-screenshot-input" />
@@ -1336,24 +1336,24 @@ export default function GirlDetail() {
 
                 {/* AI 提取结果 */}
                 {aiResult && Object.keys(aiResult).length > 0 && (
-                  <Box bg="gray.700" border="1px solid" borderColor="teal.600" borderRadius="md" overflow="hidden">
-                    <Box px={4} py={3} borderBottom="1px solid" borderColor="gray.600">
+                  <Box bg="warm.700" border="1px solid" borderColor="teal.600" borderRadius="md" overflow="hidden">
+                    <Box px={4} py={3} borderBottom="1px solid" borderColor="warm.600">
                       <HStack justify="space-between">
                         <HStack>
                           <Icon as={FiZap} color="teal.400" />
                           <Text color="teal.300" fontWeight="bold" fontSize="sm">AI 识别结果（共 {Object.keys(aiResult).length} 个字段）</Text>
                         </HStack>
                         <HStack spacing={2}>
-                          <Button size="xs" variant="ghost" color="gray.400" onClick={() => setAiResult(null)} leftIcon={<Icon as={FiX} />}>清除</Button>
-                          <Button size="xs" colorScheme="teal" onClick={applyAiResult} leftIcon={<Icon as={FiCheck} />}>应用到表单</Button>
+                          <Button size="xs" variant="ghost" color="rgba(245,240,232,0.4)" onClick={() => setAiResult(null)} leftIcon={<Icon as={FiX} />}>清除</Button>
+                          <Button size="xs" colorScheme="gold" onClick={applyAiResult} leftIcon={<Icon as={FiCheck} />}>应用到表单</Button>
                         </HStack>
                       </HStack>
                     </Box>
                     <Box px={4} py={3}>
                       <SimpleGrid columns={2} spacing={2}>
                         {Object.entries(aiResult).map(([key, { label, value }]) => (
-                          <HStack key={key} justify="space-between" bg="gray.800" px={3} py={1.5} borderRadius="md">
-                            <Text color="gray.400" fontSize="sm">{label}</Text>
+                          <HStack key={key} justify="space-between" bg="warm.800" px={3} py={1.5} borderRadius="md">
+                            <Text color="rgba(245,240,232,0.4)" fontSize="sm">{label}</Text>
                             <Text color="white" fontSize="sm" fontWeight="medium">{value}</Text>
                           </HStack>
                         ))}
@@ -1363,8 +1363,8 @@ export default function GirlDetail() {
                 )}
 
                 <HStack justify="flex-end" spacing={3}>
-                  <Button variant="ghost" color="gray.400" onClick={onEditClose}>取消</Button>
-                  <Button colorScheme="teal" onClick={() => setAiMode(false)}>返回手动填写</Button>
+                  <Button variant="ghost" color="rgba(245,240,232,0.4)" onClick={onEditClose}>取消</Button>
+                  <Button colorScheme="gold" onClick={() => setAiMode(false)}>返回手动填写</Button>
                 </HStack>
               </VStack>
             )}
@@ -1373,7 +1373,7 @@ export default function GirlDetail() {
           {!aiMode && (
             <ModalFooter>
               <Button variant="ghost" mr={3} onClick={onEditClose}>取消</Button>
-              <Button colorScheme="teal" onClick={handleSave} isLoading={saving}>保存</Button>
+              <Button colorScheme="gold" onClick={handleSave} isLoading={saving}>保存</Button>
             </ModalFooter>
           )}
         </ModalContent>

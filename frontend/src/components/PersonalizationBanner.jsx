@@ -307,16 +307,7 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
             )}
           </HStack>
           <Text color="rgba(245,240,232,0.2)" fontSize="xs">
-            档案更新了？重新生成，保持同步。
-            <Button
-              size="xs"
-              variant="link"
-              colorScheme="gold"
-              ml={2}
-              onClick={handleRegenerate}
-            >
-              重新生成
-            </Button>
+            你的专属版本已是最新。
           </Text>
         </VStack>
       )}

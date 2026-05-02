@@ -79,10 +79,10 @@ export default function Onboarding() {
         <VStack spacing={6} py={8} textAlign="center">
           <Icon as={CheckIcon} boxSize={16} color="teal.400" />
           <Heading color="white" size="lg">入职完成！</Heading>
-          <Text color="gray.400" maxW="400px">
+          <Text color="rgba(245,240,232,0.4)" maxW="400px">
             你的档案已保存，AI教练已为你准备好个性化指导。开始探索你的缘分吧！
           </Text>
-          <Button colorScheme="teal" size="lg" mt={4} onClick={() => window.location.href = '/'}>
+          <Button colorScheme="gold" size="lg" mt={4} onClick={() => window.location.href = '/'}>
             进入首页
           </Button>
         </VStack>
@@ -92,7 +92,7 @@ export default function Onboarding() {
     if (step === 0) {
       return (
         <VStack spacing={5} align="stretch">
-          <Text color="gray.400" fontSize="sm">步骤 1/3 · 基本信息</Text>
+          <Text color="rgba(245,240,232,0.4)" fontSize="sm">步骤 1/3 · 基本信息</Text>
           <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
             <FormControl isRequired>
               <FormLabel color="gray.300">昵称/称呼</FormLabel>
@@ -100,7 +100,7 @@ export default function Onboarding() {
                 value={form.nickname}
                 onChange={e => update('nickname', e.target.value)}
                 placeholder="你怎么称呼自己"
-                bg="gray.700"
+                bg="warm.700"
                 border="none"
                 color="white"
               />
@@ -112,7 +112,7 @@ export default function Onboarding() {
                 onChange={e => update('age', e.target.value)}
                 placeholder="你的年龄"
                 type="number"
-                bg="gray.700"
+                bg="warm.700"
                 border="none"
                 color="white"
               />
@@ -124,7 +124,7 @@ export default function Onboarding() {
               value={form.occupation}
               onChange={e => update('occupation', e.target.value)}
               placeholder="你现在从事什么工作"
-              bg="gray.700"
+              bg="warm.700"
               border="none"
               color="white"
             />
@@ -135,7 +135,7 @@ export default function Onboarding() {
               value={form.residence}
               onChange={e => update('residence', e.target.value)}
               placeholder="你现在在哪个城市"
-              bg="gray.700"
+              bg="warm.700"
               border="none"
               color="white"
             />
@@ -146,7 +146,7 @@ export default function Onboarding() {
               value={form.emotionalGoal}
               onChange={e => update('emotionalGoal', e.target.value)}
               placeholder="你现在最想要什么"
-              bg="gray.700"
+              bg="warm.700"
               border="none"
               color="white"
             >
@@ -163,7 +163,7 @@ export default function Onboarding() {
               value={form.relationshipGoal}
               onChange={e => update('relationshipGoal', e.target.value)}
               placeholder="你想要的关系类型"
-              bg="gray.700"
+              bg="warm.700"
               border="none"
               color="white"
             >
@@ -179,7 +179,7 @@ export default function Onboarding() {
     if (step === 1) {
       return (
         <VStack spacing={5} align="stretch">
-          <Text color="gray.400" fontSize="sm">步骤 2/3 · 自我评估</Text>
+          <Text color="rgba(245,240,232,0.4)" fontSize="sm">步骤 2/3 · 自我评估</Text>
           <FormControl>
             <FormLabel color="gray.300">颜值自评（1-10）</FormLabel>
             <HStack spacing={4}>
@@ -190,12 +190,12 @@ export default function Onboarding() {
                 type="number"
                 min={1}
                 max={10}
-                bg="gray.700"
+                bg="warm.700"
                 border="none"
                 color="white"
                 w="100px"
               />
-              <Text color="gray.500" fontSize="sm">（诚实评估，AI教练会帮你找到最优策略）</Text>
+              <Text color="rgba(245,240,232,0.2)" fontSize="sm">（诚实评估，AI教练会帮你找到最优策略）</Text>
             </HStack>
           </FormControl>
           <FormControl isRequired>
@@ -204,7 +204,7 @@ export default function Onboarding() {
               value={form.personality}
               onChange={e => update('personality', e.target.value)}
               placeholder="如：ENFP、INTJ，或用几个词描述"
-              bg="gray.700"
+              bg="warm.700"
               border="none"
               color="white"
             />
@@ -215,7 +215,7 @@ export default function Onboarding() {
               value={form.communicationStyle}
               onChange={e => update('communicationStyle', e.target.value)}
               placeholder="你平时怎么和人聊天"
-              bg="gray.700"
+              bg="warm.700"
               border="none"
               color="white"
             >
@@ -237,7 +237,7 @@ export default function Onboarding() {
                   type="range"
                   min={1}
                   max={10}
-                  bg="gray.700"
+                  bg="warm.700"
                   border="none"
                   p={0}
                 />
@@ -253,7 +253,7 @@ export default function Onboarding() {
                   type="range"
                   min={1}
                   max={10}
-                  bg="gray.700"
+                  bg="warm.700"
                   border="none"
                   p={0}
                 />
@@ -269,7 +269,7 @@ export default function Onboarding() {
                   type="range"
                   min={1}
                   max={10}
-                  bg="gray.700"
+                  bg="warm.700"
                   border="none"
                   p={0}
                 />
@@ -283,14 +283,14 @@ export default function Onboarding() {
     if (step === 2) {
       return (
         <VStack spacing={5} align="stretch">
-          <Text color="gray.400" fontSize="sm">步骤 3/3 · 学习偏好</Text>
+          <Text color="rgba(245,240,232,0.4)" fontSize="sm">步骤 3/3 · 学习偏好</Text>
           <FormControl isRequired>
             <FormLabel color="gray.300">学习能力</FormLabel>
             <Select
               value={form.learningAbility}
               onChange={e => update('learningAbility', e.target.value)}
               placeholder="你的学习能力如何"
-              bg="gray.700"
+              bg="warm.700"
               border="none"
               color="white"
             >
@@ -310,7 +310,7 @@ export default function Onboarding() {
                   type="range"
                   min={1}
                   max={10}
-                  bg="gray.700"
+                  bg="warm.700"
                   border="none"
                   p={0}
                 />
@@ -326,7 +326,7 @@ export default function Onboarding() {
                   type="range"
                   min={1}
                   max={10}
-                  bg="gray.700"
+                  bg="warm.700"
                   border="none"
                   p={0}
                 />
@@ -339,7 +339,7 @@ export default function Onboarding() {
               value={form.pacePreference}
               onChange={e => update('pacePreference', e.target.value)}
               placeholder="你喜欢什么节奏"
-              bg="gray.700"
+              bg="warm.700"
               border="none"
               color="white"
             >
@@ -354,7 +354,7 @@ export default function Onboarding() {
               value={form.clientType}
               onChange={e => update('clientType', e.target.value)}
               placeholder="你属于哪种类型"
-              bg="gray.700"
+              bg="warm.700"
               border="none"
               color="white"
             >
@@ -369,7 +369,7 @@ export default function Onboarding() {
               value={form.profileBio}
               onChange={e => update('profileBio', e.target.value)}
               placeholder="简单介绍一下自己，让AI教练更快了解你"
-              bg="gray.700"
+              bg="warm.700"
               border="none"
               color="white"
               rows={3}
@@ -397,20 +397,20 @@ export default function Onboarding() {
               >
                 {i < step ? '✓ ' : ''}{s.label}
               </Badge>
-              <Text color="gray.500" fontSize="xs" textAlign="center">{s.desc}</Text>
+              <Text color="rgba(245,240,232,0.2)" fontSize="xs" textAlign="center">{s.desc}</Text>
             </VStack>
           ))}
         </Flex>
         <Progress
           value={(step / 3) * 100}
           size="xs"
-          colorScheme="teal"
+          colorScheme="gold"
           borderRadius="full"
         />
       </Box>
 
       {/* 步骤内容 */}
-      <Card bg="gray.800">
+      <Card bg="warm.800">
         <CardBody p={8}>
           <Heading color="teal.400" size="md" mb={6}>
             {step < 3 ? STEPS[step].label : '完成'}
@@ -424,17 +424,17 @@ export default function Onboarding() {
                 variant="ghost"
                 onClick={() => setStep(s => s - 1)}
                 isDisabled={step === 0}
-                color="gray.400"
+                color="rgba(245,240,232,0.4)"
               >
                 上一步
               </Button>
               <HStack>
-                <Text color="gray.500" fontSize="sm">
+                <Text color="rgba(245,240,232,0.2)" fontSize="sm">
                   {step + 1} / 3
                 </Text>
                 {step < 2 ? (
                   <Button
-                    colorScheme="teal"
+                    colorScheme="gold"
                     onClick={() => setStep(s => s + 1)}
                     isDisabled={!canNext()}
                   >
@@ -442,7 +442,7 @@ export default function Onboarding() {
                   </Button>
                 ) : (
                   <Button
-                    colorScheme="teal"
+                    colorScheme="gold"
                     onClick={handleSubmit}
                     isLoading={submitting}
                     isDisabled={!canNext()}

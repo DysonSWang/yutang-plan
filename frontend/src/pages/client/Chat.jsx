@@ -454,7 +454,7 @@ export default function ClientChat() {
             <Box
               w="120px"
               h="90px"
-              bg="gray.800"
+              bg="warm.800"
               borderRadius="md"
               display="flex"
               flexDirection="column"
@@ -626,7 +626,7 @@ export default function ClientChat() {
                             icon={<Text fontSize="xs">↩</Text>}
                             size="xs"
                             variant="ghost"
-                            color="gray.400"
+                            color="rgba(245,240,232,0.4)"
                             opacity={0}
                             position="absolute"
                             top={1}
@@ -679,7 +679,7 @@ export default function ClientChat() {
                   icon={<Text>✕</Text>}
                   size="sm"
                   variant="ghost"
-                  color="gray.400"
+                  color="rgba(245,240,232,0.4)"
                   onClick={cancelPreview}
                   aria-label="取消"
                 />

@@ -443,14 +443,14 @@ export default function ClientDates() {
         )}
 
         {p.venue && (
-          <Card bg="gray.750" mb={4}>
+          <Card bg="warm.800" mb={4}>
             <CardBody>
               <Text color="teal.400" fontWeight="bold" mb={2}>推荐地点</Text>
               <SimpleGrid columns={2} spacing={3}>
-                <Box><Text color="gray.400" fontSize="sm">名称</Text><Text color="white">{p.venue.name}</Text></Box>
-                <Box><Text color="gray.400" fontSize="sm">类型</Text><Text color="white">{p.venue.type}</Text></Box>
-                <Box><Text color="gray.400" fontSize="sm">地址</Text><Text color="white">{p.venue.address}</Text></Box>
-                <Box><Text color="gray.400" fontSize="sm">预算</Text><Text color="white">{p.venue.budget}</Text></Box>
+                <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">名称</Text><Text color="white">{p.venue.name}</Text></Box>
+                <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">类型</Text><Text color="white">{p.venue.type}</Text></Box>
+                <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">地址</Text><Text color="white">{p.venue.address}</Text></Box>
+                <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">预算</Text><Text color="white">{p.venue.budget}</Text></Box>
               </SimpleGrid>
               {p.venue.reason && <Text color="gray.300" fontSize="sm" mt={2}><b>选点理由：</b>{p.venue.reason}</Text>}
             </CardBody>
@@ -458,18 +458,18 @@ export default function ClientDates() {
         )}
 
         {p.schedule?.length > 0 && (
-          <Card bg="gray.750" mb={4}>
+          <Card bg="warm.800" mb={4}>
             <CardBody>
               <Text color="teal.400" fontWeight="bold" mb={3}>约会时间表</Text>
               <VStack spacing={2} align="stretch">
                 {p.schedule.map((s, i) => (
-                  <Flex key={i} gap={3} p={2} bg="gray.700" borderRadius="md" align="center">
-                    <Badge colorScheme="teal" minW="60px" textAlign="center">{s.time}</Badge>
+                  <Flex key={i} gap={3} p={2} bg="warm.700" borderRadius="md" align="center">
+                    <Badge colorScheme="gold" minW="60px" textAlign="center">{s.time}</Badge>
                     <Box flex={1}>
                       <Text color="white" fontSize="sm">{s.activity}</Text>
-                      {s.note && <Text color="gray.400" fontSize="xs">{s.note}</Text>}
+                      {s.note && <Text color="rgba(245,240,232,0.4)" fontSize="xs">{s.note}</Text>}
                     </Box>
-                    <Text color="gray.500" fontSize="xs">{s.duration}</Text>
+                    <Text color="rgba(245,240,232,0.2)" fontSize="xs">{s.duration}</Text>
                   </Flex>
                 ))}
               </VStack>
@@ -478,12 +478,12 @@ export default function ClientDates() {
         )}
 
         {p.talkingPoints?.length > 0 && (
-          <Card bg="gray.750" mb={4}>
+          <Card bg="warm.800" mb={4}>
             <CardBody>
               <Text color="orange.400" fontWeight="bold" mb={3}>聊天话题</Text>
               <VStack spacing={2} align="stretch">
                 {p.talkingPoints.map((t, i) => (
-                  <Box key={i} p={2} bg="gray.700" borderRadius="md">
+                  <Box key={i} p={2} bg="warm.700" borderRadius="md">
                     <Flex justify="space-between" mb={1}>
                       <Text color="orange.300" fontSize="sm">{t.topic}</Text>
                       <Badge colorScheme="purple" fontSize="xs">{t.goal}</Badge>
@@ -497,14 +497,14 @@ export default function ClientDates() {
         )}
 
         {p.precautions?.length > 0 && (
-          <Card bg="gray.750" mb={4}>
+          <Card bg="warm.800" mb={4}>
             <CardBody>
               <Text color="red.400" fontWeight="bold" mb={3}>注意事项</Text>
               <VStack spacing={2} align="stretch">
                 {p.precautions.map((p2, i) => (
-                  <Box key={i} p={2} bg="gray.700" borderRadius="md">
+                  <Box key={i} p={2} bg="warm.700" borderRadius="md">
                     <Text color="red.300" fontSize="sm">⚠ {p2.point}</Text>
-                    <Text color="gray.400" fontSize="xs">{p2.suggestion}</Text>
+                    <Text color="rgba(245,240,232,0.4)" fontSize="xs">{p2.suggestion}</Text>
                   </Box>
                 ))}
               </VStack>
@@ -514,7 +514,7 @@ export default function ClientDates() {
 
         <SimpleGrid columns={2} spacing={4}>
           {p.outfit && (
-            <Card bg="gray.750">
+            <Card bg="warm.800">
               <CardBody>
                 <Text color="pink.400" fontWeight="bold" mb={2}>穿搭建议</Text>
                 <Text color="white" fontSize="sm">风格：{p.outfit.style}</Text>
@@ -524,7 +524,7 @@ export default function ClientDates() {
             </Card>
           )}
           {p.budgetTips && (
-            <Card bg="gray.750">
+            <Card bg="warm.800">
               <CardBody>
                 <Text color="green.400" fontWeight="bold" mb={2}>预算建议</Text>
                 <Text color="white" fontSize="sm">{p.budgetTips}</Text>
@@ -534,7 +534,7 @@ export default function ClientDates() {
         </SimpleGrid>
 
         {p.successSignals?.length > 0 && (
-          <Card bg="gray.750" mt={4}>
+          <Card bg="warm.800" mt={4}>
             <CardBody>
               <Text color="green.400" fontWeight="bold" mb={2}>约会好信号</Text>
               <Wrap>
@@ -589,7 +589,7 @@ export default function ClientDates() {
                             {iv.interviewOverview && (
                               <Text color="cyan.300" fontSize="sm" mb={1}>{iv.interviewOverview}</Text>
                             )}
-                            <Text color="gray.400" fontSize="xs">
+                            <Text color="rgba(245,240,232,0.4)" fontSize="xs">
                               约会对象：{iv.girlName} · 推送时间：{iv.pushedAt ? new Date(iv.pushedAt).toLocaleDateString('zh-CN') : '-'}
                             </Text>
                           </Box>
@@ -607,50 +607,50 @@ export default function ClientDates() {
             {/* 统计栏 */}
             {!loading && (allDates.length > 0 || pendingInterviews.length > 0) && (
               <SimpleGrid columns={{ base: 2, md: 4 }} spacing={3} mb={6}>
-                <Card bg="gray.800" border="1px solid" borderColor="orange.600">
+                <Card bg="warm.800" border="1px solid" borderColor="orange.600">
                   <CardBody py={4} px={4}>
                     <Flex align="center" gap={3}>
                       <Box w="40px" h="40px" borderRadius="10px" bg="rgba(249,115,22,0.2)" display="flex" alignItems="center" justifyContent="center" fontSize="20px">📋</Box>
                       <Box>
                         <Text fontSize="2xl" fontWeight="bold" color="orange.400">{stats.interviews}</Text>
-                        <Text fontSize="xs" color="gray.400">待访谈</Text>
-                        <Text fontSize="10px" color="gray.600">约会后填写</Text>
+                        <Text fontSize="xs" color="rgba(245,240,232,0.4)">待访谈</Text>
+                        <Text fontSize="10px" color="warm.600">约会后填写</Text>
                       </Box>
                     </Flex>
                   </CardBody>
                 </Card>
-                <Card bg="gray.800" border="1px solid" borderColor="green.600">
+                <Card bg="warm.800" border="1px solid" borderColor="green.600">
                   <CardBody py={4} px={4}>
                     <Flex align="center" gap={3}>
                       <Box w="40px" h="40px" borderRadius="10px" bg="rgba(34,197,94,0.2)" display="flex" alignItems="center" justifyContent="center" fontSize="20px">🎉</Box>
                       <Box>
                         <Text fontSize="2xl" fontWeight="bold" color="green.400">{stats.completed}</Text>
-                        <Text fontSize="xs" color="gray.400">已完成</Text>
-                        <Text fontSize="10px" color="gray.600">累计完成</Text>
+                        <Text fontSize="xs" color="rgba(245,240,232,0.4)">已完成</Text>
+                        <Text fontSize="10px" color="warm.600">累计完成</Text>
                       </Box>
                     </Flex>
                   </CardBody>
                 </Card>
-                <Card bg="gray.800" border="1px solid" borderColor="cyan.600">
+                <Card bg="warm.800" border="1px solid" borderColor="cyan.600">
                   <CardBody py={4} px={4}>
                     <Flex align="center" gap={3}>
                       <Box w="40px" h="40px" borderRadius="10px" bg="rgba(6,182,212,0.2)" display="flex" alignItems="center" justifyContent="center" fontSize="20px">📅</Box>
                       <Box>
                         <Text fontSize="2xl" fontWeight="bold" color="cyan.400">{stats.thisMonth}</Text>
-                        <Text fontSize="xs" color="gray.400">本月约会</Text>
-                        <Text fontSize="10px" color="gray.600">本月活动</Text>
+                        <Text fontSize="xs" color="rgba(245,240,232,0.4)">本月约会</Text>
+                        <Text fontSize="10px" color="warm.600">本月活动</Text>
                       </Box>
                     </Flex>
                   </CardBody>
                 </Card>
-                <Card bg="gray.800" border="1px solid" borderColor="pink.600">
+                <Card bg="warm.800" border="1px solid" borderColor="pink.600">
                   <CardBody py={4} px={4}>
                     <Flex align="center" gap={3}>
                       <Box w="40px" h="40px" borderRadius="10px" bg="rgba(244,114,182,0.2)" display="flex" alignItems="center" justifyContent="center" fontSize="20px">💳</Box>
                       <Box>
                         <Text fontSize="2xl" fontWeight="bold" color="pink.400">¥{stats.thisWeekExpense}</Text>
-                        <Text fontSize="xs" color="gray.400">本周花费</Text>
-                        <Text fontSize="10px" color="gray.600">本周支出</Text>
+                        <Text fontSize="xs" color="rgba(245,240,232,0.4)">本周花费</Text>
+                        <Text fontSize="10px" color="warm.600">本周支出</Text>
                       </Box>
                     </Flex>
                   </CardBody>
@@ -681,7 +681,7 @@ export default function ClientDates() {
                         <Text fontSize="36px" fontWeight="bold" color="gold.400" lineHeight="1">
                           {new Date(upcomingDate.dateTime).getDate()}
                         </Text>
-                        <Text fontSize="sm" color="gray.400">
+                        <Text fontSize="sm" color="rgba(245,240,232,0.4)">
                           {formatDateRelative(upcomingDate.dateTime)}
                         </Text>
                       </Box>
@@ -695,7 +695,7 @@ export default function ClientDates() {
                           </Badge>
                         </HStack>
                         <Text color="gray.300" fontSize="sm">{upcomingDate.title || '约会'}</Text>
-                        <HStack spacing={4} mt={2} color="gray.400" fontSize="xs">
+                        <HStack spacing={4} mt={2} color="rgba(245,240,232,0.4)" fontSize="xs">
                           {upcomingDate.location && (
                             <HStack spacing={1}>
                               <MapPinIcon />
@@ -724,12 +724,12 @@ export default function ClientDates() {
             {loading ? (
               <Flex justify="center" py={12}><Spinner /></Flex>
             ) : filteredDates.length === 0 && pendingInterviews.length === 0 ? (
-              <Card bg="gray.800">
+              <Card bg="warm.800">
                 <CardBody>
                   <Flex direction="column" align="center" py={12} gap={3}>
-                    <Icon as={CalendarIcon} color="gray.500" boxSize={12} />
-                    <Text color="gray.400">暂无约会</Text>
-                    <Text color="gray.500" fontSize="sm">点击右上角"添加约会"开始</Text>
+                    <Icon as={CalendarIcon} color="rgba(245,240,232,0.2)" boxSize={12} />
+                    <Text color="rgba(245,240,232,0.4)">暂无约会</Text>
+                    <Text color="rgba(245,240,232,0.2)" fontSize="sm">点击右上角"添加约会"开始</Text>
                   </Flex>
                 </CardBody>
               </Card>
@@ -741,9 +741,9 @@ export default function ClientDates() {
                     placeholder={`全部女生 (${girlList.length})`}
                     w="180px"
                     size="sm"
-                    bg="gray.800"
+                    bg="warm.800"
                     color="white"
-                    borderColor="gray.600"
+                    borderColor="warm.600"
                     value={filterGirlId}
                     onChange={e => setFilterGirlId(e.target.value)}
                   >
@@ -755,7 +755,7 @@ export default function ClientDates() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      color="gray.400"
+                      color="rgba(245,240,232,0.4)"
                       onClick={() => setFilterGirlId('')}
                     >
                       清除过滤
@@ -769,7 +769,7 @@ export default function ClientDates() {
                   return (
                     <Card
                       key={d.id}
-                      bg="gray.800"
+                      bg="warm.800"
                       border="1px solid"
                       borderColor="purple.500"
                       cursor="pointer"
@@ -853,7 +853,7 @@ export default function ClientDates() {
       {/* 方案详情 — trapFocus=false 防止方案更新时 FocusLock 自动聚焦导致滚回顶部 */}
       <Modal isOpen={isOpen} onClose={onClose} size="3xl" trapFocus={false}>
         <ModalOverlay />
-        <ModalContent bg="gray.800" maxH="85vh" overflow="auto" ref={modalContentRef}>
+        <ModalContent bg="warm.800" maxH="85vh" overflow="auto" ref={modalContentRef}>
           <ModalHeader color="white">
             {selected?.title || '约会方案'}
             <Badge ml={2} colorScheme={selected?.status === 'confirmed' ? 'green' : selected?.status === 'pending_client_confirm' ? 'purple' : selected?.status === 'planned' ? 'teal' : 'orange'}>
@@ -874,17 +874,17 @@ export default function ClientDates() {
                   <HStack spacing={3} justify="center">
                     <Spinner size="sm" color="teal.300" />
                     <Text color="teal.200" fontWeight="bold" fontSize="md">{streamStatus || 'AI 正在重新生成方案...'}</Text>
-                    <Progress size="xs" isIndeterminate colorScheme="teal" w="100px" borderRadius="full" />
+                    <Progress size="xs" isIndeterminate colorScheme="gold" w="100px" borderRadius="full" />
                   </HStack>
                 </Box>
 
                 {/* AI 思考过程 — 可折叠面板，自动跟随滚动 */}
                 {streamReasoning && (
-                  <Box bg="gray.900" border="1px solid" borderColor="gray.600" borderRadius="md" overflow="hidden">
+                  <Box bg="gray.900" border="1px solid" borderColor="warm.600" borderRadius="md" overflow="hidden">
                     <Button
                       variant="ghost" size="sm" w="100%" borderRadius={0}
                       onClick={() => setShowReasoning(!showReasoning)}
-                      color="gray.400" _hover={{ bg: 'gray.800' }}
+                      color="rgba(245,240,232,0.4)" _hover={{ bg: 'warm.800' }}
                       rightIcon={<Text fontSize="xs">{showReasoning ? '▲' : '▼'}</Text>}
                     >
                       <HStack spacing={2}>
@@ -893,8 +893,8 @@ export default function ClientDates() {
                       </HStack>
                     </Button>
                     {showReasoning && (
-                      <Box p={3} maxH="250px" overflow="auto" bg="gray.850" borderTop="1px solid" borderColor="gray.600">
-                        <Text color="gray.400" fontSize="xs" whiteSpace="pre-wrap" lineHeight="1.6">{filterReasoning(streamReasoning)}</Text>
+                      <Box p={3} maxH="250px" overflow="auto" bg="gray.850" borderTop="1px solid" borderColor="warm.600">
+                        <Text color="rgba(245,240,232,0.4)" fontSize="xs" whiteSpace="pre-wrap" lineHeight="1.6">{filterReasoning(streamReasoning)}</Text>
                         <Box ref={reasoningEndRef} />
                       </Box>
                     )}
@@ -903,7 +903,7 @@ export default function ClientDates() {
 
                 {/* 方案内容流式输出（过滤 JSON 符号） */}
                 {streamContent && (
-                  <Box mt={2} p={4} bg="gray.750" borderRadius="md" border="1px solid" borderColor="gray.600" maxH="450px" overflow="auto">
+                  <Box mt={2} p={4} bg="warm.800" borderRadius="md" border="1px solid" borderColor="warm.600" maxH="450px" overflow="auto">
                     <Text color="gray.300" fontSize="sm" whiteSpace="pre-wrap" lineHeight="1.8">
                       {cleanStreamText(streamContent)}
                     </Text>
@@ -916,36 +916,36 @@ export default function ClientDates() {
             {selected && (
               <Box>
                 <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4} mb={4}>
-                  <Box bg="gray.750" p={3} borderRadius="md">
-                    <Text color="gray.400" fontSize="sm">约会对象</Text>
+                  <Box bg="warm.800" p={3} borderRadius="md">
+                    <Text color="rgba(245,240,232,0.4)" fontSize="sm">约会对象</Text>
                     <Text color="teal.300">{selected.girl?.name}</Text>
                   </Box>
-                  <Box bg="gray.750" p={3} borderRadius="md">
-                    <Text color="gray.400" fontSize="sm">约会时间</Text>
+                  <Box bg="warm.800" p={3} borderRadius="md">
+                    <Text color="rgba(245,240,232,0.4)" fontSize="sm">约会时间</Text>
                     <Text color="white" fontSize="sm">
                       {selected.dateTime ? new Date(selected.dateTime).toLocaleString('zh-CN') : '-'}
                     </Text>
                   </Box>
-                  <Box bg="gray.750" p={3} borderRadius="md">
-                    <Text color="gray.400" fontSize="sm">地点</Text>
+                  <Box bg="warm.800" p={3} borderRadius="md">
+                    <Text color="rgba(245,240,232,0.4)" fontSize="sm">地点</Text>
                     <Text color="white">{selected.location || '-'}</Text>
                   </Box>
                 </SimpleGrid>
 
-                <Divider borderColor="gray.600" mb={4} />
+                <Divider borderColor="warm.600" mb={4} />
 
                 {reoptimizing ? (
                   streamContent ? null : (
                     <Flex justify="center" py={8}>
                       <VStack spacing={3}>
                         <Spinner size="lg" color="teal.400" />
-                        <Text color="gray.400" fontSize="sm">方案生成中，请稍候...</Text>
+                        <Text color="rgba(245,240,232,0.4)" fontSize="sm">方案生成中，请稍候...</Text>
                       </VStack>
                     </Flex>
                   )
                 ) : renderPlan(selected.aiPlan)}
 
-                <Divider borderColor="gray.600" my={4} />
+                <Divider borderColor="warm.600" my={4} />
 
                 {/* 操作区 */}
                 <VStack spacing={3} align="stretch">
@@ -953,7 +953,7 @@ export default function ClientDates() {
                     <AlertIcon />
                     <AlertDescription fontSize="sm">这是您的约会。如需优化方案，可让 AI 重新生成。</AlertDescription>
                   </Alert>
-                  <Button colorScheme="teal" leftIcon={<SparklesIcon />} onClick={handleReoptimizeDate}>
+                  <Button colorScheme="gold" leftIcon={<SparklesIcon />} onClick={handleReoptimizeDate}>
                     AI 重新生成
                   </Button>
                 </VStack>
@@ -966,7 +966,7 @@ export default function ClientDates() {
       {/* 访谈问卷弹窗 */}
       <Modal isOpen={interviewOpen} onClose={() => setInterviewOpen(false)} size="2xl">
         <ModalOverlay />
-        <ModalContent bg="gray.800" maxH="85vh" overflow="auto">
+        <ModalContent bg="warm.800" maxH="85vh" overflow="auto">
           <ModalHeader color="white">
             {interviewModal?.title || '约会反馈访谈'}
             <Badge ml={2} colorScheme="cyan">个性化问卷</Badge>
@@ -986,14 +986,14 @@ export default function ClientDates() {
                   {(interviewModal.questions || []).map((q, i) => {
                     const qId = q.id || `q${i + 1}`;
                     return (
-                      <Card key={qId} bg="gray.750">
+                      <Card key={qId} bg="warm.800">
                         <CardBody>
                           <Flex align="flex-start" gap={3} mb={2}>
                             <Badge colorScheme="cyan" minW="24px" textAlign="center">{i + 1}</Badge>
                             <Box flex={1}>
                               <Text color="white" fontSize="sm" mb={1}>{q.question}</Text>
                               {q.purpose && (
-                                <Text color="gray.500" fontSize="xs">（{q.purpose}）</Text>
+                                <Text color="rgba(245,240,232,0.2)" fontSize="xs">（{q.purpose}）</Text>
                               )}
                             </Box>
                           </Flex>
@@ -1025,7 +1025,7 @@ export default function ClientDates() {
                               value={interviewAnswers[qId] || ''}
                               onChange={e => setInterviewAnswers({ ...interviewAnswers, [qId]: e.target.value })}
                               placeholder="请输入您的回答..."
-                              bg="gray.700" color="white" rows={2} size="sm"
+                              bg="warm.700" color="white" rows={2} size="sm"
                             />
                           )}
                         </CardBody>
@@ -1049,7 +1049,7 @@ export default function ClientDates() {
       {/* 添加约会 Modal - 双步统一流程 */}
       <Modal isOpen={showAddModal} onClose={() => { setShowAddModal(false); resetDateForm(); }} size="lg">
         <ModalOverlay />
-        <ModalContent bg="gray.800" maxH="85vh" overflow="auto">
+        <ModalContent bg="warm.800" maxH="85vh" overflow="auto">
           <ModalHeader color="white">
             {addStep === 1 ? '选择约会对象' : '填写约会信息'}
           </ModalHeader>
@@ -1063,7 +1063,7 @@ export default function ClientDates() {
                   w={addStep === step ? '32px' : '8px'}
                   h="8px"
                   borderRadius="full"
-                  bg={addStep >= step ? 'gold.500' : 'gray.600'}
+                  bg={addStep >= step ? 'gold.500' : 'warm.600'}
                   transition="all 0.3s"
                 />
               ))}
@@ -1072,10 +1072,10 @@ export default function ClientDates() {
             {/* Step 1: 选择女生 */}
             {addStep === 1 && (
               <VStack spacing={4} align="stretch">
-                <Text color="gray.400" textAlign="center" mb={2}>选择约会对象</Text>
+                <Text color="rgba(245,240,232,0.4)" textAlign="center" mb={2}>选择约会对象</Text>
                 <VStack spacing={3} align="stretch" maxH="300px" overflowY="auto">
                   {girlList.length === 0 ? (
-                    <Text color="gray.500" textAlign="center" py={8}>暂无比心仪的女生</Text>
+                    <Text color="rgba(245,240,232,0.2)" textAlign="center" py={8}>暂无比心仪的女生</Text>
                   ) : girlList.map(girl => {
                     const stageLabels = {
                       '陌生': { color: 'gray', text: '陌生' },
@@ -1093,9 +1093,9 @@ export default function ClientDates() {
                     <Card
                       key={girl.id}
                       cursor="pointer"
-                      bg={selectedGirlForDate?.id === girl.id ? 'rgba(0,212,170,0.15)' : 'gray.750'}
+                      bg={selectedGirlForDate?.id === girl.id ? 'rgba(0,212,170,0.15)' : 'warm.800'}
                       border="2px solid"
-                      borderColor={selectedGirlForDate?.id === girl.id ? 'gold.500' : 'gray.600'}
+                      borderColor={selectedGirlForDate?.id === girl.id ? 'gold.500' : 'warm.600'}
                       onClick={() => {
                         setSelectedGirlForDate(girl);
                         setAddStep(2);
@@ -1128,13 +1128,13 @@ export default function ClientDates() {
                               <Badge colorScheme={stage.color} size="sm">{stage.text}</Badge>
                             </HStack>
                             <HStack spacing={2} mt={1} flexWrap="wrap">
-                              {girl.age && <Text color="gray.400" fontSize="xs">{girl.age}岁</Text>}
-                              {girl.occupation && <Text color="gray.500" fontSize="xs">· {girl.occupation}</Text>}
-                              {girl.personalityTags && <Text color="gray.500" fontSize="xs">· {girl.personalityTags}</Text>}
+                              {girl.age && <Text color="rgba(245,240,232,0.4)" fontSize="xs">{girl.age}岁</Text>}
+                              {girl.occupation && <Text color="rgba(245,240,232,0.2)" fontSize="xs">· {girl.occupation}</Text>}
+                              {girl.personalityTags && <Text color="rgba(245,240,232,0.2)" fontSize="xs">· {girl.personalityTags}</Text>}
                             </HStack>
                             {(girl.dietPreferences || girl.dietRestrictions) && (
                               <HStack spacing={1} mt={1} flexWrap="wrap">
-                                <Text color="gray.500" fontSize="xs">🍽</Text>
+                                <Text color="rgba(245,240,232,0.2)" fontSize="xs">🍽</Text>
                                 {girl.dietRestrictions && <Badge size="sm" colorScheme="red" mr={1}>{girl.dietRestrictions}</Badge>}
                                 {girl.dietPreferences && <Badge size="sm" colorScheme="green">{girl.dietPreferences}</Badge>}
                               </HStack>
@@ -1165,7 +1165,7 @@ export default function ClientDates() {
               <VStack spacing={4} align="stretch">
                 {/* 已选女生信息卡片 */}
                 {selectedGirlForDate && (
-                  <Card bg="gray.750" border="1px solid" borderColor="gold.500">
+                  <Card bg="warm.800" border="1px solid" borderColor="gold.500">
                     <CardBody py={3} px={4}>
                       <Flex align="center" gap={3}>
                         <Avatar size="md" name={selectedGirlForDate.name} src={getAvatar(selectedGirlForDate)} />
@@ -1173,7 +1173,7 @@ export default function ClientDates() {
                           <Text color="white" fontWeight="bold">{selectedGirlForDate.name}</Text>
                           <HStack spacing={2} mt={1} flexWrap="wrap">
                             {selectedGirlForDate.age && <Tag size="sm" colorScheme="purple">{selectedGirlForDate.age}岁</Tag>}
-                            {selectedGirlForDate.occupation && <Tag size="sm" colorScheme="teal">{selectedGirlForDate.occupation}</Tag>}
+                            {selectedGirlForDate.occupation && <Tag size="sm" colorScheme="gold">{selectedGirlForDate.occupation}</Tag>}
                             {selectedGirlForDate.personalityTags && <Tag size="sm" colorScheme="orange">{selectedGirlForDate.personalityTags}</Tag>}
                             {selectedGirlForDate.interests && <Tag size="sm" colorScheme="pink">{selectedGirlForDate.interests}</Tag>}
                           </HStack>
@@ -1186,17 +1186,17 @@ export default function ClientDates() {
 
                 {/* --- 公共基础信息 --- */}
                 <FormControl>
-                  <FormLabel color="gray.400" fontSize="sm">约会标题</FormLabel>
+                  <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">约会标题</FormLabel>
                   <Input
                     placeholder="如：周末约会"
                     value={dateForm.title}
                     onChange={e => setDateForm({ ...dateForm, title: e.target.value })}
-                    bg="gray.700" borderColor="gray.600"
+                    bg="warm.700" borderColor="warm.600"
                   />
                 </FormControl>
 
                 <FormControl>
-                  <FormLabel color="gray.400" fontSize="sm">约会时间</FormLabel>
+                  <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">约会时间</FormLabel>
                   <DatePicker
                     selected={dateForm.dateTime ? new Date(dateForm.dateTime) : null}
                     onChange={(date) => setDateForm({ ...dateForm, dateTime: formatLocalDateTime(date) })}
@@ -1208,8 +1208,8 @@ export default function ClientDates() {
                     placeholderText="选择日期和时间"
                     customInput={
                       <Input
-                        bg="gray.700" borderColor="gray.600"
-                        _placeholder={{ color: 'gray.500' }}
+                        bg="warm.700" borderColor="warm.600"
+                        _placeholder={{ color: 'rgba(245,240,232,0.2)' }}
                       />
                     }
                     calendarClassName="chinese-calendar"
@@ -1217,23 +1217,23 @@ export default function ClientDates() {
                 </FormControl>
 
                 <FormControl>
-                  <FormLabel color="gray.400" fontSize="sm">约会地点</FormLabel>
+                  <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">约会地点</FormLabel>
                   <Input
                     placeholder="如：北京三里屯 / 海底捞火锅"
                     value={dateForm.location}
                     onChange={e => setDateForm({ ...dateForm, location: e.target.value })}
-                    bg="gray.700" borderColor="gray.600"
-                    _placeholder={{ color: 'gray.500' }}
+                    bg="warm.700" borderColor="warm.600"
+                    _placeholder={{ color: 'rgba(245,240,232,0.2)' }}
                   />
                 </FormControl>
 
                 <FormControl>
-                  <FormLabel color="gray.400" fontSize="sm">备注（选填）</FormLabel>
+                  <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">备注（选填）</FormLabel>
                   <Textarea
                     placeholder="备注信息"
                     value={dateForm.notes}
                     onChange={e => setDateForm({ ...dateForm, notes: e.target.value })}
-                    bg="gray.700" borderColor="gray.600" rows={2}
+                    bg="warm.700" borderColor="warm.600" rows={2}
                   />
                 </FormControl>
 

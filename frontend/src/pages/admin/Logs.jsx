@@ -25,47 +25,47 @@ function FrontendDetail({ log }) {
   return (
     <VStack spacing={3} align="stretch" fontFamily="mono" fontSize="sm">
       <Box>
-        <Text color="gray.400" fontSize="xs" mb={1}>errorId</Text>
+        <Text color="rgba(245,240,232,0.4)" fontSize="xs" mb={1}>errorId</Text>
         <Text color="cyan.300">{log.errorId || '-'}</Text>
       </Box>
       <Box>
-        <Text color="gray.400" fontSize="xs" mb={1}>错误信息</Text>
+        <Text color="rgba(245,240,232,0.4)" fontSize="xs" mb={1}>错误信息</Text>
         <Text color="red.300" fontWeight="bold">{log.message}</Text>
       </Box>
       <Box>
-        <Text color="gray.400" fontSize="xs" mb={1}>错误类型</Text>
+        <Text color="rgba(245,240,232,0.4)" fontSize="xs" mb={1}>错误类型</Text>
         <Badge colorScheme="orange">{log.type}</Badge>
       </Box>
       <Box>
-        <Text color="gray.400" fontSize="xs" mb={1}>发生页面</Text>
+        <Text color="rgba(245,240,232,0.4)" fontSize="xs" mb={1}>发生页面</Text>
         <Text color="yellow.300" wordBreak="break-all">{log.url}</Text>
       </Box>
       {log.metadata?.lineno != null && (
         <Box>
-          <Text color="gray.400" fontSize="xs" mb={1}>出错位置</Text>
+          <Text color="rgba(245,240,232,0.4)" fontSize="xs" mb={1}>出错位置</Text>
           <Text>第 {log.metadata.lineno} 行，第 {log.metadata.colno} 列</Text>
         </Box>
       )}
       {log.metadata?.componentStack && (
         <Box>
-          <Text color="gray.400" fontSize="xs" mb={1}>React 组件栈</Text>
+          <Text color="rgba(245,240,232,0.4)" fontSize="xs" mb={1}>React 组件栈</Text>
           <Box bg="gray.900" p={3} borderRadius="md" maxH="150px" overflowY="auto" fontSize="xs">
             <Text whiteSpace="pre-wrap" color="gray.300">{log.metadata.componentStack}</Text>
           </Box>
         </Box>
       )}
       <Box>
-        <Text color="gray.400" fontSize="xs" mb={1}>堆栈追踪</Text>
+        <Text color="rgba(245,240,232,0.4)" fontSize="xs" mb={1}>堆栈追踪</Text>
         <Box bg="gray.900" p={3} borderRadius="md" maxH="250px" overflowY="auto" fontSize="xs">
           <Text whiteSpace="pre-wrap" color="gray.300">{log.stack || '无堆栈信息'}</Text>
         </Box>
       </Box>
       <Box>
-        <Text color="gray.400" fontSize="xs" mb={1}>浏览器</Text>
-        <Text color="gray.400" fontSize="xs" wordBreak="break-all">{log.userAgent}</Text>
+        <Text color="rgba(245,240,232,0.4)" fontSize="xs" mb={1}>浏览器</Text>
+        <Text color="rgba(245,240,232,0.4)" fontSize="xs" wordBreak="break-all">{log.userAgent}</Text>
       </Box>
       <Box>
-        <Text color="gray.400" fontSize="xs" mb={1}>发生时间</Text>
+        <Text color="rgba(245,240,232,0.4)" fontSize="xs" mb={1}>发生时间</Text>
         <Text>{log.time ? new Date(log.time).toLocaleString('zh-CN') : '-'}</Text>
       </Box>
     </VStack>
@@ -77,54 +77,54 @@ function BackendDetail({ log }) {
   return (
     <VStack spacing={3} align="stretch" fontFamily="mono" fontSize="sm">
       <Box>
-        <Text color="gray.400" fontSize="xs" mb={1}>日志级别</Text>
+        <Text color="rgba(245,240,232,0.4)" fontSize="xs" mb={1}>日志级别</Text>
         <Badge colorScheme={log.level === 'error' ? 'red' : 'orange'}>{log.level}</Badge>
       </Box>
       <Box>
-        <Text color="gray.400" fontSize="xs" mb={1}>消息</Text>
+        <Text color="rgba(245,240,232,0.4)" fontSize="xs" mb={1}>消息</Text>
         <Text color="red.300" fontWeight="bold">{log.message}</Text>
       </Box>
       {log.code && (
         <Box>
-          <Text color="gray.400" fontSize="xs" mb={1}>错误码</Text>
+          <Text color="rgba(245,240,232,0.4)" fontSize="xs" mb={1}>错误码</Text>
           <Text color="yellow.300">{log.code}</Text>
         </Box>
       )}
       {log.requestId && (
         <Box>
-          <Text color="gray.400" fontSize="xs" mb={1}>请求ID (requestId)</Text>
+          <Text color="rgba(245,240,232,0.4)" fontSize="xs" mb={1}>请求ID (requestId)</Text>
           <Text color="cyan.300">{log.requestId}</Text>
         </Box>
       )}
       <HStack spacing={6}>
         {log.method && (
           <Box>
-            <Text color="gray.400" fontSize="xs" mb={1}>请求方法</Text>
+            <Text color="rgba(245,240,232,0.4)" fontSize="xs" mb={1}>请求方法</Text>
             <Text color="green.300">{log.method}</Text>
           </Box>
         )}
         {log.status && (
           <Box>
-            <Text color="gray.400" fontSize="xs" mb={1}>状态码</Text>
+            <Text color="rgba(245,240,232,0.4)" fontSize="xs" mb={1}>状态码</Text>
             <Text color={log.status >= 400 ? 'red.300' : 'green.300'}>{log.status}</Text>
           </Box>
         )}
         {log.duration != null && (
           <Box>
-            <Text color="gray.400" fontSize="xs" mb={1}>耗时</Text>
+            <Text color="rgba(245,240,232,0.4)" fontSize="xs" mb={1}>耗时</Text>
             <Text color={log.duration > 3000 ? 'orange.300' : 'gray.300'}>{log.duration}ms</Text>
           </Box>
         )}
       </HStack>
       {log.path && (
         <Box>
-          <Text color="gray.400" fontSize="xs" mb={1}>请求路径</Text>
+          <Text color="rgba(245,240,232,0.4)" fontSize="xs" mb={1}>请求路径</Text>
           <Text color="yellow.300" wordBreak="break-all">{log.path}</Text>
         </Box>
       )}
       {log.metadata && (
         <Box>
-          <Text color="gray.400" fontSize="xs" mb={1}>附加信息 (metadata)</Text>
+          <Text color="rgba(245,240,232,0.4)" fontSize="xs" mb={1}>附加信息 (metadata)</Text>
           <Box bg="gray.900" p={3} borderRadius="md" maxH="200px" overflowY="auto" fontSize="xs">
             <Text whiteSpace="pre-wrap" color="gray.300">{JSON.stringify(log.metadata, null, 2)}</Text>
           </Box>
@@ -132,14 +132,14 @@ function BackendDetail({ log }) {
       )}
       {log.stack && (
         <Box>
-          <Text color="gray.400" fontSize="xs" mb={1}>堆栈追踪</Text>
+          <Text color="rgba(245,240,232,0.4)" fontSize="xs" mb={1}>堆栈追踪</Text>
           <Box bg="gray.900" p={3} borderRadius="md" maxH="200px" overflowY="auto" fontSize="xs">
             <Text whiteSpace="pre-wrap" color="gray.300">{log.stack}</Text>
           </Box>
         </Box>
       )}
       <Box>
-        <Text color="gray.400" fontSize="xs" mb={1}>发生时间</Text>
+        <Text color="rgba(245,240,232,0.4)" fontSize="xs" mb={1}>发生时间</Text>
         <Text>{log.time ? new Date(log.time).toLocaleString('zh-CN') : '-'}</Text>
       </Box>
     </VStack>
@@ -304,7 +304,7 @@ export default function Logs() {
   }, [socket, toast]);
 
   const levelColor = { error: 'red', slow: 'purple', warn: 'orange', info: 'blue', debug: 'gray' };
-  const levelBg = { error: 'red.900', slow: 'purple.900', warn: 'orange.900', info: 'gray.800', debug: 'gray.800' };
+  const levelBg = { error: 'red.900', slow: 'purple.900', warn: 'orange.900', info: 'warm.800', debug: 'warm.800' };
 
   const handleClearFilter = () => {
     setFilter({ date: filter.date, level: '', source: '', search: '' });
@@ -319,7 +319,7 @@ export default function Logs() {
   const SlowAnalysisTab = () => (
     <Box>
       <HStack mb={4} justify="space-between">
-        <Text color="gray.400">分析近7天慢请求数据，帮助优化性能瓶颈</Text>
+        <Text color="rgba(245,240,232,0.4)">分析近7天慢请求数据，帮助优化性能瓶颈</Text>
         <Button onClick={loadSlowAnalysis} isLoading={slowAnalysisLoading} colorScheme="purple" size="sm">
           刷新分析
         </Button>
@@ -390,7 +390,7 @@ export default function Logs() {
                   </Tooltip>
                 ))}
               </HStack>
-              <HStack justify="space-between" mt={1} fontSize="xs" color="gray.500">
+              <HStack justify="space-between" mt={1} fontSize="xs" color="rgba(245,240,232,0.2)">
                 <Text>0时</Text>
                 <Text>6时</Text>
                 <Text>12时</Text>
@@ -414,7 +414,7 @@ export default function Logs() {
                   </Tooltip>
                 ))}
               </HStack>
-              <Text fontSize="xs" color="gray.500" mt={1} textAlign="center">
+              <Text fontSize="xs" color="rgba(245,240,232,0.2)" mt={1} textAlign="center">
                 共 {slowAnalysis.total} 次慢请求
               </Text>
             </CardBody>
@@ -423,7 +423,7 @@ export default function Logs() {
       )}
 
       {slowAnalysisLoading && !slowAnalysis && (
-        <Text color="gray.500" textAlign="center" py={8}>
+        <Text color="rgba(245,240,232,0.2)" textAlign="center" py={8}>
           正在加载慢请求分析...
         </Text>
       )}
@@ -436,7 +436,7 @@ export default function Logs() {
       <Card mb={4}>
         <CardBody>
           <Text fontWeight="bold" mb={3}>🔍 Trace追踪</Text>
-          <Text color="gray.400" fontSize="sm" mb={3}>
+          <Text color="rgba(245,240,232,0.4)" fontSize="sm" mb={3}>
             输入 trace-id 或 request-id 查询完整调用链
           </Text>
           <HStack>
@@ -463,17 +463,17 @@ export default function Logs() {
                   key={i}
                   mb={2}
                   p={3}
-                  bg={levelBg[log.level] || 'gray.800'}
+                  bg={levelBg[log.level] || 'warm.800'}
                   borderRadius="md"
                   borderLeft="3px solid"
                   borderLeftColor={`${levelColor[log.level] || 'gray'}.400`}
                 >
                   <HStack spacing={2} mb={1}>
-                    <Text fontSize="xs" color="gray.400">{log.timestamp?.slice(11, 23)}</Text>
+                    <Text fontSize="xs" color="rgba(245,240,232,0.4)">{log.timestamp?.slice(11, 23)}</Text>
                     <Badge colorScheme={levelColor[log.level]} fontSize="0.6rem">{log.level}</Badge>
                     <Text fontWeight="bold">{log.message}</Text>
                   </HStack>
-                  <HStack spacing={4} fontSize="xs" color="gray.400">
+                  <HStack spacing={4} fontSize="xs" color="rgba(245,240,232,0.4)">
                     {log.path && <Text>path: <Text as="span" color="yellow.300">{log.path}</Text></Text>}
                     {log.method && <Text>method: <Text as="span" color="green.300">{log.method}</Text></Text>}
                     {log.duration && <Text>duration: <Text as="span" color="orange.300">{log.duration}ms</Text></Text>}
@@ -487,7 +487,7 @@ export default function Logs() {
       )}
 
       {!traceResult && !traceLoading && (
-        <Text color="gray.500" textAlign="center" py={8}>
+        <Text color="rgba(245,240,232,0.2)" textAlign="center" py={8}>
           输入 trace-id 查询完整调用链
         </Text>
       )}
@@ -544,7 +544,7 @@ export default function Logs() {
       </HStack>
 
       {/* Tab切换 */}
-      <Tabs variant="soft-rounded" colorScheme="teal" mb={4} index={tabIndex} onChange={handleTabChange}>
+      <Tabs variant="soft-rounded" colorScheme="gold" mb={4} index={tabIndex} onChange={handleTabChange}>
         <TabList>
           <Tab>📋 日志列表</Tab>
           <Tab>🐌 慢请求分析</Tab>
@@ -618,15 +618,15 @@ export default function Logs() {
               overflowY="auto"
               fontFamily="mono"
               fontSize="xs"
-              sx={{ '&::-webkit-scrollbar': { width: '8px' }, '&::-webkit-scrollbar-track': { bg: 'gray.800' }, '&::-webkit-scrollbar-thumb': { bg: 'gray.600', borderRadius: '4px' } }}
+              sx={{ '&::-webkit-scrollbar': { width: '8px' }, '&::-webkit-scrollbar-track': { bg: 'warm.800' }, '&::-webkit-scrollbar-thumb': { bg: 'warm.600', borderRadius: '4px' } }}
             >
               {logs.length === 0 ? (
-                <Text color="gray.500" textAlign="center" py={8}>暂无日志数据</Text>
+                <Text color="rgba(245,240,232,0.2)" textAlign="center" py={8}>暂无日志数据</Text>
               ) : (
                 logs.map((log, i) => (
-                  <Box key={`${log.time}-${i}`} mb={2} p={2} bg={levelBg[log.level] || 'gray.800'} borderRadius="sm" borderLeft="3px solid" borderLeftColor={`${levelColor[log.level] || 'gray'}.400`}>
+                  <Box key={`${log.time}-${i}`} mb={2} p={2} bg={levelBg[log.level] || 'warm.800'} borderRadius="sm" borderLeft="3px solid" borderLeftColor={`${levelColor[log.level] || 'gray'}.400`}>
                     <HStack spacing={2} mb={1}>
-                      <Text color="gray.400" fontSize="xs">{log.time?.slice(11, 23)}</Text>
+                      <Text color="rgba(245,240,232,0.4)" fontSize="xs">{log.time?.slice(11, 23)}</Text>
                       <Badge colorScheme={levelColor[log.level]} fontSize="0.6rem" textTransform="uppercase">{log.level}</Badge>
                       {log.source === 'frontend' && <Badge colorScheme="orange" fontSize="0.6rem" variant="outline">前端</Badge>}
                       {(log.level === 'error' || log.level === 'warn') ? (
@@ -635,14 +635,14 @@ export default function Logs() {
                         <Text fontWeight="bold">{log.message}</Text>
                       )}
                     </HStack>
-                    <HStack spacing={4} fontSize="0.75rem" color="gray.400" flexWrap="wrap">
+                    <HStack spacing={4} fontSize="0.75rem" color="rgba(245,240,232,0.4)" flexWrap="wrap">
                       {log.source === 'frontend' ? (
                         <>
                           {log.errorId && <Text>errorId: <Text as="span" color="cyan.300" cursor="pointer" textDecoration="underline" _hover={{ color: 'cyan.100' }} onClick={() => openLogDetail(log)}>{log.errorId}</Text></Text>}
                           {log.type && <Text>type: <Text as="span" color="orange.300">{log.type}</Text></Text>}
                           {log.url && <Text>url: <Text as="span" color="yellow.300" maxW="300px" isTruncated display="inline-block" verticalAlign="bottom">{log.url}</Text></Text>}
                           {log.metadata?.lineno != null && <Text>位置: <Text as="span" color="gray.300">{log.metadata.lineno}:{log.metadata.colno}</Text></Text>}
-                          {log.stack && <Text>stack: <Text as="span" color="gray.400" maxW="300px" isTruncated display="inline-block" verticalAlign="bottom">{log.stack.slice(0, 100)}</Text></Text>}
+                          {log.stack && <Text>stack: <Text as="span" color="rgba(245,240,232,0.4)" maxW="300px" isTruncated display="inline-block" verticalAlign="bottom">{log.stack.slice(0, 100)}</Text></Text>}
                         </>
                       ) : (
                         <>
@@ -658,7 +658,7 @@ export default function Logs() {
                 ))
               )}
             </Box>
-            <Text fontSize="xs" color="gray.500" mt={2}>实时更新中... 显示最近 200 条日志</Text>
+            <Text fontSize="xs" color="rgba(245,240,232,0.2)" mt={2}>实时更新中... 显示最近 200 条日志</Text>
           </TabPanel>
 
           {/* 慢请求分析Tab */}
@@ -676,7 +676,7 @@ export default function Logs() {
       {/* 日志详情弹窗（前后端通用） */}
       <Modal isOpen={isDetailOpen} onClose={onDetailClose} size="xl">
         <ModalOverlay />
-        <ModalContent bg="gray.800" color="gray.100">
+        <ModalContent bg="warm.800" color="gray.100">
           <ModalHeader>
             {logDetail?.source === 'frontend' ? '前端错误详情' : '后端日志详情'}
           </ModalHeader>

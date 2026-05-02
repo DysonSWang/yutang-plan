@@ -119,16 +119,16 @@ export default function AdminProgress() {
     <Box>
       <Heading color="white" mb={6}>进度管理</Heading>
 
-      <Card bg="gray.800">
+      <Card bg="warm.800">
         <CardBody>
           <Table variant="simple" color="gray.300">
             <Thead>
               <Tr>
-                <Th color="gray.400">客户</Th>
-                <Th color="gray.400">当前阶段</Th>
-                <Th color="gray.400">阶段详情</Th>
-                <Th color="gray.400">缘分资源</Th>
-                <Th color="gray.400">操作</Th>
+                <Th color="rgba(245,240,232,0.4)">客户</Th>
+                <Th color="rgba(245,240,232,0.4)">当前阶段</Th>
+                <Th color="rgba(245,240,232,0.4)">阶段详情</Th>
+                <Th color="rgba(245,240,232,0.4)">缘分资源</Th>
+                <Th color="rgba(245,240,232,0.4)">操作</Th>
               </Tr>
             </Thead>
             <Tbody>
@@ -147,11 +147,11 @@ export default function AdminProgress() {
                       <Progress
                         value={(currentStage / 5) * 100}
                         size="sm"
-                        colorScheme="teal"
+                        colorScheme="gold"
                         w="150px"
                         borderRadius="full"
                       />
-                      <Text fontSize="xs" color="gray.500" mt={1}>
+                      <Text fontSize="xs" color="rgba(245,240,232,0.2)" mt={1}>
                         {currentStage}/5 阶段
                       </Text>
                     </Td>
@@ -161,7 +161,7 @@ export default function AdminProgress() {
                     <Td>
                       <Button
                         size="sm"
-                        colorScheme="teal"
+                        colorScheme="gold"
                         onClick={() => openProgressModal(client)}
                       >
                         更新进度
@@ -172,7 +172,7 @@ export default function AdminProgress() {
               })}
               {clientList.length === 0 && (
                 <Tr>
-                  <Td colSpan={5} textAlign="center" color="gray.500">暂无客户</Td>
+                  <Td colSpan={5} textAlign="center" color="rgba(245,240,232,0.2)">暂无客户</Td>
                 </Tr>
               )}
             </Tbody>
@@ -183,7 +183,7 @@ export default function AdminProgress() {
       {/* 更新进度弹窗 */}
       <Modal isOpen={isOpen} onClose={onClose} size="lg">
         <ModalOverlay />
-        <ModalContent bg="gray.800">
+        <ModalContent bg="warm.800">
           <ModalHeader color="white">
             更新进度 - {selectedClient?.nickname}
           </ModalHeader>
@@ -191,8 +191,8 @@ export default function AdminProgress() {
           <ModalBody>
             <VStack spacing={4} align="stretch">
               {/* 当前阶段 */}
-              <Box p={4} bg="gray.700" borderRadius="md">
-                <Text color="gray.400" fontSize="sm" mb={2}>当前阶段</Text>
+              <Box p={4} bg="warm.700" borderRadius="md">
+                <Text color="rgba(245,240,232,0.4)" fontSize="sm" mb={2}>当前阶段</Text>
                 <Badge
                   colorScheme={getStageInfo(getCurrentStage(selectedClient)).color}
                   fontSize="md"
@@ -208,7 +208,7 @@ export default function AdminProgress() {
                 <Select
                   value={newStage}
                   onChange={(e) => setNewStage(parseInt(e.target.value))}
-                  bg="gray.700"
+                  bg="warm.700"
                   color="white"
                 >
                   {SERVICE_STAGES.map(s => (
@@ -236,17 +236,17 @@ export default function AdminProgress() {
               <FormControl>
                 <FormLabel color="gray.300">本阶段付款金额</FormLabel>
                 <NumberInput value={amountPaid} onChange={(_, v) => setAmountPaid(v)}>
-                  <NumberInputField bg="gray.700" placeholder="选填" />
+                  <NumberInputField bg="warm.700" placeholder="选填" />
                 </NumberInput>
               </FormControl>
 
               {/* 历史进度 */}
               {clientProgress.length > 0 && (
                 <Box>
-                  <Text color="gray.400" fontSize="sm" mb={2}>历史进度</Text>
+                  <Text color="rgba(245,240,232,0.4)" fontSize="sm" mb={2}>历史进度</Text>
                   <VStack spacing={2} align="stretch">
                     {clientProgress.map(p => (
-                      <HStack key={p.id} p={2} bg="gray.700" borderRadius="md">
+                      <HStack key={p.id} p={2} bg="warm.700" borderRadius="md">
                         <Badge colorScheme={STAGE_COLORS[p.status] || 'gray'}>
                           {p.stage}
                         </Badge>
@@ -255,7 +255,7 @@ export default function AdminProgress() {
                           <Text color="green.400" fontSize="sm">¥{p.amountPaid}</Text>
                         )}
                         {p.completedAt && (
-                          <Text color="gray.500" fontSize="xs">
+                          <Text color="rgba(245,240,232,0.2)" fontSize="xs">
                             {new Date(p.completedAt).toLocaleDateString()}
                           </Text>
                         )}
@@ -268,7 +268,7 @@ export default function AdminProgress() {
           </ModalBody>
           <ModalFooter>
             <Button variant="ghost" mr={3} onClick={onClose}>取消</Button>
-            <Button colorScheme="teal" onClick={updateProgress} isLoading={loading}>
+            <Button colorScheme="gold" onClick={updateProgress} isLoading={loading}>
               确认更新
             </Button>
           </ModalFooter>

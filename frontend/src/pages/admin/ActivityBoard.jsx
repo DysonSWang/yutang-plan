@@ -14,7 +14,7 @@ const LEVEL_COLORS = {
   high: { bg: 'green.900', color: 'green.300', label: '高活跃' },
   medium: { bg: 'yellow.900', color: 'yellow.300', label: '中活跃' },
   low: { bg: 'orange.900', color: 'orange.300', label: '低活跃' },
-  dormant: { bg: 'gray.800', color: 'gray.400', label: '沉睡' },
+  dormant: { bg: 'warm.800', color: 'rgba(245,240,232,0.4)', label: '沉睡' },
 };
 
 const LEVEL_ORDER = ['high', 'medium', 'low', 'dormant'];
@@ -141,7 +141,7 @@ export default function ActivityBoard() {
             <Stat>
               <Flex align="center" gap={1}>
                 <StatLabel>总用户数</StatLabel>
-                <Icon as={FiTrendingUp} boxSize={3} color="gray.500" />
+                <Icon as={FiTrendingUp} boxSize={3} color="rgba(245,240,232,0.2)" />
               </Flex>
               <StatNumber>{totalUsers}</StatNumber>
               <StatHelpText>人</StatHelpText>
@@ -153,7 +153,7 @@ export default function ActivityBoard() {
             <Stat>
               <Flex align="center" gap={1}>
                 <StatLabel>日活跃 (DAU)</StatLabel>
-                <Icon as={FiTrendingUp} boxSize={3} color="gray.500" />
+                <Icon as={FiTrendingUp} boxSize={3} color="rgba(245,240,232,0.2)" />
               </Flex>
               <StatNumber color="cyan.300">{dau}</StatNumber>
               <StatHelpText>{dauRate}%</StatHelpText>
@@ -165,7 +165,7 @@ export default function ActivityBoard() {
             <Stat>
               <Flex align="center" gap={1}>
                 <StatLabel>月活跃 (MAU)</StatLabel>
-                <Icon as={FiTrendingUp} boxSize={3} color="gray.500" />
+                <Icon as={FiTrendingUp} boxSize={3} color="rgba(245,240,232,0.2)" />
               </Flex>
               <StatNumber color="teal.300">{mau}</StatNumber>
               <StatHelpText>{mauRate}%</StatHelpText>
@@ -201,7 +201,7 @@ export default function ActivityBoard() {
         </Card>
       </SimpleGrid>
 
-      <Tabs variant="soft-rounded" colorScheme="teal" index={tabIndex} onChange={setTabIndex}>
+      <Tabs variant="soft-rounded" colorScheme="gold" index={tabIndex} onChange={setTabIndex}>
         <TabList mb={4}>
           <Tab>总览</Tab>
           <Tab>活跃趋势</Tab>
@@ -247,7 +247,7 @@ export default function ActivityBoard() {
                     </Flex>
                     <Flex justify="space-between" align="center">
                       <Text>约会方案生成</Text>
-                      <Badge colorScheme="teal">{featureUsage.datePlans} 次</Badge>
+                      <Badge colorScheme="gold">{featureUsage.datePlans} 次</Badge>
                     </Flex>
                     <Flex justify="space-between" align="center">
                       <Text>聊天消息</Text>
@@ -350,8 +350,8 @@ export default function ActivityBoard() {
                         const heightPct = maxVal > 0 ? (val / maxVal) * 100 : 0;
                         return (
                           <Tooltip key={day.date} label={`${day.date}: ${val}${metric.unit}`}>
-                            <Box flex={1} h="100%" bg="gray.800" borderRadius="2px 2px 0 0" position="relative" cursor="pointer"
-                              _hover={{ bg: 'gray.700' }}>
+                            <Box flex={1} h="100%" bg="warm.800" borderRadius="2px 2px 0 0" position="relative" cursor="pointer"
+                              _hover={{ bg: 'warm.700' }}>
                               <Box
                                 position="absolute"
                                 bottom={0}
@@ -367,7 +367,7 @@ export default function ActivityBoard() {
                         );
                       })}
                     </Flex>
-                    <Flex justify="space-between" mt={2} fontSize="xs" color="gray.400">
+                    <Flex justify="space-between" mt={2} fontSize="xs" color="rgba(245,240,232,0.3)">
                       <Text>{growth.length > 0 ? formatDate(growth[Math.max(0, growth.length - trendDays)]?.date) : '-'}</Text>
                       <Text>
                         {TREND_METRICS[trendMetric].label}
@@ -389,7 +389,7 @@ export default function ActivityBoard() {
             <Card>
               <CardBody>
                 <Heading size="md" mb={4}>沉睡用户名单</Heading>
-                <Text fontSize="sm" color="gray.400" mb={4}>
+                <Text fontSize="sm" color="rgba(245,240,232,0.3)" mb={4}>
                   已连续14天无活跃操作
                 </Text>
                 <Table size="sm">
@@ -414,7 +414,7 @@ export default function ActivityBoard() {
                     ))}
                     {dormantUsers.length === 0 && (
                       <Tr>
-                        <Td colSpan={4} textAlign="center" color="gray.500">
+                        <Td colSpan={4} textAlign="center" color="rgba(245,240,232,0.2)">
                           暂无沉睡用户
                         </Td>
                       </Tr>

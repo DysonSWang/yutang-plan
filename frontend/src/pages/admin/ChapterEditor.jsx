@@ -104,14 +104,14 @@ export default function ChapterEditor() {
             icon={<FiArrowLeft />}
             aria-label="返回"
             variant="ghost"
-            color="gray.400"
+            color="rgba(245,240,232,0.4)"
             onClick={() => navigate('/admin/chapters')}
           />
           <Text color="white" fontSize="xl" fontWeight="bold">
             {isEdit ? '编辑章节' : '新建章节'}
           </Text>
           {isEdit && (
-            <Text color="gray.500" fontSize="sm">第 {chapterId} 章</Text>
+            <Text color="rgba(245,240,232,0.2)" fontSize="sm">第 {chapterId} 章</Text>
           )}
         </HStack>
         <HStack spacing={3}>
@@ -129,7 +129,7 @@ export default function ChapterEditor() {
           <Button variant="ghost" colorScheme="gray" onClick={() => navigate('/admin/chapters')}>
             取消
           </Button>
-          <Button colorScheme="teal" onClick={handleSave} isLoading={saving} px={8}>
+          <Button colorScheme="gold" onClick={handleSave} isLoading={saving} px={8}>
             保存
           </Button>
         </HStack>
@@ -143,18 +143,18 @@ export default function ChapterEditor() {
           display={{ base: previewMode ? 'none' : 'block', lg: 'block' }}
           overflow="auto"
         >
-          <VStack spacing={4} align="stretch" bg="gray.800" p={6} borderRadius="lg">
+          <VStack spacing={4} align="stretch" bg="warm.800" p={6} borderRadius="lg">
             <FormControl isRequired>
               <FormLabel color="gray.300">标题</FormLabel>
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="章节标题"
-                bg="gray.700"
+                bg="warm.700"
                 border="none"
                 color="white"
                 fontSize="lg"
-                _placeholder={{ color: 'gray.500' }}
+                _placeholder={{ color: 'rgba(245,240,232,0.2)' }}
               />
             </FormControl>
 
@@ -164,10 +164,10 @@ export default function ChapterEditor() {
                 value={subtitle}
                 onChange={(e) => setSubtitle(e.target.value)}
                 placeholder="副标题（可选）"
-                bg="gray.700"
+                bg="warm.700"
                 border="none"
                 color="white"
-                _placeholder={{ color: 'gray.500' }}
+                _placeholder={{ color: 'rgba(245,240,232,0.2)' }}
               />
             </FormControl>
 
@@ -205,7 +205,7 @@ export default function ChapterEditor() {
                   }
                 }}
                 placeholder="在此编写 Markdown 格式的章节内容..."
-                bg="gray.700"
+                bg="warm.700"
                 border="none"
                 color="white"
                 fontFamily="monospace"
@@ -214,7 +214,7 @@ export default function ChapterEditor() {
                 flex={1}
                 minH="400px"
                 resize="none"
-                _placeholder={{ color: 'gray.500' }}
+                _placeholder={{ color: 'rgba(245,240,232,0.2)' }}
                 sx={{
                   '&::-webkit-scrollbar': { width: '4px' },
                   '&::-webkit-scrollbar-thumb': { background: 'rgba(255,255,255,0.1)', borderRadius: '2px' },
@@ -235,24 +235,24 @@ export default function ChapterEditor() {
               syncScroll(previewRef.current, textareaRef.current);
             }
           }}
-          bg="gray.800"
+          bg="warm.800"
           borderRadius="lg"
           p={6}
           borderLeft={{ lg: '1px solid' }}
-          borderColor="gray.700"
+          borderColor="warm.700"
         >
-          <Text color="gray.500" fontSize="xs" mb={4} letterSpacing="wider">
+          <Text color="rgba(245,240,232,0.2)" fontSize="xs" mb={4} letterSpacing="wider">
             实时预览
           </Text>
 
           {title ? (
-            <Box mb={6} pb={4} borderBottom="1px solid" borderColor="gray.700">
+            <Box mb={6} pb={4} borderBottom="1px solid" borderColor="warm.700">
               <Text color="white" fontSize="2xl" fontWeight="bold">{title}</Text>
-              {subtitle && <Text color="gray.400" mt={1}>{subtitle}</Text>}
+              {subtitle && <Text color="rgba(245,240,232,0.4)" mt={1}>{subtitle}</Text>}
             </Box>
           ) : (
-            <Box mb={6} pb={4} borderBottom="1px solid" borderColor="gray.700">
-              <Text color="gray.600" fontSize="2xl" fontStyle="italic">输入标题后在此预览</Text>
+            <Box mb={6} pb={4} borderBottom="1px solid" borderColor="warm.700">
+              <Text color="warm.600" fontSize="2xl" fontStyle="italic">输入标题后在此预览</Text>
             </Box>
           )}
 
@@ -264,24 +264,24 @@ export default function ChapterEditor() {
               lineHeight="1.9"
               sx={{
                 'h1,h2,h3,h4,h5,h6': { color: 'teal.300', mt: 5, mb: 2, fontWeight: 'bold' },
-                h1: { fontSize: 'xl', borderBottom: '1px solid', borderColor: 'gray.700', pb: 2 },
+                h1: { fontSize: 'xl', borderBottom: '1px solid', borderColor: 'warm.700', pb: 2 },
                 h2: { fontSize: 'lg' },
                 h3: { fontSize: 'md' },
                 p: { mb: 3 },
                 'ul,ol': { pl: 5, mb: 3 },
                 li: { mb: 1 },
-                code: { bg: 'gray.700', px: 1.5, py: 0.5, borderRadius: 'sm', fontSize: 'xs' },
+                code: { bg: 'warm.700', px: 1.5, py: 0.5, borderRadius: 'sm', fontSize: 'xs' },
                 pre: { bg: 'gray.900', p: 3, borderRadius: 'md', overflowX: 'auto', mb: 3 },
                 blockquote: {
-                  borderLeft: '3px solid', borderColor: 'teal.500', pl: 3, color: 'gray.400', mb: 3,
+                  borderLeft: '3px solid', borderColor: 'teal.500', pl: 3, color: 'rgba(245,240,232,0.4)', mb: 3,
                   fontStyle: 'italic'
                 },
                 table: { w: '100%', mb: 3, borderCollapse: 'collapse' },
-                th: { bg: 'gray.700', p: 2, textAlign: 'left', fontWeight: 'bold', borderBottom: '2px solid', borderColor: 'gray.600' },
-                td: { p: 2, borderBottom: '1px solid', borderColor: 'gray.700' },
+                th: { bg: 'warm.700', p: 2, textAlign: 'left', fontWeight: 'bold', borderBottom: '2px solid', borderColor: 'warm.600' },
+                td: { p: 2, borderBottom: '1px solid', borderColor: 'warm.700' },
                 strong: { color: 'white' },
                 a: { color: 'teal.300' },
-                hr: { borderColor: 'gray.700', my: 4 },
+                hr: { borderColor: 'warm.700', my: 4 },
               }}
             >
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -289,7 +289,7 @@ export default function ChapterEditor() {
               </ReactMarkdown>
             </Box>
           ) : (
-            <Text color="gray.600" fontStyle="italic">输入正文后在此预览</Text>
+            <Text color="warm.600" fontStyle="italic">输入正文后在此预览</Text>
           )}
         </Box>
       </Flex>

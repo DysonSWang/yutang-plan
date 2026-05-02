@@ -1,14 +1,47 @@
-import { Modal, ModalOverlay, ModalContent, ModalBody, ModalFooter, Button, Text, VStack, Flex } from '@chakra-ui/react';
+import { Modal, ModalOverlay, ModalContent, ModalBody, ModalFooter, Button, Text, VStack, Flex, Progress } from '@chakra-ui/react';
+import { useState } from 'react';
+import { Http } from '@capacitor-community/http';
+import { FileOpener } from '@capawesome-team/capacitor-file-opener';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { captureError } from '../utils/frontendErrorCapture';
 
 export default function VersionUpdateModal({ isOpen, onClose, upgradeType, latestVersion, updateDescription, downloadUrl, onForceUpdate }) {
   const isForce = upgradeType === 'force';
+  const [downloading, setDownloading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [error, setError] = useState(null);
 
-  const handleUpdate = () => {
-    window.open(downloadUrl, '_blank');
-    if (isForce) {
-      // 强制升级：打开下载页后不关闭弹窗
-    } else {
-      onClose();
+  const handleUpdate = async () => {
+    setDownloading(true);
+    setError(null);
+    setProgress(0);
+
+    try {
+      // 1. 直接下载 APK 到手机
+      const downloadResult = await Http.downloadFile({
+        url: downloadUrl,
+        filePath: `zhuiai-${latestVersion}.apk`,
+        fileDirectory: Directory.Documents,
+        method: 'GET',
+        progress: true,
+        progressCallback: (data) => {
+          if (data.totalExpected && data.totalReceived) {
+            setProgress(Math.round((data.totalReceived / data.totalExpected) * 100));
+          }
+        },
+      });
+
+      // 2. 打开 APK 触发系统安装
+      await FileOpener.openFile({
+        path: downloadResult.path,
+        contentType: 'application/vnd.android.package-archive',
+      });
+
+      setDownloading(false);
+    } catch (err) {
+      setDownloading(false);
+      setError(err.message || '下载失败，请稍后重试');
+      captureError(err, { context: 'apk_download_install' });
     }
   };
 
@@ -76,8 +109,44 @@ export default function VersionUpdateModal({ isOpen, onClose, upgradeType, lates
               {updateDescription || '修复问题，提升性能'}
             </Text>
 
+            {/* 下载进度 */}
+            {downloading && (
+              <VStack w="100%" spacing={2}>
+                <Text color="rgba(245,240,232,0.5)" fontSize="xs">
+                  正在下载 {progress}%
+                </Text>
+                <Progress
+                  value={progress}
+                  w="100%"
+                  size="sm"
+                  colorScheme="gold"
+                  borderRadius="full"
+                  sx={{
+                    'div[role="progressbar"]': {
+                      background: 'linear-gradient(135deg, #00d4aa, #00e0b8)',
+                    },
+                  }}
+                />
+              </VStack>
+            )}
+
+            {/* 下载错误 */}
+            {error && (
+              <Text
+                color="red.400"
+                fontSize="xs"
+                textAlign="center"
+                bg="red.900"
+                p={2}
+                borderRadius="8px"
+                w="100%"
+              >
+                {error}
+              </Text>
+            )}
+
             {/* 强制升级提示 */}
-            {isForce && (
+            {isForce && !downloading && (
               <Text
                 color="red.400"
                 fontSize="xs"
@@ -104,11 +173,14 @@ export default function VersionUpdateModal({ isOpen, onClose, upgradeType, lates
               borderRadius="12px"
               _hover={{ transform: 'translateY(-2px)', boxShadow: '0 4px 12px rgba(0,212,170,0.3)' }}
               onClick={handleUpdate}
+              isLoading={downloading}
+              loadingText={downloading ? `下载中 ${progress}%` : ''}
+              disabled={downloading}
             >
-              {isForce ? '立即更新' : '去下载'}
+              {isForce ? '立即下载并安装' : '直接下载 APK'}
             </Button>
 
-            {!isForce && (
+            {!isForce && !downloading && (
               <Button
                 w="100%"
                 size="sm"

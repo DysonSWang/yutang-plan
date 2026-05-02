@@ -243,7 +243,7 @@ export default function ClientLearning() {
                   );
                 })}
                 <HStack gap={3} flexWrap="wrap" pt={2}>
-                  <Badge colorScheme="teal" variant="subtle">20章节</Badge>
+                  <Badge colorScheme="gold" variant="subtle">20章节</Badge>
                   <Badge colorScheme="blue" variant="subtle">5.5万字</Badge>
                   <Badge colorScheme="purple" variant="subtle">126+方法</Badge>
                   <Badge colorScheme="orange" variant="subtle">90+心理学原理</Badge>
@@ -266,7 +266,7 @@ export default function ClientLearning() {
                   <Text as="span" fontWeight="bold" color="gold.300">我现在用一套系统方法，一年做到了50个。</Text>不是理论，不是网上抄的，是我用这套方法在真实世界里一趟一趟跑出来的。这个结果不是运气。是系统。
                 </Text>
                 <HStack gap={3} flexWrap="wrap" pt={2}>
-                  <Badge colorScheme="teal" variant="subtle">20章节</Badge>
+                  <Badge colorScheme="gold" variant="subtle">20章节</Badge>
                   <Badge colorScheme="blue" variant="subtle">5.5万字</Badge>
                   <Badge colorScheme="purple" variant="subtle">126+方法</Badge>
                   <Badge colorScheme="orange" variant="subtle">90+心理学原理</Badge>

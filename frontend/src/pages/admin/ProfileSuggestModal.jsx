@@ -94,8 +94,8 @@ export default function ProfileSuggestModal({ clientId, clientName, isOpen, onCl
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="lg" isCentered>
       <ModalOverlay bg="blackAlpha.700" />
-      <ModalContent bg="gray.800" color="white" maxH="80vh" overflow="hidden">
-        <ModalHeader borderBottom="1px" borderColor="gray.700">
+      <ModalContent bg="warm.800" color="white" maxH="80vh" overflow="hidden">
+        <ModalHeader borderBottom="1px" borderColor="rgba(255,255,255,0.06)">
           <HStack>
             <Text>📋</Text>
             <Text>完善 {clientName || '客户'} 的信息</Text>
@@ -106,15 +106,15 @@ export default function ProfileSuggestModal({ clientId, clientName, isOpen, onCl
         <ModalBody p={0} overflowY="auto">
           {loading ? (
             <VStack py={12} spacing={4}>
-              <Spinner size="xl" color="teal.400" />
-              <Text color="gray.400">正在分析聊天记录...</Text>
-              <Text color="gray.500" fontSize="sm">提取客户信息字段中</Text>
+              <Spinner size="xl" color="gold.400" />
+              <Text color="rgba(245,240,232,0.4)">正在分析聊天记录...</Text>
+              <Text color="rgba(245,240,232,0.2)" fontSize="sm">提取客户信息字段中</Text>
             </VStack>
           ) : submitted ? (
             <VStack py={12} spacing={4}>
               <Text fontSize="4xl">✅</Text>
               <Text fontSize="lg" fontWeight="bold">信息已更新！</Text>
-              <Text color="gray.400" fontSize="sm">已更新 {selected.size} 个字段</Text>
+              <Text color="rgba(245,240,232,0.4)" fontSize="sm">已更新 {selected.size} 个字段</Text>
             </VStack>
           ) : error ? (
             <VStack py={8} spacing={4}>
@@ -144,7 +144,7 @@ export default function ProfileSuggestModal({ clientId, clientName, isOpen, onCl
             <VStack py={12} spacing={4}>
               <Text fontSize="4xl">🔍</Text>
               <Text fontWeight="bold">未发现需要完善的字段</Text>
-              <Text color="gray.400" fontSize="sm" textAlign="center" px={4}>
+              <Text color="rgba(245,240,232,0.4)" fontSize="sm" textAlign="center" px={4}>
                 {messageCount > 0
                   ? `共分析了 ${messageCount} 条聊天记录，暂无新发现`
                   : '暂无足够聊天记录进行分析'}
@@ -154,9 +154,9 @@ export default function ProfileSuggestModal({ clientId, clientName, isOpen, onCl
             <VStack spacing={0} align="stretch">
               {/* 聊天摘要 */}
               {chatSummary && (
-                <Box px={4} py={3} bg="gray.900" borderBottom="1px" borderColor="gray.700">
-                  <Text fontSize="xs" color="gray.500" mb={1}>📝 聊天摘要</Text>
-                  <Text fontSize="sm" color="gray.300">{chatSummary}</Text>
+                <Box px={4} py={3} bg="warm.900" borderBottom="1px" borderColor="rgba(255,255,255,0.06)">
+                  <Text fontSize="xs" color="rgba(245,240,232,0.2)" mb={1}>📝 聊天摘要</Text>
+                  <Text fontSize="sm" color="rgba(245,240,232,0.6)">{chatSummary}</Text>
                 </Box>
               )}
 
@@ -164,20 +164,20 @@ export default function ProfileSuggestModal({ clientId, clientName, isOpen, onCl
               <Box px={4} py={3}>
                 <HStack justify="space-between" mb={3}>
                   <Text fontWeight="bold" fontSize="sm">💡 建议更新</Text>
-                  <Badge colorScheme="teal">{selected.size}/{suggestions.length} 已选</Badge>
+                  <Badge colorScheme="gold">{selected.size}/{suggestions.length} 已选</Badge>
                 </HStack>
                 <VStack spacing={2} align="stretch">
                   {suggestions.map(s => (
                     <Box
                       key={s.field}
                       p={3}
-                      bg={selected.has(s.field) ? 'teal.900' : 'gray.700'}
+                      bg={selected.has(s.field) ? 'gold.900' : 'warm.700'}
                       borderRadius="md"
                       border="1px solid"
-                      borderColor={selected.has(s.field) ? 'teal.500' : 'gray.600'}
+                      borderColor={selected.has(s.field) ? 'gold.500' : 'rgba(255,255,255,0.08)'}
                       cursor="pointer"
                       onClick={() => toggleField(s.field)}
-                      _hover={{ borderColor: 'teal.400' }}
+                      _hover={{ borderColor: 'gold.400' }}
                       transition="all 0.15s"
                     >
                       <HStack justify="space-between" mb={1}>
@@ -189,12 +189,12 @@ export default function ProfileSuggestModal({ clientId, clientName, isOpen, onCl
                           {s.confidence === 'high' ? '●●' : s.confidence === 'medium' ? '●○' : '○○'} {confidenceLabel(s.confidence)}
                         </Badge>
                       </HStack>
-                      <HStack fontSize="xs" color="gray.400" spacing={2} flexWrap="wrap">
-                        <Text>当前: <Text as="span" color="gray.300"><strong>{s.currentValue}</strong></Text></Text>
-                        <Text color="teal.300">→</Text>
-                        <Text>更新为: <Text as="span" color="teal.300"><strong>{s.suggestedValue}</strong></Text></Text>
+                      <HStack fontSize="xs" color="rgba(245,240,232,0.3)" spacing={2} flexWrap="wrap">
+                        <Text>当前: <Text as="span" color="rgba(245,240,232,0.5)"><strong>{s.currentValue}</strong></Text></Text>
+                        <Text color="gold.400">→</Text>
+                        <Text>更新为: <Text as="span" color="gold.300"><strong>{s.suggestedValue}</strong></Text></Text>
                       </HStack>
-                      <Text fontSize="xs" color="gray.500" mt={1}>依据: {s.evidence}</Text>
+                      <Text fontSize="xs" color="rgba(245,240,232,0.2)" mt={1}>依据: {s.evidence}</Text>
                     </Box>
                   ))}
                 </VStack>
@@ -203,14 +203,14 @@ export default function ProfileSuggestModal({ clientId, clientName, isOpen, onCl
           )}
         </ModalBody>
 
-        <ModalFooter borderTop="1px" borderColor="gray.700">
+        <ModalFooter borderTop="1px" borderColor="rgba(255,255,255,0.06)">
           <HStack spacing={3}>
-            <Button variant="ghost" color="gray.400" onClick={onClose}>
+            <Button variant="ghost" color="rgba(245,240,232,0.4)" onClick={onClose}>
               {submitted ? '关闭' : '取消'}
             </Button>
             {!loading && !submitted && suggestions.length > 0 && (
               <Button
-                colorScheme="teal"
+                colorScheme="gold"
                 onClick={handleConfirm}
                 isLoading={submitting}
                 loadingText="更新中..."

@@ -199,15 +199,15 @@ export default function SelectionToCalendar({ clientId, girlList }) {
         <Portal>
           <ModalOverlay bg="blackAlpha.700" backdropFilter="blur(4px)" />
         </Portal>
-        <ModalContent bg="gray.800" className="selection-calendar-modal">
+        <ModalContent bg="warm.800" className="selection-calendar-modal">
           <ModalHeader color="white">添加到日历</ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={4}>
             <VStack spacing={4} align="stretch">
               {/* 选中的文本预览 */}
               {selectedText && (
-                <Box bg="gray.750" p={3} borderRadius="md" borderLeft="3px solid" borderColor="blue.400">
-                  <Text color="gray.400" fontSize="xs" mb={1}>选中的内容</Text>
+                <Box bg="warm.800" p={3} borderRadius="md" borderLeft="3px solid" borderColor="blue.400">
+                  <Text color="rgba(245,240,232,0.4)" fontSize="xs" mb={1}>选中的内容</Text>
                   <Text color="gray.300" fontSize="sm" noOfLines={3}>
                     "{selectedText.length > 200 ? selectedText.slice(0, 200) + '...' : selectedText}"
                   </Text>
@@ -216,20 +216,20 @@ export default function SelectionToCalendar({ clientId, girlList }) {
 
               <HStack spacing={3}>
                 <FormControl isRequired flex={1}>
-                  <FormLabel color="gray.400" fontSize="sm">标题</FormLabel>
+                  <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">标题</FormLabel>
                   <Input
                     value={form.title}
                     onChange={e => setForm({ ...form, title: e.target.value })}
                     placeholder="事件标题"
-                    bg="gray.700" color="white"
+                    bg="warm.700" color="white"
                   />
                 </FormControl>
                 <FormControl w="150px">
-                  <FormLabel color="gray.400" fontSize="sm">关联女生</FormLabel>
+                  <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">关联女生</FormLabel>
                   <Select
                     value={form.girlId}
                     onChange={e => setForm({ ...form, girlId: e.target.value })}
-                    bg="gray.700" color="white"
+                    bg="warm.700" color="white"
                   >
                     <option value="">不关联</option>
                     {(girlList || []).map(g => (
@@ -240,22 +240,22 @@ export default function SelectionToCalendar({ clientId, girlList }) {
               </HStack>
 
               <FormControl isRequired>
-                <FormLabel color="gray.400" fontSize="sm">时间</FormLabel>
+                <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">时间</FormLabel>
                 <Input
                   type="datetime-local"
                   value={form.dateTime}
                   onChange={e => setForm({ ...form, dateTime: e.target.value })}
-                  bg="gray.700" color="white"
+                  bg="warm.700" color="white"
                 />
               </FormControl>
 
               <FormControl>
-                <FormLabel color="gray.400" fontSize="sm">备注</FormLabel>
+                <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">备注</FormLabel>
                 <Textarea
                   value={form.content}
                   onChange={e => setForm({ ...form, content: e.target.value })}
                   placeholder="详细描述"
-                  bg="gray.700" color="white"
+                  bg="warm.700" color="white"
                   rows={3}
                 />
               </FormControl>

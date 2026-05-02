@@ -376,27 +376,27 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
     <Box>
       <Flex justify="space-between" align="center" mb={3}>
         <HStack spacing={2}>
-          <Text color="gray.400" fontSize="sm">
+          <Text color="rgba(245,240,232,0.4)" fontSize="sm">
             {clientNickname || '客户'} 的日历
           </Text>
           {/* 图例 */}
           <HStack spacing={2} ml={4}>
             <HStack spacing={1}>
               <Box w={2} h={2} borderRadius="sm" bg="green.500" />
-              <Text fontSize="xs" color="gray.500">约会</Text>
+              <Text fontSize="xs" color="rgba(245,240,232,0.2)">约会</Text>
             </HStack>
             <HStack spacing={1}>
               <Box w={2} h={2} borderRadius="sm" bg="orange.500" />
-              <Text fontSize="xs" color="gray.500">行动项</Text>
+              <Text fontSize="xs" color="rgba(245,240,232,0.2)">行动项</Text>
             </HStack>
             <HStack spacing={1}>
               <Box w={2} h={2} borderRadius="sm" bg="blue.500" />
-              <Text fontSize="xs" color="gray.500">手动</Text>
+              <Text fontSize="xs" color="rgba(245,240,232,0.2)">手动</Text>
             </HStack>
           </HStack>
         </HStack>
         <HStack spacing={2}>
-          <Button size="xs" colorScheme="teal" variant="outline" onClick={loadEvents}>
+          <Button size="xs" colorScheme="gold" variant="outline" onClick={loadEvents}>
             刷新
           </Button>
         </HStack>
@@ -407,7 +407,7 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
       ) : (
         <Box ref={containerRef} minH="500px" sx={{
           '.fc': { fontFamily: 'inherit' },
-          '.fc .fc-toolbar-title': { color: 'gray.200', fontSize: 'md !important' },
+          '.fc .fc-toolbar-title': { color: 'rgba(245,240,232,0.6)', fontSize: 'md !important' },
           '.fc .fc-button': {
             backgroundColor: 'teal.600 !important', borderColor: 'teal.600 !important',
             fontSize: 'xs !important', padding: '4px 8px !important',
@@ -416,17 +416,17 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
             backgroundColor: 'teal.700 !important', borderColor: 'teal.700 !important',
           },
           '.fc .fc-button-primary:hover': { backgroundColor: 'teal.500 !important' },
-          '.fc .fc-col-header-cell-cushion': { color: 'gray.400', fontSize: 'xs' },
+          '.fc .fc-col-header-cell-cushion': { color: 'rgba(245,240,232,0.4)', fontSize: 'xs' },
           '.fc .fc-daygrid-day-number': { color: 'gray.300', fontSize: 'xs' },
           '.fc .fc-daygrid-day.fc-day-today': { backgroundColor: 'rgba(226,176,68,0.1) !important' },
           '.fc .fc-daygrid-event': { fontSize: '11px', borderRadius: '3px', padding: '1px 3px' },
           '.fc .fc-timegrid-event': { fontSize: '11px', borderRadius: '3px' },
           '.fc .fc-event-dot': { display: 'none' },
           '.fc .fc-daygrid-more-link': { color: 'teal.300', fontSize: '11px' },
-          '.fc .fc-popover': { backgroundColor: 'gray.700', borderColor: 'gray.600' },
-          '.fc .fc-popover-header': { backgroundColor: 'gray.750', color: 'gray.200' },
-          '.fc td, .fc th': { borderColor: 'gray.700 !important' },
-          '.fc .fc-scrollgrid': { borderColor: 'gray.700 !important' },
+          '.fc .fc-popover': { backgroundColor: 'warm.700', borderColor: 'warm.600' },
+          '.fc .fc-popover-header': { backgroundColor: 'warm.800', color: 'rgba(245,240,232,0.6)' },
+          '.fc td, .fc th': { borderColor: 'warm.700 !important' },
+          '.fc .fc-scrollgrid': { borderColor: 'warm.700 !important' },
           '.fc-event-action': { cursor: 'pointer' },
           '.fc-event-date': { cursor: 'pointer' },
         }}>
@@ -464,7 +464,7 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
       {/* Event Modal */}
       <Modal isOpen={isOpen} onClose={onClose} size="lg">
         <ModalOverlay bg="blackAlpha.700" backdropFilter="blur(4px)" />
-        <ModalContent bg="gray.800" maxH="90vh" overflow="auto">
+        <ModalContent bg="warm.800" maxH="90vh" overflow="auto">
           <ModalHeader color="white">
             {editMode === 'create' ? (isDateEvent ? '新建约会' : '添加事件') :
              editMode === 'edit' ? (isDateEvent ? '编辑约会' : '编辑事件') :
@@ -501,29 +501,29 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
 
                 <SimpleGrid columns={2} spacing={3}>
                   {selectedEvent?.girl?.name && (
-                    <Box bg="gray.750" p={3} borderRadius="md">
-                      <Text color="gray.400" fontSize="xs">女生</Text>
+                    <Box bg="warm.800" p={3} borderRadius="md">
+                      <Text color="rgba(245,240,232,0.4)" fontSize="xs">女生</Text>
                       <Text color="teal.300">{selectedEvent.girl.name}</Text>
                     </Box>
                   )}
-                  <Box bg="gray.750" p={3} borderRadius="md">
-                    <Text color="gray.400" fontSize="xs">时间</Text>
+                  <Box bg="warm.800" p={3} borderRadius="md">
+                    <Text color="rgba(245,240,232,0.4)" fontSize="xs">时间</Text>
                     <Text color="white" fontSize="sm">
                       {selectedEvent?.eventTime ? new Date(selectedEvent.eventTime).toLocaleString('zh-CN') : '-'}
                     </Text>
                   </Box>
                   {selectedEvent?.location && (
-                    <Box bg="gray.750" p={3} borderRadius="md">
-                      <Text color="gray.400" fontSize="xs">地点</Text>
+                    <Box bg="warm.800" p={3} borderRadius="md">
+                      <Text color="rgba(245,240,232,0.4)" fontSize="xs">地点</Text>
                       <Text color="gray.300">{selectedEvent.location}</Text>
                     </Box>
                   )}
                   {selectedEvent?.rating && (
-                    <Box bg="gray.750" p={3} borderRadius="md">
-                      <Text color="gray.400" fontSize="xs">评价</Text>
+                    <Box bg="warm.800" p={3} borderRadius="md">
+                      <Text color="rgba(245,240,232,0.4)" fontSize="xs">评价</Text>
                       <HStack spacing={0}>
                         {[1, 2, 3, 4, 5].map(i => (
-                          <Box key={i} color={i <= selectedEvent.rating ? 'orange.400' : 'gray.600'} fontSize="lg">
+                          <Box key={i} color={i <= selectedEvent.rating ? 'orange.400' : 'warm.600'} fontSize="lg">
                             <FireIcon />
                           </Box>
                         ))}
@@ -533,16 +533,16 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
                 </SimpleGrid>
 
                 {selectedEvent?.content && (
-                  <Box bg="gray.750" p={3} borderRadius="md">
-                    <Text color="gray.400" fontSize="xs">内容</Text>
+                  <Box bg="warm.800" p={3} borderRadius="md">
+                    <Text color="rgba(245,240,232,0.4)" fontSize="xs">内容</Text>
                     <Text color="gray.300" fontSize="sm">{selectedEvent.content}</Text>
                   </Box>
                 )}
 
                 {selectedEvent?.aiContext && (
-                  <Box bg="gray.750" p={3} borderRadius="md">
-                    <Text color="gray.400" fontSize="xs">AI 原文</Text>
-                    <Text color="gray.500" fontSize="xs" fontStyle="italic">
+                  <Box bg="warm.800" p={3} borderRadius="md">
+                    <Text color="rgba(245,240,232,0.4)" fontSize="xs">AI 原文</Text>
+                    <Text color="rgba(245,240,232,0.2)" fontSize="xs" fontStyle="italic">
                       "{selectedEvent.aiContext}"
                     </Text>
                   </Box>
@@ -577,11 +577,11 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
                 <SimpleGrid columns={2} spacing={3}>
                   {isDateEvent ? (
                     <FormControl isRequired>
-                      <FormLabel color="gray.400" fontSize="sm">女生</FormLabel>
+                      <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">女生</FormLabel>
                       <Select
                         value={form.girlId}
                         onChange={e => setForm({ ...form, girlId: e.target.value })}
-                        bg="gray.700" color="white"
+                        bg="warm.700" color="white"
                       >
                         <option value="">选择女生</option>
                         {(girlList || []).map(g => (
@@ -591,11 +591,11 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
                     </FormControl>
                   ) : (
                     <FormControl>
-                      <FormLabel color="gray.400" fontSize="sm">关联女生</FormLabel>
+                      <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">关联女生</FormLabel>
                       <Select
                         value={form.girlId}
                         onChange={e => setForm({ ...form, girlId: e.target.value })}
-                        bg="gray.700" color="white"
+                        bg="warm.700" color="white"
                       >
                         <option value="">不关联</option>
                         {(girlList || []).map(g => (
@@ -605,30 +605,30 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
                     </FormControl>
                   )}
                   <FormControl isRequired>
-                    <FormLabel color="gray.400" fontSize="sm">时间</FormLabel>
+                    <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">时间</FormLabel>
                     <Input
                       type="datetime-local"
                       value={form.dateTime}
                       onChange={e => setForm({ ...form, dateTime: e.target.value })}
-                      bg="gray.700" color="white"
+                      bg="warm.700" color="white"
                     />
                   </FormControl>
                   <FormControl isRequired={!isDateEvent}>
-                    <FormLabel color="gray.400" fontSize="sm">{isDateEvent ? '标题' : '标题'}</FormLabel>
+                    <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">{isDateEvent ? '标题' : '标题'}</FormLabel>
                     <Input
                       value={form.title}
                       onChange={e => setForm({ ...form, title: e.target.value })}
                       placeholder={isDateEvent ? '如：第一次见面' : '如：联系女生、约见面'}
-                      bg="gray.700" color="white"
+                      bg="warm.700" color="white"
                     />
                   </FormControl>
                   {!isDateEvent && (
                     <FormControl>
-                      <FormLabel color="gray.400" fontSize="sm">状态</FormLabel>
+                      <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">状态</FormLabel>
                       <Select
                         value={form.status}
                         onChange={e => setForm({ ...form, status: e.target.value })}
-                        bg="gray.700" color="white"
+                        bg="warm.700" color="white"
                       >
                         <option value="pending">待办</option>
                         <option value="completed">已完成</option>
@@ -639,12 +639,12 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
                 </SimpleGrid>
 
                 <FormControl>
-                  <FormLabel color="gray.400" fontSize="sm">{isDateEvent ? '备注' : '内容'}</FormLabel>
+                  <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">{isDateEvent ? '备注' : '内容'}</FormLabel>
                   <Textarea
                     value={form.content}
                     onChange={e => setForm({ ...form, content: e.target.value })}
                     placeholder={isDateEvent ? '约会备注' : '事件详情、具体行动描述'}
-                    bg="gray.700" color="white"
+                    bg="warm.700" color="white"
                     rows={3}
                   />
                 </FormControl>
@@ -680,7 +680,7 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
                 <Button variant="ghost" colorScheme="red" size="sm" onClick={handleDelete} isLoading={deleting}>
                   删除
                 </Button>
-                <Button colorScheme="teal" size="sm" onClick={startEdit}>
+                <Button colorScheme="gold" size="sm" onClick={startEdit}>
                   编辑
                 </Button>
               </HStack>
@@ -689,7 +689,7 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
                 <Button variant="ghost" colorScheme="gray" size="sm" mr={2} onClick={onClose}>
                   取消
                 </Button>
-                <Button colorScheme="teal" size="sm" onClick={handleSave} isLoading={saving}>
+                <Button colorScheme="gold" size="sm" onClick={handleSave} isLoading={saving}>
                   保存
                 </Button>
               </>

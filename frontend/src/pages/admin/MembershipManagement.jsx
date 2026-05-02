@@ -18,14 +18,14 @@ function ClientMembershipCard({ client, onManage }) {
   const daysLeft = endDate ? Math.max(0, Math.ceil((endDate - new Date()) / 86400000)) : 0;
 
   return (
-    <Card bg="gray.800" border="1px solid" borderColor="gray.700">
+    <Card bg="warm.800" border="1px solid" borderColor="warm.700">
       <CardBody>
         <HStack justify="space-between" mb={3}>
           <HStack gap={3}>
             <Avatar name={client.nickname} size="sm" bg="teal.600" />
             <Box>
               <Text color="white" fontWeight="bold">{client.nickname || client.username}</Text>
-              <Text color="gray.400" fontSize="xs">{client.username}</Text>
+              <Text color="rgba(245,240,232,0.4)" fontSize="xs">{client.username}</Text>
             </Box>
           </HStack>
           <VStack align="end" spacing={1}>
@@ -34,7 +34,7 @@ function ClientMembershipCard({ client, onManage }) {
                 <Badge colorScheme={TYPE_BADGE_COLOR[client.membership.type] || 'green'}>
                   {TYPE_LABEL[client.membership.type] || '会员'}
                 </Badge>
-                <Text color={daysLeft < 7 ? 'orange.400' : 'gray.400'} fontSize="xs">
+                <Text color={daysLeft < 7 ? 'orange.400' : 'rgba(245,240,232,0.4)'} fontSize="xs">
                   {daysLeft > 0 ? `剩余${daysLeft}天` : '已到期'}
                 </Text>
               </>
@@ -44,12 +44,12 @@ function ClientMembershipCard({ client, onManage }) {
           </VStack>
         </HStack>
 
-        <HStack justify="space-between" mt={3} pt={3} borderTop="1px solid" borderColor="gray.700">
+        <HStack justify="space-between" mt={3} pt={3} borderTop="1px solid" borderColor="warm.700">
           <VStack align="start" spacing={0}>
-            <Text color="gray.400" fontSize="xs">积分余额</Text>
+            <Text color="rgba(245,240,232,0.4)" fontSize="xs">积分余额</Text>
             <Text color="gold.400" fontWeight="bold" fontSize="lg">{client.points || 0}</Text>
           </VStack>
-          <Button size="sm" colorScheme="teal" variant="outline" onClick={() => onManage(client)}>
+          <Button size="sm" colorScheme="gold" variant="outline" onClick={() => onManage(client)}>
             管理
           </Button>
         </HStack>
@@ -136,15 +136,15 @@ function ManageModal({ client, onClose }) {
 
   return (
     <>
-      <HStack mb={4} p={3} bg="gray.700" borderRadius="md">
+      <HStack mb={4} p={3} bg="warm.700" borderRadius="md">
         <Avatar name={client.nickname} size="sm" bg="teal.600" />
         <Box>
           <Text color="white" fontWeight="bold">{client.nickname || client.username}</Text>
-          <Text color="gray.400" fontSize="xs">积分：{client.points || 0}</Text>
+          <Text color="rgba(245,240,232,0.4)" fontSize="xs">积分：{client.points || 0}</Text>
         </Box>
       </HStack>
 
-      <Tabs index={tab} onChange={setTab} colorScheme="teal">
+      <Tabs index={tab} onChange={setTab} colorScheme="gold">
         <TabList mb={4}>
           <Tab><Icon as={PointsIcon} mr={1} /> 积分管理</Tab>
           <Tab><Icon as={MembershipIcon} mr={1} /> 会员管理</Tab>
@@ -161,7 +161,7 @@ function ManageModal({ client, onClose }) {
                 onChange={v => setPointsForm({ ...pointsForm, amount: v })}
                 flex={1}
               >
-                <NumberInputField placeholder="积分数量" bg="gray.700" borderColor="gray.600" />
+                <NumberInputField placeholder="积分数量" bg="warm.700" borderColor="warm.600" />
               </NumberInput>
               <Button colorScheme="green" onClick={handleRecharge}>充值</Button>
               <Button colorScheme="red" variant="outline" onClick={handleDeduct}>扣减</Button>
@@ -170,18 +170,18 @@ function ManageModal({ client, onClose }) {
               placeholder="备注（选填）"
               value={pointsForm.note}
               onChange={e => setPointsForm({ ...pointsForm, note: e.target.value })}
-              bg="gray.700"
-              borderColor="gray.600"
+              bg="warm.700"
+              borderColor="warm.600"
               mb={4}
             />
 
             {loading ? <Spinner /> : (
               <Box maxH="300px" overflowY="auto">
                 <Table size="sm">
-                  <Thead><Tr><Th color="gray.400">类型</Th><Th color="gray.400" isNumeric>变动</Th><Th color="gray.400" isNumeric>余额</Th><Th color="gray.400">时间</Th></Tr></Thead>
+                  <Thead><Tr><Th color="rgba(245,240,232,0.4)">类型</Th><Th color="rgba(245,240,232,0.4)" isNumeric>变动</Th><Th color="rgba(245,240,232,0.4)" isNumeric>余额</Th><Th color="rgba(245,240,232,0.4)">时间</Th></Tr></Thead>
                   <Tbody>
                     {pointsHistory.length === 0 ? (
-                      <Tr><Td colSpan={4} color="gray.500" textAlign="center">暂无记录</Td></Tr>
+                      <Tr><Td colSpan={4} color="rgba(245,240,232,0.2)" textAlign="center">暂无记录</Td></Tr>
                     ) : pointsHistory.map(r => (
                       <Tr key={r.id}>
                         <Td>
@@ -193,7 +193,7 @@ function ManageModal({ client, onClose }) {
                           {r.amount > 0 ? '+' : ''}{r.amount}
                         </Td>
                         <Td isNumeric color="gray.300">{r.balanceAfter}</Td>
-                        <Td color="gray.500" fontSize="xs">{new Date(r.createdAt).toLocaleString()}</Td>
+                        <Td color="rgba(245,240,232,0.2)" fontSize="xs">{new Date(r.createdAt).toLocaleString()}</Td>
                       </Tr>
                     ))}
                   </Tbody>
@@ -208,8 +208,8 @@ function ManageModal({ client, onClose }) {
               <Select
                 value={membershipForm.type}
                 onChange={e => setMembershipForm({ ...membershipForm, type: e.target.value })}
-                bg="gray.700"
-                borderColor="gray.600"
+                bg="warm.700"
+                borderColor="warm.600"
               >
                 <option value="monthly">普惠月付（999元）</option>
                 <option value="yearly">普惠年付（8888元）</option>
@@ -219,8 +219,8 @@ function ManageModal({ client, onClose }) {
                 placeholder="实际支付价格"
                 value={membershipForm.price}
                 onChange={e => setMembershipForm({ ...membershipForm, price: e.target.value })}
-                bg="gray.700"
-                borderColor="gray.600"
+                bg="warm.700"
+                borderColor="warm.600"
               />
               <HStack>
                 <Input
@@ -228,20 +228,20 @@ function ManageModal({ client, onClose }) {
                   placeholder="开始日期"
                   value={membershipForm.startDate}
                   onChange={e => setMembershipForm({ ...membershipForm, startDate: e.target.value })}
-                  bg="gray.700"
-                  borderColor="gray.600"
+                  bg="warm.700"
+                  borderColor="warm.600"
                 />
                 <Input
                   type="date"
                   placeholder="结束日期"
                   value={membershipForm.endDate}
                   onChange={e => setMembershipForm({ ...membershipForm, endDate: e.target.value })}
-                  bg="gray.700"
-                  borderColor="gray.600"
+                  bg="warm.700"
+                  borderColor="warm.600"
                 />
               </HStack>
               <HStack>
-                <Button colorScheme="teal" flex={1} onClick={handleSetMembership}>设置会员</Button>
+                <Button colorScheme="gold" flex={1} onClick={handleSetMembership}>设置会员</Button>
                 <Button colorScheme="red" variant="outline" onClick={handleCancelMembership}>取消会员</Button>
               </HStack>
             </VStack>
@@ -326,15 +326,15 @@ function ScreenshotProfilesTab() {
           placeholder="选择客户（选填）"
           value={selectedClient}
           onChange={e => setSelectedClient(e.target.value)}
-          bg="gray.700"
-          borderColor="gray.600"
+          bg="warm.700"
+          borderColor="warm.600"
           w="200px"
         >
           {clients.map(c => (
             <option key={c.id} value={c.id}>{c.nickname}</option>
           ))}
         </Select>
-        <Button as="label" colorScheme="teal" leftIcon={<CameraIcon />} isLoading={uploading} cursor="pointer">
+        <Button as="label" colorScheme="gold" leftIcon={<CameraIcon />} isLoading={uploading} cursor="pointer">
           上传截图
           <input type="file" accept="image/*" hidden onChange={handleUpload} />
         </Button>
@@ -343,17 +343,17 @@ function ScreenshotProfilesTab() {
       {loading ? <Center py={10}><Spinner /></Center> : profiles.length === 0 ? (
         <Center py={10}>
           <VStack>
-            <CameraIcon boxSize={10} color="gray.600" />
-            <Text color="gray.500">暂无截图档案</Text>
+            <CameraIcon boxSize={10} color="warm.600" />
+            <Text color="rgba(245,240,232,0.2)">暂无截图档案</Text>
           </VStack>
         </Center>
       ) : (
         <VStack spacing={3} align="stretch">
           {profiles.map(p => (
-            <Box key={p.id} p={4} bg="gray.800" border="1px solid" borderColor="gray.700" borderRadius="lg">
+            <Box key={p.id} p={4} bg="warm.800" border="1px solid" borderColor="warm.700" borderRadius="lg">
               <HStack justify="space-between" mb={3}>
                 <Badge colorScheme={statusColor[p.status]}>{p.status === 'pending' ? '待确认' : p.status === 'confirmed' ? '已确认' : '已拒绝'}</Badge>
-                <Text color="gray.500" fontSize="xs">{new Date(p.createdAt).toLocaleString()}</Text>
+                <Text color="rgba(245,240,232,0.2)" fontSize="xs">{new Date(p.createdAt).toLocaleString()}</Text>
               </HStack>
               {p.imagePath && (
                 <Box mb={3}>
@@ -369,7 +369,7 @@ function ScreenshotProfilesTab() {
               {p.status === 'pending' && (
                 <HStack>
                   <Button size="sm" colorScheme="green" onClick={() => handleConfirm(p.id, 'create_user')}>创建新用户</Button>
-                  <Button size="sm" colorScheme="teal" variant="outline" onClick={() => handleConfirm(p.id, 'link_existing')}>关联已有</Button>
+                  <Button size="sm" colorScheme="gold" variant="outline" onClick={() => handleConfirm(p.id, 'link_existing')}>关联已有</Button>
                   <Button size="sm" colorScheme="gray" variant="ghost" onClick={() => handleConfirm(p.id, 'reject')}>拒绝</Button>
                 </HStack>
               )}
@@ -413,7 +413,7 @@ function TrialConfigTab() {
   return (
     <Box>
       <VStack spacing={4} align="stretch">
-        <Box p={4} bg="gray.800" borderRadius="md" border="1px solid" borderColor="gray.700">
+        <Box p={4} bg="warm.800" borderRadius="md" border="1px solid" borderColor="warm.700">
           <Text color="white" fontWeight="bold" mb={4}>试用会员配置</Text>
           <VStack spacing={4} align="stretch">
             <HStack justify="space-between">
@@ -425,7 +425,7 @@ function TrialConfigTab() {
                 onChange={v => setConfig({ ...config, validDays: parseInt(v) || 3 })}
                 w="120px"
               >
-                <NumberInputField bg="gray.700" borderColor="gray.600" />
+                <NumberInputField bg="warm.700" borderColor="warm.600" />
               </NumberInput>
             </HStack>
             <HStack justify="space-between">
@@ -437,7 +437,7 @@ function TrialConfigTab() {
                 onChange={v => setConfig({ ...config, maxChapters: parseInt(v) || 2 })}
                 w="120px"
               >
-                <NumberInputField bg="gray.700" borderColor="gray.600" />
+                <NumberInputField bg="warm.700" borderColor="warm.600" />
               </NumberInput>
             </HStack>
             <HStack justify="space-between">
@@ -449,7 +449,7 @@ function TrialConfigTab() {
                 onChange={v => setConfig({ ...config, maxGirls: parseInt(v) || 1 })}
                 w="120px"
               >
-                <NumberInputField bg="gray.700" borderColor="gray.600" />
+                <NumberInputField bg="warm.700" borderColor="warm.600" />
               </NumberInput>
             </HStack>
             <HStack justify="space-between">
@@ -461,15 +461,15 @@ function TrialConfigTab() {
                 onChange={v => setConfig({ ...config, maxTrialUses: parseInt(v) || 2 })}
                 w="120px"
               >
-                <NumberInputField bg="gray.700" borderColor="gray.600" />
+                <NumberInputField bg="warm.700" borderColor="warm.600" />
               </NumberInput>
             </HStack>
-            <Text color="gray.500" fontSize="sm">
+            <Text color="rgba(245,240,232,0.2)" fontSize="sm">
               说明：试用次数是各功能共用的（约会方案、AI教练、回复建议、话术优化、女生聊天）
             </Text>
           </VStack>
         </Box>
-        <Button colorScheme="teal" onClick={handleSave} isLoading={saving}>保存配置</Button>
+        <Button colorScheme="gold" onClick={handleSave} isLoading={saving}>保存配置</Button>
       </VStack>
     </Box>
   );
@@ -519,7 +519,7 @@ export default function MembershipManagement() {
 
           {clients.length === 0 && (
             <Center py={20}>
-              <Text color="gray.500">暂无客户数据</Text>
+              <Text color="rgba(245,240,232,0.2)">暂无客户数据</Text>
             </Center>
           )}
         </>
@@ -527,7 +527,7 @@ export default function MembershipManagement() {
 
       <Modal isOpen={isOpen} onClose={onClose} size="lg">
         <ModalOverlay />
-        <ModalContent bg="gray.800" color="white">
+        <ModalContent bg="warm.800" color="white">
           <ModalHeader>管理：{selectedClient?.nickname}</ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={6}>

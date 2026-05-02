@@ -9,12 +9,12 @@ export default function EmojiPanel({ onSelect, isDisabled = false, variant = 'ad
   const [activeIdx, setActiveIdx] = useState(0);
 
   const isAdmin = variant === 'admin';
-  const popoverBg = isAdmin ? 'gray.700' : 'warm.900';
-  const popoverBorder = isAdmin ? 'gray.600' : 'rgba(255,255,255,0.08)';
-  const hoverBg = isAdmin ? 'gray.600' : 'rgba(255,255,255,0.06)';
-  const activeBg = isAdmin ? 'gray.500' : 'rgba(255,255,255,0.1)';
-  const triggerColor = isAdmin ? 'gray.400' : 'rgba(245,240,232,0.4)';
-  const categoryBarBorder = isAdmin ? 'gray.600' : 'rgba(255,255,255,0.06)';
+  const popoverBg = isAdmin ? 'warm.700' : 'warm.900';
+  const popoverBorder = isAdmin ? 'warm.600' : 'rgba(255,255,255,0.08)';
+  const hoverBg = isAdmin ? 'warm.600' : 'rgba(255,255,255,0.06)';
+  const activeBg = isAdmin ? 'rgba(245,240,232,0.2)' : 'rgba(255,255,255,0.1)';
+  const triggerColor = isAdmin ? 'rgba(245,240,232,0.4)' : 'rgba(245,240,232,0.4)';
+  const categoryBarBorder = isAdmin ? 'warm.600' : 'rgba(255,255,255,0.06)';
   const activeTabScheme = isAdmin ? 'yellow' : 'gold';
 
   const currentEmojis = emojiCategories[activeIdx]?.emojis || [];

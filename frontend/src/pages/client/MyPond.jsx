@@ -64,72 +64,72 @@ export default function MyPond() {
       <Heading color="white" mb={6}>我的缘分</Heading>
 
       <HStack mb={4} justify="flex-end">
-        <Button colorScheme="teal" size="sm" onClick={onAddOpen}>+ 添加女生</Button>
+        <Button colorScheme="gold" size="sm" onClick={onAddOpen}>+ 添加女生</Button>
       </HStack>
 
       {/* 女生卡片网格 */}
       <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4}>
         {girlsList.map(girl => (
-          <Card key={girl.id} bg="gray.800" cursor="pointer"
+          <Card key={girl.id} bg="warm.800" cursor="pointer"
             onClick={() => navigate(`/my-pond/${girl.id}`)}
-            _hover={{ bg: 'gray.700', transform: 'translateY(-2px)' }}
+            _hover={{ bg: 'warm.700', transform: 'translateY(-2px)' }}
             transition="all 0.2s">
             <CardBody>
               <HStack justify="space-between" mb={2}>
                 <Text color="white" fontWeight="bold">{girl.name}</Text>
                 <Badge colorScheme={STAGE_COLORS[girl.stage] || 'gray'}>{girl.stage || '未知'}</Badge>
               </HStack>
-              <Text color="gray.400" fontSize="sm">
+              <Text color="rgba(245,240,232,0.4)" fontSize="sm">
                 {[girl.age ? `${girl.age}岁` : '', girl.occupation || ''].filter(Boolean).join(' · ') || '待完善'}
               </Text>
               <HStack mt={2} spacing={1}>
                 <Icon as={HeartIcon} color="red.400" w={3} h={3} />
-                <Text color="gray.500" fontSize="xs">亲密度 x{girl.intimacyLevel || 1}</Text>
+                <Text color="rgba(245,240,232,0.2)" fontSize="xs">亲密度 x{girl.intimacyLevel || 1}</Text>
               </HStack>
             </CardBody>
           </Card>
         ))}
         {girlsList.length === 0 && (
-          <Text color="gray.500" gridColumn="1 / -1" textAlign="center" py={10}>暂无女生资源，点击右上角添加</Text>
+          <Text color="rgba(245,240,232,0.2)" gridColumn="1 / -1" textAlign="center" py={10}>暂无女生资源，点击右上角添加</Text>
         )}
       </SimpleGrid>
 
       {/* 添加女生弹窗 */}
       <Modal isOpen={isAddOpen} onClose={onAddClose} size="md">
         <ModalOverlay />
-        <ModalContent bg="gray.800">
+        <ModalContent bg="warm.800">
           <ModalHeader color="white">添加女生</ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={6}>
             <VStack spacing={4} align="stretch">
               <FormControl isRequired>
-                <FormLabel color="gray.400" fontSize="sm">昵称</FormLabel>
+                <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">昵称</FormLabel>
                 <Input value={addForm.name} onChange={e => setAddForm({...addForm, name: e.target.value})}
-                  placeholder="输入女生昵称" bg="gray.700" color="white" _placeholder={{ color: 'gray.400' }}
+                  placeholder="输入女生昵称" bg="warm.700" color="white" _placeholder={{ color: 'rgba(245,240,232,0.15)' }}
                   onKeyPress={e => { if (e.key === 'Enter') handleAddGirl(); }} />
               </FormControl>
               <HStack spacing={4}>
                 <FormControl>
-                  <FormLabel color="gray.400" fontSize="sm">年龄</FormLabel>
-                  <NumberInput value={addForm.age} onChange={(_, v) => setAddForm({...addForm, age: v})} bg="gray.700" min={18} max={60}>
+                  <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">年龄</FormLabel>
+                  <NumberInput value={addForm.age} onChange={(_, v) => setAddForm({...addForm, age: v})} bg="warm.700" min={18} max={60}>
                     <NumberInputField color="white" />
                     <NumberInputStepper>
-                      <NumberIncrementStepper color="gray.400" />
-                      <NumberDecrementStepper color="gray.400" />
+                      <NumberIncrementStepper color="rgba(245,240,232,0.4)" />
+                      <NumberDecrementStepper color="rgba(245,240,232,0.4)" />
                     </NumberInputStepper>
                   </NumberInput>
                 </FormControl>
                 <FormControl>
-                  <FormLabel color="gray.400" fontSize="sm">职业</FormLabel>
+                  <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">职业</FormLabel>
                   <Select value={addForm.occupation} onChange={e => setAddForm({...addForm, occupation: e.target.value})}
-                    bg="gray.700" color="white" placeholder="选择">
+                    bg="warm.700" color="white" placeholder="选择">
                     {['学生', '上班族', '自由职业', '企业主', '公务员', '医生', '律师', '教师', '销售', '设计师', '程序员', '其他'].map(o => (
                       <option key={o} value={o}>{o}</option>
                     ))}
                   </Select>
                 </FormControl>
               </HStack>
-              <Button colorScheme="teal" onClick={handleAddGirl} isLoading={adding} w="100%">添加</Button>
+              <Button colorScheme="gold" onClick={handleAddGirl} isLoading={adding} w="100%">添加</Button>
             </VStack>
           </ModalBody>
         </ModalContent>

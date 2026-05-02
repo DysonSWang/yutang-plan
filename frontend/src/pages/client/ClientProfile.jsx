@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Box, Heading, Card, CardBody, SimpleGrid, Badge, Text, VStack, HStack, Flex, Avatar, Button, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton, useDisclosure, FormControl, FormLabel, Input, Select, Textarea, useToast, Spinner, Icon, InputGroup, InputRightElement, IconButton, Image, Progress } from '@chakra-ui/react';
+import { Box, Heading, Card, CardBody, SimpleGrid, Badge, Text, VStack, HStack, Flex, Avatar, Button, Checkbox, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton, useDisclosure, FormControl, FormLabel, Input, Select, Textarea, useToast, Spinner, Icon, InputGroup, InputRightElement, IconButton, Image, Progress } from '@chakra-ui/react';
 import { CrownIcon, CheckIcon } from '../../components/Icons';
 import { FiEdit2, FiEye, FiEyeOff } from 'react-icons/fi';
 import { api, clients, membership as membershipApi, auth, upload } from '../../utils/api';
@@ -20,7 +20,7 @@ function formatDate(iso) {
 // 空值占位符：引导用户填写而非显示冷冰冰的"-"
 function EmptyValue({ children, ...props }) {
   if (children) return <Text color="white" {...props}>{children}</Text>;
-  return <Text color="gray.600" fontSize="sm" {...props}>待填写</Text>;
+  return <Text color="warm.600" fontSize="sm" {...props}>待填写</Text>;
 }
 
 const PRICING_DATA = [
@@ -134,12 +134,12 @@ function ProfileField({ field, value, onChange }) {
     for (let i = min; i <= max; i += step) options.push(i);
     return (
       <FormControl key={field.key}>
-        <FormLabel color="gray.400" fontSize="sm">{field.label}</FormLabel>
+        <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">{field.label}</FormLabel>
         <Select
           value={value || (field.default ? String(field.default) : '')}
           onChange={e => onChange(field.key, e.target.value)}
-          bg="gray.700" color="white" border="1px solid" borderColor="gray.600"
-          _hover={{ borderColor: 'gray.500' }}
+          bg="warm.700" color="white" border="1px solid" borderColor="warm.600"
+          _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
           _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }}
         >
           {options.map(n => (
@@ -152,12 +152,12 @@ function ProfileField({ field, value, onChange }) {
   if (field.type === 'input') {
     return (
       <FormControl key={field.key}>
-        <FormLabel color="gray.400" fontSize="sm">{field.label}</FormLabel>
+        <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">{field.label}</FormLabel>
         <Input
           value={value || ''}
           onChange={e => onChange(field.key, e.target.value)}
-          bg="gray.700" color="white" border="1px solid" borderColor="gray.600"
-          _hover={{ borderColor: 'gray.500' }}
+          bg="warm.700" color="white" border="1px solid" borderColor="warm.600"
+          _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
           _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }}
         />
       </FormControl>
@@ -169,12 +169,12 @@ function ProfileField({ field, value, onChange }) {
     const showCustomInput = hasOther && (value === '其他' || isCustom);
     return (
       <FormControl key={field.key}>
-        <FormLabel color="gray.400" fontSize="sm">{field.label}</FormLabel>
+        <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">{field.label}</FormLabel>
         <Select
           value={isCustom ? '其他' : (value || '')}
           onChange={e => onChange(field.key, e.target.value)}
-          bg="gray.700" color="white" border="1px solid" borderColor="gray.600"
-          _hover={{ borderColor: 'gray.500' }}
+          bg="warm.700" color="white" border="1px solid" borderColor="warm.600"
+          _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
           _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }}
         >
           <option value="">请选择</option>
@@ -188,8 +188,8 @@ function ProfileField({ field, value, onChange }) {
             value={isCustom ? value : ''}
             placeholder="请输入"
             onChange={e => onChange(field.key, e.target.value)}
-            bg="gray.700" color="white" border="1px solid" borderColor="gray.600"
-            _hover={{ borderColor: 'gray.500' }}
+            bg="warm.700" color="white" border="1px solid" borderColor="warm.600"
+            _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
             _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }}
           />
         )}
@@ -199,12 +199,12 @@ function ProfileField({ field, value, onChange }) {
   if (field.type === 'textarea') {
     return (
       <FormControl key={field.key}>
-        <FormLabel color="gray.400" fontSize="sm">{field.label}</FormLabel>
+        <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">{field.label}</FormLabel>
         <Textarea
           value={value || ''}
           onChange={e => onChange(field.key, e.target.value)}
-          bg="gray.700" color="white" border="1px solid" borderColor="gray.600"
-          _hover={{ borderColor: 'gray.500' }}
+          bg="warm.700" color="white" border="1px solid" borderColor="warm.600"
+          _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
           _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }}
           rows={3}
         />
@@ -214,7 +214,7 @@ function ProfileField({ field, value, onChange }) {
   if (field.type === 'region') {
     return (
       <FormControl key={field.key}>
-        <FormLabel color="gray.400" fontSize="sm">{field.label}</FormLabel>
+        <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">{field.label}</FormLabel>
         <RegionSelector
           value={value || ''}
           onChange={val => onChange(field.key, val)}
@@ -262,6 +262,7 @@ export default function ClientProfile() {
   const [aiExtractedFields, setAiExtractedFields] = useState(null);
   const [aiScreenshotFile, setAiScreenshotFile] = useState(null);
   const [aiScreenshotPreview, setAiScreenshotPreview] = useState('');
+  const [aiConfirmSelections, setAiConfirmSelections] = useState({});
   const fileInputRef = useRef(null);
   const screenshotInputRef = useRef(null);
   const aiStreamRef = useRef('');
@@ -354,6 +355,7 @@ export default function ClientProfile() {
     setAiExtractedFields(null);
     setAiScreenshotFile(null);
     setAiScreenshotPreview('');
+    setAiConfirmSelections({});
     onOpen();
   };
 
@@ -425,6 +427,10 @@ export default function ClientProfile() {
               const parsed = JSON.parse(dataStr);
               if (parsed.success && parsed.profile) {
                 setAiExtractedFields(parsed.profile);
+                // 默认全选
+                const selections = {};
+                Object.keys(parsed.profile).forEach(k => { selections[k] = true; });
+                setAiConfirmSelections(selections);
                 toast({ title: 'AI 分析完成', description: `识别到 ${Object.keys(parsed.profile).filter(k => parsed.profile[k]).length} 个字段`, status: 'success' });
               }
             } catch {}
@@ -465,6 +471,10 @@ export default function ClientProfile() {
       const res = await clients.extractFromScreenshot(aiScreenshotFile);
       if (res.success && res.pendingFields) {
         setAiExtractedFields(res.pendingFields);
+        // 默认全选
+        const selections = {};
+        Object.keys(res.pendingFields).forEach(k => { selections[k] = true; });
+        setAiConfirmSelections(selections);
         const count = Object.keys(res.pendingFields).filter(k => res.pendingFields[k]).length;
         toast({ title: 'AI 分析完成', description: `识别到 ${count} 个字段`, status: 'success' });
       } else {
@@ -478,19 +488,21 @@ export default function ClientProfile() {
     }
   };
 
-  // 将 AI 提取的字段应用到编辑表单
-  const handleApplyAiFields = () => {
+  // 将勾选的 AI 字段应用到编辑表单
+  const handleApplySelectedFields = () => {
     if (!aiExtractedFields) return;
-    setEditData(prev => {
-      const next = { ...prev };
-      for (const [key, value] of Object.entries(aiExtractedFields)) {
-        if (value && CLIENT_EDITABLE_FIELDS.some(f => f.key === key)) {
-          next[key] = value;
-        }
+    const updates = {};
+    Object.entries(aiExtractedFields).forEach(([key, value]) => {
+      if (aiConfirmSelections[key] && value && CLIENT_EDITABLE_FIELDS.some(f => f.key === key)) {
+        updates[key] = value;
       }
-      return next;
     });
-    toast({ title: '已应用 AI 识别的字段', description: '请检查并修改后保存', status: 'success' });
+    if (Object.keys(updates).length === 0) {
+      toast({ title: '请至少选择一个字段', status: 'warning' });
+      return;
+    }
+    setEditData(prev => ({ ...prev, ...updates }));
+    toast({ title: `已应用 ${Object.keys(updates).length} 个字段`, description: '请检查并修改后保存', status: 'success' });
     setAiMode('manual');
   };
 
@@ -645,7 +657,7 @@ export default function ClientProfile() {
       </Flex>
 
       {/* 个人信息 + 会员合并卡片 */}
-      <Card bg="gray.800" mb={4} borderLeft="3px solid" borderColor="teal.400" sx={{ boxShadow: '0 0 20px rgba(0, 212, 170, 0.08)' }}>
+      <Card bg="warm.800" mb={4} borderLeft="3px solid" borderColor="teal.400" sx={{ boxShadow: '0 0 20px rgba(0, 212, 170, 0.08)' }}>
         <CardBody>
           {/* 上排：头像 + 基本信息 | 会员信息 */}
           <HStack spacing={6} align="start" mb={4}>
@@ -657,7 +669,7 @@ export default function ClientProfile() {
                   aria-label="编辑头像"
                   icon={<Icon as={FiEdit2} />}
                   size="xs"
-                  colorScheme="teal"
+                  colorScheme="gold"
                   position="absolute"
                   bottom={0}
                   right={0}
@@ -667,45 +679,45 @@ export default function ClientProfile() {
               </Box>
               <Box minW="0">
                 <Text color="white" fontSize="lg" fontWeight="bold" noOfLines={1}>{profile.nickname || profile.username}</Text>
-                <Text color="gray.400" fontSize="sm">{profile.occupation || profile.education || '未填写'}</Text>
+                <Text color="rgba(245,240,232,0.4)" fontSize="sm">{profile.occupation || profile.education || '未填写'}</Text>
               </Box>
             </HStack>
 
             {/* 右侧：会员信息 */}
-            <Box flex={1} pl={6} borderLeft="1px solid" borderColor="gray.700">
+            <Box flex={1} pl={6} borderLeft="1px solid" borderColor="warm.700">
               {memberStatus?.membership ? (
                 <VStack spacing={1.5} align="stretch">
                   <HStack justify="space-between">
-                    <Text color="gray.400" fontSize="xs">会员类型</Text>
+                    <Text color="rgba(245,240,232,0.4)" fontSize="xs">会员类型</Text>
                     <Badge colorScheme={TYPE_BADGE_COLOR[memberStatus.membership.type] || 'brand'} px={2} py={0.5} borderRadius="md" fontSize="xs">
                       {TYPE_LABEL[memberStatus.membership.type] || '会员'}
                     </Badge>
                   </HStack>
                   <HStack justify="space-between">
-                    <Text color="gray.400" fontSize="xs">有效期</Text>
+                    <Text color="rgba(245,240,232,0.4)" fontSize="xs">有效期</Text>
                     <Text color="white" fontSize="xs">
                       {formatDate(memberStatus.membership.startDate)} ~ {formatDate(memberStatus.membership.endDate)}
                     </Text>
                   </HStack>
                   <HStack justify="space-between">
-                    <Text color="gray.400" fontSize="xs">积分</Text>
+                    <Text color="rgba(245,240,232,0.4)" fontSize="xs">积分</Text>
                     <Badge colorScheme="orange" px={2} py={0.5} borderRadius="md" fontSize="xs">
                       {memberStatus?.points || 0}
                     </Badge>
                   </HStack>
                   <HStack spacing={2} pt={1}>
-                    <Button size="xs" colorScheme="teal" onClick={onRenewalOpen}>续费</Button>
+                    <Button size="xs" colorScheme="gold" onClick={onRenewalOpen}>续费</Button>
                     <Button size="xs" variant="link" color="teal.400" onClick={onPricingOpen}>定价</Button>
                   </HStack>
                 </VStack>
               ) : (
                 <VStack spacing={1.5} align="stretch">
                   <HStack justify="space-between">
-                    <Text color="gray.400" fontSize="xs">会员状态</Text>
+                    <Text color="rgba(245,240,232,0.4)" fontSize="xs">会员状态</Text>
                     <Badge colorScheme="gray" px={2} py={0.5} borderRadius="md" fontSize="xs">未开通</Badge>
                   </HStack>
                   <HStack justify="space-between">
-                    <Text color="gray.400" fontSize="xs">积分</Text>
+                    <Text color="rgba(245,240,232,0.4)" fontSize="xs">积分</Text>
                     <Badge colorScheme="orange" px={2} py={0.5} borderRadius="md" fontSize="xs">
                       {memberStatus?.points || 0}
                     </Badge>
@@ -721,7 +733,7 @@ export default function ClientProfile() {
 
           {/* 头像编辑 */}
           {editingAvatar && (
-            <Box mb={4} p={3} bg="gray.700" borderRadius="md">
+            <Box mb={4} p={3} bg="warm.700" borderRadius="md">
               <VStack align="stretch" spacing={2}>
                 <Text color="gray.300" fontSize="sm">上传头像图片</Text>
                 <Input
@@ -729,8 +741,8 @@ export default function ClientProfile() {
                   accept="image/*"
                   ref={fileInputRef}
                   onChange={handleAvatarFileChange}
-                  bg="gray.600"
-                  borderColor="gray.500"
+                  bg="warm.600"
+                  borderColor="rgba(245,240,232,0.2)"
                   color="white"
                   p={1}
                   sx={{
@@ -751,7 +763,7 @@ export default function ClientProfile() {
                   <Avatar size="md" src={avatarPreview} />
                 )}
                 <HStack spacing={2}>
-                  <Button size="sm" colorScheme="teal" onClick={handleSaveAvatar} isLoading={savingAvatar} isDisabled={!avatarFile}>保存</Button>
+                  <Button size="sm" colorScheme="gold" onClick={handleSaveAvatar} isLoading={savingAvatar} isDisabled={!avatarFile}>保存</Button>
                   <Button size="sm" variant="ghost" onClick={handleCancelAvatar}>取消</Button>
                 </HStack>
               </VStack>
@@ -761,7 +773,7 @@ export default function ClientProfile() {
           {/* 档案完整度 + 操作按钮 */}
           <Box>
             <HStack justify="space-between" mb={1}>
-              <Text color="gray.400" fontSize="xs">档案完整度</Text>
+              <Text color="rgba(245,240,232,0.4)" fontSize="xs">档案完整度</Text>
               <Text color={completenessPercent >= 80 ? 'green.400' : completenessPercent >= 50 ? 'yellow.400' : 'orange.400'} fontSize="xs" fontWeight="bold">{completenessPercent}%</Text>
             </HStack>
             <Progress
@@ -769,11 +781,11 @@ export default function ClientProfile() {
               size="xs"
               colorScheme={completenessPercent >= 80 ? 'green' : completenessPercent >= 50 ? 'yellow' : 'orange'}
               borderRadius="full"
-              bg="gray.700"
+              bg="warm.700"
               mb={2}
             />
             {completenessPercent < 80 ? (
-              <Text color="gray.600" fontSize="xs" mb={2}>完善档案后，AI 教练能为你提供更精准的建议</Text>
+              <Text color="warm.600" fontSize="xs" mb={2}>完善档案后，AI 教练能为你提供更精准的建议</Text>
             ) : null}
 
           </Box>
@@ -782,37 +794,37 @@ export default function ClientProfile() {
 
       {/* 编辑档案入口，在数据展示区上方 */}
       <Flex justify="flex-end" mb={4}>
-        <Button size="sm" colorScheme="teal" leftIcon={<Icon as={FiEdit2} />} onClick={openEdit}>编辑档案</Button>
+        <Button size="sm" colorScheme="gold" leftIcon={<Icon as={FiEdit2} />} onClick={openEdit}>编辑档案</Button>
       </Flex>
 
       <SimpleGrid columns={2} spacing={4}>
         {/* 基础信息 */}
-        <Card bg="gray.800">
+        <Card bg="warm.800">
           <CardBody>
             <Heading as="h3" size="sm" color="teal.400" mb={3}>基础信息</Heading>
             <VStack spacing={2} align="stretch">
               <HStack justify="space-between">
-                <Text color="gray.400" fontSize="sm">年龄</Text>
-                {profile.age ? <Text color="white">{profile.age}岁</Text> : <Text color="gray.600" fontSize="sm">待填写</Text>}
+                <Text color="rgba(245,240,232,0.4)" fontSize="sm">年龄</Text>
+                {profile.age ? <Text color="white">{profile.age}岁</Text> : <Text color="warm.600" fontSize="sm">待填写</Text>}
               </HStack>
               <HStack justify="space-between">
-                <Text color="gray.400" fontSize="sm">职业</Text>
+                <Text color="rgba(245,240,232,0.4)" fontSize="sm">职业</Text>
                 <EmptyValue>{profile.occupation}</EmptyValue>
               </HStack>
               <HStack justify="space-between">
-                <Text color="gray.400" fontSize="sm">学历</Text>
+                <Text color="rgba(245,240,232,0.4)" fontSize="sm">学历</Text>
                 <EmptyValue>{profile.education}</EmptyValue>
               </HStack>
               <HStack justify="space-between">
-                <Text color="gray.400" fontSize="sm">收入</Text>
+                <Text color="rgba(245,240,232,0.4)" fontSize="sm">收入</Text>
                 <EmptyValue>{profile.income}</EmptyValue>
               </HStack>
               <HStack justify="space-between">
-                <Text color="gray.400" fontSize="sm">所在地</Text>
+                <Text color="rgba(245,240,232,0.4)" fontSize="sm">所在地</Text>
                 <EmptyValue>{profile.residence}</EmptyValue>
               </HStack>
               <HStack justify="space-between">
-                <Text color="gray.400" fontSize="sm">籍贯</Text>
+                <Text color="rgba(245,240,232,0.4)" fontSize="sm">籍贯</Text>
                 <EmptyValue>{profile.hometown}</EmptyValue>
               </HStack>
             </VStack>
@@ -820,24 +832,24 @@ export default function ClientProfile() {
         </Card>
 
         {/* 外貌资源 */}
-        <Card bg="gray.800">
+        <Card bg="warm.800">
           <CardBody>
             <Heading as="h3" size="sm" color="teal.400" mb={3}>外貌特征</Heading>
             <VStack spacing={2} align="stretch">
               <HStack justify="space-between">
-                <Text color="gray.400" fontSize="sm">身高</Text>
-                {profile.height ? <Text color="white">{profile.height}cm</Text> : <Text color="gray.600" fontSize="sm">待填写</Text>}
+                <Text color="rgba(245,240,232,0.4)" fontSize="sm">身高</Text>
+                {profile.height ? <Text color="white">{profile.height}cm</Text> : <Text color="warm.600" fontSize="sm">待填写</Text>}
               </HStack>
               <HStack justify="space-between">
-                <Text color="gray.400" fontSize="sm">体重</Text>
-                {profile.weight ? <Text color="white">{profile.weight}斤</Text> : <Text color="gray.600" fontSize="sm">待填写</Text>}
+                <Text color="rgba(245,240,232,0.4)" fontSize="sm">体重</Text>
+                {profile.weight ? <Text color="white">{profile.weight}斤</Text> : <Text color="warm.600" fontSize="sm">待填写</Text>}
               </HStack>
               <HStack justify="space-between">
-                <Text color="gray.400" fontSize="sm">穿着风格</Text>
+                <Text color="rgba(245,240,232,0.4)" fontSize="sm">穿着风格</Text>
                 <EmptyValue>{profile.dressingStyle}</EmptyValue>
               </HStack>
               <HStack justify="space-between">
-                <Text color="gray.400" fontSize="sm">外貌描述</Text>
+                <Text color="rgba(245,240,232,0.4)" fontSize="sm">外貌描述</Text>
                 <EmptyValue maxW="150px" noOfLines={2}>{profile.appearance}</EmptyValue>
               </HStack>
             </VStack>
@@ -845,20 +857,20 @@ export default function ClientProfile() {
         </Card>
 
         {/* 家庭背景 */}
-        <Card bg="gray.800">
+        <Card bg="warm.800">
           <CardBody>
             <Heading as="h3" size="sm" color="purple.400" mb={3}>家庭背景</Heading>
             <VStack spacing={2} align="stretch">
               <HStack justify="space-between">
-                <Text color="gray.400" fontSize="sm">家庭背景</Text>
+                <Text color="rgba(245,240,232,0.4)" fontSize="sm">家庭背景</Text>
                 <EmptyValue>{profile.familyBackground}</EmptyValue>
               </HStack>
               <HStack justify="space-between">
-                <Text color="gray.400" fontSize="sm">家庭结构</Text>
+                <Text color="rgba(245,240,232,0.4)" fontSize="sm">家庭结构</Text>
                 <EmptyValue>{profile.familyStructure}</EmptyValue>
               </HStack>
               <HStack justify="space-between">
-                <Text color="gray.400" fontSize="sm">家庭氛围</Text>
+                <Text color="rgba(245,240,232,0.4)" fontSize="sm">家庭氛围</Text>
                 <EmptyValue>{profile.familyAtmosphere}</EmptyValue>
               </HStack>
             </VStack>
@@ -866,24 +878,24 @@ export default function ClientProfile() {
         </Card>
 
         {/* 性格画像 */}
-        <Card bg="gray.800">
+        <Card bg="warm.800">
           <CardBody>
             <Heading as="h3" size="sm" color="purple.400" mb={3}>性格画像</Heading>
             <VStack spacing={2} align="stretch">
               <HStack justify="space-between">
-                <Text color="gray.400" fontSize="sm">性格/MBTI</Text>
-                {profile.personality ? <Badge colorScheme="cyan">{profile.personality}</Badge> : <Text color="gray.600" fontSize="sm">待填写</Text>}
+                <Text color="rgba(245,240,232,0.4)" fontSize="sm">性格/MBTI</Text>
+                {profile.personality ? <Badge colorScheme="cyan">{profile.personality}</Badge> : <Text color="warm.600" fontSize="sm">待填写</Text>}
               </HStack>
               <HStack justify="space-between">
-                <Text color="gray.400" fontSize="sm">沟通风格</Text>
+                <Text color="rgba(245,240,232,0.4)" fontSize="sm">沟通风格</Text>
                 <EmptyValue>{profile.communicationStyle}</EmptyValue>
               </HStack>
               <HStack justify="space-between">
-                <Text color="gray.400" fontSize="sm">社交风格</Text>
+                <Text color="rgba(245,240,232,0.4)" fontSize="sm">社交风格</Text>
                 <EmptyValue>{profile.socialStyle}</EmptyValue>
               </HStack>
               <HStack justify="space-between">
-                <Text color="gray.400" fontSize="sm">幽默风格</Text>
+                <Text color="rgba(245,240,232,0.4)" fontSize="sm">幽默风格</Text>
                 <EmptyValue>{profile.humorStyle}</EmptyValue>
               </HStack>
             </VStack>
@@ -891,16 +903,16 @@ export default function ClientProfile() {
         </Card>
 
         {/* 个人优势与不足 */}
-        <Card bg="gray.800">
+        <Card bg="warm.800">
           <CardBody>
             <Heading as="h3" size="sm" color="purple.400" mb={3}>优势与不足</Heading>
             <VStack spacing={2} align="stretch">
               <HStack justify="space-between" align="start">
-                <Text color="gray.400" fontSize="sm">优势</Text>
+                <Text color="rgba(245,240,232,0.4)" fontSize="sm">优势</Text>
                 <EmptyValue maxW="180px" textAlign="right">{profile.strengths}</EmptyValue>
               </HStack>
               <HStack justify="space-between" align="start">
-                <Text color="gray.400" fontSize="sm">不足</Text>
+                <Text color="rgba(245,240,232,0.4)" fontSize="sm">不足</Text>
                 <EmptyValue maxW="180px" textAlign="right">{profile.weaknesses}</EmptyValue>
               </HStack>
             </VStack>
@@ -908,24 +920,24 @@ export default function ClientProfile() {
         </Card>
 
         {/* 情感状态 */}
-        <Card bg="gray.800">
+        <Card bg="warm.800">
           <CardBody>
             <Heading as="h3" size="sm" color="orange.400" mb={3}>情感状态</Heading>
             <VStack spacing={2} align="stretch">
               <HStack justify="space-between">
-                <Text color="gray.400" fontSize="sm">婚恋态度</Text>
+                <Text color="rgba(245,240,232,0.4)" fontSize="sm">婚恋态度</Text>
                 <EmptyValue>{profile.relationshipAttitude}</EmptyValue>
               </HStack>
               <HStack justify="space-between">
-                <Text color="gray.400" fontSize="sm">关系目标</Text>
-                {profile.relationshipGoal ? <Badge colorScheme="green">{profile.relationshipGoal}</Badge> : <Text color="gray.600" fontSize="sm">待填写</Text>}
+                <Text color="rgba(245,240,232,0.4)" fontSize="sm">关系目标</Text>
+                {profile.relationshipGoal ? <Badge colorScheme="green">{profile.relationshipGoal}</Badge> : <Text color="warm.600" fontSize="sm">待填写</Text>}
               </HStack>
               <HStack justify="space-between">
-                <Text color="gray.400" fontSize="sm">感情诉求</Text>
+                <Text color="rgba(245,240,232,0.4)" fontSize="sm">感情诉求</Text>
                 <EmptyValue>{profile.emotionalGoal}</EmptyValue>
               </HStack>
               <HStack justify="space-between">
-                <Text color="gray.400" fontSize="sm">婚史</Text>
+                <Text color="rgba(245,240,232,0.4)" fontSize="sm">婚史</Text>
                 <EmptyValue>{profile.marriageHistory}</EmptyValue>
               </HStack>
             </VStack>
@@ -933,54 +945,54 @@ export default function ClientProfile() {
         </Card>
 
         {/* 对目标的期望 */}
-        <Card bg="gray.800">
+        <Card bg="warm.800">
           <CardBody>
             <Heading as="h3" size="sm" color="orange.400" mb={3}>对目标的期望</Heading>
             {profile.matchPreferences ? (
               <Text color="gray.300" fontSize="sm" whiteSpace="pre-wrap">{profile.matchPreferences}</Text>
             ) : (
-              <Text color="gray.600" fontSize="sm">待填写</Text>
+              <Text color="warm.600" fontSize="sm">待填写</Text>
             )}
           </CardBody>
         </Card>
 
         {/* 禁忌 */}
-        <Card bg="gray.800">
+        <Card bg="warm.800">
           <CardBody>
             <Heading as="h3" size="sm" color="orange.400" mb={3}>禁忌</Heading>
             {profile.dateTaboos ? (
               <Text color="gray.300" fontSize="sm" whiteSpace="pre-wrap">{profile.dateTaboos}</Text>
             ) : (
-              <Text color="gray.600" fontSize="sm">待填写</Text>
+              <Text color="warm.600" fontSize="sm">待填写</Text>
             )}
           </CardBody>
         </Card>
       </SimpleGrid>
 
       {/* 个人签名 */}
-      <Card bg="gray.800" mt={4}>
+      <Card bg="warm.800" mt={4}>
         <CardBody>
-          <Text color="gray.400" fontSize="sm" mb={2}>个人签名</Text>
+          <Text color="rgba(245,240,232,0.4)" fontSize="sm" mb={2}>个人签名</Text>
           {profile.profileBio ? (
             <Text color="gray.300">{profile.profileBio}</Text>
           ) : (
-            <Text color="gray.600" fontSize="sm">待填写</Text>
+            <Text color="warm.600" fontSize="sm">待填写</Text>
           )}
         </CardBody>
       </Card>
 
       {/* 关于我们 */}
-      <Box mt={8} pt={4} borderTop="1px solid" borderColor="gray.700">
-        <Text color="gray.600" fontSize="xs" mb={3}>设置</Text>
-        <Card bg="gray.800">
+      <Box mt={8} pt={4} borderTop="1px solid" borderColor="warm.700">
+        <Text color="warm.600" fontSize="xs" mb={3}>设置</Text>
+        <Card bg="warm.800">
           <CardBody>
           <VStack spacing={2} align="stretch">
             <HStack justify="space-between">
-              <Text color="gray.500" fontSize="sm">当前版本</Text>
+              <Text color="rgba(245,240,232,0.2)" fontSize="sm">当前版本</Text>
               <Text color="white" fontSize="sm">V{VERSION}</Text>
             </HStack>
             <HStack spacing={2}>
-              <Button size="sm" variant="outline" colorScheme="teal" onClick={handleCheckUpdate} isLoading={checkingUpdate}>
+              <Button size="sm" variant="outline" colorScheme="gold" onClick={handleCheckUpdate} isLoading={checkingUpdate}>
                 检查更新
               </Button>
               <Button size="sm" variant="outline" colorScheme="orange" onClick={onPwdOpen}>
@@ -995,11 +1007,11 @@ export default function ClientProfile() {
       {/* 编辑档案弹窗 */}
       <Modal isOpen={isOpen} onClose={onClose} size="xl">
         <ModalOverlay bg="blackAlpha.700" />
-        <ModalContent bg="gray.800" overflow="auto">
+        <ModalContent bg="warm.800" overflow="auto">
           <ModalHeader color="white">
             <HStack spacing={3}>
               <Text>编辑我的档案</Text>
-              <HStack spacing={0} bg="gray.700" borderRadius="md" p="2px">
+              <HStack spacing={0} bg="warm.700" borderRadius="md" p="2px">
                 <Button
                   size="xs"
                   colorScheme={aiMode === 'manual' ? 'teal' : 'gray'}
@@ -1031,32 +1043,32 @@ export default function ClientProfile() {
                   ))}
                 </SimpleGrid>
                 <HStack justify="flex-end" mt={6} spacing={3}>
-                  <Button variant="ghost" color="gray.400" onClick={onClose}>取消</Button>
-                  <Button colorScheme="teal" onClick={handleSave} isLoading={saving}>保存</Button>
+                  <Button variant="ghost" color="rgba(245,240,232,0.4)" onClick={onClose}>取消</Button>
+                  <Button colorScheme="gold" onClick={handleSave} isLoading={saving}>保存</Button>
                 </HStack>
               </>
             ) : (
               <VStack spacing={4} align="stretch">
                 {/* 子 tab 切换 */}
-                <HStack spacing={0} bg="gray.700" borderRadius="md" p="2px" w="fit-content">
+                <HStack spacing={0} bg="warm.700" borderRadius="md" p="2px" w="fit-content">
                   <Button
                     size="xs"
                     colorScheme={aiTab === 'text' ? 'blue' : 'gray'}
                     variant={aiTab === 'text' ? 'solid' : 'ghost'}
-                    onClick={() => { setAiTab('text'); setAiExtractedFields(null); }}
+                    onClick={() => { setAiTab('text'); setAiExtractedFields(null); setAiConfirmSelections({}); }}
                   >文字描述</Button>
                   <Button
                     size="xs"
                     colorScheme={aiTab === 'screenshot' ? 'blue' : 'gray'}
                     variant={aiTab === 'screenshot' ? 'solid' : 'ghost'}
-                    onClick={() => { setAiTab('screenshot'); setAiExtractedFields(null); }}
+                    onClick={() => { setAiTab('screenshot'); setAiExtractedFields(null); setAiConfirmSelections({}); }}
                   >上传截图</Button>
                 </HStack>
 
                 {/* 文字描述模式 */}
                 {aiTab === 'text' && (
                   <VStack spacing={3} align="stretch">
-                    <Text color="gray.400" fontSize="sm">
+                    <Text color="rgba(245,240,232,0.4)" fontSize="sm">
                       粘贴一段自我介绍文字，AI 将自动分析并提取档案字段。支持描述自己的年龄、职业、学历、性格、感情观等。
                     </Text>
                     <Textarea
@@ -1064,11 +1076,11 @@ export default function ClientProfile() {
                       onChange={e => setAiText(e.target.value)}
                       placeholder="例如：我今年28岁，在深圳做互联网工程师，本科学历，性格开朗幽默，喜欢运动和旅行。希望能找到认真交往的对象..."
                       rows={5}
-                      bg="gray.700"
+                      bg="warm.700"
                       color="white"
                       border="1px solid"
-                      borderColor="gray.600"
-                      _hover={{ borderColor: 'gray.500' }}
+                      borderColor="warm.600"
+                      _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
                       _focus={{ borderColor: 'blue.500', boxShadow: '0 0 0 1px var(--chakra-colors-blue-500)' }}
                     />
                     <Button
@@ -1081,7 +1093,7 @@ export default function ClientProfile() {
 
                     {/* 流式分析进度 */}
                     {aiExtracting && aiStreamText && (
-                      <Card bg="gray.750" border="1px solid" borderColor="blue.700">
+                      <Card bg="warm.800" border="1px solid" borderColor="blue.700">
                         <CardBody py={3}>
                           <Text color="blue.300" fontWeight="bold" fontSize="sm" mb={2}>AI 正在分析...</Text>
                           <Text color="gray.300" fontSize="sm" whiteSpace="pre-wrap" maxH="200px" overflowY="auto">
@@ -1096,7 +1108,7 @@ export default function ClientProfile() {
                 {/* 截图模式 */}
                 {aiTab === 'screenshot' && (
                   <VStack spacing={3} align="stretch">
-                    <Text color="gray.400" fontSize="sm">
+                    <Text color="rgba(245,240,232,0.4)" fontSize="sm">
                       上传一张聊天截图（如交友资料页、聊天记录等），AI 将识别其中的个人信息并提取档案字段。
                     </Text>
                     <Input
@@ -1116,7 +1128,7 @@ export default function ClientProfile() {
                           top={2}
                           right={2}
                           colorScheme="red"
-                          onClick={() => { setAiScreenshotFile(null); setAiScreenshotPreview(''); }}
+                          onClick={() => { setAiScreenshotFile(null); setAiScreenshotPreview(''); setAiExtractedFields(null); setAiConfirmSelections({}); }}
                           aria-label="移除图片"
                         />
                       </Box>
@@ -1141,34 +1153,50 @@ export default function ClientProfile() {
 
                 {/* AI 提取结果 */}
                 {aiExtractedFields && (
-                  <Card bg="gray.700" border="1px solid" borderColor="teal.600">
+                  <Card bg="warm.700" border="1px solid" borderColor="teal.600">
                     <CardBody>
-                      <Text color="teal.400" fontWeight="bold" mb={3}>
-                        AI 识别结果（共 {Object.entries(aiExtractedFields).filter(([, v]) => v).length} 个字段）
-                      </Text>
-                      <SimpleGrid columns={2} spacing={2}>
+                      <HStack justify="space-between" mb={3}>
+                        <Text color="teal.400" fontWeight="bold">
+                          AI 识别结果（共 {Object.entries(aiExtractedFields).filter(([, v]) => v).length} 个字段）
+                        </Text>
+                        <HStack spacing={2}>
+                          <Button size="xs" variant="ghost" color="teal.400" onClick={() => {
+                            const all = {};
+                            Object.keys(aiExtractedFields).forEach(k => { all[k] = true; });
+                            setAiConfirmSelections(all);
+                          }}>全选</Button>
+                          <Button size="xs" variant="ghost" color="rgba(245,240,232,0.4)" onClick={() => setAiConfirmSelections({})}>反选</Button>
+                        </HStack>
+                      </HStack>
+                      <VStack spacing={1} align="stretch">
                         {Object.entries(aiExtractedFields).map(([key, value]) => {
                           if (!value) return null;
                           const label = ALL_FIELD_LABELS[key] || key;
                           return (
-                            <HStack key={key} justify="space-between" bg="gray.800" px={3} py={1.5} borderRadius="md">
-                              <Text color="gray.400" fontSize="sm">{label}</Text>
-                              <Text color="white" fontSize="sm" fontWeight="medium">{String(value)}</Text>
+                            <HStack key={key} bg="warm.800" px={3} py={1.5} borderRadius="md">
+                              <Checkbox
+                                isChecked={!!aiConfirmSelections[key]}
+                                onChange={e => setAiConfirmSelections(prev => ({ ...prev, [key]: e.target.checked }))}
+                                colorScheme="gold"
+                                size="sm"
+                              />
+                              <Text color="rgba(245,240,232,0.4)" fontSize="sm" minW="80px">{label}</Text>
+                              <Text color="white" fontSize="sm" fontWeight="medium" flex={1}>{String(value)}</Text>
                             </HStack>
                           );
                         })}
-                      </SimpleGrid>
+                      </VStack>
                       <HStack justify="flex-end" mt={4} spacing={3}>
-                        <Button size="sm" variant="ghost" color="gray.400" onClick={() => setAiExtractedFields(null)}>清除</Button>
-                        <Button size="sm" colorScheme="teal" onClick={handleApplyAiFields}>应用到表单</Button>
+                        <Button size="sm" variant="ghost" color="rgba(245,240,232,0.4)" onClick={() => { setAiExtractedFields(null); setAiConfirmSelections({}); }}>清除</Button>
+                        <Button size="sm" colorScheme="gold" onClick={handleApplySelectedFields}>应用已选字段</Button>
                       </HStack>
                     </CardBody>
                   </Card>
                 )}
 
                 <HStack justify="flex-end" spacing={3}>
-                  <Button variant="ghost" color="gray.400" onClick={onClose}>取消</Button>
-                  <Button colorScheme="teal" onClick={() => setAiMode('manual')}>返回手动填写</Button>
+                  <Button variant="ghost" color="rgba(245,240,232,0.4)" onClick={onClose}>取消</Button>
+                  <Button colorScheme="gold" onClick={() => setAiMode('manual')}>返回手动填写</Button>
                 </HStack>
               </VStack>
             )}
@@ -1179,11 +1207,11 @@ export default function ClientProfile() {
       {/* 定价方案弹窗 */}
       <Modal isOpen={isPricingOpen} onClose={onPricingClose} size="2xl">
         <ModalOverlay backdropFilter="blur(4px)" />
-        <ModalContent bg="gray.800" color="white" borderRadius="xl" maxH="90vh" overflowY="auto">
+        <ModalContent bg="warm.800" color="white" borderRadius="xl" maxH="90vh" overflowY="auto">
           <ModalHeader textAlign="center" pb={2}>
             <Icon as={CrownIcon} w={6} h={6} color="gold.400" mb={2} />
             <Text color="white">选择专属方案</Text>
-            <Text color="gray.400" fontSize="sm" fontWeight="normal" mt={1}>联系客服，获取您的专属定制方案</Text>
+            <Text color="rgba(245,240,232,0.4)" fontSize="sm" fontWeight="normal" mt={1}>联系客服，获取您的专属定制方案</Text>
           </ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={6}>
@@ -1191,9 +1219,9 @@ export default function ClientProfile() {
               {PRICING_DATA.map(plan => (
                 <Card
                   key={plan.type}
-                  bg="gray.700"
+                  bg="warm.700"
                   border="1px solid"
-                  borderColor={plan.type === 'premium' ? 'purple.500' : plan.type === 'yearly' ? 'blue.500' : 'gray.600'}
+                  borderColor={plan.type === 'premium' ? 'purple.500' : plan.type === 'yearly' ? 'blue.500' : 'warm.600'}
                   borderRadius="xl"
                   position="relative"
                   overflow="hidden"
@@ -1213,9 +1241,9 @@ export default function ClientProfile() {
                       <Text color="white" fontWeight="bold" fontSize="lg">{plan.label}</Text>
                       <HStack spacing={1} align="baseline">
                         <Text color="gold.400" fontSize="3xl" fontWeight="bold">¥{plan.price}</Text>
-                        <Text color="gray.400" fontSize="sm">/{plan.period}</Text>
+                        <Text color="rgba(245,240,232,0.4)" fontSize="sm">/{plan.period}</Text>
                       </HStack>
-                      <Text color="gray.500" fontSize="xs">约¥{plan.perMonth}/月</Text>
+                      <Text color="rgba(245,240,232,0.2)" fontSize="xs">约¥{plan.perMonth}/月</Text>
                     </VStack>
                     <VStack spacing={2} align="stretch">
                       {plan.features.map((f, i) => (
@@ -1229,23 +1257,23 @@ export default function ClientProfile() {
                 </Card>
               ))}
             </SimpleGrid>
-            <Box mt={4} p={3} bg="gray.750" borderRadius="md">
-              <Text color="gray.400" fontSize="sm" mb={2}>邀请有礼</Text>
+            <Box mt={4} p={3} bg="warm.800" borderRadius="md">
+              <Text color="rgba(245,240,232,0.4)" fontSize="sm" mb={2}>邀请有礼</Text>
               <SimpleGrid columns={3} spacing={2}>
-                <Box textAlign="center" p={2} bg="gray.600" borderRadius="md">
+                <Box textAlign="center" p={2} bg="warm.600" borderRadius="md">
                   <Text color="gold.400" fontWeight="600">500</Text>
-                  <Text color="gray.400" fontSize="xs">普惠月付邀请积分</Text>
+                  <Text color="rgba(245,240,232,0.4)" fontSize="xs">普惠月付邀请积分</Text>
                 </Box>
-                <Box textAlign="center" p={2} bg="gray.600" borderRadius="md">
+                <Box textAlign="center" p={2} bg="warm.600" borderRadius="md">
                   <Text color="blue.400" fontWeight="600">4444</Text>
-                  <Text color="gray.400" fontSize="xs">普惠年付邀请积分</Text>
+                  <Text color="rgba(245,240,232,0.4)" fontSize="xs">普惠年付邀请积分</Text>
                 </Box>
-                <Box textAlign="center" p={2} bg="gray.600" borderRadius="md">
+                <Box textAlign="center" p={2} bg="warm.600" borderRadius="md">
                   <Text color="purple.400" fontWeight="600">25000</Text>
-                  <Text color="gray.400" fontSize="xs">高端会员邀请积分</Text>
+                  <Text color="rgba(245,240,232,0.4)" fontSize="xs">高端会员邀请积分</Text>
                 </Box>
               </SimpleGrid>
-              <Text color="gray.500" fontSize="xs" mt={2}>
+              <Text color="rgba(245,240,232,0.2)" fontSize="xs" mt={2}>
                 积分只能用于续费抵扣，无有效期限制。被邀请人首单可享8折优惠
               </Text>
             </Box>
@@ -1256,25 +1284,25 @@ export default function ClientProfile() {
       {/* 续费弹窗 */}
       <Modal isOpen={isRenewalOpen} onClose={onRenewalClose} size="md">
         <ModalOverlay bg="blackAlpha.700" />
-        <ModalContent bg="gray.800" color="white">
+        <ModalContent bg="warm.800" color="white">
           <ModalHeader>{memberStatus?.membership ? '积分续费' : '开通会员'}</ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={6}>
             {memberStatus?.membership && (
-              <Box mb={4} p={3} bg="gray.700" borderRadius="md">
+              <Box mb={4} p={3} bg="warm.700" borderRadius="md">
                 <Text color="gray.300" fontSize="sm">
                   当前有效期至: {formatDate(memberStatus.membership.endDate)}
                 </Text>
               </Box>
             )}
 
-            <Text color="gray.400" fontSize="sm" mb={2}>选择套餐</Text>
+            <Text color="rgba(245,240,232,0.4)" fontSize="sm" mb={2}>选择套餐</Text>
             <SimpleGrid columns={3} spacing={2} mb={4}>
               {PRICING_DATA.map(plan => (
                 <Box
                   key={plan.type}
                   p={3}
-                  bg={renewalType === plan.type ? 'teal.700' : 'gray.700'}
+                  bg={renewalType === plan.type ? 'teal.700' : 'warm.700'}
                   borderRadius="md"
                   cursor="pointer"
                   border="2px solid"
@@ -1286,12 +1314,12 @@ export default function ClientProfile() {
                 >
                   <Text fontSize="sm" fontWeight="bold">{plan.label}</Text>
                   <Text color="gold.300" fontSize="lg" fontWeight="bold">¥{plan.price}</Text>
-                  <Text color="gray.400" fontSize="xs">/{plan.period}</Text>
+                  <Text color="rgba(245,240,232,0.4)" fontSize="xs">/{plan.period}</Text>
                 </Box>
               ))}
             </SimpleGrid>
 
-            <Box p={3} bg="gray.700" borderRadius="md">
+            <Box p={3} bg="warm.700" borderRadius="md">
               {(() => {
                 const price = renewalPrice;
                 const balance = memberStatus?.points || 0;
@@ -1301,7 +1329,7 @@ export default function ClientProfile() {
                     <HStack justify="space-between" mb={3}>
                       <HStack>
                         <Text color="gray.300" fontSize="sm">需要积分</Text>
-                        <Badge colorScheme="teal" fontSize="md">{price}</Badge>
+                        <Badge colorScheme="gold" fontSize="md">{price}</Badge>
                       </HStack>
                       <HStack>
                         <Text color="gray.300" fontSize="sm">可用积分</Text>
@@ -1318,7 +1346,7 @@ export default function ClientProfile() {
                       if (renewalType === 'monthly') d.setMonth(d.getMonth() + 1);
                       else d.setFullYear(d.getFullYear() + 1);
                       return (
-                        <Text color="gray.400" fontSize="xs" mb={2}>
+                        <Text color="rgba(245,240,232,0.4)" fontSize="xs" mb={2}>
                           续费后有效期至: {formatDate(d.toISOString())}
                         </Text>
                       );
@@ -1328,7 +1356,7 @@ export default function ClientProfile() {
               })()}
             </Box>
 
-            <Text color="gray.500" fontSize="xs" mt={3}>
+            <Text color="rgba(245,240,232,0.2)" fontSize="xs" mt={3}>
               系统仅支持积分支付，1积分=1元。
               {memberStatus?.membership
                 ? '续费后有效期将在现有基础上累加。'
@@ -1337,8 +1365,8 @@ export default function ClientProfile() {
           </ModalBody>
 
           <ModalFooter>
-            <Button variant="ghost" color="gray.400" mr={3} onClick={onRenewalClose}>取消</Button>
-            <Button colorScheme="teal" onClick={handleRenewalSubmit} isLoading={renewing} loadingText="处理中" isDisabled={renewalPointsInsufficient}>
+            <Button variant="ghost" color="rgba(245,240,232,0.4)" mr={3} onClick={onRenewalClose}>取消</Button>
+            <Button colorScheme="gold" onClick={handleRenewalSubmit} isLoading={renewing} loadingText="处理中" isDisabled={renewalPointsInsufficient}>
               {renewalPointsInsufficient ? '积分不足' : (memberStatus?.membership ? '确认续费' : '确认开通')}
             </Button>
           </ModalFooter>
@@ -1360,19 +1388,19 @@ export default function ClientProfile() {
       {/* 修改密码弹窗 */}
       <Modal isOpen={isPwdOpen} onClose={onPwdClose} size="sm">
         <ModalOverlay bg="blackAlpha.700" />
-        <ModalContent bg="gray.800">
+        <ModalContent bg="warm.800">
           <ModalHeader color="white">修改密码</ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={4}>
             <VStack spacing={4}>
               <FormControl>
-                <FormLabel color="gray.400" fontSize="sm">旧密码</FormLabel>
+                <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">旧密码</FormLabel>
                 <InputGroup>
                   <Input
                     type={showOld ? 'text' : 'password'}
                     value={oldPassword}
                     onChange={e => setOldPassword(e.target.value)}
-                    bg="gray.700" color="white" border="1px solid" borderColor="gray.600"
+                    bg="warm.700" color="white" border="1px solid" borderColor="warm.600"
                     placeholder="请输入旧密码"
                   />
                   <InputRightElement>
@@ -1385,13 +1413,13 @@ export default function ClientProfile() {
                 </InputGroup>
               </FormControl>
               <FormControl>
-                <FormLabel color="gray.400" fontSize="sm">新密码</FormLabel>
+                <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">新密码</FormLabel>
                 <InputGroup>
                   <Input
                     type={showNew ? 'text' : 'password'}
                     value={newPassword}
                     onChange={e => setNewPassword(e.target.value)}
-                    bg="gray.700" color="white" border="1px solid" borderColor="gray.600"
+                    bg="warm.700" color="white" border="1px solid" borderColor="warm.600"
                     placeholder="请输入新密码（至少8位）"
                   />
                   <InputRightElement>
@@ -1404,13 +1432,13 @@ export default function ClientProfile() {
                 </InputGroup>
               </FormControl>
               <FormControl>
-                <FormLabel color="gray.400" fontSize="sm">确认新密码</FormLabel>
+                <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">确认新密码</FormLabel>
                 <InputGroup>
                   <Input
                     type={showConfirm ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={e => setConfirmPassword(e.target.value)}
-                    bg="gray.700" color="white" border="1px solid" borderColor="gray.600"
+                    bg="warm.700" color="white" border="1px solid" borderColor="warm.600"
                     placeholder="请再次输入新密码"
                   />
                   <InputRightElement>
@@ -1425,7 +1453,7 @@ export default function ClientProfile() {
             </VStack>
           </ModalBody>
           <ModalFooter>
-            <Button variant="ghost" color="gray.400" mr={3} onClick={onPwdClose}>取消</Button>
+            <Button variant="ghost" color="rgba(245,240,232,0.4)" mr={3} onClick={onPwdClose}>取消</Button>
             <Button colorScheme="orange" onClick={handleChangePassword} isLoading={changingPwd}>确认修改</Button>
           </ModalFooter>
         </ModalContent>

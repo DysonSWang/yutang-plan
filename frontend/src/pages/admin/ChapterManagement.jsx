@@ -34,7 +34,7 @@ function PreviewModal({ isOpen, onClose, chapterId, chapter }) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="2xl" scrollBehavior="inside">
       <ModalOverlay />
-      <ModalContent bg="gray.800" color="white" maxH="85vh">
+      <ModalContent bg="warm.800" color="white" maxH="85vh">
         <ModalHeader>
           <HStack>
             <Text>{chapter?.title || detail?.title || '预览'}</Text>
@@ -52,7 +52,7 @@ function PreviewModal({ isOpen, onClose, chapterId, chapter }) {
           ) : detail ? (
             <Box>
               {detail.subtitle && (
-                <Text color="gray.400" fontSize="sm" mb={4}>{detail.subtitle}</Text>
+                <Text color="rgba(245,240,232,0.4)" fontSize="sm" mb={4}>{detail.subtitle}</Text>
               )}
               <Box
                 className="markdown-body"
@@ -60,21 +60,21 @@ function PreviewModal({ isOpen, onClose, chapterId, chapter }) {
                 fontSize="sm"
                 sx={{
                   'h1,h2,h3': { color: 'teal.300', mt: 5, mb: 2, fontWeight: 'bold' },
-                  h1: { fontSize: 'xl', borderBottom: '1px solid', borderColor: 'gray.700', pb: 2 },
+                  h1: { fontSize: 'xl', borderBottom: '1px solid', borderColor: 'warm.700', pb: 2 },
                   h2: { fontSize: 'lg' },
                   h3: { fontSize: 'md' },
                   p: { mb: 3, lineHeight: '1.8' },
                   'ul,ol': { pl: 5, mb: 3 },
                   li: { mb: 1 },
-                  code: { bg: 'gray.700', px: 1.5, py: 0.5, borderRadius: 'sm', fontSize: 'xs' },
+                  code: { bg: 'warm.700', px: 1.5, py: 0.5, borderRadius: 'sm', fontSize: 'xs' },
                   pre: { bg: 'gray.900', p: 3, borderRadius: 'md', overflowX: 'auto', mb: 3 },
-                  blockquote: { borderLeft: '3px solid', borderColor: 'teal.500', pl: 3, color: 'gray.400', mb: 3 },
+                  blockquote: { borderLeft: '3px solid', borderColor: 'teal.500', pl: 3, color: 'rgba(245,240,232,0.4)', mb: 3 },
                   table: { w: '100%', mb: 3 },
-                  th: { bg: 'gray.700', p: 2, textAlign: 'left', fontWeight: 'bold' },
-                  td: { p: 2, borderBottom: '1px solid', borderColor: 'gray.700' },
+                  th: { bg: 'warm.700', p: 2, textAlign: 'left', fontWeight: 'bold' },
+                  td: { p: 2, borderBottom: '1px solid', borderColor: 'warm.700' },
                   strong: { color: 'white' },
                   a: { color: 'teal.300' },
-                  hr: { borderColor: 'gray.700', my: 4 }
+                  hr: { borderColor: 'warm.700', my: 4 }
                 }}
               >
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -83,7 +83,7 @@ function PreviewModal({ isOpen, onClose, chapterId, chapter }) {
               </Box>
             </Box>
           ) : (
-            <Text color="gray.500" textAlign="center" py={8}>加载失败</Text>
+            <Text color="rgba(245,240,232,0.2)" textAlign="center" py={8}>加载失败</Text>
           )}
         </ModalBody>
       </ModalContent>
@@ -115,7 +115,7 @@ function DeleteDialog({ isOpen, onClose, chapter, onDeleted }) {
   return (
     <AlertDialog isOpen={isOpen} onClose={onClose} leastDestructiveRef={undefined}>
       <AlertDialogOverlay>
-        <AlertDialogContent bg="gray.800" color="white">
+        <AlertDialogContent bg="warm.800" color="white">
           <AlertDialogHeader>确认删除</AlertDialogHeader>
           <AlertDialogBody>
             确定要删除章节「{chapter?.title}」吗？此操作不可撤销，相关的学习进度数据也会被清空。
@@ -270,7 +270,7 @@ export default function ChapterManagement() {
         <Heading size="lg" color="white">学习版块管理</Heading>
         <Button
           leftIcon={<FiPlus />}
-          colorScheme="teal"
+          colorScheme="gold"
           onClick={handleCreate}
         >
           新建章节
@@ -280,10 +280,10 @@ export default function ChapterManagement() {
       {chapters.length === 0 ? (
         <Center py={16}>
           <VStack spacing={3}>
-            <Text color="gray.500" fontSize="lg">暂无章节数据</Text>
+            <Text color="rgba(245,240,232,0.2)" fontSize="lg">暂无章节数据</Text>
             <Button
               leftIcon={<FiPlus />}
-              colorScheme="teal"
+              colorScheme="gold"
               variant="outline"
               onClick={handleCreate}
             >
@@ -295,22 +295,22 @@ export default function ChapterManagement() {
         <Box borderRadius="md" overflow="hidden">
           <Table variant="simple" size="sm">
             <Thead>
-              <Tr bg="gray.800">
-                <Th color="gray.400" border="none" w="36px" />
-                <Th color="gray.400" border="none" w="60px">ID</Th>
-                <Th color="gray.400" border="none">标题</Th>
-                <Th color="gray.400" border="none" display={{ base: 'none', md: 'table-cell' }}>副标题</Th>
-                <Th color="gray.400" border="none" w="80px" textAlign="center">状态</Th>
-                <Th color="gray.400" border="none" w="200px">操作</Th>
+              <Tr bg="warm.800">
+                <Th color="rgba(245,240,232,0.4)" border="none" w="36px" />
+                <Th color="rgba(245,240,232,0.4)" border="none" w="60px">ID</Th>
+                <Th color="rgba(245,240,232,0.4)" border="none">标题</Th>
+                <Th color="rgba(245,240,232,0.4)" border="none" display={{ base: 'none', md: 'table-cell' }}>副标题</Th>
+                <Th color="rgba(245,240,232,0.4)" border="none" w="80px" textAlign="center">状态</Th>
+                <Th color="rgba(245,240,232,0.4)" border="none" w="200px">操作</Th>
               </Tr>
             </Thead>
             <Tbody>
               {chapters.map((ch) => (
                 <Tr
                   key={ch.chapterId}
-                  _hover={{ bg: 'gray.800' }}
+                  _hover={{ bg: 'warm.800' }}
                   borderBottom="1px"
-                  borderColor="gray.700"
+                  borderColor="warm.700"
                   bg={dragOverId === ch.chapterId ? 'teal.900' : 'transparent'}
                   transition="background 0.15s"
                   draggable
@@ -325,16 +325,16 @@ export default function ChapterManagement() {
                   <Td border="none" p={2}>
                     <Icon
                       as={FiMenu}
-                      color="gray.500"
+                      color="rgba(245,240,232,0.2)"
                       cursor="grab"
                       _hover={{ color: 'teal.300' }}
                     />
                   </Td>
-                  <Td color="gray.400" border="none">
-                    <Badge colorScheme="teal" variant="subtle">{ch.chapterId}</Badge>
+                  <Td color="rgba(245,240,232,0.4)" border="none">
+                    <Badge colorScheme="gold" variant="subtle">{ch.chapterId}</Badge>
                   </Td>
                   <Td color="white" border="none" fontWeight="medium">{ch.title}</Td>
-                  <Td color="gray.400" border="none" display={{ base: 'none', md: 'table-cell' }}>
+                  <Td color="rgba(245,240,232,0.4)" border="none" display={{ base: 'none', md: 'table-cell' }}>
                     {ch.subtitle || '—'}
                   </Td>
                   <Td border="none" textAlign="center">
@@ -368,7 +368,7 @@ export default function ChapterManagement() {
                       <Button
                         size="xs"
                         variant="ghost"
-                        colorScheme="teal"
+                        colorScheme="gold"
                         leftIcon={<FiEdit2 />}
                         onClick={() => handleEdit(ch)}
                       >

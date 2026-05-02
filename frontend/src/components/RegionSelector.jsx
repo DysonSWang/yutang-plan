@@ -568,12 +568,12 @@ export default function RegionSelector({ value, onChange }) {
         value={province}
         onChange={handleProvinceChange}
         placeholder="省份"
-        bg="gray.700"
+        bg="warm.700"
         color="white"
         border="1px solid"
-        borderColor="gray.600"
-        _hover={{ borderColor: 'gray.500' }}
-        _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }}
+        borderColor="warm.600"
+        _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
+        _focus={{ borderColor: 'gold.500', boxShadow: '0 0 0 1px var(--chakra-colors-gold-500)' }}
         flex="1"
       >
         {REGION_DATA.provinces.map(p => (
@@ -584,12 +584,12 @@ export default function RegionSelector({ value, onChange }) {
         value={city}
         onChange={handleCityChange}
         placeholder="城市"
-        bg="gray.700"
+        bg="warm.700"
         color="white"
         border="1px solid"
-        borderColor="gray.600"
-        _hover={{ borderColor: 'gray.500' }}
-        _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }}
+        borderColor="warm.600"
+        _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
+        _focus={{ borderColor: 'gold.500', boxShadow: '0 0 0 1px var(--chakra-colors-gold-500)' }}
         flex="1"
         isDisabled={!province}
       >
@@ -601,12 +601,12 @@ export default function RegionSelector({ value, onChange }) {
         value={district}
         onChange={handleDistrictChange}
         placeholder="区县"
-        bg="gray.700"
+        bg="warm.700"
         color="white"
         border="1px solid"
-        borderColor="gray.600"
-        _hover={{ borderColor: 'gray.500' }}
-        _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }}
+        borderColor="warm.600"
+        _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
+        _focus={{ borderColor: 'gold.500', boxShadow: '0 0 0 1px var(--chakra-colors-gold-500)' }}
         flex="1"
         isDisabled={!province || !city}
       >

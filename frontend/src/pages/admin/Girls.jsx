@@ -665,20 +665,20 @@ export default function AdminGirls() {
         displayValue = Array.isArray(arr) ? arr.join('、') : value;
       } catch { displayValue = value; }
     }
-    if (!displayValue) return <Text color="gray.500">-</Text>;
+    if (!displayValue) return <Text color="rgba(245,240,232,0.2)">-</Text>;
     return <Text color="white">{displayValue}</Text>;
   };
 
   const getTensionColor = (score) => {
     if (score >= 7) return 'red.400';
     if (score >= 5) return 'orange.400';
-    return 'gray.400';
+    return 'rgba(245,240,232,0.4)';
   };
 
   const getTensionIcon = (score) => {
     if (score >= 7) return <Icon as={FireIcon} color="red.400" />;
     if (score >= 5) return <Icon as={FireIcon} color="orange.400" />;
-    return <Icon as={SnowIcon} color="gray.400" />;
+    return <Icon as={SnowIcon} color="rgba(245,240,232,0.4)" />;
   };
 
   const getRelationshipStageColor = (stage) => {
@@ -710,13 +710,13 @@ export default function AdminGirls() {
     <Box>
       <Flex justify="space-between" align="center" mb={4} gap={2} direction={{ base: 'column', md: 'row' }}>
         <Heading color="white" size={{ base: 'md', md: 'lg' }}>女生资源</Heading>
-        <Button colorScheme="teal" size="sm" onClick={() => { setFormData(getInitialFormData()); onCreateOpen(); }}>
+        <Button colorScheme="gold" size="sm" onClick={() => { setFormData(getInitialFormData()); onCreateOpen(); }}>
           + 添加女生
         </Button>
       </Flex>
 
       {/* 搜索和过滤 */}
-      <Card bg="gray.800" mb={4}>
+      <Card bg="warm.800" mb={4}>
         <CardBody py={3}>
           <Flex gap={2} direction={{ base: 'column', sm: 'row' }} wrap="wrap">
             <Input
@@ -724,9 +724,9 @@ export default function AdminGirls() {
               value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
               maxW={{ base: '100%', sm: '250px' }}
-              bg="gray.700"
-              border="gray.600"
-              _placeholder={{ color: 'gray.400' }}
+              bg="warm.700"
+              border="warm.600"
+              _placeholder={{ color: 'rgba(245,240,232,0.4)' }}
               size="sm"
             />
             <Select
@@ -734,8 +734,8 @@ export default function AdminGirls() {
               value={filterStage}
               onChange={(e) => setFilterStage(e.target.value)}
               maxW={{ base: '100%', sm: '120px' }}
-              bg="gray.700"
-              border="gray.600"
+              bg="warm.700"
+              border="warm.600"
               size="sm"
             >
               {STAGES.map(stage => (
@@ -747,8 +747,8 @@ export default function AdminGirls() {
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
               maxW={{ base: '100%', sm: '120px' }}
-              bg="gray.700"
-              border="gray.600"
+              bg="warm.700"
+              border="warm.600"
               size="sm"
             >
               <option value="available">可用</option>
@@ -762,8 +762,8 @@ export default function AdminGirls() {
               value={filterClientId}
               onChange={(e) => setFilterClientId(e.target.value)}
               maxW={{ base: '100%', sm: '180px' }}
-              bg="gray.700"
-              border="gray.600"
+              bg="warm.700"
+              border="warm.600"
               size="sm"
             >
               {clientList.filter(c => c.role !== 'admin' && c.role !== 'operator').map(client => (
@@ -776,40 +776,40 @@ export default function AdminGirls() {
               <Button
                 variant="ghost"
                 size="sm"
-                color="gray.400"
+                color="rgba(245,240,232,0.4)"
                 onClick={() => { setSearchKeyword(''); setFilterStage(''); setFilterStatus(''); setFilterClientId(''); }}
               >
                 清除
               </Button>
             )}
             <Box flex={1} display={{ base: 'none', sm: 'block' }} />
-            <Text color="gray.400" fontSize="sm" alignSelf="center">
+            <Text color="rgba(245,240,232,0.4)" fontSize="sm" alignSelf="center">
               {filteredGirls.length} / {girlsList.length}
             </Text>
           </Flex>
         </CardBody>
       </Card>
 
-      <Card bg="gray.800">
+      <Card bg="warm.800">
         <CardBody>
           {/* 桌面端表格 */}
           <Box display={{ base: 'none', lg: 'block' }}>
             <Table variant="simple" color="gray.300" size="sm">
               <Thead>
                 <Tr>
-                  <Th color="gray.400">昵称</Th>
-                  <Th color="gray.400">年龄</Th>
-                  <Th color="gray.400">职业</Th>
-                  <Th color="gray.400">阶段</Th>
-                  <Th color="gray.400">热度</Th>
-                  <Th color="gray.400">亲密度</Th>
-                  <Th color="gray.400">Kink</Th>
-                  <Th color="gray.400">操作</Th>
+                  <Th color="rgba(245,240,232,0.4)">昵称</Th>
+                  <Th color="rgba(245,240,232,0.4)">年龄</Th>
+                  <Th color="rgba(245,240,232,0.4)">职业</Th>
+                  <Th color="rgba(245,240,232,0.4)">阶段</Th>
+                  <Th color="rgba(245,240,232,0.4)">热度</Th>
+                  <Th color="rgba(245,240,232,0.4)">亲密度</Th>
+                  <Th color="rgba(245,240,232,0.4)">Kink</Th>
+                  <Th color="rgba(245,240,232,0.4)">操作</Th>
                 </Tr>
               </Thead>
               <Tbody>
                 {filteredGirls.map(girl => (
-                  <Tr key={girl.id} _hover={{ bg: 'gray.750' }} transition="background 0.15s ease" cursor="pointer" onClick={() => openDetailModal(girl)}>
+                  <Tr key={girl.id} _hover={{ bg: 'warm.800' }} transition="background 0.15s ease" cursor="pointer" onClick={() => openDetailModal(girl)}>
                     <Td fontWeight="bold">
                       <HStack spacing={2}>
                         {girl.name}
@@ -817,7 +817,7 @@ export default function AdminGirls() {
                         {girlAlerts[girl.id] && girlAlerts[girl.id].length > 0 && (
                           <Icon as={FiAlertTriangle} color={
                             girlAlerts[girl.id].some(a => a.severity === 'P0') ? 'red.400' :
-                            girlAlerts[girl.id].some(a => a.severity === 'P1') ? 'orange.400' : 'gray.400'
+                            girlAlerts[girl.id].some(a => a.severity === 'P1') ? 'orange.400' : 'rgba(245,240,232,0.4)'
                           } boxSize={4} title={`${girlAlerts[girl.id].length}条预警`} />
                         )}
                       </HStack>
@@ -826,7 +826,7 @@ export default function AdminGirls() {
                     <Td>{girl.occupation || '-'}</Td>
                     <Td>
                       <VStack spacing={1} align="start">
-                        <Badge colorScheme="teal" fontSize="xs">{girl.stage || '陌生'}</Badge>
+                        <Badge colorScheme="gold" fontSize="xs">{girl.stage || '陌生'}</Badge>
                         {girl.relationshipStage && (
                           <Badge colorScheme={
                             girl.relationshipStage === 'EXPLORATION' ? 'gray' :
@@ -858,11 +858,11 @@ export default function AdminGirls() {
                       </HStack>
                     </Td>
                     <Td>
-                      {girl.isKinkOriented ? <Badge colorScheme="purple">K</Badge> : <Text color="gray.600">-</Text>}
+                      {girl.isKinkOriented ? <Badge colorScheme="purple">K</Badge> : <Text color="warm.600">-</Text>}
                     </Td>
                     <Td>
                       <HStack spacing={2}>
-                        <Button size="xs" colorScheme="teal" variant="ghost" onClick={() => openDetailModal(girl)}>详情</Button>
+                        <Button size="xs" colorScheme="gold" variant="ghost" onClick={() => openDetailModal(girl)}>详情</Button>
                         <Button size="xs" colorScheme="blue" variant="ghost" onClick={(e) => { e.stopPropagation(); openEditModal(girl); }}>编辑</Button>
                         <Button size="xs" colorScheme="orange" variant="ghost" onClick={(e) => { e.stopPropagation(); openScreenshotModal(girl); }}>截图</Button>
                         <Button size="xs" colorScheme="red" variant="ghost" onClick={(e) => { e.stopPropagation(); deleteGirl(girl.id); }}>删除</Button>
@@ -871,7 +871,7 @@ export default function AdminGirls() {
                   </Tr>
                 ))}
                 {filteredGirls.length === 0 && (
-                  <Tr><Td colSpan={8} textAlign="center" color="gray.500">
+                  <Tr><Td colSpan={8} textAlign="center" color="rgba(245,240,232,0.2)">
                     {girlsList.length === 0 ? '暂无女生资源' : '未找到匹配的女生'}
                   </Td></Tr>
                 )}
@@ -882,13 +882,13 @@ export default function AdminGirls() {
           {/* 移动端卡片列表 */}
           <Box display={{ base: 'block', lg: 'none' }}>
             {filteredGirls.length === 0 ? (
-              <Text color="gray.500" textAlign="center" py={8}>
+              <Text color="rgba(245,240,232,0.2)" textAlign="center" py={8}>
                 {girlsList.length === 0 ? '暂无女生资源' : '未找到匹配的女生'}
               </Text>
             ) : (
               <VStack spacing={3} align="stretch">
                 {filteredGirls.map(girl => (
-                  <Card key={girl.id} bg="gray.700" size="sm" cursor="pointer" onClick={() => openDetailModal(girl)} _hover={{ bg: 'gray.650' }} transition="background 0.15s">
+                  <Card key={girl.id} bg="warm.700" size="sm" cursor="pointer" onClick={() => openDetailModal(girl)} _hover={{ bg: 'gray.650' }} transition="background 0.15s">
                     <CardBody py={3} px={4}>
                       <Flex justify="space-between" align="center" mb={2}>
                         <HStack>
@@ -897,10 +897,10 @@ export default function AdminGirls() {
                           {girlAlerts[girl.id] && girlAlerts[girl.id].length > 0 && (
                             <Icon as={FiAlertTriangle} color={
                               girlAlerts[girl.id].some(a => a.severity === 'P0') ? 'red.400' :
-                              girlAlerts[girl.id].some(a => a.severity === 'P1') ? 'orange.400' : 'gray.400'
+                              girlAlerts[girl.id].some(a => a.severity === 'P1') ? 'orange.400' : 'rgba(245,240,232,0.4)'
                             } boxSize={4} />
                           )}
-                          <Badge colorScheme="teal">{girl.stage || '陌生'}</Badge>
+                          <Badge colorScheme="gold">{girl.stage || '陌生'}</Badge>
                           {girl.relationshipStage && (
                             <Badge colorScheme={
                               girl.relationshipStage === 'EXPLORATION' ? 'gray' :
@@ -925,8 +925,8 @@ export default function AdminGirls() {
                         </HStack>
                       </Flex>
                       <HStack spacing={4} wrap="wrap">
-                        <Text color="gray.400" fontSize="xs">{girl.age || '-'}岁</Text>
-                        <Text color="gray.400" fontSize="xs">{girl.occupation || '-'}</Text>
+                        <Text color="rgba(245,240,232,0.4)" fontSize="xs">{girl.age || '-'}岁</Text>
+                        <Text color="rgba(245,240,232,0.4)" fontSize="xs">{girl.occupation || '-'}</Text>
                         <HStack spacing={1}>
                           {Array.from({ length: girl.intimacyLevel || 1 }).map((_, i) => (
                             <Icon key={i} as={HeartIcon} color="red.400" boxSize={3} />
@@ -948,11 +948,11 @@ export default function AdminGirls() {
       {/* 添加/编辑女生弹窗 */}
       <Modal isOpen={isOpen} onClose={onClose} size={{ base: 'full', lg: '4xl' }}>
         <ModalOverlay />
-        <ModalContent bg="gray.800">
+        <ModalContent bg="warm.800">
           <ModalHeader color="white">{selectedGirl ? '编辑女生' : '添加女生'}</ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={6}>
-            <Tabs colorScheme="teal" size="sm">
+            <Tabs colorScheme="gold" size="sm">
               <TabList mb={4} overflowX="auto" flexWrap="nowrap">
                 <Tab>基础信息</Tab>
                 <Tab>外貌家庭</Tab>
@@ -967,14 +967,14 @@ export default function AdminGirls() {
                 <TabPanel px={0}>
                   <VStack spacing={4} align="stretch">
                     <FormControl isRequired>
-                      <FormLabel color="gray.400">所属客户</FormLabel>
-                      <Select placeholder="选择客户" value={formData.clientId} onChange={e => handleClientChange(e.target.value)} bg="gray.700" color="white">
+                      <FormLabel color="rgba(245,240,232,0.4)">所属客户</FormLabel>
+                      <Select placeholder="选择客户" value={formData.clientId} onChange={e => handleClientChange(e.target.value)} bg="warm.700" color="white">
                         {clientList.map(c => (
                           <option key={c.id} value={c.id}>{c.nickname || c.username}（{c.girlCount || 0}/{c.girlQuota || 10}人）</option>
                         ))}
                       </Select>
                       {selectedClientQuota && (
-                        <Text fontSize="xs" color={selectedClientQuota.count >= selectedClientQuota.quota ? 'red.400' : 'gray.400'}>
+                        <Text fontSize="xs" color={selectedClientQuota.count >= selectedClientQuota.quota ? 'red.400' : 'rgba(245,240,232,0.4)'}>
                           {selectedClientQuota.count >= selectedClientQuota.quota
                             ? `额度已用完（${selectedClientQuota.count}/${selectedClientQuota.quota}），请先调整客户配额`
                             : `剩余 ${selectedClientQuota.quota - selectedClientQuota.count} 个名额（${selectedClientQuota.count}/${selectedClientQuota.quota}）`}
@@ -982,66 +982,66 @@ export default function AdminGirls() {
                       )}
                     </FormControl>
                     <FormControl isRequired>
-                      <FormLabel color="gray.400">昵称</FormLabel>
-                      <Input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} bg="gray.700" />
+                      <FormLabel color="rgba(245,240,232,0.4)">昵称</FormLabel>
+                      <Input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} bg="warm.700" />
                     </FormControl>
                     <SimpleGrid columns={{ base: 1, sm: 2, md: 4 }} spacing={4}>
                       <FormControl>
-                        <FormLabel color="gray.400">年龄</FormLabel>
-                        <NumberInput value={formData.age} onChange={(_, v) => setFormData({...formData, age: v})} bg="gray.700" min={18} max={60}>
+                        <FormLabel color="rgba(245,240,232,0.4)">年龄</FormLabel>
+                        <NumberInput value={formData.age} onChange={(_, v) => setFormData({...formData, age: v})} bg="warm.700" min={18} max={60}>
                           <NumberInputField />
                         </NumberInput>
                       </FormControl>
                       <FormControl>
-                        <FormLabel color="gray.400">职业</FormLabel>
-                        <Select value={formData.occupation} onChange={e => setFormData({...formData, occupation: e.target.value})} bg="gray.700" color="white">
+                        <FormLabel color="rgba(245,240,232,0.4)">职业</FormLabel>
+                        <Select value={formData.occupation} onChange={e => setFormData({...formData, occupation: e.target.value})} bg="warm.700" color="white">
                           <option value="">选择</option>
                           {OCCUPATIONS.map(o => <option key={o} value={o}>{o}</option>)}
                         </Select>
                       </FormControl>
                       <FormControl>
-                        <FormLabel color="gray.400">学历</FormLabel>
-                        <Select value={formData.education} onChange={e => setFormData({...formData, education: e.target.value})} bg="gray.700" color="white">
+                        <FormLabel color="rgba(245,240,232,0.4)">学历</FormLabel>
+                        <Select value={formData.education} onChange={e => setFormData({...formData, education: e.target.value})} bg="warm.700" color="white">
                           <option value="">选择</option>
                           {EDUCATIONS.map(e => <option key={e} value={e}>{e}</option>)}
                         </Select>
                       </FormControl>
                       <FormControl>
-                        <FormLabel color="gray.400">专业</FormLabel>
-                        <Input value={formData.major} onChange={e => setFormData({...formData, major: e.target.value})} bg="gray.700" />
+                        <FormLabel color="rgba(245,240,232,0.4)">专业</FormLabel>
+                        <Input value={formData.major} onChange={e => setFormData({...formData, major: e.target.value})} bg="warm.700" />
                       </FormControl>
                     </SimpleGrid>
                     <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
                       <FormControl>
-                        <FormLabel color="gray.400">籍贯</FormLabel>
-                        <Select value={formData.hometown} onChange={e => setFormData({...formData, hometown: e.target.value})} bg="gray.700" color="white">
+                        <FormLabel color="rgba(245,240,232,0.4)">籍贯</FormLabel>
+                        <Select value={formData.hometown} onChange={e => setFormData({...formData, hometown: e.target.value})} bg="warm.700" color="white">
                           <option value="">选择</option>
                           {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
                         </Select>
                       </FormControl>
                       <FormControl>
-                        <FormLabel color="gray.400">现居城市</FormLabel>
-                        <Select value={formData.residence} onChange={e => setFormData({...formData, residence: e.target.value})} bg="gray.700" color="white">
+                        <FormLabel color="rgba(245,240,232,0.4)">现居城市</FormLabel>
+                        <Select value={formData.residence} onChange={e => setFormData({...formData, residence: e.target.value})} bg="warm.700" color="white">
                           <option value="">选择</option>
                           {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
                         </Select>
                       </FormControl>
                       <FormControl>
-                        <FormLabel color="gray.400">工作地点</FormLabel>
-                        <Input value={formData.workplace} onChange={e => setFormData({...formData, workplace: e.target.value})} bg="gray.700" />
+                        <FormLabel color="rgba(245,240,232,0.4)">工作地点</FormLabel>
+                        <Input value={formData.workplace} onChange={e => setFormData({...formData, workplace: e.target.value})} bg="warm.700" />
                       </FormControl>
                     </SimpleGrid>
                     <SimpleGrid columns={2} spacing={4}>
                       <FormControl>
-                        <FormLabel color="gray.400">平台来源</FormLabel>
-                        <Select value={formData.sourcePlatform} onChange={e => setFormData({...formData, sourcePlatform: e.target.value})} bg="gray.700" color="white">
+                        <FormLabel color="rgba(245,240,232,0.4)">平台来源</FormLabel>
+                        <Select value={formData.sourcePlatform} onChange={e => setFormData({...formData, sourcePlatform: e.target.value})} bg="warm.700" color="white">
                           <option value="">选择平台</option>
                           {PLATFORMS.map(p => <option key={p} value={p}>{p}</option>)}
                         </Select>
                       </FormControl>
                       <FormControl>
-                        <FormLabel color="gray.400">主页链接</FormLabel>
-                        <Input value={formData.homepageUrl} onChange={e => setFormData({...formData, homepageUrl: e.target.value})} bg="gray.700" color="white" placeholder="https://..." />
+                        <FormLabel color="rgba(245,240,232,0.4)">主页链接</FormLabel>
+                        <Input value={formData.homepageUrl} onChange={e => setFormData({...formData, homepageUrl: e.target.value})} bg="warm.700" color="white" placeholder="https://..." />
                       </FormControl>
                     </SimpleGrid>
                   </VStack>
@@ -1052,51 +1052,51 @@ export default function AdminGirls() {
                   <VStack spacing={4} align="stretch">
                     <Text color="white" fontWeight="bold">外貌特征</Text>
                     <FormControl>
-                      <FormLabel color="gray.400">外貌描述</FormLabel>
-                      <Textarea value={formData.appearance} onChange={e => setFormData({...formData, appearance: e.target.value})} placeholder="穿着风格、发型、肤色..." bg="gray.700" rows={2} />
+                      <FormLabel color="rgba(245,240,232,0.4)">外貌描述</FormLabel>
+                      <Textarea value={formData.appearance} onChange={e => setFormData({...formData, appearance: e.target.value})} placeholder="穿着风格、发型、肤色..." bg="warm.700" rows={2} />
                     </FormControl>
                     <SimpleGrid columns={{ base: 1, sm: 2, md: 4 }} spacing={4}>
                       <FormControl>
-                        <FormLabel color="gray.400">身高(cm)</FormLabel>
-                        <NumberInput value={formData.height} onChange={(_, v) => setFormData({...formData, height: v})} bg="gray.700" min={140} max={200}>
+                        <FormLabel color="rgba(245,240,232,0.4)">身高(cm)</FormLabel>
+                        <NumberInput value={formData.height} onChange={(_, v) => setFormData({...formData, height: v})} bg="warm.700" min={140} max={200}>
                           <NumberInputField />
                         </NumberInput>
                       </FormControl>
                       <FormControl>
-                        <FormLabel color="gray.400">体型</FormLabel>
-                        <Select value={formData.bodyType} onChange={e => setFormData({...formData, bodyType: e.target.value})} bg="gray.700" color="white">
+                        <FormLabel color="rgba(245,240,232,0.4)">体型</FormLabel>
+                        <Select value={formData.bodyType} onChange={e => setFormData({...formData, bodyType: e.target.value})} bg="warm.700" color="white">
                           <option value="">选择</option>
                           {BODY_TYPES.map(b => <option key={b} value={b}>{b}</option>)}
                         </Select>
                       </FormControl>
                       <FormControl>
-                        <FormLabel color="gray.400">风格标签</FormLabel>
-                        <Select value={formData.styleTags} onChange={e => setFormData({...formData, styleTags: e.target.value})} bg="gray.700" color="white">
+                        <FormLabel color="rgba(245,240,232,0.4)">风格标签</FormLabel>
+                        <Select value={formData.styleTags} onChange={e => setFormData({...formData, styleTags: e.target.value})} bg="warm.700" color="white">
                           <option value="">选择标签</option>
                           {STYLE_TAGS.map(t => <option key={t} value={t}>{t}</option>)}
                         </Select>
                       </FormControl>
                       <FormControl>
-                        <FormLabel color="gray.400">照片链接（多个用逗号分隔）</FormLabel>
-                        <Input value={formData.photos} onChange={e => setFormData({...formData, photos: e.target.value})} bg="gray.700" color="white" placeholder="https://..." />
+                        <FormLabel color="rgba(245,240,232,0.4)">照片链接（多个用逗号分隔）</FormLabel>
+                        <Input value={formData.photos} onChange={e => setFormData({...formData, photos: e.target.value})} bg="warm.700" color="white" placeholder="https://..." />
                       </FormControl>
                     </SimpleGrid>
                     <FormControl>
-                      <FormLabel color="gray.400">视频链接（多个用逗号分隔）</FormLabel>
-                      <Input value={formData.videos} onChange={e => setFormData({...formData, videos: e.target.value})} bg="gray.700" color="white" placeholder="https://..." />
+                      <FormLabel color="rgba(245,240,232,0.4)">视频链接（多个用逗号分隔）</FormLabel>
+                      <Input value={formData.videos} onChange={e => setFormData({...formData, videos: e.target.value})} bg="warm.700" color="white" placeholder="https://..." />
                     </FormControl>
                     <Text color="white" fontWeight="bold" mt={2}>家庭背景</Text>
                     <SimpleGrid columns={2} spacing={4}>
                       <FormControl>
-                        <FormLabel color="gray.400">家庭背景</FormLabel>
-                        <Select value={formData.familyBackground} onChange={e => setFormData({...formData, familyBackground: e.target.value})} bg="gray.700" color="white">
+                        <FormLabel color="rgba(245,240,232,0.4)">家庭背景</FormLabel>
+                        <Select value={formData.familyBackground} onChange={e => setFormData({...formData, familyBackground: e.target.value})} bg="warm.700" color="white">
                           <option value="">选择</option>
                           {FAMILY_BACKGROUNDS.map(f => <option key={f} value={f}>{f}</option>)}
                         </Select>
                       </FormControl>
                       <FormControl>
-                        <FormLabel color="gray.400">家庭氛围</FormLabel>
-                        <Select value={formData.familyAtmosphere} onChange={e => setFormData({...formData, familyAtmosphere: e.target.value})} bg="gray.700" color="white">
+                        <FormLabel color="rgba(245,240,232,0.4)">家庭氛围</FormLabel>
+                        <Select value={formData.familyAtmosphere} onChange={e => setFormData({...formData, familyAtmosphere: e.target.value})} bg="warm.700" color="white">
                           <option value="">选择</option>
                           {FAMILY_ATMOSPHERES.map(f => <option key={f} value={f}>{f}</option>)}
                         </Select>
@@ -1104,15 +1104,15 @@ export default function AdminGirls() {
                     </SimpleGrid>
                     <SimpleGrid columns={2} spacing={4}>
                       <FormControl>
-                        <FormLabel color="gray.400">养老负担</FormLabel>
-                        <Select value={formData.familyBurden} onChange={e => setFormData({...formData, familyBurden: e.target.value})} bg="gray.700" color="white">
+                        <FormLabel color="rgba(245,240,232,0.4)">养老负担</FormLabel>
+                        <Select value={formData.familyBurden} onChange={e => setFormData({...formData, familyBurden: e.target.value})} bg="warm.700" color="white">
                           <option value="">选择</option>
                           {FAMILY_BURDENS.map(f => <option key={f} value={f}>{f}</option>)}
                         </Select>
                       </FormControl>
                       <FormControl>
-                        <FormLabel color="gray.400">家庭备注</FormLabel>
-                        <Input value={formData.familyComments} onChange={e => setFormData({...formData, familyComments: e.target.value})} bg="gray.700" />
+                        <FormLabel color="rgba(245,240,232,0.4)">家庭备注</FormLabel>
+                        <Input value={formData.familyComments} onChange={e => setFormData({...formData, familyComments: e.target.value})} bg="warm.700" />
                       </FormControl>
                     </SimpleGrid>
                   </VStack>
@@ -1124,22 +1124,22 @@ export default function AdminGirls() {
                     <Text color="white" fontWeight="bold">生活状态</Text>
                     <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
                       <FormControl>
-                        <FormLabel color="gray.400">工作作息</FormLabel>
-                        <Select value={formData.workSchedule} onChange={e => setFormData({...formData, workSchedule: e.target.value})} bg="gray.700" color="white">
+                        <FormLabel color="rgba(245,240,232,0.4)">工作作息</FormLabel>
+                        <Select value={formData.workSchedule} onChange={e => setFormData({...formData, workSchedule: e.target.value})} bg="warm.700" color="white">
                           <option value="">选择</option>
                           {WORK_SCHEDULES.map(w => <option key={w} value={w}>{w}</option>)}
                         </Select>
                       </FormControl>
                       <FormControl>
-                        <FormLabel color="gray.400">社交活跃度</FormLabel>
-                        <Select value={formData.socialActivity} onChange={e => setFormData({...formData, socialActivity: e.target.value})} bg="gray.700" color="white">
+                        <FormLabel color="rgba(245,240,232,0.4)">社交活跃度</FormLabel>
+                        <Select value={formData.socialActivity} onChange={e => setFormData({...formData, socialActivity: e.target.value})} bg="warm.700" color="white">
                           <option value="">选择</option>
                           {SOCIAL_ACTIVITY_LEVELS.map(s => <option key={s} value={s}>{s}</option>)}
                         </Select>
                       </FormControl>
                       <FormControl>
-                        <FormLabel color="gray.400">消费习惯</FormLabel>
-                        <Select value={formData.financialHabits} onChange={e => setFormData({...formData, financialHabits: e.target.value})} bg="gray.700" color="white">
+                        <FormLabel color="rgba(245,240,232,0.4)">消费习惯</FormLabel>
+                        <Select value={formData.financialHabits} onChange={e => setFormData({...formData, financialHabits: e.target.value})} bg="warm.700" color="white">
                           <option value="">选择</option>
                           {FINANCIAL_HABITS.map(f => <option key={f} value={f}>{f}</option>)}
                         </Select>
@@ -1147,36 +1147,36 @@ export default function AdminGirls() {
                     </SimpleGrid>
                     <Text color="white" fontWeight="bold" mt={2}>兴趣爱好</Text>
                     <FormControl>
-                      <FormLabel color="gray.400">兴趣爱好</FormLabel>
-                      <Select value={formData.interests} onChange={e => setFormData({...formData, interests: e.target.value})} bg="gray.700" color="white">
+                      <FormLabel color="rgba(245,240,232,0.4)">兴趣爱好</FormLabel>
+                      <Select value={formData.interests} onChange={e => setFormData({...formData, interests: e.target.value})} bg="warm.700" color="white">
                           <option value="">选择</option>
                           {INTERESTS.map(i => <option key={i} value={i}>{i}</option>)}
                         </Select>
                     </FormControl>
                     <SimpleGrid columns={2} spacing={4}>
                       <FormControl>
-                        <FormLabel color="gray.400">饮食偏好（多选，用逗号分隔）</FormLabel>
+                        <FormLabel color="rgba(245,240,232,0.4)">饮食偏好（多选，用逗号分隔）</FormLabel>
                         <Textarea
                           value={formData.dietPreferences}
                           onChange={e => setFormData({...formData, dietPreferences: e.target.value})}
                           placeholder="清淡,火锅,日料"
-                          bg="gray.700" rows={2}
+                          bg="warm.700" rows={2}
                         />
-                        <Text color="gray.500" fontSize="xs" mt={1}>可选：{DIET_PREFERENCES.join('、')}</Text>
+                        <Text color="rgba(245,240,232,0.2)" fontSize="xs" mt={1}>可选：{DIET_PREFERENCES.join('、')}</Text>
                       </FormControl>
                       <FormControl>
-                        <FormLabel color="gray.400">饮食禁忌/过敏（多选，用逗号分隔）</FormLabel>
+                        <FormLabel color="rgba(245,240,232,0.4)">饮食禁忌/过敏（多选，用逗号分隔）</FormLabel>
                         <Textarea
                           value={formData.dietRestrictions}
                           onChange={e => setFormData({...formData, dietRestrictions: e.target.value})}
                           placeholder="不吃辣,海鲜过敏"
-                          bg="gray.700" rows={2}
+                          bg="warm.700" rows={2}
                         />
-                        <Text color="gray.500" fontSize="xs" mt={1}>可选：{DIET_RESTRICTIONS.join('、')}</Text>
+                        <Text color="rgba(245,240,232,0.2)" fontSize="xs" mt={1}>可选：{DIET_RESTRICTIONS.join('、')}</Text>
                       </FormControl>
                       <FormControl>
-                        <FormLabel color="gray.400">兴趣详情</FormLabel>
-                        <Input value={formData.hobbiesDetail} onChange={e => setFormData({...formData, hobbiesDetail: e.target.value})} bg="gray.700" />
+                        <FormLabel color="rgba(245,240,232,0.4)">兴趣详情</FormLabel>
+                        <Input value={formData.hobbiesDetail} onChange={e => setFormData({...formData, hobbiesDetail: e.target.value})} bg="warm.700" />
                       </FormControl>
                     </SimpleGrid>
                   </VStack>
@@ -1187,38 +1187,38 @@ export default function AdminGirls() {
                   <VStack spacing={4} align="stretch">
                     <SimpleGrid columns={2} spacing={4}>
                       <FormControl>
-                        <FormLabel color="gray.400">婚恋态度</FormLabel>
-                        <Select value={formData.relationshipAttitude} onChange={e => setFormData({...formData, relationshipAttitude: e.target.value})} bg="gray.700" color="white">
+                        <FormLabel color="rgba(245,240,232,0.4)">婚恋态度</FormLabel>
+                        <Select value={formData.relationshipAttitude} onChange={e => setFormData({...formData, relationshipAttitude: e.target.value})} bg="warm.700" color="white">
                           <option value="">选择</option>
                           {RELATIONSHIP_ATTITUDES.map(r => <option key={r} value={r}>{r}</option>)}
                         </Select>
                       </FormControl>
                       <FormControl>
-                        <FormLabel color="gray.400">依恋类型</FormLabel>
-                        <Select value={formData.attachmentStyle} onChange={e => setFormData({...formData, attachmentStyle: e.target.value})} bg="gray.700" color="white">
+                        <FormLabel color="rgba(245,240,232,0.4)">依恋类型</FormLabel>
+                        <Select value={formData.attachmentStyle} onChange={e => setFormData({...formData, attachmentStyle: e.target.value})} bg="warm.700" color="white">
                           <option value="">选择</option>
                           {ATTACHMENT_STYLES.map(a => <option key={a} value={a}>{a}</option>)}
                         </Select>
                       </FormControl>
                     </SimpleGrid>
                     <FormControl>
-                      <FormLabel color="gray.400">情史摘要</FormLabel>
-                      <Textarea value={formData.pastRelationshipSummary} onChange={e => setFormData({...formData, pastRelationshipSummary: e.target.value})} bg="gray.700" rows={2} />
+                      <FormLabel color="rgba(245,240,232,0.4)">情史摘要</FormLabel>
+                      <Textarea value={formData.pastRelationshipSummary} onChange={e => setFormData({...formData, pastRelationshipSummary: e.target.value})} bg="warm.700" rows={2} />
                     </FormControl>
                     <FormControl>
-                      <FormLabel color="gray.400">情伤记录</FormLabel>
-                      <Select value={formData.emotionalWounds} onChange={e => setFormData({...formData, emotionalWounds: e.target.value})} bg="gray.700" color="white">
+                      <FormLabel color="rgba(245,240,232,0.4)">情伤记录</FormLabel>
+                      <Select value={formData.emotionalWounds} onChange={e => setFormData({...formData, emotionalWounds: e.target.value})} bg="warm.700" color="white">
                           <option value="">选择</option>
                           {EMOTIONAL_WOUNDS_OPTIONS.map(e => <option key={e} value={e}>{e}</option>)}
                         </Select>
                     </FormControl>
                     <FormControl>
-                      <FormLabel color="gray.400">绝对雷区</FormLabel>
-                      <Textarea value={formData.dealbreakers} onChange={e => setFormData({...formData, dealbreakers: e.target.value})} bg="gray.700" rows={2} />
+                      <FormLabel color="rgba(245,240,232,0.4)">绝对雷区</FormLabel>
+                      <Textarea value={formData.dealbreakers} onChange={e => setFormData({...formData, dealbreakers: e.target.value})} bg="warm.700" rows={2} />
                     </FormControl>
                     <FormControl>
-                      <FormLabel color="gray.400">择偶偏好</FormLabel>
-                      <Textarea value={formData.matePreferences} onChange={e => setFormData({...formData, matePreferences: e.target.value})} placeholder="年龄范围/学历/地域/职业/收入/其他要求" bg="gray.700" rows={2} />
+                      <FormLabel color="rgba(245,240,232,0.4)">择偶偏好</FormLabel>
+                      <Textarea value={formData.matePreferences} onChange={e => setFormData({...formData, matePreferences: e.target.value})} placeholder="年龄范围/学历/地域/职业/收入/其他要求" bg="warm.700" rows={2} />
                     </FormControl>
                   </VStack>
                 </TabPanel>
@@ -1227,44 +1227,44 @@ export default function AdminGirls() {
                 <TabPanel px={0}>
                   <VStack spacing={4} align="stretch">
                     <FormControl display="flex" alignItems="center">
-                      <FormLabel color="gray.400" mb={0}>接触字母圈</FormLabel>
+                      <FormLabel color="rgba(245,240,232,0.4)" mb={0}>接触字母圈</FormLabel>
                       <Switch isChecked={formData.isKinkOriented} onChange={e => setFormData({...formData, isKinkOriented: e.target.checked})} colorScheme="purple" />
                     </FormControl>
                     {formData.isKinkOriented && (
                       <>
                         <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
                           <FormControl>
-                            <FormLabel color="gray.400">身份</FormLabel>
-                            <Select value={formData.kinkIdentity} onChange={e => setFormData({...formData, kinkIdentity: e.target.value})} bg="gray.700" color="white">
+                            <FormLabel color="rgba(245,240,232,0.4)">身份</FormLabel>
+                            <Select value={formData.kinkIdentity} onChange={e => setFormData({...formData, kinkIdentity: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {KINK_IDENTITIES.map(k => <option key={k} value={k}>{k}</option>)}
                             </Select>
                           </FormControl>
                           <FormControl>
-                            <FormLabel color="gray.400">经验</FormLabel>
-                            <Select value={formData.kinkExperience} onChange={e => setFormData({...formData, kinkExperience: e.target.value})} bg="gray.700" color="white">
+                            <FormLabel color="rgba(245,240,232,0.4)">经验</FormLabel>
+                            <Select value={formData.kinkExperience} onChange={e => setFormData({...formData, kinkExperience: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {KINK_EXPERIENCES.map(k => <option key={k} value={k}>{k}</option>)}
                             </Select>
                           </FormControl>
                           <FormControl>
-                            <FormLabel color="gray.400">边界</FormLabel>
-                            <Select value={formData.kinkBoundaries} onChange={e => setFormData({...formData, kinkBoundaries: e.target.value})} bg="gray.700" color="white">
+                            <FormLabel color="rgba(245,240,232,0.4)">边界</FormLabel>
+                            <Select value={formData.kinkBoundaries} onChange={e => setFormData({...formData, kinkBoundaries: e.target.value})} bg="warm.700" color="white">
                               <option value="">选择</option>
                               {KINK_BOUNDARIES_OPTIONS.map(k => <option key={k} value={k}>{k}</option>)}
                             </Select>
                           </FormControl>
                         </SimpleGrid>
                         <FormControl>
-                          <FormLabel color="gray.400">兴趣标签</FormLabel>
-                          <Select value={formData.kinkInterests} onChange={e => setFormData({...formData, kinkInterests: e.target.value})} bg="gray.700" color="white">
+                          <FormLabel color="rgba(245,240,232,0.4)">兴趣标签</FormLabel>
+                          <Select value={formData.kinkInterests} onChange={e => setFormData({...formData, kinkInterests: e.target.value})} bg="warm.700" color="white">
                             <option value="">选择</option>
                             {KINK_INTERESTS_OPTIONS.map(k => <option key={k} value={k}>{k}</option>)}
                           </Select>
                         </FormControl>
                         <FormControl>
-                          <FormLabel color="gray.400">特殊备注</FormLabel>
-                          <Textarea value={formData.kinkNotes} onChange={e => setFormData({...formData, kinkNotes: e.target.value})} placeholder="安全词/特殊需求..." bg="gray.700" rows={2} />
+                          <FormLabel color="rgba(245,240,232,0.4)">特殊备注</FormLabel>
+                          <Textarea value={formData.kinkNotes} onChange={e => setFormData({...formData, kinkNotes: e.target.value})} placeholder="安全词/特殊需求..." bg="warm.700" rows={2} />
                         </FormControl>
                       </>
                     )}
@@ -1277,22 +1277,22 @@ export default function AdminGirls() {
                     <Text color="white" fontWeight="bold">内在画像（AI提炼）</Text>
                     <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
                       <FormControl>
-                        <FormLabel color="gray.400">性格/MBTI</FormLabel>
-                        <Select value={formData.personality} onChange={e => setFormData({...formData, personality: e.target.value})} bg="gray.700" color="white">
+                        <FormLabel color="rgba(245,240,232,0.4)">性格/MBTI</FormLabel>
+                        <Select value={formData.personality} onChange={e => setFormData({...formData, personality: e.target.value})} bg="warm.700" color="white">
                           <option value="">选择</option>
                           {PERSONALITY_TYPES.map(p => <option key={p} value={p}>{p}</option>)}
                         </Select>
                       </FormControl>
                       <FormControl>
-                        <FormLabel color="gray.400">价值观</FormLabel>
-                        <Select value={formData.values_} onChange={e => setFormData({...formData, values_: e.target.value})} bg="gray.700" color="white">
+                        <FormLabel color="rgba(245,240,232,0.4)">价值观</FormLabel>
+                        <Select value={formData.values_} onChange={e => setFormData({...formData, values_: e.target.value})} bg="warm.700" color="white">
                           <option value="">选择</option>
                           {VALUES_OPTIONS.map(v => <option key={v} value={v}>{v}</option>)}
                         </Select>
                       </FormControl>
                       <FormControl>
-                        <FormLabel color="gray.400">沟通风格</FormLabel>
-                        <Select value={formData.communicationStyle} onChange={e => setFormData({...formData, communicationStyle: e.target.value})} bg="gray.700" color="white">
+                        <FormLabel color="rgba(245,240,232,0.4)">沟通风格</FormLabel>
+                        <Select value={formData.communicationStyle} onChange={e => setFormData({...formData, communicationStyle: e.target.value})} bg="warm.700" color="white">
                           <option value="">选择</option>
                           {COMMUNICATION_STYLE_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
                         </Select>
@@ -1300,24 +1300,24 @@ export default function AdminGirls() {
                     </SimpleGrid>
                     <SimpleGrid columns={2} spacing={4}>
                       <FormControl>
-                        <FormLabel color="gray.400">情绪触发点</FormLabel>
-                        <Textarea value={formData.emotionalTriggers} onChange={e => setFormData({...formData, emotionalTriggers: e.target.value})} bg="gray.700" rows={2} />
+                        <FormLabel color="rgba(245,240,232,0.4)">情绪触发点</FormLabel>
+                        <Textarea value={formData.emotionalTriggers} onChange={e => setFormData({...formData, emotionalTriggers: e.target.value})} bg="warm.700" rows={2} />
                       </FormControl>
                       <FormControl>
-                        <FormLabel color="gray.400">喜欢的话题</FormLabel>
-                        <Textarea value={formData.talkingTopics} onChange={e => setFormData({...formData, talkingTopics: e.target.value})} bg="gray.700" rows={2} />
+                        <FormLabel color="rgba(245,240,232,0.4)">喜欢的话题</FormLabel>
+                        <Textarea value={formData.talkingTopics} onChange={e => setFormData({...formData, talkingTopics: e.target.value})} bg="warm.700" rows={2} />
                       </FormControl>
                     </SimpleGrid>
                     <FormControl>
-                      <FormLabel color="gray.400">禁忌话题</FormLabel>
-                      <Textarea value={formData.thingsToAvoid} onChange={e => setFormData({...formData, thingsToAvoid: e.target.value})} bg="gray.700" rows={2} />
+                      <FormLabel color="rgba(245,240,232,0.4)">禁忌话题</FormLabel>
+                      <Textarea value={formData.thingsToAvoid} onChange={e => setFormData({...formData, thingsToAvoid: e.target.value})} bg="warm.700" rows={2} />
                     </FormControl>
 
                     <Text color="white" fontWeight="bold" mt={2}>AI战略分析</Text>
                     <SimpleGrid columns={2} spacing={4}>
                       <FormControl>
-                        <FormLabel color="gray.400">最佳策略</FormLabel>
-                        <Select value={formData.bestApproach} onChange={e => setFormData({...formData, bestApproach: e.target.value})} bg="gray.700" color="white">
+                        <FormLabel color="rgba(245,240,232,0.4)">最佳策略</FormLabel>
+                        <Select value={formData.bestApproach} onChange={e => setFormData({...formData, bestApproach: e.target.value})} bg="warm.700" color="white">
                           <option value="">选择</option>
                           <option value="幽默">幽默</option>
                           <option value="真诚">真诚</option>
@@ -1327,8 +1327,8 @@ export default function AdminGirls() {
                         </Select>
                       </FormControl>
                       <FormControl>
-                        <FormLabel color="gray.400">推荐话题</FormLabel>
-                        <Select value={formData.recommendedTopics} onChange={e => setFormData({...formData, recommendedTopics: e.target.value})} bg="gray.700" color="white">
+                        <FormLabel color="rgba(245,240,232,0.4)">推荐话题</FormLabel>
+                        <Select value={formData.recommendedTopics} onChange={e => setFormData({...formData, recommendedTopics: e.target.value})} bg="warm.700" color="white">
                           <option value="">选择</option>
                           {TALKING_TOPICS_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
                         </Select>
@@ -1336,12 +1336,12 @@ export default function AdminGirls() {
                     </SimpleGrid>
                     <SimpleGrid columns={2} spacing={4}>
                       <FormControl>
-                        <FormLabel color="gray.400">升级条件</FormLabel>
-                        <Textarea value={formData.upgradeConditions} onChange={e => setFormData({...formData, upgradeConditions: e.target.value})} bg="gray.700" rows={2} />
+                        <FormLabel color="rgba(245,240,232,0.4)">升级条件</FormLabel>
+                        <Textarea value={formData.upgradeConditions} onChange={e => setFormData({...formData, upgradeConditions: e.target.value})} bg="warm.700" rows={2} />
                       </FormControl>
                       <FormControl>
-                        <FormLabel color="gray.400">预计时间线</FormLabel>
-                        <Select value={formData.estimatedTimeline} onChange={e => setFormData({...formData, estimatedTimeline: e.target.value})} bg="gray.700" color="white">
+                        <FormLabel color="rgba(245,240,232,0.4)">预计时间线</FormLabel>
+                        <Select value={formData.estimatedTimeline} onChange={e => setFormData({...formData, estimatedTimeline: e.target.value})} bg="warm.700" color="white">
                           <option value="">选择</option>
                           <option value="1周内">1周内</option>
                           <option value="2周内">2周内</option>
@@ -1354,12 +1354,12 @@ export default function AdminGirls() {
                     </SimpleGrid>
                     <SimpleGrid columns={2} spacing={4}>
                       <FormControl>
-                        <FormLabel color="gray.400">风险因素</FormLabel>
-                        <Textarea value={formData.riskFactors} onChange={e => setFormData({...formData, riskFactors: e.target.value})} bg="gray.700" rows={2} />
+                        <FormLabel color="rgba(245,240,232,0.4)">风险因素</FormLabel>
+                        <Textarea value={formData.riskFactors} onChange={e => setFormData({...formData, riskFactors: e.target.value})} bg="warm.700" rows={2} />
                       </FormControl>
                       <FormControl>
-                        <FormLabel color="gray.400">战略备注</FormLabel>
-                        <Textarea value={formData.strategicNotes} onChange={e => setFormData({...formData, strategicNotes: e.target.value})} bg="gray.700" rows={2} />
+                        <FormLabel color="rgba(245,240,232,0.4)">战略备注</FormLabel>
+                        <Textarea value={formData.strategicNotes} onChange={e => setFormData({...formData, strategicNotes: e.target.value})} bg="warm.700" rows={2} />
                       </FormControl>
                     </SimpleGrid>
 
@@ -1373,8 +1373,8 @@ export default function AdminGirls() {
                         { key: 'conflictRes', label: '冲突解决' }
                       ].map(item => (
                         <FormControl key={item.key}>
-                          <FormLabel color="gray.400">{item.label}</FormLabel>
-                          <NumberInput value={formData[item.key]} onChange={(_, v) => setFormData({...formData, [item.key]: v})} bg="gray.700" min={1} max={10}>
+                          <FormLabel color="rgba(245,240,232,0.4)">{item.label}</FormLabel>
+                          <NumberInput value={formData[item.key]} onChange={(_, v) => setFormData({...formData, [item.key]: v})} bg="warm.700" min={1} max={10}>
                             <NumberInputField />
                           </NumberInput>
                         </FormControl>
@@ -1389,7 +1389,7 @@ export default function AdminGirls() {
                     <Text color="white" fontWeight="bold">关系状态</Text>
 
                     {/* M007 S01: 关系阶段选择器 */}
-                    <Box bg="gray.750" p={4} borderRadius="md">
+                    <Box bg="warm.800" p={4} borderRadius="md">
                       <Flex justify="space-between" align="center" mb={3}>
                         <Text color="white" fontWeight="bold" fontSize="sm">关系阶段（新）</Text>
                         {selectedGirl && (
@@ -1456,9 +1456,9 @@ export default function AdminGirls() {
                             key={s.value}
                             p={2}
                             borderRadius="md"
-                            bg={formData.relationshipStage === s.value ? `${s.color}.900` : 'gray.700'}
+                            bg={formData.relationshipStage === s.value ? `${s.color}.900` : 'warm.700'}
                             borderWidth={formData.relationshipStage === s.value ? '2px' : '1px'}
-                            borderColor={formData.relationshipStage === s.value ? `${s.color}.400` : 'gray.600'}
+                            borderColor={formData.relationshipStage === s.value ? `${s.color}.400` : 'warm.600'}
                             cursor="pointer"
                             onClick={() => setFormData({...formData, relationshipStage: formData.relationshipStage === s.value ? '' : s.value})}
                             _hover={{ borderColor: `${s.color}.400` }}
@@ -1467,12 +1467,12 @@ export default function AdminGirls() {
                               <Badge colorScheme={s.color}>{s.label}</Badge>
                               {formData.relationshipStage === s.value && <Text color={`${s.color}.300`} fontSize="xs">✓</Text>}
                             </HStack>
-                            <Text color="gray.400" fontSize="xs" mt={1}>{s.desc}</Text>
+                            <Text color="rgba(245,240,232,0.4)" fontSize="xs" mt={1}>{s.desc}</Text>
                           </Box>
                         ))}
                       </SimpleGrid>
                       {formData.relationshipStage && (
-                        <Text color="gray.500" fontSize="xs">
+                        <Text color="rgba(245,240,232,0.2)" fontSize="xs">
                           当前：{RELATIONSHIP_STAGES.find(s => s.value === formData.relationshipStage)?.label || formData.relationshipStage}
                         </Text>
                       )}
@@ -1480,38 +1480,38 @@ export default function AdminGirls() {
 
                     <SimpleGrid columns={{ base: 1, sm: 2, md: 4 }} spacing={4}>
                       <FormControl>
-                        <FormLabel color="gray.400">阶段（旧）</FormLabel>
-                        <Select value={formData.stage} onChange={e => setFormData({...formData, stage: e.target.value})} bg="gray.700" color="white">
+                        <FormLabel color="rgba(245,240,232,0.4)">阶段（旧）</FormLabel>
+                        <Select value={formData.stage} onChange={e => setFormData({...formData, stage: e.target.value})} bg="warm.700" color="white">
                           {STAGES.map(s => <option key={s} value={s}>{s}</option>)}
                         </Select>
                       </FormControl>
                       <FormControl>
-                        <FormLabel color="gray.400">状态</FormLabel>
-                        <Select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})} bg="gray.700" color="white">
+                        <FormLabel color="rgba(245,240,232,0.4)">状态</FormLabel>
+                        <Select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})} bg="warm.700" color="white">
                           {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
                         </Select>
                       </FormControl>
                       <FormControl>
-                        <FormLabel color="gray.400">亲密度(1-5)</FormLabel>
-                        <NumberInput value={formData.intimacyLevel} onChange={(_, v) => setFormData({...formData, intimacyLevel: v})} bg="gray.700" min={1} max={5}>
+                        <FormLabel color="rgba(245,240,232,0.4)">亲密度(1-5)</FormLabel>
+                        <NumberInput value={formData.intimacyLevel} onChange={(_, v) => setFormData({...formData, intimacyLevel: v})} bg="warm.700" min={1} max={5}>
                           <NumberInputField />
                         </NumberInput>
                       </FormControl>
                       <FormControl>
-                        <FormLabel color="gray.400">热度(1-10)</FormLabel>
-                        <NumberInput value={formData.tensionScore} onChange={(_, v) => setFormData({...formData, tensionScore: v})} bg="gray.700" min={1} max={10} step={0.1}>
+                        <FormLabel color="rgba(245,240,232,0.4)">热度(1-10)</FormLabel>
+                        <NumberInput value={formData.tensionScore} onChange={(_, v) => setFormData({...formData, tensionScore: v})} bg="warm.700" min={1} max={10} step={0.1}>
                           <NumberInputField />
                         </NumberInput>
                       </FormControl>
                     </SimpleGrid>
                     <SimpleGrid columns={2} spacing={4}>
                       <FormControl>
-                        <FormLabel color="gray.400">最后联系</FormLabel>
-                        <Input type="datetime-local" value={formData.lastContact} onChange={e => setFormData({...formData, lastContact: e.target.value})} bg="gray.700" />
+                        <FormLabel color="rgba(245,240,232,0.4)">最后联系</FormLabel>
+                        <Input type="datetime-local" value={formData.lastContact} onChange={e => setFormData({...formData, lastContact: e.target.value})} bg="warm.700" />
                       </FormControl>
                       <FormControl>
-                        <FormLabel color="gray.400">回复规律</FormLabel>
-                        <Select value={formData.responsePattern} onChange={e => setFormData({...formData, responsePattern: e.target.value})} bg="gray.700" color="white">
+                        <FormLabel color="rgba(245,240,232,0.4)">回复规律</FormLabel>
+                        <Select value={formData.responsePattern} onChange={e => setFormData({...formData, responsePattern: e.target.value})} bg="warm.700" color="white">
                           <option value="">选择</option>
                           {RESPONSE_PATTERNS.map(r => <option key={r} value={r}>{r}</option>)}
                         </Select>
@@ -1520,46 +1520,46 @@ export default function AdminGirls() {
 
                     <Text color="white" fontWeight="bold" mt={2}>上下文记忆</Text>
                     <FormControl>
-                      <FormLabel color="gray.400">关键信号(JSON)</FormLabel>
-                      <Textarea value={formData.signals} onChange={e => setFormData({...formData, signals: e.target.value})} placeholder='[{"date":"2026-04-14","type":"positive","event":"主动发健身照片"}]' bg="gray.700" rows={3} />
+                      <FormLabel color="rgba(245,240,232,0.4)">关键信号(JSON)</FormLabel>
+                      <Textarea value={formData.signals} onChange={e => setFormData({...formData, signals: e.target.value})} placeholder='[{"date":"2026-04-14","type":"positive","event":"主动发健身照片"}]' bg="warm.700" rows={3} />
                     </FormControl>
                     <FormControl>
-                      <FormLabel color="gray.400">待推进事项(JSON)</FormLabel>
-                      <Textarea value={formData.pendingActions} onChange={e => setFormData({...formData, pendingActions: e.target.value})} placeholder='["出差回来后约第二次见面"]' bg="gray.700" rows={2} />
+                      <FormLabel color="rgba(245,240,232,0.4)">待推进事项(JSON)</FormLabel>
+                      <Textarea value={formData.pendingActions} onChange={e => setFormData({...formData, pendingActions: e.target.value})} placeholder='["出差回来后约第二次见面"]' bg="warm.700" rows={2} />
                     </FormControl>
                     <FormControl>
-                      <FormLabel color="gray.400">观察记录(JSON)</FormLabel>
-                      <Textarea value={formData.observations} onChange={e => setFormData({...formData, observations: e.target.value})} bg="gray.700" rows={2} />
+                      <FormLabel color="rgba(245,240,232,0.4)">观察记录(JSON)</FormLabel>
+                      <Textarea value={formData.observations} onChange={e => setFormData({...formData, observations: e.target.value})} bg="warm.700" rows={2} />
                     </FormControl>
                     <FormControl>
-                      <FormLabel color="gray.400">对话摘要</FormLabel>
-                      <Textarea value={formData.conversationSummary} onChange={e => setFormData({...formData, conversationSummary: e.target.value})} bg="gray.700" rows={3} />
+                      <FormLabel color="rgba(245,240,232,0.4)">对话摘要</FormLabel>
+                      <Textarea value={formData.conversationSummary} onChange={e => setFormData({...formData, conversationSummary: e.target.value})} bg="warm.700" rows={3} />
                     </FormControl>
 
                     <Text color="white" fontWeight="bold" mt={2}>匹配相关</Text>
                     <SimpleGrid columns={2} spacing={4}>
                       <FormControl>
-                        <FormLabel color="gray.400">匹配分</FormLabel>
-                        <NumberInput value={formData.matchScore} onChange={(_, v) => setFormData({...formData, matchScore: v})} bg="gray.700" min={1} max={100}>
+                        <FormLabel color="rgba(245,240,232,0.4)">匹配分</FormLabel>
+                        <NumberInput value={formData.matchScore} onChange={(_, v) => setFormData({...formData, matchScore: v})} bg="warm.700" min={1} max={100}>
                           <NumberInputField />
                         </NumberInput>
                       </FormControl>
                     </SimpleGrid>
                     <FormControl>
-                      <FormLabel color="gray.400">匹配分计算依据</FormLabel>
-                      <Textarea value={formData.matchScoreBasis} onChange={e => setFormData({...formData, matchScoreBasis: e.target.value})} placeholder="说明这个分数是怎么算出来的，如：年龄差3岁、同城、学历相当、互有好感" bg="gray.700" rows={2} />
+                      <FormLabel color="rgba(245,240,232,0.4)">匹配分计算依据</FormLabel>
+                      <Textarea value={formData.matchScoreBasis} onChange={e => setFormData({...formData, matchScoreBasis: e.target.value})} placeholder="说明这个分数是怎么算出来的，如：年龄差3岁、同城、学历相当、互有好感" bg="warm.700" rows={2} />
                     </FormControl>
                     <Text color="white" fontWeight="bold" mt={2}>其他</Text>
                     <FormControl>
-                      <FormLabel color="gray.400">备注</FormLabel>
-                      <Textarea value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} bg="gray.700" rows={2} />
+                      <FormLabel color="rgba(245,240,232,0.4)">备注</FormLabel>
+                      <Textarea value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} bg="warm.700" rows={2} />
                     </FormControl>
                   </VStack>
                 </TabPanel>
               </TabPanels>
             </Tabs>
             <Button
-              colorScheme="teal"
+              colorScheme="gold"
               w="100%"
               mt={6}
               onClick={handleSubmit}
@@ -1581,7 +1581,7 @@ export default function AdminGirls() {
       {/* 女生详情弹窗 */}
       <Modal isOpen={isDetailOpen} onClose={onDetailClose} size={{ base: 'full', lg: '4xl' }}>
         <ModalOverlay />
-        <ModalContent bg="gray.800" overflow="auto">
+        <ModalContent bg="warm.800" overflow="auto">
           <ModalHeader color="white">
             {selectedGirl?.name} - 详情
             {selectedGirl?.isKinkOriented && <Badge colorScheme="purple" ml={2}>Kink</Badge>}
@@ -1594,7 +1594,7 @@ export default function AdminGirls() {
           <ModalCloseButton />
           <ModalBody pb={6}>
             {selectedGirl && (
-              <Tabs colorScheme="teal" size="sm">
+              <Tabs colorScheme="gold" size="sm">
                 <TabList mb={4}>
                   <Tab>基础</Tab>
                   <Tab>外貌家庭</Tab>
@@ -1608,39 +1608,39 @@ export default function AdminGirls() {
                 <TabPanels>
                   <TabPanel px={0}>
                     <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
-                      <Box><Text color="gray.400" fontSize="sm">年龄</Text>{renderField('age', selectedGirl.age)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">身高</Text>{renderField('height', selectedGirl.height ? selectedGirl.height + 'cm' : '')}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">职业</Text>{renderField('occupation', selectedGirl.occupation)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">学历</Text>{renderField('education', selectedGirl.education)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">专业</Text>{renderField('major', selectedGirl.major)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">籍贯</Text>{renderField('hometown', selectedGirl.hometown)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">现居</Text>{renderField('residence', selectedGirl.residence)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">工作地点</Text>{renderField('workplace', selectedGirl.workplace)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">平台</Text>{renderField('sourcePlatform', selectedGirl.sourcePlatform)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">匹配分</Text>{renderField('matchScore', selectedGirl.matchScore)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">匹配分依据</Text><Text color={selectedGirl.matchScoreBasis ? 'white' : 'gray.500'}>{selectedGirl.matchScoreBasis || '-'}</Text></Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">年龄</Text>{renderField('age', selectedGirl.age)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">身高</Text>{renderField('height', selectedGirl.height ? selectedGirl.height + 'cm' : '')}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">职业</Text>{renderField('occupation', selectedGirl.occupation)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">学历</Text>{renderField('education', selectedGirl.education)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">专业</Text>{renderField('major', selectedGirl.major)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">籍贯</Text>{renderField('hometown', selectedGirl.hometown)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">现居</Text>{renderField('residence', selectedGirl.residence)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">工作地点</Text>{renderField('workplace', selectedGirl.workplace)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">平台</Text>{renderField('sourcePlatform', selectedGirl.sourcePlatform)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">匹配分</Text>{renderField('matchScore', selectedGirl.matchScore)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">匹配分依据</Text><Text color={selectedGirl.matchScoreBasis ? 'white' : 'rgba(245,240,232,0.2)'}>{selectedGirl.matchScoreBasis || '-'}</Text></Box>
                     </SimpleGrid>
                     <Box mt={4}>
-                      <Text color="gray.400" fontSize="sm">主页链接</Text>
+                      <Text color="rgba(245,240,232,0.4)" fontSize="sm">主页链接</Text>
                       {selectedGirl.homepageUrl ? (
                         <Text as="a" href={selectedGirl.homepageUrl} color="teal.400" fontSize="sm" wordBreak="break-all" target="_blank">{selectedGirl.homepageUrl}</Text>
-                      ) : <Text color="gray.500">-</Text>}
+                      ) : <Text color="rgba(245,240,232,0.2)">-</Text>}
                     </Box>
-                    <Divider my={4} borderColor="gray.600" />
+                    <Divider my={4} borderColor="warm.600" />
                     <Box>
-                      <Text color="gray.400" fontSize="sm">备注</Text>
+                      <Text color="rgba(245,240,232,0.4)" fontSize="sm">备注</Text>
                       <Text color="white" whiteSpace="pre-wrap">{selectedGirl.notes || '无'}</Text>
                     </Box>
                   </TabPanel>
                   <TabPanel px={0}>
                     <Text color="white" fontWeight="bold" mb={2}>外貌特征</Text>
                     <SimpleGrid columns={2} spacing={4} mb={4}>
-                      <Box><Text color="gray.400" fontSize="sm">外貌描述</Text>{renderField('appearance', selectedGirl.appearance)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">体型</Text>{renderField('bodyType', selectedGirl.bodyType)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">外貌描述</Text>{renderField('appearance', selectedGirl.appearance)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">体型</Text>{renderField('bodyType', selectedGirl.bodyType)}</Box>
                     </SimpleGrid>
                     {selectedGirl.photos && (
                       <Box mb={4}>
-                        <Text color="gray.400" fontSize="sm" mb={2}>照片</Text>
+                        <Text color="rgba(245,240,232,0.4)" fontSize="sm" mb={2}>照片</Text>
                         <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={2}>
                           {(parseJSONField(selectedGirl.photos) || []).map((url, i) => (
                             <Image key={i} src={url} alt="照片" h="100px" objectFit="cover" borderRadius="md" cursor="pointer" onClick={() => window.open(url, '_blank')} _hover={{ opacity: 0.8 }} />
@@ -1650,10 +1650,10 @@ export default function AdminGirls() {
                     )}
                     {selectedGirl.videos && (
                       <Box mb={4}>
-                        <Text color="gray.400" fontSize="sm" mb={2}>视频</Text>
+                        <Text color="rgba(245,240,232,0.4)" fontSize="sm" mb={2}>视频</Text>
                         <VStack spacing={2} align="stretch">
                           {(parseJSONField(selectedGirl.videos) || []).map((url, i) => (
-                            <Box key={i} p={2} bg="gray.700" borderRadius="md">
+                            <Box key={i} p={2} bg="warm.700" borderRadius="md">
                               <Text as="a" href={url} color="teal.400" fontSize="sm" target="_blank">{url}</Text>
                             </Box>
                           ))}
@@ -1662,55 +1662,55 @@ export default function AdminGirls() {
                     )}
                     <Text color="white" fontWeight="bold" mb={2}>家庭背景</Text>
                     <SimpleGrid columns={2} spacing={4}>
-                      <Box><Text color="gray.400" fontSize="sm">家庭背景</Text>{renderField('familyBackground', selectedGirl.familyBackground)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">家庭氛围</Text>{renderField('familyAtmosphere', selectedGirl.familyAtmosphere)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">养老负担</Text>{renderField('familyBurden', selectedGirl.familyBurden)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">家庭备注</Text>{renderField('familyComments', selectedGirl.familyComments)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">家庭背景</Text>{renderField('familyBackground', selectedGirl.familyBackground)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">家庭氛围</Text>{renderField('familyAtmosphere', selectedGirl.familyAtmosphere)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">养老负担</Text>{renderField('familyBurden', selectedGirl.familyBurden)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">家庭备注</Text>{renderField('familyComments', selectedGirl.familyComments)}</Box>
                     </SimpleGrid>
                   </TabPanel>
                   <TabPanel px={0}>
                     <SimpleGrid columns={2} spacing={4} mb={4}>
-                      <Box><Text color="gray.400" fontSize="sm">婚恋态度</Text>{renderField('relationshipAttitude', selectedGirl.relationshipAttitude)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">依恋类型</Text>{renderField('attachmentStyle', selectedGirl.attachmentStyle)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">工作作息</Text>{renderField('workSchedule', selectedGirl.workSchedule)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">社交活跃度</Text>{renderField('socialActivity', selectedGirl.socialActivity)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">消费习惯</Text>{renderField('financialHabits', selectedGirl.financialHabits)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">饮食偏好</Text>{renderField('dietPreferences', selectedGirl.dietPreferences)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">饮食禁忌</Text>{renderField('dietRestrictions', selectedGirl.dietRestrictions) || <Text color="gray.500" fontSize="sm">无</Text>}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">婚恋态度</Text>{renderField('relationshipAttitude', selectedGirl.relationshipAttitude)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">依恋类型</Text>{renderField('attachmentStyle', selectedGirl.attachmentStyle)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">工作作息</Text>{renderField('workSchedule', selectedGirl.workSchedule)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">社交活跃度</Text>{renderField('socialActivity', selectedGirl.socialActivity)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">消费习惯</Text>{renderField('financialHabits', selectedGirl.financialHabits)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">饮食偏好</Text>{renderField('dietPreferences', selectedGirl.dietPreferences)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">饮食禁忌</Text>{renderField('dietRestrictions', selectedGirl.dietRestrictions) || <Text color="rgba(245,240,232,0.2)" fontSize="sm">无</Text>}</Box>
                     </SimpleGrid>
                     <Text color="white" fontWeight="bold" mb={2}>情史</Text>
                     <SimpleGrid columns={1} spacing={2}>
-                      <Box><Text color="gray.400" fontSize="sm">情史摘要</Text>{renderField('pastRelationshipSummary', selectedGirl.pastRelationshipSummary)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">情伤记录</Text>{renderField('emotionalWounds', selectedGirl.emotionalWounds)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">绝对雷区</Text>{renderField('dealbreakers', selectedGirl.dealbreakers)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">择偶偏好</Text>{renderField('matePreferences', selectedGirl.matePreferences)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">情史摘要</Text>{renderField('pastRelationshipSummary', selectedGirl.pastRelationshipSummary)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">情伤记录</Text>{renderField('emotionalWounds', selectedGirl.emotionalWounds)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">绝对雷区</Text>{renderField('dealbreakers', selectedGirl.dealbreakers)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">择偶偏好</Text>{renderField('matePreferences', selectedGirl.matePreferences)}</Box>
                     </SimpleGrid>
                     {selectedGirl.isKinkOriented && (
                       <>
-                        <Divider my={4} borderColor="gray.600" />
+                        <Divider my={4} borderColor="warm.600" />
                         <Text color="purple.400" fontWeight="bold" mb={2}>字母圈属性</Text>
                         <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
-                          <Box><Text color="gray.400" fontSize="sm">身份</Text>{renderField('kinkIdentity', selectedGirl.kinkIdentity)}</Box>
-                          <Box><Text color="gray.400" fontSize="sm">经验</Text>{renderField('kinkExperience', selectedGirl.kinkExperience)}</Box>
-                          <Box><Text color="gray.400" fontSize="sm">边界</Text>{renderField('kinkBoundaries', selectedGirl.kinkBoundaries)}</Box>
-                          <Box><Text color="gray.400" fontSize="sm">兴趣标签</Text>{renderField('kinkInterests', selectedGirl.kinkInterests)}</Box>
+                          <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">身份</Text>{renderField('kinkIdentity', selectedGirl.kinkIdentity)}</Box>
+                          <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">经验</Text>{renderField('kinkExperience', selectedGirl.kinkExperience)}</Box>
+                          <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">边界</Text>{renderField('kinkBoundaries', selectedGirl.kinkBoundaries)}</Box>
+                          <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">兴趣标签</Text>{renderField('kinkInterests', selectedGirl.kinkInterests)}</Box>
                         </SimpleGrid>
-                        <Box mt={2}><Text color="gray.400" fontSize="sm">特殊备注</Text>{renderField('kinkNotes', selectedGirl.kinkNotes)}</Box>
+                        <Box mt={2}><Text color="rgba(245,240,232,0.4)" fontSize="sm">特殊备注</Text>{renderField('kinkNotes', selectedGirl.kinkNotes)}</Box>
                       </>
                     )}
                   </TabPanel>
                   <TabPanel px={0}>
                     <Text color="white" fontWeight="bold" mb={2}>内在画像</Text>
                     <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4} mb={4}>
-                      <Box><Text color="gray.400" fontSize="sm">性格</Text>{renderField('personality', selectedGirl.personality)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">价值观</Text>{renderField('values_', selectedGirl.values_)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">沟通风格</Text>{renderField('communicationStyle', selectedGirl.communicationStyle)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">性格</Text>{renderField('personality', selectedGirl.personality)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">价值观</Text>{renderField('values_', selectedGirl.values_)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">沟通风格</Text>{renderField('communicationStyle', selectedGirl.communicationStyle)}</Box>
                     </SimpleGrid>
                     <SimpleGrid columns={2} spacing={2} mb={4}>
-                      <Box><Text color="gray.400" fontSize="sm">情绪触发点</Text>{renderField('emotionalTriggers', selectedGirl.emotionalTriggers)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">喜欢话题</Text>{renderField('talkingTopics', selectedGirl.talkingTopics)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">禁忌话题</Text>{renderField('thingsToAvoid', selectedGirl.thingsToAvoid)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">兴趣爱好</Text>{renderField('interests', selectedGirl.interests)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">情绪触发点</Text>{renderField('emotionalTriggers', selectedGirl.emotionalTriggers)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">喜欢话题</Text>{renderField('talkingTopics', selectedGirl.talkingTopics)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">禁忌话题</Text>{renderField('thingsToAvoid', selectedGirl.thingsToAvoid)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">兴趣爱好</Text>{renderField('interests', selectedGirl.interests)}</Box>
                     </SimpleGrid>
                     <Text color="white" fontWeight="bold" mb={2}>谙世EQ维度</Text>
                     <SimpleGrid columns={{ base: 1, sm: 2, md: 5 }} spacing={4} mb={4}>
@@ -1722,8 +1722,8 @@ export default function AdminGirls() {
                         { key: 'conflictRes', label: '冲突解决' }
                       ].map(item => (
                         <Box key={item.key}>
-                          <Text color="gray.400" fontSize="sm">{item.label}</Text>
-                          <Text color={selectedGirl[item.key] ? 'teal.400' : 'gray.500'}>
+                          <Text color="rgba(245,240,232,0.4)" fontSize="sm">{item.label}</Text>
+                          <Text color={selectedGirl[item.key] ? 'teal.400' : 'rgba(245,240,232,0.2)'}>
                             {selectedGirl[item.key] ? selectedGirl[item.key] + '/10' : '-'}
                           </Text>
                         </Box>
@@ -1731,27 +1731,27 @@ export default function AdminGirls() {
                     </SimpleGrid>
                     <Text color="white" fontWeight="bold" mb={2}>AI战略分析</Text>
                     <SimpleGrid columns={2} spacing={2}>
-                      <Box><Text color="gray.400" fontSize="sm">最佳策略</Text>{renderField('bestApproach', selectedGirl.bestApproach)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">推荐话题</Text>{renderField('recommendedTopics', selectedGirl.recommendedTopics)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">升级条件</Text>{renderField('upgradeConditions', selectedGirl.upgradeConditions)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">预计时间线</Text>{renderField('estimatedTimeline', selectedGirl.estimatedTimeline)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">风险因素</Text>{renderField('riskFactors', selectedGirl.riskFactors)}</Box>
-                      <Box><Text color="gray.400" fontSize="sm">战略备注</Text>{renderField('strategicNotes', selectedGirl.strategicNotes)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">最佳策略</Text>{renderField('bestApproach', selectedGirl.bestApproach)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">推荐话题</Text>{renderField('recommendedTopics', selectedGirl.recommendedTopics)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">升级条件</Text>{renderField('upgradeConditions', selectedGirl.upgradeConditions)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">预计时间线</Text>{renderField('estimatedTimeline', selectedGirl.estimatedTimeline)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">风险因素</Text>{renderField('riskFactors', selectedGirl.riskFactors)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">战略备注</Text>{renderField('strategicNotes', selectedGirl.strategicNotes)}</Box>
                     </SimpleGrid>
                   </TabPanel>
                   <TabPanel px={0}>
                     <Text color="white" fontWeight="bold" mb={2}>关系状态</Text>
                     <SimpleGrid columns={{ base: 1, sm: 2, md: 4 }} spacing={4} mb={4}>
-                      <Box><Text color="gray.400" fontSize="sm">阶段</Text><Badge colorScheme="teal">{selectedGirl.stage}</Badge></Box>
-                      <Box><Text color="gray.400" fontSize="sm">状态</Text><Badge>{selectedGirl.status}</Badge></Box>
-                      <Box><Text color="gray.400" fontSize="sm">亲密度</Text>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">阶段</Text><Badge colorScheme="gold">{selectedGirl.stage}</Badge></Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">状态</Text><Badge>{selectedGirl.status}</Badge></Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">亲密度</Text>
                         <HStack>
                           {Array.from({ length: selectedGirl.intimacyLevel || 1 }).map((_, i) => (
                             <Icon key={i} as={HeartIcon} color="red.400" boxSize={4} />
                           ))}
                         </HStack>
                       </Box>
-                      <Box><Text color="gray.400" fontSize="sm">热度</Text>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">热度</Text>
                         <HStack>
                           <Text color={getTensionColor(selectedGirl.tensionScore)}>
                             {selectedGirl.tensionScore?.toFixed(1) || '5.0'}
@@ -1759,14 +1759,14 @@ export default function AdminGirls() {
                           {getTensionIcon(selectedGirl.tensionScore)}
                         </HStack>
                       </Box>
-                      <Box><Text color="gray.400" fontSize="sm">最后联系</Text>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">最后联系</Text>
                         <Text color="white">{selectedGirl.lastContact ? new Date(selectedGirl.lastContact).toLocaleString() : '-'}</Text>
                       </Box>
-                      <Box><Text color="gray.400" fontSize="sm">回复规律</Text>{renderField('responsePattern', selectedGirl.responsePattern)}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">回复规律</Text>{renderField('responsePattern', selectedGirl.responsePattern)}</Box>
                     </SimpleGrid>
                     <Text color="white" fontWeight="bold" mb={2}>关键信号</Text>
                     {selectedGirl.signals ? (
-                      <Box bg="gray.700" p={3} borderRadius="md" mb={4}>
+                      <Box bg="warm.700" p={3} borderRadius="md" mb={4}>
                         {(() => {
                           const arr = parseJSONField(selectedGirl.signals);
                           return arr.map((s, i) => (
@@ -1775,15 +1775,15 @@ export default function AdminGirls() {
                                 {s.type === 'positive' ? '[+]' : s.type === 'negative' ? '[-]' : '[*]'}
                               </Badge>
                               <Text color="white" fontSize="sm">{typeof s.event === 'string' ? s.event : ''}</Text>
-                              <Text color="gray.500" fontSize="xs" ml={2}>{s.date}</Text>
+                              <Text color="rgba(245,240,232,0.2)" fontSize="xs" ml={2}>{s.date}</Text>
                             </Flex>
                           ));
                         })()}
                       </Box>
-                    ) : <Text color="gray.500" mb={4}>暂无信号记录</Text>}
+                    ) : <Text color="rgba(245,240,232,0.2)" mb={4}>暂无信号记录</Text>}
                     <Text color="white" fontWeight="bold" mb={2}>待推进事项</Text>
                     {selectedGirl.pendingActions ? (
-                      <Box bg="gray.700" p={3} borderRadius="md" mb={4}>
+                      <Box bg="warm.700" p={3} borderRadius="md" mb={4}>
                         {(() => {
                           const arr = parseJSONField(selectedGirl.pendingActions);
                           return arr.map((a, i) => (
@@ -1791,10 +1791,10 @@ export default function AdminGirls() {
                           ));
                         })()}
                       </Box>
-                    ) : <Text color="gray.500" mb={4}>暂无待办</Text>}
+                    ) : <Text color="rgba(245,240,232,0.2)" mb={4}>暂无待办</Text>}
                     <Text color="white" fontWeight="bold" mb={2}>观察记录</Text>
                     {selectedGirl.observations ? (
-                      <Box bg="gray.700" p={3} borderRadius="md" mb={4}>
+                      <Box bg="warm.700" p={3} borderRadius="md" mb={4}>
                         {(() => {
                           const arr = parseJSONField(selectedGirl.observations);
                           return arr.map((o, i) => (
@@ -1802,9 +1802,9 @@ export default function AdminGirls() {
                           ));
                         })()}
                       </Box>
-                    ) : <Text color="gray.500" mb={4}>暂无观察记录</Text>}
+                    ) : <Text color="rgba(245,240,232,0.2)" mb={4}>暂无观察记录</Text>}
                     <Text color="white" fontWeight="bold" mb={2}>对话摘要</Text>
-                    <Box bg="gray.700" p={3} borderRadius="md">
+                    <Box bg="warm.700" p={3} borderRadius="md">
                       <Text color="white" whiteSpace="pre-wrap" fontSize="sm">{selectedGirl.conversationSummary || '暂无摘要'}</Text>
                     </Box>
                   </TabPanel>
@@ -1813,14 +1813,14 @@ export default function AdminGirls() {
                   <TabPanel px={0}>
                     <VStack spacing={4} align="stretch">
                       {/* 上传区 */}
-                      <Flex gap={4} align="flex-end" bg="gray.700" p={4} borderRadius="md">
+                      <Flex gap={4} align="flex-end" bg="warm.700" p={4} borderRadius="md">
                         <FormControl flex={1}>
-                          <FormLabel color="gray.400" fontSize="sm">选择朋友圈截图</FormLabel>
-                          <Input type="file" accept="image/*" ref={momentFileRef} onChange={handleMomentImageSelect} bg="gray.600" pt={1} color="white" _placeholder={{ color: 'gray.400' }} />
+                          <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">选择朋友圈截图</FormLabel>
+                          <Input type="file" accept="image/*" ref={momentFileRef} onChange={handleMomentImageSelect} bg="warm.600" pt={1} color="white" _placeholder={{ color: 'rgba(245,240,232,0.4)' }} />
                         </FormControl>
                         <FormControl flex={1}>
-                          <FormLabel color="gray.400" fontSize="sm">备注</FormLabel>
-                          <Input value={momentNotes} onChange={e => setMomentNotes(e.target.value)} placeholder="如：深夜美食自拍" bg="gray.600" color="white" _placeholder={{ color: 'gray.400' }} />
+                          <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">备注</FormLabel>
+                          <Input value={momentNotes} onChange={e => setMomentNotes(e.target.value)} placeholder="如：深夜美食自拍" bg="warm.600" color="white" _placeholder={{ color: 'rgba(245,240,232,0.4)' }} />
                         </FormControl>
                         <Button colorScheme="purple" onClick={handleUploadMomentScreenshot} isLoading={uploadingMoment} h="40px">
                           上传并分析
@@ -1845,15 +1845,15 @@ export default function AdminGirls() {
 
                       {/* 已有朋友圈截图 */}
                       <Box>
-                        <Text color="gray.400" fontSize="sm" mb={3}>已保存 ({momentScreenshots.length})</Text>
+                        <Text color="rgba(245,240,232,0.4)" fontSize="sm" mb={3}>已保存 ({momentScreenshots.length})</Text>
                         {momentScreenshots.length === 0 ? (
-                          <Flex h="150px" align="center" justify="center" bg="gray.700" borderRadius="md">
-                            <Text color="gray.500">暂无朋友圈截图</Text>
+                          <Flex h="150px" align="center" justify="center" bg="warm.700" borderRadius="md">
+                            <Text color="rgba(245,240,232,0.2)">暂无朋友圈截图</Text>
                           </Flex>
                         ) : (
                           <SimpleGrid columns={{ base: 1, sm: 2, md: 4 }} spacing={4}>
                             {momentScreenshots.map(m => (
-                              <Box key={m.id} position="relative" bg="gray.700" borderRadius="md" overflow="hidden">
+                              <Box key={m.id} position="relative" bg="warm.700" borderRadius="md" overflow="hidden">
                                 <Image
                                   src={`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}${m.imageUrl}`}
                                   alt="朋友圈截图"
@@ -1887,15 +1887,15 @@ export default function AdminGirls() {
                   {/* 关系阶段 Tab */}
                   <TabPanel px={0}>
                     {/* 当前阶段 */}
-                    <Flex align="center" justify="space-between" mb={4} bg="gray.700" p={4} borderRadius="md">
+                    <Flex align="center" justify="space-between" mb={4} bg="warm.700" p={4} borderRadius="md">
                       <Box>
-                        <Text color="gray.400" fontSize="sm">当前阶段</Text>
+                        <Text color="rgba(245,240,232,0.4)" fontSize="sm">当前阶段</Text>
                         <HStack mt={1}>
                           <Badge colorScheme={getRelationshipStageColor(selectedGirl.relationshipStage)} fontSize="md">
                             {getRelationshipStageLabel(selectedGirl.relationshipStage)}
                           </Badge>
                           {selectedGirl.relationshipStageUpdatedAt && (
-                            <Text color="gray.500" fontSize="xs">
+                            <Text color="rgba(245,240,232,0.2)" fontSize="xs">
                               更新于 {new Date(selectedGirl.relationshipStageUpdatedAt).toLocaleString()}
                             </Text>
                           )}
@@ -1956,30 +1956,30 @@ export default function AdminGirls() {
                     {/* 阶段变更历史 */}
                     <Text color="white" fontWeight="bold" mb={3}>变更历史</Text>
                     {stageHistory.length === 0 ? (
-                      <Flex h="100px" align="center" justify="center" bg="gray.700" borderRadius="md">
-                        <Text color="gray.500" fontSize="sm">暂无历史记录</Text>
+                      <Flex h="100px" align="center" justify="center" bg="warm.700" borderRadius="md">
+                        <Text color="rgba(245,240,232,0.2)" fontSize="sm">暂无历史记录</Text>
                       </Flex>
                     ) : (
                       <VStack spacing={2} align="stretch">
                         {stageHistory.map((h, i) => (
-                          <Box key={i} bg="gray.700" p={3} borderRadius="md">
+                          <Box key={i} bg="warm.700" p={3} borderRadius="md">
                             <Flex align="center" justify="space-between" mb={1}>
                               <HStack>
                                 <Badge colorScheme="gray" fontSize="xs">{h.fromStage ? getRelationshipStageLabel(h.fromStage) : '新建'}</Badge>
-                                <Icon as={FiArrowRight} color="gray.500" boxSize={3} />
+                                <Icon as={FiArrowRight} color="rgba(245,240,232,0.2)" boxSize={3} />
                                 <Badge colorScheme={getRelationshipStageColor(h.toStage)} fontSize="xs">
                                   {getRelationshipStageLabel(h.toStage)}
                                 </Badge>
                               </HStack>
-                              <Text color="gray.500" fontSize="xs">
+                              <Text color="rgba(245,240,232,0.2)" fontSize="xs">
                                 {new Date(h.createdAt).toLocaleString()}
                               </Text>
                             </Flex>
-                            <Text color="gray.400" fontSize="xs">
+                            <Text color="rgba(245,240,232,0.4)" fontSize="xs">
                               {h.reason || '无备注'} {h.source && `(${h.source === 'ai' ? 'AI评估' : h.source === 'manual' ? '手动设置' : h.source})`}
                             </Text>
                             {h.changedBy && (
-                              <Text color="gray.600" fontSize="xs">by {h.changedBy}</Text>
+                              <Text color="warm.600" fontSize="xs">by {h.changedBy}</Text>
                             )}
                           </Box>
                         ))}
@@ -1992,7 +1992,7 @@ export default function AdminGirls() {
                     <VStack spacing={4} align="stretch">
                       {/* 快速风险判断 */}
                       {reversalRisk && (
-                        <Flex align="center" justify="space-between" bg="gray.700" p={4} borderRadius="md">
+                        <Flex align="center" justify="space-between" bg="warm.700" p={4} borderRadius="md">
                           <HStack spacing={3}>
                             <Badge colorScheme={
                               reversalRisk.riskLevel === 'high' ? 'red' :
@@ -2002,7 +2002,7 @@ export default function AdminGirls() {
                                reversalRisk.riskLevel === 'medium' ? '中风险' : '低风险'}
                             </Badge>
                             {reversalRisk.matchedKeywords && reversalRisk.matchedKeywords.length > 0 && (
-                              <Text color="gray.400" fontSize="sm">
+                              <Text color="rgba(245,240,232,0.4)" fontSize="sm">
                                 关键词: {reversalRisk.matchedKeywords.join(', ')}
                               </Text>
                             )}
@@ -2023,12 +2023,12 @@ export default function AdminGirls() {
                       {reversalAnalyzing && (
                         <Flex align="center" justify="center" py={8} gap={2}>
                           <Spinner size="sm" color="purple.400" />
-                          <Text color="gray.400" fontSize="sm">AI 分析中...</Text>
+                          <Text color="rgba(245,240,232,0.4)" fontSize="sm">AI 分析中...</Text>
                         </Flex>
                       )}
 
                       {reversalAnalysis && (
-                        <Box bg="gray.700" p={4} borderRadius="md">
+                        <Box bg="warm.700" p={4} borderRadius="md">
                           {/* 风险标签 */}
                           <HStack mb={3} spacing={2} flexWrap="wrap">
                             <Badge colorScheme={
@@ -2041,13 +2041,13 @@ export default function AdminGirls() {
                             {reversalAnalysis.type && (
                               <Badge colorScheme="purple">{reversalAnalysis.type}</Badge>
                             )}
-                            <Badge colorScheme="teal">置信度 {reversalAnalysis.confidence}%</Badge>
+                            <Badge colorScheme="gold">置信度 {reversalAnalysis.confidence}%</Badge>
                           </HStack>
 
                           {/* 建议 */}
                           {reversalAnalysis.suggestion && (
                             <Box mb={3}>
-                              <Text color="gray.400" fontSize="sm" mb={1}>操盘手建议</Text>
+                              <Text color="rgba(245,240,232,0.4)" fontSize="sm" mb={1}>操盘手建议</Text>
                               <Text color="teal.300" fontSize="sm">{reversalAnalysis.suggestion}</Text>
                             </Box>
                           )}
@@ -2055,7 +2055,7 @@ export default function AdminGirls() {
                           {/* 证据 */}
                           {reversalAnalysis.evidence && reversalAnalysis.evidence.length > 0 && (
                             <Box mb={3}>
-                              <Text color="gray.400" fontSize="sm" mb={1}>分析证据</Text>
+                              <Text color="rgba(245,240,232,0.4)" fontSize="sm" mb={1}>分析证据</Text>
                               <VStack spacing={1} align="stretch">
                                 {reversalAnalysis.evidence.map((e, i) => (
                                   <Text key={i} color="gray.300" fontSize="xs">{i + 1}. {e}</Text>
@@ -2067,12 +2067,12 @@ export default function AdminGirls() {
                           {/* 鉴别诊断 */}
                           {reversalAnalysis.differential && (
                             <Box>
-                              <Text color="gray.400" fontSize="sm" mb={1}>鉴别诊断</Text>
-                              <Text color="gray.400" fontSize="xs">{reversalAnalysis.differential}</Text>
+                              <Text color="rgba(245,240,232,0.4)" fontSize="sm" mb={1}>鉴别诊断</Text>
+                              <Text color="rgba(245,240,232,0.4)" fontSize="xs">{reversalAnalysis.differential}</Text>
                             </Box>
                           )}
 
-                          <Text color="gray.600" fontSize="xs" mt={3}>
+                          <Text color="warm.600" fontSize="xs" mt={3}>
                             分析时间: {new Date(reversalAnalysis.analyzedAt).toLocaleString()}
                           </Text>
                         </Box>
@@ -2080,8 +2080,8 @@ export default function AdminGirls() {
 
                       {!reversalRisk && !reversalAnalyzing && !reversalAnalysis && (
                         <Flex align="center" justify="center" py={8} direction="column" gap={3}>
-                          <Icon as={FiAlertTriangle} color="gray.600" boxSize={8} />
-                          <Text color="gray.500" fontSize="sm">点击下方按钮启动 AI 反撇分析</Text>
+                          <Icon as={FiAlertTriangle} color="warm.600" boxSize={8} />
+                          <Text color="rgba(245,240,232,0.2)" fontSize="sm">点击下方按钮启动 AI 反撇分析</Text>
                           <Button
                             size="sm"
                             colorScheme="purple"
@@ -2103,7 +2103,7 @@ export default function AdminGirls() {
       {/* 截图管理弹窗 */}
       <Modal isOpen={isScreenshotOpen} onClose={onScreenshotClose} size={{ base: 'full', lg: '4xl' }}>
         <ModalOverlay />
-        <ModalContent bg="gray.800" maxH="85vh" overflow="auto">
+        <ModalContent bg="warm.800" maxH="85vh" overflow="auto">
           <ModalHeader color="white">
             聊天截图管理 - {selectedGirl?.name}
           </ModalHeader>
@@ -2111,16 +2111,16 @@ export default function AdminGirls() {
           <ModalBody pb={6}>
             <VStack spacing={6} align="stretch">
               {/* 上传区域 - 优化布局 */}
-              <Flex gap={4} align="flex-end" bg="gray.700" p={4} borderRadius="md">
+              <Flex gap={4} align="flex-end" bg="warm.700" p={4} borderRadius="md">
                 <FormControl flex={1}>
-                  <FormLabel color="gray.400" fontSize="sm">选择图片</FormLabel>
-                  <Input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileSelect} bg="gray.600" pt={1} color="white" _placeholder={{ color: 'gray.400' }} />
+                  <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">选择图片</FormLabel>
+                  <Input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileSelect} bg="warm.600" pt={1} color="white" _placeholder={{ color: 'rgba(245,240,232,0.4)' }} />
                 </FormControl>
                 <FormControl flex={1}>
-                  <FormLabel color="gray.400" fontSize="sm">备注（可选）</FormLabel>
-                  <Input value={screenshotNotes} onChange={e => setScreenshotNotes(e.target.value)} placeholder="简短描述..." bg="gray.600" color="white" _placeholder={{ color: 'gray.400' }} />
+                  <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">备注（可选）</FormLabel>
+                  <Input value={screenshotNotes} onChange={e => setScreenshotNotes(e.target.value)} placeholder="简短描述..." bg="warm.600" color="white" _placeholder={{ color: 'rgba(245,240,232,0.4)' }} />
                 </FormControl>
-                <Button colorScheme="teal" onClick={handleUploadScreenshot} isLoading={uploading} isDisabled={!selectedFile} h="40px">
+                <Button colorScheme="gold" onClick={handleUploadScreenshot} isLoading={uploading} isDisabled={!selectedFile} h="40px">
                   上传
                 </Button>
               </Flex>
@@ -2132,8 +2132,8 @@ export default function AdminGirls() {
                   {selectedGirl?.sourcePlatform && <Badge colorScheme="blue">{selectedGirl.sourcePlatform}</Badge>}
                 </Flex>
                 {screenshots.length === 0 ? (
-                  <Flex h="200px" align="center" justify="center" bg="gray.700" borderRadius="md">
-                    <Text color="gray.500">暂无截图记录</Text>
+                  <Flex h="200px" align="center" justify="center" bg="warm.700" borderRadius="md">
+                    <Text color="rgba(245,240,232,0.2)">暂无截图记录</Text>
                   </Flex>
                 ) : (
                   <SimpleGrid columns={{ base: 2, sm: 3, md: 4 }} spacing={4}>
@@ -2141,7 +2141,7 @@ export default function AdminGirls() {
                       <Box
                         key={ss.id}
                         position="relative"
-                        bg="gray.700"
+                        bg="warm.700"
                         borderRadius="md"
                         overflow="hidden"
                         cursor="pointer"
@@ -2174,7 +2174,7 @@ export default function AdminGirls() {
                   <Heading size="sm" color="white" mb={4}>截图详情</Heading>
                   <VStack spacing={3} align="stretch">
                     {screenshots.map(ss => (
-                      <Flex key={ss.id} gap={4} bg="gray.700" p={3} borderRadius="md" align="center">
+                      <Flex key={ss.id} gap={4} bg="warm.700" p={3} borderRadius="md" align="center">
                         <Image
                           src={`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}${ss.imageUrl}`}
                           alt="聊天截图"
@@ -2190,14 +2190,14 @@ export default function AdminGirls() {
                         <Box flex={1}>
                           <Flex gap={2} mb={1}>
                             {ss.platform && <Badge colorScheme="blue" fontSize="xs">{ss.platform}</Badge>}
-                            <Text color="gray.500" fontSize="xs">
+                            <Text color="rgba(245,240,232,0.2)" fontSize="xs">
                               {new Date(ss.createdAt).toLocaleString()}
                             </Text>
                           </Flex>
                           <Textarea
                             value={ss.notes || ''}
                             placeholder="备注..."
-                            bg="gray.600"
+                            bg="warm.600"
                             size="sm"
                             rows={1}
                             onChange={(e) => {
@@ -2206,11 +2206,11 @@ export default function AdminGirls() {
                             }}
                             onBlur={(e) => handleUpdateNotes(ss.id, e.target.value)}
                             color="white"
-                            _placeholder={{ color: 'gray.400' }}
+                            _placeholder={{ color: 'rgba(245,240,232,0.4)' }}
                           />
                         </Box>
                         <HStack spacing={2}>
-                          <Button size="sm" colorScheme="teal" onClick={() => handleAiNotes(ss.id)} isLoading={aiGenerating} leftIcon={<Icon as={SparklesIcon} />}>
+                          <Button size="sm" colorScheme="gold" onClick={() => handleAiNotes(ss.id)} isLoading={aiGenerating} leftIcon={<Icon as={SparklesIcon} />}>
                             AI备注
                           </Button>
                           <Button size="sm" colorScheme="red" variant="ghost" onClick={() => handleDeleteScreenshot(ss.id)}>
@@ -2230,7 +2230,7 @@ export default function AdminGirls() {
       {/* AI 识别字段确认弹窗 */}
       <Modal isOpen={isConfirmOpen} onClose={onConfirmClose} size="md">
         <ModalOverlay />
-        <ModalContent bg="gray.800">
+        <ModalContent bg="warm.800">
           <ModalHeader color="white">
             确认录入信息
             <Button
@@ -2255,14 +2255,14 @@ export default function AdminGirls() {
             </Text>
             <VStack spacing={3} align="stretch">
               {Object.entries(pendingFields).map(([key, { label, value }]) => (
-                <Flex key={key} align="center" gap={3} bg="gray.700" p={3} borderRadius="md">
+                <Flex key={key} align="center" gap={3} bg="warm.700" p={3} borderRadius="md">
                   <Checkbox
-                    colorScheme="teal"
+                    colorScheme="gold"
                     isChecked={!!confirmSelections[key]}
                     onChange={(e) => setConfirmSelections(prev => ({ ...prev, [key]: e.target.checked }))}
                   />
                   <Box flex={1}>
-                    <Text color="gray.400" fontSize="sm">{label}</Text>
+                    <Text color="rgba(245,240,232,0.4)" fontSize="sm">{label}</Text>
                     <Text color="white" fontSize="md">{value}</Text>
                   </Box>
                 </Flex>
@@ -2270,7 +2270,7 @@ export default function AdminGirls() {
             </VStack>
             <HStack mt={6} spacing={4} justify="flex-end">
               <Button variant="ghost" colorScheme="gray" onClick={onConfirmClose}>取消</Button>
-              <Button colorScheme="teal" onClick={handleConfirmFields}>
+              <Button colorScheme="gold" onClick={handleConfirmFields}>
                 确认录入 ({Object.values(confirmSelections).filter(Boolean).length})
               </Button>
             </HStack>
