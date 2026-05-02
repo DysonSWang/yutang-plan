@@ -12,7 +12,7 @@ const VERSION_CONFIG = {
   minVersion: '1.0.5',      // 强制升级版本，低于此版本必须更新
   downloadUrl: 'https://www.pgyer.com/zhuiaiai',
   updateDescription: '优化体验',
-  buildNumber: 11
+  buildNumber: 13
 };
 
 router.get('/check', (req, res) => {

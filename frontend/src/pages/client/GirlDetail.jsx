@@ -29,7 +29,7 @@ const FIELD_GROUPS = {
   },
   appearance: {
     title: '外貌特征', color: 'teal.400',
-    fields: ['appearance', 'height', 'bodyType', 'styleTags']
+    fields: ['appearance', 'height', 'weight', 'bodyType', 'styleTags']
   },
   family: {
     title: '家庭背景', color: 'purple.400',
@@ -61,6 +61,7 @@ const GIRL_EDITABLE_FIELDS = [
   { key: 'workplace', label: '工作地点', type: 'input' },
   { key: 'appearance', label: '外貌描述', type: 'input' },
   { key: 'height', label: '身高(cm)', type: 'input' },
+  { key: 'weight', label: '体重(kg)', type: 'input' },
   { key: 'bodyType', label: '体型', type: 'select', options: ['偏瘦', '标准', '微胖', '偏胖'] },
   { key: 'styleTags', label: '风格标签', type: 'input' },
   { key: 'avatar', label: '头像', type: 'media', accept: 'image/*', multiple: false },
@@ -390,6 +391,19 @@ export default function GirlDetail() {
       const payload = { ...editData };
       // avatar 在 MediaUploadField 中是数组，后端期望字符串
       if (Array.isArray(payload.avatar)) payload.avatar = payload.avatar[0] || null;
+      // 自动推断体型（仅当 bodyType 为空且 height 和 weight 都有值时）
+      if (!payload.bodyType && payload.height && payload.weight) {
+        const h = parseFloat(payload.height);
+        const w = parseFloat(payload.weight);
+        if (h > 0 && w > 0) {
+          const heightM = h / 100;
+          const bmi = w / (heightM * heightM);
+          if (bmi < 18.5) payload.bodyType = '偏瘦';
+          else if (bmi < 24) payload.bodyType = '标准';
+          else if (bmi < 28) payload.bodyType = '微胖';
+          else payload.bodyType = '偏胖';
+        }
+      }
       const res = await girls.clientUpdate(girlId, payload);
       if (res.success) {
         toast({ title: '保存成功', status: 'success', duration: 2000 });
@@ -494,12 +508,41 @@ export default function GirlDetail() {
     } finally { setSavingAvatar(false); }
   };
 
-  // ---- 计算完整度 ----
+  // 用户可见字段（用于完整度计算，与展示区对齐）
+  const VISIBLE_FIELDS = [
+    // FIELD_GROUPS 中的字段
+    'age', 'occupation', 'education', 'major', 'residence', 'workplace', 'hometown',
+    'appearance', 'height', 'weight', 'bodyType', 'styleTags',
+    'familyBackground', 'familyAtmosphere', 'familyBurden', 'familyComments',
+    'workSchedule', 'socialActivity', 'financialHabits',
+    'interests', 'dietPreferences', 'dietRestrictions', 'hobbiesDetail',
+    'relationshipAttitude', 'pastRelationshipSummary', 'emotionalWounds', 'attachmentStyle', 'dealbreakers',
+    // 照片与媒体区
+    'avatar', 'photos', 'momentPhotos', 'videos',
+    'homepageUrl', 'sourcePlatform', 'sourceUrl',
+    // 系统分析区
+    'personality', 'values_', 'communicationStyle', 'emotionalTriggers',
+    'talkingTopics', 'thingsToAvoid',
+    'empathy', 'selfAwareness', 'communication', 'relationship', 'conflictRes',
+    'bestApproach', 'recommendedTopics', 'upgradeConditions', 'estimatedTimeline', 'riskFactors', 'strategicNotes',
+    'matchScore', 'matchScoreBasis', 'matePreferences',
+    // 关系状态
+    'stage', 'intimacyLevel', 'tensionScore',
+  ];
+
+  // ---- 计算完整度（仅统计用户可见字段） ----
   const calcCompleteness = () => {
     if (!girl) return 0;
-    const fields = GIRL_EDITABLE_FIELDS.map(f => f.key);
-    const filled = fields.filter(k => girl[k] !== null && girl[k] !== undefined && girl[k] !== '').length;
-    return Math.round((filled / fields.length) * 100);
+    const filled = VISIBLE_FIELDS.filter(k => {
+      const val = girl[k];
+      if (val === null || val === undefined || val === '') return false;
+      if (Array.isArray(val)) return val.length > 0;
+      if (['photos', 'videos', 'momentPhotos'].includes(k) && typeof val === 'string') {
+        try { return JSON.parse(val).length > 0; } catch { return false; }
+      }
+      return true;
+    }).length;
+    return Math.round((filled / VISIBLE_FIELDS.length) * 100);
   };
 
   // ---- 加载态 ----
@@ -597,6 +640,7 @@ export default function GirlDetail() {
               {group.fields.map(fk => {
                 const val = girl[fk];
                 if (fk === 'height') return <FieldRow key={fk} label="身高" value={val ? `${val}cm` : null} />;
+                if (fk === 'weight') return <FieldRow key={fk} label="体重" value={val ? `${val}kg` : null} />;
                 if (fk === 'age') return <FieldRow key={fk} label="年龄" value={val ? `${val}岁` : null} />;
                 return <EmptyValue key={fk} value={val}>
                   <Box><Text color="gray.500" fontSize="xs">{getFieldLabel(fk)}</Text><Text color="gray.200" fontSize="sm">{val}</Text></Box>
@@ -1044,7 +1088,7 @@ function getFieldLabel(key) {
   const map = {
     age: '年龄', occupation: '职业', education: '学历', major: '专业',
     hometown: '籍贯', residence: '现居城市', workplace: '工作地点',
-    appearance: '外貌描述', height: '身高', bodyType: '体型',
+    appearance: '外貌描述', height: '身高', weight: '体重', bodyType: '体型',
     familyBackground: '家庭背景', familyAtmosphere: '家庭氛围',
     familyBurden: '养老负担', familyComments: '家庭备注',
     workSchedule: '作息规律', socialActivity: '社交活跃度', financialHabits: '消费习惯',

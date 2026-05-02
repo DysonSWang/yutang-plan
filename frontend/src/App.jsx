@@ -12,6 +12,7 @@ import VersionUpdateModal from './components/VersionUpdateModal';
 import { checkVersion, isCapacitorApp } from './utils/version';
 import { api } from './utils/api';
 import { normalizeError, getErrorMessage } from './utils/errorHandler';
+import { captureError } from './utils/frontendErrorCapture';
 
 const ClientHome = lazy(() => import('./pages/client/Home'));
 const ClientProfile = lazy(() => import('./pages/client/ClientProfile'));
@@ -179,13 +180,16 @@ function VersionChecker() {
   const [updateInfo, setUpdateInfo] = useState(null);
 
   useEffect(() => {
-    // 启动时检测版本
-    checkVersion().then(info => {
-      if (info?.hasUpdate) {
-        setUpdateInfo(info);
-        onOpen();
-      }
-    });
+    checkVersion()
+      .then(info => {
+        if (info?.hasUpdate) {
+          setUpdateInfo(info);
+          onOpen();
+        }
+      })
+      .catch(err => {
+        captureError(err, { context: 'version_check_startup' });
+      });
   }, []);
 
   if (!updateInfo) return null;

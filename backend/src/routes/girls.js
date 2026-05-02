@@ -41,7 +41,7 @@ const girlScreenshotUpload = multer({
 // 客户可编辑的女生档案字段（不含系统分析/AI生成字段）
 const GIRL_CLIENT_EDITABLE_FIELDS = new Set([
   'name', 'age', 'occupation', 'education', 'major', 'hometown', 'residence', 'workplace',
-  'appearance', 'height', 'bodyType', 'styleTags', 'photos', 'avatar', 'homepageUrl', 'videos',
+  'appearance', 'height', 'weight', 'bodyType', 'styleTags', 'photos', 'avatar', 'homepageUrl', 'videos',
   'familyBackground', 'familyAtmosphere', 'familyBurden', 'familyComments',
   'workSchedule', 'socialActivity', 'financialHabits',
   'interests', 'dietPreferences', 'dietRestrictions', 'hobbiesDetail',
@@ -673,6 +673,7 @@ router.put('/:id/client-update', authMiddleware, async (req, res) => {
       'kinkIdentity', 'kinkBoundaries', 'kinkInterests', 'kinkExperience', 'kinkNotes',
       'sourcePlatform', 'sourceUrl', 'notes'];
     const intFields = ['age', 'height'];
+    const floatFields = ['weight'];
     const jsonFields = ['photos', 'videos', 'momentPhotos'];
     const boolFields = ['isKinkOriented'];
 
@@ -686,6 +687,11 @@ router.put('/:id/client-update', authMiddleware, async (req, res) => {
         updateData[key] = data[key] ? parseInt(data[key]) : null;
       }
     }
+    for (const key of floatFields) {
+      if (data[key] !== undefined && GIRL_CLIENT_EDITABLE_FIELDS.has(key)) {
+        updateData[key] = data[key] ? parseFloat(data[key]) : null;
+      }
+    }
     for (const key of jsonFields) {
       if (data[key] !== undefined && GIRL_CLIENT_EDITABLE_FIELDS.has(key)) {
         updateData[key] = data[key] ? JSON.stringify(data[key]) : null;
@@ -694,6 +700,20 @@ router.put('/:id/client-update', authMiddleware, async (req, res) => {
     for (const key of boolFields) {
       if (data[key] !== undefined && GIRL_CLIENT_EDITABLE_FIELDS.has(key)) {
         updateData[key] = !!data[key];
+      }
+    }
+
+    // 自动推断体型（仅当 bodyType 为空且 height 和 weight 都有值时）
+    if (!updateData.bodyType && !girl.bodyType) {
+      const h = updateData.height || girl.height;
+      const w = updateData.weight || girl.weight;
+      if (h && w && h > 0 && w > 0) {
+        const heightM = h / 100;
+        const bmi = w / (heightM * heightM);
+        if (bmi < 18.5) updateData.bodyType = '偏瘦';
+        else if (bmi < 24) updateData.bodyType = '标准';
+        else if (bmi < 28) updateData.bodyType = '微胖';
+        else updateData.bodyType = '偏胖';
       }
     }
 

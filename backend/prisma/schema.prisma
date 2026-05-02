@@ -234,6 +234,7 @@ model Girl {
   // ===== 外貌特征 =====
   appearance  String? // 外貌描述（穿着风格）
   height      Int? // 身高(cm)
+  weight      Float? // 体重(kg)
   bodyType    String? // 体型：偏瘦/标准/微胖/偏胖
   avatar      String? // 头像
   photos      String? // JSON array - 照片
