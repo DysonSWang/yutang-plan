@@ -6,6 +6,17 @@ import { parseErrorResponse, ErrorType } from './errorHandler';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3005';
 
+/**
+ * 将 OSS 相对路径转为完整 URL
+ * @param {string} path - 如 /public/images/xxx.png
+ * @returns {string} 完整 URL
+ */
+export function getMediaUrl(path) {
+  if (!path) return '';
+  if (path.startsWith('http')) return path;
+  return `${API_BASE}${path}`;
+}
+
 // API缓存配置
 const CACHE_TTL = 5 * 60 * 1000; // 5分钟
 const apiCache = new Map();
@@ -344,7 +355,7 @@ export const upload = {
     formData.append('file', file);
     if (isBurnAfterRead) formData.append('isBurnAfterRead', 'true');
     if (isFlashImage) formData.append('isFlashImage', 'true');
-    const res = await fetch(`${api.baseUrl}/api/upload/compress-video`, {
+    const res = await fetch(`${api.baseUrl}/api/upload/video`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` },
       body: formData

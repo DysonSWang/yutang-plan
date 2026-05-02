@@ -235,6 +235,7 @@ model Girl {
   appearance  String? // 外貌描述（穿着风格）
   height      Int? // 身高(cm)
   bodyType    String? // 体型：偏瘦/标准/微胖/偏胖
+  avatar      String? // 头像
   photos      String? // JSON array - 照片
   homepageUrl String? // 主页链接（个人网站/社交主页）
   videos      String? // JSON array - 视频链接

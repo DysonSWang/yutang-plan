@@ -12,7 +12,7 @@ import { zhCN } from 'date-fns/locale/zh-CN';
 import 'react-datepicker/dist/react-datepicker.css';
 import { CalendarIcon, SparklesIcon, QuestionIcon, CopyIcon, MapPinIcon, ClockIcon, FireIcon } from '../../components/Icons';
 import ClientCalendar from '../../components/ClientCalendar';
-import { dates, membership as membershipApi, clients } from '../../utils/api';
+import { dates, membership as membershipApi, clients, getMediaUrl } from '../../utils/api';
 
 function formatLocalDateTime(date) {
   if (!date) return '';
@@ -194,12 +194,12 @@ export default function ClientDates() {
   const getAvatar = (girl) => {
     if (!girl) return null;
     // 优先使用用户自定义头像
-    if (girl.avatar) return girl.avatar;
+    if (girl.avatar) return getMediaUrl(girl.avatar);
     // 其次使用第一张照片
     if (girl.photos) {
       try {
         const photos = typeof girl.photos === 'string' ? JSON.parse(girl.photos) : girl.photos;
-        if (Array.isArray(photos) && photos[0]) return photos[0];
+        if (Array.isArray(photos) && photos[0]) return getMediaUrl(photos[0]);
       } catch {}
     }
     // 用名字生成固定头像索引
