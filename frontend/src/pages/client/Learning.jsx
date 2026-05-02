@@ -36,7 +36,7 @@ function ChapterCard({ chapter, progress, personalizationStatus, onUpdate }) {
             w="40px"
             h="40px"
             borderRadius="lg"
-            bg={isStudied ? 'green.900' : 'abyss.800'}
+            bg={isStudied ? 'green.900' : 'warm.800'}
             display="flex"
             alignItems="center"
             justifyContent="center"
@@ -44,13 +44,13 @@ function ChapterCard({ chapter, progress, personalizationStatus, onUpdate }) {
             {isStudied ? (
               <CheckIcon color="green.400" />
             ) : (
-              <Text color="brand.400" fontWeight="bold" fontSize="sm">{chapter.chapterId}</Text>
+              <Text color="gold.400" fontWeight="bold" fontSize="sm">{chapter.chapterId}</Text>
             )}
           </Box>
           <Box>
             <Text color="white" fontWeight="bold">{chapter.title}</Text>
             {chapter.subtitle && (
-              <Text color="abyss.400" fontSize="xs" mt={0.5}>{chapter.subtitle}</Text>
+              <Text color="rgba(245,240,232,0.4)" fontSize="xs" mt={0.5}>{chapter.subtitle}</Text>
             )}
           </Box>
         </HStack>
@@ -68,7 +68,7 @@ function ChapterCard({ chapter, progress, personalizationStatus, onUpdate }) {
         {!isStudied ? (
           <Button
             size="sm"
-            colorScheme="brand"
+            colorScheme="gold"
             variant="outline"
             onClick={(e) => { e.stopPropagation(); onUpdate(chapter.chapterId, 'completed'); }}
           >
@@ -207,7 +207,7 @@ export default function ClientLearning() {
       <Box mb={6} p={5} bg="rgba(0,212,170,0.06)" borderRadius="xl" border="1px solid rgba(0,212,170,0.15)">
         <Flex justify="space-between" align="center" cursor="pointer" onClick={() => setShowPreface(!showPreface)}>
           <Box>
-            <Text color="brand.300" fontWeight="bold" fontSize="lg">
+            <Text color="gold.300" fontWeight="bold" fontSize="lg">
               {prefaceData?.title || '写在前面'}
             </Text>
           </Box>
@@ -216,7 +216,7 @@ export default function ClientLearning() {
               <Button
                 size="xs"
                 variant="ghost"
-                colorScheme="brand"
+                colorScheme="gold"
                 isLoading={prefaceRegenerating}
                 onClick={regeneratePreface}
               >
@@ -225,7 +225,7 @@ export default function ClientLearning() {
             )}
             <Icon
               as={showPreface ? FiChevronUp : FiChevronDown}
-              color="brand.300"
+              color="gold.300"
               boxSize={6}
               cursor="pointer"
               onClick={() => setShowPreface(!showPreface)}
@@ -240,28 +240,28 @@ export default function ClientLearning() {
                   const trimmed = line.trim();
                   // 标题
                   if (trimmed.startsWith('### ')) {
-                    return <Heading key={i} as="h4" size="sm" color="brand.200" mt={2}>{trimmed.slice(4)}</Heading>;
+                    return <Heading key={i} as="h4" size="sm" color="gold.200" mt={2}>{trimmed.slice(4)}</Heading>;
                   }
                   if (trimmed.startsWith('## ')) {
-                    return <Heading key={i} as="h3" size="sm" color="brand.200" mt={3}>{trimmed.slice(3)}</Heading>;
+                    return <Heading key={i} as="h3" size="sm" color="gold.200" mt={3}>{trimmed.slice(3)}</Heading>;
                   }
                   if (trimmed.startsWith('# ')) {
-                    return <Heading key={i} as="h2" size="md" color="brand.200" mt={3}>{trimmed.slice(2)}</Heading>;
+                    return <Heading key={i} as="h2" size="md" color="gold.200" mt={3}>{trimmed.slice(2)}</Heading>;
                   }
                   // 引用
                   if (trimmed.startsWith('> ')) {
                     return (
-                      <Text key={i} color="abyss.400" fontSize="xs" fontStyle="italic" pl={3} borderLeft="2px solid" borderColor="brand.400">
+                      <Text key={i} color="rgba(245,240,232,0.4)" fontSize="xs" fontStyle="italic" pl={3} borderLeft="2px solid" borderColor="gold.400">
                         {trimmed.slice(2)}
                       </Text>
                     );
                   }
                   // 普通段落
                   return (
-                    <Text key={i} color="abyss.200" fontSize="sm" lineHeight="1.9">
+                    <Text key={i} color="rgba(245,240,232,0.6)" fontSize="sm" lineHeight="1.9">
                       {trimmed.split(/(\*\*[^*]+\*\*)/).map((part, j) => {
                         if (part.startsWith('**') && part.endsWith('**')) {
-                          return <Text as="span" key={j} fontWeight="bold" color="brand.300">{part.slice(2, -2)}</Text>;
+                          return <Text as="span" key={j} fontWeight="bold" color="gold.300">{part.slice(2, -2)}</Text>;
                         }
                         return part;
                       })}
@@ -277,19 +277,19 @@ export default function ClientLearning() {
               </VStack>
             ) : (
               <VStack align="stretch" spacing={4}>
-                <Text color="abyss.200" fontSize="sm" lineHeight="1.9">
-                  <Text as="span" fontWeight="bold" color="brand.300">你追女生失败的次数，比你知道的要多。</Text>
+                <Text color="rgba(245,240,232,0.6)" fontSize="sm" lineHeight="1.9">
+                  <Text as="span" fontWeight="bold" color="gold.300">你追女生失败的次数，比你知道的要多。</Text>
                 </Text>
-                <Text color="abyss.300" fontSize="sm" lineHeight="1.8">
+                <Text color="rgba(245,240,232,0.6)" fontSize="sm" lineHeight="1.8">
                   不是运气差。不是她眼光高。不是「缘分没到」。
                   是因为你从第一步开始，就在用让结果变糟的方式努力。
                   你以为你在追她，其实你在推开她。每发一条「在吗」，每等20分钟才回消息，每送一次礼、解释一次自己，都在强化一个信号：「我不重要，是我更需要你」。
                 </Text>
-                <Text color="abyss.300" fontSize="sm" lineHeight="1.8">
-                  <Text as="span" fontWeight="bold" color="brand.300">这不是你的错。</Text>从来没有人教过你这些。学校没有，爸妈没有，哥们儿只会说「大胆点」。结果就是：大多数人凭感觉在情感世界里裸奔，摸黑走路，踩一个坑学一个坑。
+                <Text color="rgba(245,240,232,0.6)" fontSize="sm" lineHeight="1.8">
+                  <Text as="span" fontWeight="bold" color="gold.300">这不是你的错。</Text>从来没有人教过你这些。学校没有，爸妈没有，哥们儿只会说「大胆点」。结果就是：大多数人凭感觉在情感世界里裸奔，摸黑走路，踩一个坑学一个坑。
                 </Text>
-                <Text color="abyss.300" fontSize="sm" lineHeight="1.8">
-                  <Text as="span" fontWeight="bold" color="brand.300">我现在用一套系统方法，一年做到了50个。</Text>不是理论，不是网上抄的，是我用这套方法在真实世界里一趟一趟跑出来的。这个结果不是运气。是系统。
+                <Text color="rgba(245,240,232,0.6)" fontSize="sm" lineHeight="1.8">
+                  <Text as="span" fontWeight="bold" color="gold.300">我现在用一套系统方法，一年做到了50个。</Text>不是理论，不是网上抄的，是我用这套方法在真实世界里一趟一趟跑出来的。这个结果不是运气。是系统。
                 </Text>
                 <HStack gap={3} flexWrap="wrap" pt={2}>
                   <Badge colorScheme="teal" variant="subtle">20章节</Badge>
@@ -297,7 +297,7 @@ export default function ClientLearning() {
                   <Badge colorScheme="purple" variant="subtle">126+方法</Badge>
                   <Badge colorScheme="orange" variant="subtle">90+心理学原理</Badge>
                 </HStack>
-                <Text color="abyss.400" fontSize="xs" pt={2} fontStyle="italic">
+                <Text color="rgba(245,240,232,0.4)" fontSize="xs" pt={2} fontStyle="italic">
                   追爱不是终点，幸福才是。—— Mo哥
                 </Text>
               </VStack>
@@ -308,11 +308,11 @@ export default function ClientLearning() {
 
       <Box mb={6} p={4} bg="rgba(0,212,170,0.08)" borderRadius="lg" border="1px solid rgba(0,212,170,0.2)">
         <HStack justify="space-between" mb={2}>
-          <Text color="brand.400" fontWeight="bold">学习进度</Text>
-          <Text color="brand.400" fontSize="sm">{studiedCount}/{totalCount} 章节</Text>
+          <Text color="gold.400" fontWeight="bold">学习进度</Text>
+          <Text color="gold.400" fontSize="sm">{studiedCount}/{totalCount} 章节</Text>
         </HStack>
-        <Progress value={percent} size="sm" colorScheme="brand" borderRadius="full" bg="abyss.800" />
-        <Text color="abyss.400" fontSize="xs" mt={1}>
+        <Progress value={percent} size="sm" colorScheme="gold" borderRadius="full" bg="warm.800" />
+        <Text color="rgba(245,240,232,0.4)" fontSize="xs" mt={1}>
           已学习 {percent}% · 坚持学习，提升情商
         </Text>
       </Box>
@@ -332,8 +332,8 @@ export default function ClientLearning() {
       {chapters.length === 0 && (
         <Center py={20}>
           <VStack>
-            <BookIcon boxSize={12} color="abyss.600" />
-            <Text color="abyss.400" mt={2}>暂无章节数据，请联系管理员</Text>
+            <BookIcon boxSize={12} color="rgba(245,240,232,0.2)" />
+            <Text color="rgba(245,240,232,0.4)" mt={2}>暂无章节数据，请联系管理员</Text>
           </VStack>
         </Center>
       )}

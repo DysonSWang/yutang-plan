@@ -142,7 +142,7 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
         <VStack align="stretch" spacing={4}>
           <HStack>
             <Badge colorScheme="orange" variant="subtle" fontSize="sm" px={2} py={0.5}>因材施教</Badge>
-            <Text color="abyss.300" fontSize="sm">
+            <Text color="rgba(245,240,232,0.6)" fontSize="sm">
               档案完善度 {completeness?.percentage || 0}%，达到 70% 解锁专属版本
             </Text>
           </HStack>
@@ -151,24 +151,24 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
             <Text color="white" fontSize="md" fontWeight="bold" mb={3}>
               大多数建议写给不存在的人。所以对谁都没用。
             </Text>
-            <Text color="abyss.300" fontSize="sm" lineHeight="1.9">
+            <Text color="rgba(245,240,232,0.6)" fontSize="sm" lineHeight="1.9">
               通用内容默认你是一个通用的人。
             </Text>
-            <Text color="abyss.300" fontSize="sm" lineHeight="1.9">
+            <Text color="rgba(245,240,232,0.6)" fontSize="sm" lineHeight="1.9">
               你不是。
             </Text>
-            <Text color="abyss.400" fontSize="sm" lineHeight="1.9" mt={3}>
+            <Text color="rgba(245,240,232,0.4)" fontSize="sm" lineHeight="1.9" mt={3}>
               填完档案。系统会读你是谁——每一章的案例、话术、行动，
               围绕你的性格、沟通方式、所处阶段重新生长。
             </Text>
-            <Text color="brand.300" fontSize="sm" fontWeight="medium" mt={2}>
+            <Text color="gold.300" fontSize="sm" fontWeight="medium" mt={2}>
               同一套方法。你的版本。
             </Text>
           </Box>
 
           <Button
             size="md"
-            colorScheme="brand"
+            colorScheme="gold"
             variant="outline"
             alignSelf="flex-start"
             onClick={() => window.location.href = '/profile'}
@@ -185,7 +185,7 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
           <HStack justify="space-between">
             <HStack>
               <Badge colorScheme="purple" variant="subtle" fontSize="sm" px={2} py={0.5}>因材施教</Badge>
-              <Text color="abyss.300" fontSize="sm">
+              <Text color="rgba(245,240,232,0.6)" fontSize="sm">
                 档案完善度 {completeness?.percentage || 0}%
               </Text>
             </HStack>
@@ -195,21 +195,21 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
             <Text color="white" fontSize="md" fontWeight="bold" mb={3}>
               你看过那些建议。有道理。但没用。
             </Text>
-            <Text color="abyss.300" fontSize="sm" lineHeight="1.9">
+            <Text color="rgba(245,240,232,0.6)" fontSize="sm" lineHeight="1.9">
               问题不在方法。在于不匹配。
             </Text>
-            <Text color="abyss.300" fontSize="sm" lineHeight="1.9">
+            <Text color="rgba(245,240,232,0.6)" fontSize="sm" lineHeight="1.9">
               内向的人和外向的人，不能用同一套话术。
               奔着结婚去的，和还在观望的，不该走同一条路。
             </Text>
-            <Text color="abyss.300" fontSize="sm" lineHeight="1.9" mt={3}>
+            <Text color="rgba(245,240,232,0.6)" fontSize="sm" lineHeight="1.9" mt={3}>
               所以我们不给你标准版。
             </Text>
-            <Text color="abyss.300" fontSize="sm" lineHeight="1.9">
+            <Text color="rgba(245,240,232,0.6)" fontSize="sm" lineHeight="1.9">
               系统读你的档案——性格、沟通风格、目标、经历——
               然后从底层重写每一章。
             </Text>
-            <Text color="brand.300" fontSize="sm" fontWeight="medium" mt={2}>
+            <Text color="gold.300" fontSize="sm" fontWeight="medium" mt={2}>
               不是润色。是重写。案例变成适合你的案例。语气像在跟你说话。
               行动匹配你当前的阶段。一个完整的体系，为一个人建造。
             </Text>
@@ -217,13 +217,13 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
 
           <HStack gap={2} flexWrap="wrap">
             {['你的案例', '你的语气', '你的阶段', '你的体系'].map(tag => (
-              <Badge key={tag} colorScheme="brand" variant="subtle" fontSize="xs">{tag}</Badge>
+              <Badge key={tag} colorScheme="gold" variant="subtle" fontSize="xs">{tag}</Badge>
             ))}
           </HStack>
 
           <Button
             size="md"
-            colorScheme="brand"
+            colorScheme="gold"
             alignSelf="flex-start"
             onClick={handleGenerate}
             px={6}
@@ -238,7 +238,7 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
         <VStack align="stretch" spacing={3}>
           <HStack>
             <Badge colorScheme="blue" variant="subtle" fontSize="sm" px={2} py={0.5}>因材施教</Badge>
-            <Text color="abyss.300" fontSize="sm">
+            <Text color="rgba(245,240,232,0.6)" fontSize="sm">
               正在逐章建造你的版本。
             </Text>
           </HStack>
@@ -247,11 +247,11 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
               <Progress
                 value={((batchProgress.completed + batchProgress.failed) / batchProgress.total) * 100}
                 size="sm"
-                colorScheme="brand"
+                colorScheme="gold"
                 borderRadius="full"
-                bg="abyss.800"
+                bg="warm.800"
               />
-              <Text color="abyss.400" fontSize="xs">
+              <Text color="rgba(245,240,232,0.4)" fontSize="xs">
                 第 {Math.min(batchProgress.completed + batchProgress.failed + 1, batchProgress.total)}/{batchProgress.total} 章
                 {generatingChapterId && batchProgress.completed + batchProgress.failed < batchProgress.total && ` · 当前：第 ${generatingChapterId} 章`}
               </Text>
@@ -261,17 +261,17 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
               <Progress
                 isIndeterminate
                 size="sm"
-                colorScheme="brand"
+                colorScheme="gold"
                 borderRadius="full"
-                bg="abyss.800"
+                bg="warm.800"
               />
-              <Text color="abyss.400" fontSize="xs">
+              <Text color="rgba(245,240,232,0.4)" fontSize="xs">
                 正在重写中...
                 {generatingChapterId && ` 当前：第 ${generatingChapterId} 章`}
               </Text>
             </>
           )}
-          <Text color="abyss.500" fontSize="xs">
+          <Text color="rgba(245,240,232,0.2)" fontSize="xs">
             可以先读标准版。完成后通知你。
           </Text>
         </VStack>
@@ -283,7 +283,7 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
           <HStack justify="space-between">
             <HStack>
               <Badge colorScheme="green" variant="subtle" fontSize="sm" px={2} py={0.5}>因材施教</Badge>
-              <Text color="abyss.300" fontSize="sm">你的版本已就绪。每一章都为你重写过了。</Text>
+              <Text color="rgba(245,240,232,0.6)" fontSize="sm">你的版本已就绪。每一章都为你重写过了。</Text>
             </HStack>
             {onSwitchVersion && (
               <HStack gap={2}>
@@ -306,12 +306,12 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
               </HStack>
             )}
           </HStack>
-          <Text color="abyss.500" fontSize="xs">
+          <Text color="rgba(245,240,232,0.2)" fontSize="xs">
             档案更新了？重新生成，保持同步。
             <Button
               size="xs"
               variant="link"
-              colorScheme="brand"
+              colorScheme="gold"
               ml={2}
               onClick={handleRegenerate}
             >
@@ -326,13 +326,13 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
         <VStack align="stretch" spacing={3}>
           <HStack>
             <Badge colorScheme="orange" variant="subtle">已过时</Badge>
-            <Text color="abyss.300" fontSize="sm">
+            <Text color="rgba(245,240,232,0.6)" fontSize="sm">
               档案已更新。你的版本不再匹配现在的你。
             </Text>
           </HStack>
           <Button
             size="sm"
-            colorScheme="brand"
+            colorScheme="gold"
             variant="outline"
             alignSelf="flex-start"
             onClick={handleRegenerate}

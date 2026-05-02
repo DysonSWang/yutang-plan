@@ -27,9 +27,9 @@ export default function VersionUpdateModal({ isOpen, onClose, upgradeType, lates
     >
       <ModalOverlay bg="blackAlpha.800" />
       <ModalContent
-        bg="abyss.900"
+        bg="warm.900"
         border="1px solid"
-        borderColor="abyss.700"
+        borderColor="warm.700"
         borderRadius="16px"
         mx={4}
       >
@@ -40,7 +40,7 @@ export default function VersionUpdateModal({ isOpen, onClose, upgradeType, lates
               w="64px"
               h="64px"
               borderRadius="full"
-              bg="brand.500"
+              bg="gold.500"
               align="center"
               justify="center"
               boxShadow="0 4px 20px rgba(0,212,170,0.3)"
@@ -60,7 +60,7 @@ export default function VersionUpdateModal({ isOpen, onClose, upgradeType, lates
 
             {/* 版本号 */}
             <Text
-              color="abyss.400"
+              color="rgba(245,240,232,0.4)"
               fontSize="sm"
             >
               V{latestVersion}
@@ -68,7 +68,7 @@ export default function VersionUpdateModal({ isOpen, onClose, upgradeType, lates
 
             {/* 更新说明 */}
             <Text
-              color="abyss.300"
+              color="rgba(245,240,232,0.6)"
               fontSize="sm"
               textAlign="center"
               lineHeight="1.6"
@@ -98,8 +98,8 @@ export default function VersionUpdateModal({ isOpen, onClose, upgradeType, lates
             <Button
               w="100%"
               size="md"
-              bgGradient="linear(135deg, brand.500, brand.400)"
-              color="abyss.950"
+              bgGradient="linear(135deg, gold.500, gold.400)"
+              color="warm.950"
               fontWeight="500"
               borderRadius="12px"
               _hover={{ transform: 'translateY(-2px)', boxShadow: '0 4px 12px rgba(0,212,170,0.3)' }}
@@ -113,9 +113,9 @@ export default function VersionUpdateModal({ isOpen, onClose, upgradeType, lates
                 w="100%"
                 size="sm"
                 variant="ghost"
-                color="abyss.500"
+                color="rgba(245,240,232,0.2)"
                 onClick={handleLater}
-                _hover={{ color: 'abyss.300' }}
+                _hover={{ color: 'rgba(245,240,232,0.6)' }}
               >
                 稍后再说
               </Button>

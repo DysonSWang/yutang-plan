@@ -7,8 +7,8 @@ import { Box, Card, CardBody, Heading, Text, SimpleGrid, Stat, StatLabel, StatNu
 import { SearchIcon, FishIcon, HeartIcon, LockIcon, SparklesIcon } from '../../components/Icons';
 
 const SERVICE_STAGES = [
-  { stage: 1, name: '背调', icon: SearchIcon, description: '需求分析+方案制定', color: 'abyss' },
-  { stage: 2, name: '建池', icon: FishIcon, description: '100+女生资源建设', color: 'ocean' },
+  { stage: 1, name: '背调', icon: SearchIcon, description: '需求分析+方案制定', color: 'warm' },
+  { stage: 2, name: '建池', icon: FishIcon, description: '100+女生资源建设', color: 'rose' },
   { stage: 3, name: '约会', icon: HeartIcon, description: '成功约出女生', color: 'orange' },
   { stage: 4, name: '锁定', icon: LockIcon, description: '确定心动关系', color: 'purple' },
   { stage: 5, name: '维护', icon: SparklesIcon, description: '长期关系维护', color: 'green' },
@@ -16,9 +16,9 @@ const SERVICE_STAGES = [
 
 // 阶段颜色配置：默认灰、激活时发光
 const STAGE_COLORS = {
-  default: { bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.1)', text: 'abyss.500' },
-  active: { bg: 'rgba(0, 212, 170, 0.15)', border: 'rgba(0, 212, 170, 0.4)', text: 'brand.400' },
-  done: { bg: 'brand.500', border: 'brand.400', text: 'white' },
+  default: { bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.1)', text: 'rgba(245,240,232,0.2)' },
+  active: { bg: 'rgba(0, 212, 170, 0.15)', border: 'rgba(0, 212, 170, 0.4)', text: 'gold.400' },
+  done: { bg: 'gold.500', border: 'gold.400', text: 'white' },
 };
 
 function StageNode({ stage, isCurrent, isPast }) {
@@ -47,7 +47,7 @@ function StageNode({ stage, isCurrent, isPast }) {
       </Box>
       <Text
         fontSize="xs"
-        color={isDone || isActive ? 'brand.400' : 'abyss.500'}
+        color={isDone || isActive ? 'gold.400' : 'rgba(245,240,232,0.2)'}
         fontWeight={isActive ? 'bold' : 'normal'}
         transition="color 0.3s ease"
       >
@@ -87,7 +87,7 @@ export default function ServiceProgressBoard({ currentStage = 1, stats = {} }) {
             {currentStageData && (
               <Badge
                 bg="rgba(0, 212, 170, 0.15)"
-                color="brand.500"
+                color="gold.500"
                 border="1px solid rgba(0, 212, 170, 0.3)"
                 fontSize="sm"
                 px={3}
@@ -148,10 +148,10 @@ export default function ServiceProgressBoard({ currentStage = 1, stats = {} }) {
             borderRadius="lg"
             mt={2}
           >
-            <Text color="brand.500" fontWeight="bold" fontSize="sm">
+            <Text color="gold.500" fontWeight="bold" fontSize="sm">
               当前：{currentStageData?.name}
             </Text>
-            <Text color="abyss.400" fontSize="xs" mt={1}>
+            <Text color="rgba(245,240,232,0.4)" fontSize="xs" mt={1}>
               {currentStageData?.description}
             </Text>
           </Box>
@@ -160,7 +160,7 @@ export default function ServiceProgressBoard({ currentStage = 1, stats = {} }) {
 
       {/* 成果展示卡片 */}
       <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
-        <StatCard label="缘分资源" value={girlCount} unit="个女生" icon={FishIcon} color="brand" />
+        <StatCard label="缘分资源" value={girlCount} unit="个女生" icon={FishIcon} color="gold" />
         <StatCard label="暧昧中" value={intimacyCount} unit="正在推进" icon={HeartIcon} color="orange" />
         <StatCard label="约会次数" value={dateCount} unit="已完成" icon={SparklesIcon} color="purple" />
         <StatCard label="长期关系" value={longTermCount} unit="确定心动" icon={LockIcon} color="red" />
@@ -171,13 +171,13 @@ export default function ServiceProgressBoard({ currentStage = 1, stats = {} }) {
 
 function StatCard({ label, value, unit, icon, color }) {
   const colorMap = {
-    brand: 'brand.500',
+    gold: 'gold.500',
     orange: 'orange.400',
     purple: 'purple.400',
     red: 'red.400',
   };
   const glowColor = {
-    brand: 'rgba(0, 212, 170, 0.2)',
+    gold: 'rgba(0, 212, 170, 0.2)',
     orange: 'rgba(251, 146, 60, 0.2)',
     purple: 'rgba(168, 85, 247, 0.2)',
     red: 'rgba(248, 113, 113, 0.2)',
@@ -199,7 +199,7 @@ function StatCard({ label, value, unit, icon, color }) {
       <CardBody>
         <Stat>
           <Flex align="center" justify="space-between" mb={2}>
-            <StatLabel color="abyss.400" fontSize="sm">{label}</StatLabel>
+            <StatLabel color="rgba(245,240,232,0.4)" fontSize="sm">{label}</StatLabel>
             <Box
               p={2}
               borderRadius="md"
@@ -209,7 +209,7 @@ function StatCard({ label, value, unit, icon, color }) {
             </Box>
           </Flex>
           <StatNumber color={colorMap[color]} fontSize="2xl" fontWeight="700">{value}</StatNumber>
-          <Text color="abyss.500" fontSize="xs" mt={1}>{unit}</Text>
+          <Text color="rgba(245,240,232,0.2)" fontSize="xs" mt={1}>{unit}</Text>
         </Stat>
       </CardBody>
     </Card>

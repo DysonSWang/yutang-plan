@@ -515,7 +515,7 @@ export default function ClientChat() {
   if (loading) {
     return (
       <Center h="calc(100vh - 150px)">
-        <Spinner size="lg" color="brand.500" />
+        <Spinner size="lg" color="gold.500" />
       </Center>
     );
   }
@@ -527,12 +527,12 @@ export default function ClientChat() {
         {/* 聊天头部 */}
         <Box p={4} borderBottom="1px solid rgba(255,255,255,0.06)">
           <HStack spacing={3}>
-            <Box w="40px" h="40px" borderRadius="full" bg="brand.500" display="flex" alignItems="center" justifyContent="center">
+            <Box w="40px" h="40px" borderRadius="full" bg="gold.500" display="flex" alignItems="center" justifyContent="center">
               <Text fontSize="lg">💕</Text>
             </Box>
             <Box>
               <Text color="white" fontWeight="bold">Mo哥</Text>
-              <Text color="abyss.400" fontSize="xs">专属人工顾问</Text>
+              <Text color="rgba(245,240,232,0.4)" fontSize="xs">专属人工顾问</Text>
             </Box>
           </HStack>
         </Box>
@@ -553,7 +553,7 @@ export default function ClientChat() {
             <Center h="100%">
               <VStack spacing={3}>
                 <Text fontSize="4xl">💬</Text>
-                <Text color="abyss.400">开始和Mo哥聊聊吧</Text>
+                <Text color="rgba(245,240,232,0.4)">开始和Mo哥聊聊吧</Text>
               </VStack>
             </Center>
           ) : (
@@ -578,7 +578,7 @@ export default function ClientChat() {
                     pb={3}
                   >
                     {showTime && (
-                      <Text color="abyss.500" fontSize="xs" textAlign="center" w="100%" my={2}>
+                      <Text color="rgba(245,240,232,0.2)" fontSize="xs" textAlign="center" w="100%" my={2}>
                         {new Date(msg.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })}
                       </Text>
                     )}
@@ -588,7 +588,7 @@ export default function ClientChat() {
                           w="28px"
                           h="28px"
                           borderRadius="full"
-                          bg="abyss.600"
+                          bg="rgba(245,240,232,0.2)"
                           display="flex"
                           alignItems="center"
                           justifyContent="center"
@@ -603,7 +603,7 @@ export default function ClientChat() {
                         borderRadius="lg"
                         bg={msg.isBurnAfterRead && !msg.burnedAt
                           ? 'linear-gradient(135deg, rgba(255,140,0,0.25), rgba(255,80,0,0.15))'
-                          : isClient ? 'brand.500' : 'rgba(255,255,255,0.08)'}
+                          : isClient ? 'gold.500' : 'rgba(255,255,255,0.08)'}
                         border={msg.isBurnAfterRead && !msg.burnedAt ? '1px solid rgba(255,140,0,0.35)' : 'none'}
                         color="white"
                         role="group"
@@ -641,7 +641,7 @@ export default function ClientChat() {
                           w="28px"
                           h="28px"
                           borderRadius="full"
-                          bg="brand.500"
+                          bg="gold.500"
                           display="flex"
                           alignItems="center"
                           justifyContent="center"
@@ -683,7 +683,7 @@ export default function ClientChat() {
                 />
                 <Button
                   size="sm"
-                  colorScheme="brand"
+                  colorScheme="gold"
                   isLoading={uploading}
                   loadingText={uploading && previewFile.type === 'video' ? '压缩中...' : '发送中'}
                   onClick={previewFile.type === 'audio' ? confirmSendAudio : confirmSendVideo}
@@ -699,7 +699,7 @@ export default function ClientChat() {
               icon={<Text>📷</Text>}
               variant="ghost"
               size="sm"
-              color="abyss.400"
+              color="rgba(245,240,232,0.4)"
               onClick={() => fileInputRef.current?.click()}
               aria-label="发送图片/视频"
               isDisabled={sending || !!previewFile}
@@ -716,7 +716,7 @@ export default function ClientChat() {
               icon={<Text>{recording ? '⏹' : '🎤'}</Text>}
               variant="ghost"
               size="sm"
-              color={recording ? 'red.400' : 'abyss.400'}
+              color={recording ? 'red.400' : 'rgba(245,240,232,0.4)'}
               onClick={recording ? stopRecording : startRecording}
               aria-label="录制语音"
               isDisabled={sending || !!previewFile}
@@ -725,7 +725,7 @@ export default function ClientChat() {
               <Button
                 size="sm"
                 variant="ghost"
-                color={burnMode ? 'orange.400' : 'abyss.400'}
+                color={burnMode ? 'orange.400' : 'rgba(245,240,232,0.4)'}
                 onClick={() => setBurnMode(!burnMode)}
                 isDisabled={!!previewFile || flashMode}
               >
@@ -738,7 +738,7 @@ export default function ClientChat() {
                   left="50%"
                   transform="translateX(-50%)"
                   mb={2}
-                  bg="abyss.800"
+                  bg="warm.800"
                   p={2}
                   borderRadius="md"
                   border="1px solid rgba(255,255,255,0.1)"
@@ -763,7 +763,7 @@ export default function ClientChat() {
             <IconButton
               icon={<Text>⚡{flashMode ? '闪图' : ''}</Text>}
               variant="ghost"
-              color={flashMode ? 'yellow.400' : 'abyss.400'}
+              color={flashMode ? 'yellow.400' : 'rgba(245,240,232,0.4)'}
               aria-label="闪图模式"
               isDisabled={sending || !!previewFile || burnMode}
               title={flashMode ? '闪图：查阅后5秒自动销毁' : '闪图模式'}
@@ -787,10 +787,10 @@ export default function ClientChat() {
               bg="rgba(255,255,255,0.05)"
               border="1px solid rgba(255,255,255,0.1)"
               color="white"
-              _placeholder={{ color: 'abyss.500' }}
-              _focus={{ borderColor: 'brand.500' }}
+              _placeholder={{ color: 'rgba(245,240,232,0.2)' }}
+              _focus={{ borderColor: 'gold.500' }}
             />
-            <Button colorScheme="brand" onClick={sendMessage} isLoading={sending} isDisabled={!input.trim()} size="sm">
+            <Button colorScheme="gold" onClick={sendMessage} isLoading={sending} isDisabled={!input.trim()} size="sm">
               发送
             </Button>
           </HStack>

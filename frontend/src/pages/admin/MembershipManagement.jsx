@@ -47,7 +47,7 @@ function ClientMembershipCard({ client, onManage }) {
         <HStack justify="space-between" mt={3} pt={3} borderTop="1px solid" borderColor="gray.700">
           <VStack align="start" spacing={0}>
             <Text color="gray.400" fontSize="xs">积分余额</Text>
-            <Text color="brand.400" fontWeight="bold" fontSize="lg">{client.points || 0}</Text>
+            <Text color="gold.400" fontWeight="bold" fontSize="lg">{client.points || 0}</Text>
           </VStack>
           <Button size="sm" colorScheme="teal" variant="outline" onClick={() => onManage(client)}>
             管理

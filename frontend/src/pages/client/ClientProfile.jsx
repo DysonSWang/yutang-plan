@@ -688,7 +688,7 @@ export default function ClientProfile() {
                     </Badge>
                   </HStack>
                   <HStack spacing={2} pt={1}>
-                    <Button size="xs" colorScheme="brand" variant="outline" leftIcon={<Icon as={CrownIcon} />} onClick={onRenewalOpen}>开通</Button>
+                    <Button size="xs" colorScheme="gold" variant="outline" leftIcon={<Icon as={CrownIcon} />} onClick={onRenewalOpen}>开通</Button>
                     <Button size="xs" variant="link" color="teal.400" onClick={onPricingOpen}>定价</Button>
                   </HStack>
                 </VStack>
@@ -1158,7 +1158,7 @@ export default function ClientProfile() {
         <ModalOverlay backdropFilter="blur(4px)" />
         <ModalContent bg="gray.800" color="white" borderRadius="xl" maxH="90vh" overflowY="auto">
           <ModalHeader textAlign="center" pb={2}>
-            <Icon as={CrownIcon} w={6} h={6} color="brand.400" mb={2} />
+            <Icon as={CrownIcon} w={6} h={6} color="gold.400" mb={2} />
             <Text color="white">选择专属方案</Text>
             <Text color="gray.400" fontSize="sm" fontWeight="normal" mt={1}>联系客服，获取您的专属定制方案</Text>
           </ModalHeader>
@@ -1189,7 +1189,7 @@ export default function ClientProfile() {
                     <VStack spacing={2} mb={4}>
                       <Text color="white" fontWeight="bold" fontSize="lg">{plan.label}</Text>
                       <HStack spacing={1} align="baseline">
-                        <Text color="brand.400" fontSize="3xl" fontWeight="bold">¥{plan.price}</Text>
+                        <Text color="gold.400" fontSize="3xl" fontWeight="bold">¥{plan.price}</Text>
                         <Text color="gray.400" fontSize="sm">/{plan.period}</Text>
                       </HStack>
                       <Text color="gray.500" fontSize="xs">约¥{plan.perMonth}/月</Text>
@@ -1210,7 +1210,7 @@ export default function ClientProfile() {
               <Text color="gray.400" fontSize="sm" mb={2}>邀请有礼</Text>
               <SimpleGrid columns={3} spacing={2}>
                 <Box textAlign="center" p={2} bg="gray.600" borderRadius="md">
-                  <Text color="brand.400" fontWeight="600">500</Text>
+                  <Text color="gold.400" fontWeight="600">500</Text>
                   <Text color="gray.400" fontSize="xs">普惠月付邀请积分</Text>
                 </Box>
                 <Box textAlign="center" p={2} bg="gray.600" borderRadius="md">
@@ -1262,7 +1262,7 @@ export default function ClientProfile() {
                   transition="all 0.15s"
                 >
                   <Text fontSize="sm" fontWeight="bold">{plan.label}</Text>
-                  <Text color="brand.300" fontSize="lg" fontWeight="bold">¥{plan.price}</Text>
+                  <Text color="gold.300" fontSize="lg" fontWeight="bold">¥{plan.price}</Text>
                   <Text color="gray.400" fontSize="xs">/{plan.period}</Text>
                 </Box>
               ))}

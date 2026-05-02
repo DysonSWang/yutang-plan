@@ -15,7 +15,7 @@ function parseBold(text) {
     if (match) {
       const idx = remaining.indexOf(match[0]);
       if (idx > 0) parts.push(<Text as="span" key={key++}>{remaining.slice(0, idx)}</Text>);
-      parts.push(<Text as="span" key={key++} fontWeight="bold" color="brand.200">{match[1]}</Text>);
+      parts.push(<Text as="span" key={key++} fontWeight="bold" color="gold.200">{match[1]}</Text>);
       remaining = remaining.slice(idx + match[0].length);
     } else {
       parts.push(<Text as="span" key={key++}>{remaining}</Text>);
@@ -127,15 +127,15 @@ export default function ChapterDetail() {
   const nextChapter = currentIndex < allChapters.length - 1 ? allChapters[currentIndex + 1] : null;
 
   if (loading) return (
-    <Center h="100vh" bg="abyss.900">
-      <Spinner color="brand.400" />
+    <Center h="100vh" bg="warm.900">
+      <Spinner color="gold.400" />
     </Center>
   );
 
   if (!chapter) return (
-    <Center h="100vh" bg="abyss.900">
+    <Center h="100vh" bg="warm.900">
       <VStack>
-        <Text color="abyss.400">章节不存在</Text>
+        <Text color="rgba(245,240,232,0.4)">章节不存在</Text>
         <Button onClick={() => navigate('/learning')}>返回学习中心</Button>
       </VStack>
     </Center>
@@ -145,7 +145,7 @@ export default function ChapterDetail() {
     <Box
       h="100vh"
       overflow="hidden"
-      bg="abyss.900"
+      bg="warm.900"
       position="relative"
     >
       {/* 顶部导航 - 沉浸式隐藏 */}
@@ -155,7 +155,7 @@ export default function ChapterDetail() {
         left={0}
         right={0}
         zIndex={10}
-        bg="abyss.900"
+        bg="warm.900"
         pb={4}
         pt={{ base: 'env(safe-area-inset-top, 16px)', md: 12 }}
         px={6}
@@ -168,13 +168,13 @@ export default function ChapterDetail() {
               <Badge colorScheme={statusColor} variant="subtle" fontSize="xs">
                 {statusLabel}
               </Badge>
-              <Text color="abyss.500" fontSize="xs">第 {chapter.chapterId} 章</Text>
+              <Text color="rgba(245,240,232,0.2)" fontSize="xs">第 {chapter.chapterId} 章</Text>
             </HStack>
             <Text color="white" fontSize="xl" fontWeight="bold" lineHeight="short">
               {chapter.title}
             </Text>
             {chapter.subtitle && (
-              <Text color="abyss.400" fontSize="sm">{chapter.subtitle}</Text>
+              <Text color="rgba(245,240,232,0.4)" fontSize="sm">{chapter.subtitle}</Text>
             )}
           </VStack>
           <IconButton
@@ -217,7 +217,7 @@ export default function ChapterDetail() {
             />
 
             {/* 章节引导信息 */}
-            <Box mb={8} pb={6} borderBottom="1px solid" borderColor="abyss.800">
+            <Box mb={8} pb={6} borderBottom="1px solid" borderColor="warm.800">
               <HStack gap={3} mb={4}>
                 <Box
                   w="48px"
@@ -232,13 +232,13 @@ export default function ChapterDetail() {
                   {status === 'completed' ? (
                     <CheckIcon color="green.400" />
                   ) : (
-                    <Text color="brand.400" fontWeight="bold" fontSize="lg">{chapter.chapterId}</Text>
+                    <Text color="gold.400" fontWeight="bold" fontSize="lg">{chapter.chapterId}</Text>
                   )}
                 </Box>
                 <VStack align="flex-start" spacing={0}>
                   <Text color="white" fontWeight="semibold" fontSize="lg">{chapter.title}</Text>
                   {chapter.subtitle && (
-                    <Text color="abyss.500" fontSize="sm">{chapter.subtitle}</Text>
+                    <Text color="rgba(245,240,232,0.2)" fontSize="sm">{chapter.subtitle}</Text>
                   )}
                 </VStack>
               </HStack>
@@ -246,7 +246,7 @@ export default function ChapterDetail() {
 
             {/* 正文 */}
             <Box
-              color="abyss.200"
+              color="rgba(245,240,232,0.6)"
               fontSize="18px"
               lineHeight="1.9"
               fontFamily="'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif"
@@ -266,7 +266,7 @@ export default function ChapterDetail() {
 
                   // 分隔线 ---
                   if (trimmed === '---') {
-                    elements.push(<Box key={i} my={6} borderBottom="1px solid" borderColor="abyss.700" />);
+                    elements.push(<Box key={i} my={6} borderBottom="1px solid" borderColor="warm.700" />);
                     continue;
                   }
 
@@ -290,9 +290,9 @@ export default function ChapterDetail() {
                       const rows = dataLines.map((rowLine, ri) => {
                         const cells = rowLine.split('|').filter((_, ci) => ci > 0 && ci < rowLine.split('|').length - 1);
                         return (
-                          <Box key={ri} display="flex" borderBottom={ri < dataLines.length - 1 ? '1px solid' : 'none'} borderColor="abyss.700">
+                          <Box key={ri} display="flex" borderBottom={ri < dataLines.length - 1 ? '1px solid' : 'none'} borderColor="warm.700">
                             {cells.map((cell, ci) => (
-                              <Box key={ci} flex={1} py={2} px={3} fontSize="sm" color={ri === 0 ? 'white' : 'abyss.200'} fontWeight={ri === 0 ? 'bold' : 'normal'} textAlign="left">
+                              <Box key={ci} flex={1} py={2} px={3} fontSize="sm" color={ri === 0 ? 'white' : 'rgba(245,240,232,0.6)'} fontWeight={ri === 0 ? 'bold' : 'normal'} textAlign="left">
                                 {parseBold(cell.trim())}
                               </Box>
                             ))}
@@ -307,7 +307,7 @@ export default function ChapterDetail() {
                   // 标题格式
                   if (trimmed.startsWith('### ')) {
                     elements.push(
-                      <Text key={i} color="brand.300" fontSize="lg" fontWeight="medium" mt={5} mb={2}>
+                      <Text key={i} color="gold.300" fontSize="lg" fontWeight="medium" mt={5} mb={2}>
                         {trimmed.slice(4)}
                       </Text>
                     );
@@ -338,7 +338,7 @@ export default function ChapterDetail() {
                     const match = trimmed.match(/^#+\s+(.+)/);
                     if (match) {
                       elements.push(
-                        <Text key={i} color="abyss.200" fontSize="md" fontWeight="medium" mt={4} mb={2}>
+                        <Text key={i} color="rgba(245,240,232,0.6)" fontSize="md" fontWeight="medium" mt={4} mb={2}>
                           {match[1]}
                         </Text>
                       );
@@ -350,7 +350,7 @@ export default function ChapterDetail() {
                   if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
                     elements.push(
                       <HStack key={i} align="flex-start" mb={2} gap={3}>
-                        <Text color="brand.400" mt={1}>·</Text>
+                        <Text color="gold.400" mt={1}>·</Text>
                         <Text flex={1}>{parseBold(trimmed.slice(2))}</Text>
                       </HStack>
                     );
@@ -365,10 +365,10 @@ export default function ChapterDetail() {
                         ml={0}
                         pl={4}
                         borderLeft="3px solid"
-                        borderColor="brand.400"
+                        borderColor="gold.400"
                         py={2}
                         mb={3}
-                        color="abyss.300"
+                        color="rgba(245,240,232,0.6)"
                         fontStyle="italic"
                       >
                         {parseBold(trimmed.slice(2))}
@@ -392,9 +392,9 @@ export default function ChapterDetail() {
         ) : (
           <Center py={20}>
             <VStack>
-              <BookIcon boxSize={12} color="abyss.600" />
-              <Text color="abyss.400" mt={4}>暂无章节内容</Text>
-              <Text color="abyss.500" fontSize="sm" mt={1}>请联系管理员添加内容</Text>
+              <BookIcon boxSize={12} color="rgba(245,240,232,0.2)" />
+              <Text color="rgba(245,240,232,0.4)" mt={4}>暂无章节内容</Text>
+              <Text color="rgba(245,240,232,0.2)" fontSize="sm" mt={1}>请联系管理员添加内容</Text>
             </VStack>
           </Center>
         )}
@@ -406,7 +406,7 @@ export default function ChapterDetail() {
           pb={4}
           px={2}
           borderTop="1px solid"
-          borderColor="abyss.800"
+          borderColor="warm.800"
         >
           <HStack justify="space-between" gap={4}>
             {prevChapter ? (
@@ -421,7 +421,7 @@ export default function ChapterDetail() {
                 _hover={{ bg: 'rgba(255,255,255,0.1)' }}
               >
                 <VStack spacing={0} align="center">
-                  <Text fontSize="xs" color="abyss.500">上一章</Text>
+                  <Text fontSize="xs" color="rgba(245,240,232,0.2)">上一章</Text>
                   <Text fontSize="sm">{prevChapter.title}</Text>
                 </VStack>
               </Button>
@@ -444,12 +444,12 @@ export default function ChapterDetail() {
               <Button
                 flex={1}
                 size="lg"
-                colorScheme="brand"
+                colorScheme="gold"
                 onClick={() => navigate(`/learning/${nextChapter.chapterId}`)}
                 borderRadius="xl"
               >
                 <VStack spacing={0} align="center">
-                  <Text fontSize="xs" color="brand.200">下一章</Text>
+                  <Text fontSize="xs" color="gold.200">下一章</Text>
                   <Text fontSize="sm">{nextChapter.title}</Text>
                 </VStack>
               </Button>
