@@ -6,13 +6,11 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-const { execSync } = require('child_process');
-
 const { JWT_SECRET, getAIConfig } = require('../config');
 const prisma = require('../prisma');
 const AppError = require('../errors/AppError');
 const { ErrorCodes } = require('../errors/errorCodes');
-const { analyzeSuitableVenueTypes } = require('./membership');
+const { analyzeSuitableVenueTypes, baiduVenueSearch } = require('./membership');
 // 辅助：验证目标用户是否为 client（管理员可操作所有客户）
 async function verifyIsClient(userId) {
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
@@ -149,43 +147,9 @@ async function callAIStream(messages, options, callbacks) {
   }
 }
 
-/**
- * 约会场地搜索 - 使用百度AI搜索
- * 百度搜索覆盖中文内容更全面，返回智能总结
- */
-const BAIDU_API_KEY = process.env.BAIDU_API_KEY || 'bce-v3/ALTAK-OLhmNcBERSUNnAlIXsXa9/80280c210c8682e7c02a2a0883ef257fe36e4692';
-
 function parsePriceRange(text) {
   const match = text.match(/人均[：:]?[¥￥]?(\d+)/);
   return match ? parseInt(match[1]) : null;
-}
-
-// 百度AI搜索
-async function baiduAISearch(query) {
-  try {
-    const cmd = [
-      'https_proxy=http://127.0.0.1:7897',
-      'http_proxy=http://127.0.0.1:7897',
-      'curl', '-s', '-X', 'POST',
-      'https://qianfan.baidubce.com/v2/ai_search/chat/completions',
-      '-H', 'Authorization: Bearer ' + BAIDU_API_KEY,
-      '-H', 'Content-Type: application/json',
-      '-d', JSON.stringify({
-        messages: [{ content: query, role: 'user' }],
-        model: 'deepseek-v3',
-        search_source: 'baidu_search_v2',
-        resource_type_filter: [{ type: 'web', top_k: 5 }],
-        stream: false,
-        enable_deep_search: false
-      })
-    ];
-
-    const output = execSync(cmd.join(' '), { timeout: 15000 });
-    return JSON.parse(output.toString());
-  } catch (e) {
-    console.warn('[Dates] 百度搜索失败:', e.message);
-    return { choices: [], references: [] };
-  }
 }
 
 async function searchVenues({ location, interests, budget, dateStyle, girl, dateTime }) {
@@ -195,32 +159,13 @@ async function searchVenues({ location, interests, budget, dateStyle, girl, date
   const budgetNum = parseInt((budget || '500').replace(/[^0-9]/g, '')) || 500;
   const locationText = location || '';
 
-  // 解析约会时间，确定时段
-  let timeHint = '';
-  if (dateTime) {
-    try {
-      const d = new Date(dateTime);
-      const hour = d.getHours();
-      if (hour >= 5 && hour < 11) timeHint = '上午时段';
-      else if (hour >= 11 && hour < 13) timeHint = '午餐时段';
-      else if (hour >= 13 && hour < 17) timeHint = '下午';
-      else if (hour >= 17 && hour < 19) timeHint = '傍晚';
-      else if (hour >= 19 && hour < 22) timeHint = '晚上黄金时段，推荐酒吧、居酒屋、夜景餐厅等晚间场所';
-      else if (hour >= 22 || hour < 2) timeHint = '深夜时段，请只推荐营业至深夜的场所如酒吧、夜宵、Livehouse，严禁推荐咖啡厅和已打烊店铺';
-      else timeHint = '凌晨时段';
-    } catch {}
-  }
-
   // 智能分析合适场所类型
   const sceneText = [dateStyle, interests].filter(Boolean).join(' ');
   const venueTypes = analyzeSuitableVenueTypes(sceneText, budget, dateTime, girl?.stage || '');
 
-  // 1. 用百度AI搜索约会场地（一次性获取综合结果）
+  // 1. 用百度AI搜索约会场地（使用增强版深搜）
   try {
-    const timeFilter = timeHint ? `，时间段：${timeHint}` : '';
-    const typeFilter = venueTypes.length > 0 ? `，场所类型：${venueTypes.join('、')}` : '';
-    const query = `${locationText}附近适合2人约会${timeFilter}${typeFilter}推荐，包含具体店名、地址、人均消费`;
-    const data = await baiduAISearch(query);
+    const data = await baiduVenueSearch(locationText, venueTypes, budgetNum);
 
     // 提取AI总结
     const choices = data.choices || [];
