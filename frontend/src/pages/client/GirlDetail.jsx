@@ -24,7 +24,7 @@ const RELATIONSHIP_STAGE_COLORS = {
 // ---- 字段分组 ----
 const FIELD_GROUPS = {
   basic: {
-    title: '基础信息', color: 'teal.400',
+    title: '基础信息', color: 'blue.400',
     fields: ['age', 'occupation', 'education', 'major', 'residence', 'workplace', 'hometown']
   },
   appearance: {
@@ -575,64 +575,58 @@ export default function GirlDetail() {
 
   return (
     <Box pb={8}>
-      {/* ---- 顶部导航 ---- */}
-      <HStack mb={6} justify="space-between">
-        <HStack spacing={3}>
-          <IconButton icon={<Icon as={FiArrowLeft} />} variant="ghost" color="gray.400" onClick={() => navigate('/my-pond')} aria-label="返回" size="sm" />
-          <Avatar size="sm" name={girl.name} src={getMediaUrl(girl.avatar) || undefined} />
-          <Heading color="white" size="lg">{girl.name}</Heading>
-          <Badge colorScheme={STAGE_COLORS[girl.stage] || 'gray'}>{girl.stage || '未知'}</Badge>
-          {relationshipStage && (
-            <Badge colorScheme={RELATIONSHIP_STAGE_COLORS[relationshipStage] || 'gray'} variant="outline">
-              {RELATIONSHIP_STAGE_LABELS[relationshipStage] || relationshipStage}
-            </Badge>
-          )}
-        </HStack>
-        <Button colorScheme="teal" size="sm" leftIcon={<Icon as={FiEdit2} />} onClick={openEdit}>编辑档案</Button>
+      {/* ---- 返回按钮 ---- */}
+      <HStack mb={4}>
+        <IconButton icon={<Icon as={FiArrowLeft} />} variant="ghost" color="gray.400" onClick={() => navigate('/my-pond')} aria-label="返回" size="sm" />
+        <Text color="gray.500" fontSize="sm">我的鱼塘</Text>
       </HStack>
 
-      {/* ---- 档案完整度 ---- */}
-      <Box mb={6} bg="gray.700" p={4} borderRadius="md">
-        <HStack justify="space-between" mb={2}>
-          <Text color="gray.300" fontSize="sm">档案完整度</Text>
-          <Text color={completeness >= 80 ? 'green.400' : completeness >= 50 ? 'yellow.400' : 'orange.400'} fontSize="sm" fontWeight="bold">{completeness}%</Text>
-        </HStack>
-        <Progress value={completeness} size="sm" colorScheme={completeness >= 80 ? 'green' : completeness >= 50 ? 'yellow' : 'orange'} borderRadius="full" />
-        {completeness < 80 && (
-          <Text color="gray.500" fontSize="xs" mt={2}>完善档案后，AI 教练能为你提供更精准的建议</Text>
-        )}
+      {/* ---- Hero 身份卡片 ---- */}
+      <Box bg="gray.750" bgGradient="linear(to-b, gray.700, gray.750)" p={5} borderRadius="lg" mb={6}>
+        <Flex direction={{ base: 'column', md: 'row' }} align={{ base: 'start', md: 'center' }} gap={4}>
+          {/* 头像 + 身份 */}
+          <Avatar size="xl" name={girl.name} src={getMediaUrl(girl.avatar) || undefined} bg="teal.500" flexShrink={0} />
+          <VStack align="start" spacing={1} flex={1}>
+            <HStack spacing={2} wrap="wrap">
+              <Heading color="white" size="lg">{girl.name}</Heading>
+              {girl.age > 0 && <Badge colorScheme="blue" variant="solid" fontSize="sm">{girl.age}岁</Badge>}
+              {girl.occupation && <Badge colorScheme="cyan" variant="subtle">{girl.occupation}</Badge>}
+              <Badge colorScheme={STAGE_COLORS[girl.stage] || 'gray'}>{girl.stage || '未知'}</Badge>
+              {relationshipStage && (
+                <Badge colorScheme={RELATIONSHIP_STAGE_COLORS[relationshipStage] || 'gray'} variant="outline">
+                  {RELATIONSHIP_STAGE_LABELS[relationshipStage] || relationshipStage}
+                </Badge>
+              )}
+            </HStack>
+            {girl.education && (
+              <Text color="gray.400" fontSize="sm">{[girl.education, girl.major, girl.residence].filter(Boolean).join(' · ')}</Text>
+            )}
+            {/* 内联完整度条 */}
+            <HStack spacing={2} w="full" mt={1}>
+              <Progress value={completeness} size="xs" flex={1} borderRadius="full"
+                colorScheme={completeness >= 80 ? 'green' : completeness >= 50 ? 'yellow' : 'orange'} />
+              <Text color={completeness >= 80 ? 'green.400' : completeness >= 50 ? 'yellow.400' : 'orange.400'} fontSize="xs" fontWeight="bold" flexShrink={0}>{completeness}%</Text>
+            </HStack>
+          </VStack>
+          {/* 编辑按钮 */}
+          <Button colorScheme="teal" size="sm" leftIcon={<Icon as={FiEdit2} />} onClick={openEdit} flexShrink={0}>编辑档案</Button>
+        </Flex>
+        {/* 关系指标条 */}
+        <SimpleGrid columns={{ base: 2, md: 4 }} spacing={3} mt={4} pt={4} borderTop="1px solid" borderColor="gray.600">
+          <HStack spacing={2}><Icon as={HeartIcon} color="red.400" boxSize={4} /><Text color="gray.400" fontSize="xs">亲密度</Text><Text color="white" fontWeight="bold" fontSize="sm">Lv.{girl.intimacyLevel || 1}</Text></HStack>
+          <HStack spacing={2}><Text color="gray.500" fontSize="xs">热度</Text><Text color="white" fontWeight="bold" fontSize="sm">{girl.tensionScore?.toFixed(1) || '5.0'}<Text as="span" color="gray.500" fontSize="xs">/10</Text></Text></HStack>
+          <HStack spacing={2}><Text color="gray.500" fontSize="xs">最后联系</Text><Text color="white" fontSize="xs">{lastContact || '未记录'}</Text></HStack>
+          <HStack spacing={2}><Text color="gray.500" fontSize="xs">约会</Text><Text color="white" fontWeight="bold" fontSize="sm">{related?.dates?.length || 0} 次</Text></HStack>
+        </SimpleGrid>
       </Box>
 
-      {/* ---- 关系状态摘要 ---- */}
-      <SimpleGrid columns={{ base: 1, sm: 2, md: 4 }} spacing={3} mb={6}>
-        <Card bg="gray.700">
-          <CardBody py={3}>
-            <Text color="gray.500" fontSize="xs">亲密度</Text>
-            <HStack mt={1}><Icon as={HeartIcon} color="red.400" boxSize={4} /><Text color="white" fontWeight="bold">Lv.{girl.intimacyLevel || 1}</Text></HStack>
-          </CardBody>
-        </Card>
-        <Card bg="gray.700">
-          <CardBody py={3}>
-            <Text color="gray.500" fontSize="xs">关系热度</Text>
-            <Text color="white" fontWeight="bold" mt={1}>{girl.tensionScore?.toFixed(1) || '5.0'} / 10</Text>
-          </CardBody>
-        </Card>
-        <Card bg="gray.700">
-          <CardBody py={3}>
-            <Text color="gray.500" fontSize="xs">最后联系</Text>
-            <Text color="white" fontSize="sm" mt={1}>{lastContact || '未记录'}</Text>
-          </CardBody>
-        </Card>
-        <Card bg="gray.700">
-          <CardBody py={3}>
-            <Text color="gray.500" fontSize="xs">约会次数</Text>
-            <Text color="white" fontWeight="bold" mt={1}>{related?.dates?.length || 0} 次</Text>
-          </CardBody>
-        </Card>
-      </SimpleGrid>
+      {/* ====== 第一区：档案信息 ====== */}
+      <Flex align="center" mb={4}>
+        <Box w="3px" h="18px" bg="blue.400" borderRadius="full" mr={2} />
+        <Heading color="white" size="md">档案信息</Heading>
+      </Flex>
 
-      {/* ---- 档案信息（双列卡片）---- */}
-      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={0} gap={4}>
+      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={0} gap={4} mb={4}>
         {Object.entries(FIELD_GROUPS).map(([groupKey, group]) => (
           <Box key={groupKey} bg="gray.700" p={4} borderRadius="md">
             <Text color={group.color} fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">{group.title}</Text>
@@ -653,9 +647,8 @@ export default function GirlDetail() {
         ))}
       </SimpleGrid>
 
-      {/* ---- 照片与媒体 ---- */}
-      <Box mt={4}>
-        <Heading color="white" size="md" mb={4}>照片与媒体</Heading>
+      {/* ---- 照片与媒体（档案信息区内）---- */}
+      <Box mt={0}>
         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
           {/* 头像 + 主页链接 */}
           <Box bg="gray.700" p={4} borderRadius="md">
@@ -763,10 +756,11 @@ export default function GirlDetail() {
         </SimpleGrid>
       </Box>
 
-      <Divider my={6} borderColor="gray.600" />
-
-      {/* ---- AI 系统分析 ---- */}
-      <Heading color="white" size="md" mb={4}>系统分析</Heading>
+      {/* ====== 第二区：系统分析 ====== */}
+      <Flex align="center" mb={4} mt={6}>
+        <Box w="3px" h="18px" bg="purple.400" borderRadius="full" mr={2} />
+        <Heading color="white" size="md">系统分析</Heading>
+      </Flex>
 
       <SimpleGrid columns={{ base: 1, md: 2 }} spacing={0} gap={4}>
         {/* AI画像 */}
@@ -815,12 +809,13 @@ export default function GirlDetail() {
         </SectionCard>
       </SimpleGrid>
 
-      <Divider my={6} borderColor="gray.600" />
-
-      {/* ---- 上下文记忆 ---- */}
+      {/* ====== 第二区·附：上下文记忆（有数据时才显示）====== */}
       {(signals.length > 0 || pendingActions.length > 0 || observations.length > 0 || girl.conversationSummary) && (
         <>
-          <Heading color="white" size="md" mb={4}>上下文记忆</Heading>
+          <Flex align="center" mb={4} mt={6}>
+            <Box w="3px" h="18px" bg="teal.400" borderRadius="full" mr={2} />
+            <Heading color="white" size="md">上下文记忆</Heading>
+          </Flex>
           <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} mb={6}>
             {girl.conversationSummary && (
               <SectionCard title="对话摘要" color="teal.400">
@@ -862,12 +857,14 @@ export default function GirlDetail() {
               </SectionCard>
             )}
           </SimpleGrid>
-          <Divider my={6} borderColor="gray.600" />
         </>
       )}
 
-      {/* ---- 关联记录 ---- */}
-      <Heading color="white" size="md" mb={4}>关联记录</Heading>
+      {/* ====== 第三区：关联记录 ====== */}
+      <Flex align="center" mb={4} mt={6}>
+        <Box w="3px" h="18px" bg="orange.400" borderRadius="full" mr={2} />
+        <Heading color="white" size="md">关联记录</Heading>
+      </Flex>
       <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
         {/* 约会记录 */}
         <SectionCard title={`约会记录 (${related?.dates?.length || 0})`} color="orange.400">
