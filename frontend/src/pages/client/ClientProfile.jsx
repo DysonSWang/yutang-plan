@@ -46,7 +46,7 @@ const CLIENT_EDITABLE_FIELDS = [
   { key: 'education', label: '学历', type: 'select', options: ['小学', '初中', '中专', '高中', '大专', '本科', '硕士', '博士'] },
   { key: 'income', label: '收入水平', type: 'select', options: ['10万以下', '10-30万', '30-50万', '50-100万', '100-300万', '300万以上', '其他'] },
   { key: 'height', label: '身高(cm)', type: 'number-select', range: [140, 200], default: 170 },
-  { key: 'weight', label: '体重(kg)', type: 'number-select', range: [80, 200], default: 130 },
+  { key: 'weight', label: '体重(斤)', type: 'number-select', range: [80, 250], default: 130 },
   { key: 'residence', label: '所在地', type: 'input' },
   { key: 'hometown', label: '籍贯', type: 'input' },
   { key: 'appearance', label: '外貌描述', type: 'input' },
@@ -120,7 +120,7 @@ Object.assign(ALL_FIELD_LABELS, {
   serviceStage: '服务阶段', selfAwareness: '自我认知', relationship: '人际关系',
   isKinkOriented: 'Kink导向', kinkIdentity: 'Kink身份', kinkBoundaries: 'Kink边界',
   kinkInterests: 'Kink兴趣', kinkExperience: 'Kink经验', kinkNotes: 'Kink备注',
-  weight: '体重(kg)',
+  weight: '体重(斤)',
   matchPreferences: '对目标的期望',
 });
 
@@ -830,7 +830,7 @@ export default function ClientProfile() {
               </HStack>
               <HStack justify="space-between">
                 <Text color="gray.400" fontSize="sm">体重</Text>
-                {profile.weight ? <Text color="white">{profile.weight}kg</Text> : <Text color="gray.600" fontSize="sm">待填写</Text>}
+                {profile.weight ? <Text color="white">{profile.weight}斤</Text> : <Text color="gray.600" fontSize="sm">待填写</Text>}
               </HStack>
               <HStack justify="space-between">
                 <Text color="gray.400" fontSize="sm">穿着风格</Text>
