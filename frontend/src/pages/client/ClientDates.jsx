@@ -766,7 +766,6 @@ export default function ClientDates() {
                 {/* 顾问方案列表 - 新卡片设计  (AI Plan cards removed for MVP) */}
                 {filteredDates.map(d => {
                   const plan = parseJSON(d.aiPlan);
-                  const progress = getProgress(d);
                   return (
                     <Card
                       key={d.id}
