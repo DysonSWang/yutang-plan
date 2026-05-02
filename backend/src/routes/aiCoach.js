@@ -2667,7 +2667,7 @@ ${girl.notes || '暂无'}
         model: aiConfig.model,
         messages: [{ role: 'user', content: systemPrompt }],
         temperature: 0.7,
-        max_tokens: 600,
+        max_tokens: 2000,
         stream: true
       };
       // deepseek-v4-pro 启用思考过程

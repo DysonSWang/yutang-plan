@@ -473,6 +473,23 @@ const OptimizeReplyPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
   );
 });
 
+// 过滤思考过程中的元信息（开头的约束理解 + 结尾的结构规划），只保留中间实际分析
+function filterReasoning(text) {
+  if (!text) return '';
+  const paragraphs = text.split(/\n\n+/);
+  if (paragraphs.length <= 2) return text;
+  let start = 0;
+  let end = paragraphs.length;
+  // 从开头跳过"理解约束/格式要求"相关的元思考
+  const beginMeta = /用户要求|前提|限制|格式|不能用|约束|注意事项|角色名|专业术语|加粗|斜体|绕弯子|说教|口语化/;
+  while (start < end && beginMeta.test(paragraphs[start])) start++;
+  // 从结尾跳过"回复结构规划"相关的元思考
+  const endMeta = /整体回复|回复结构|按用户列出|几点.*组织|语气.*朋友|避免.*说教|最后.*回复|结构可以|组织方式|回复格式/;
+  while (end > start && endMeta.test(paragraphs[end - 1])) end--;
+  if (start >= end) return text; // 全被过滤了，返回原文
+  return paragraphs.slice(start, end).join('\n\n');
+}
+
 // 分析思考过程组件 — 内嵌在女生分析气泡顶部，可折叠
 const AnalysisReasoning = memo(({ reasoning, loading }) => {
   const [open, setOpen] = useState(true);
@@ -496,7 +513,7 @@ const AnalysisReasoning = memo(({ reasoning, loading }) => {
       </Flex>
       {open && (
         <Box px={4} py={3} maxH="260px" overflowY="auto" borderBottom="1px solid" borderColor="whiteAlpha.200">
-          <Text fontSize="13px" color="gray.300" lineHeight="1.8" whiteSpace="pre-wrap">{reasoning}</Text>
+          <Text fontSize="13px" color="gray.300" lineHeight="1.8" whiteSpace="pre-wrap">{filterReasoning(reasoning)}</Text>
         </Box>
       )}
     </>
@@ -554,7 +571,7 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
             </Flex>
             {reasoningOpen && (
               <Box px={4} py={3} maxH="260px" overflowY="auto" borderBottom="1px solid" borderColor="whiteAlpha.200">
-                <Text fontSize="13px" color="gray.300" lineHeight="1.8" whiteSpace="pre-wrap">{reasoning}</Text>
+                <Text fontSize="13px" color="gray.300" lineHeight="1.8" whiteSpace="pre-wrap">{filterReasoning(reasoning)}</Text>
               </Box>
             )}
             {/* 正式回复内容 */}
