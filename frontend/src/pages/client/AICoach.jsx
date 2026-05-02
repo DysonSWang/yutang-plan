@@ -2032,6 +2032,56 @@ export default function AICoach() {
                 />
               );
             })}
+
+            {/* 女生分析 — 作为对话的一部分，在最底部，像正常消息一样流式输出 */}
+            {girlAnalysisLoading && !girlAnalysisContent && (
+              <Flex justify="flex-start" mb={4}>
+                <HStack bg="gray.700" px={4} py={3} borderRadius="2xl" spacing={2}>
+                  {[0, 150, 300].map((delay) => (
+                    <Box key={delay} w="8px" h="8px" bg="teal.400" borderRadius="full"
+                      animation={`bounce 1.4s infinite ease-in-out ${delay}ms`}
+                      sx={{ '@keyframes bounce': { '0%,80%,100%': { transform: 'scale(0)' }, '40%': { transform: 'scale(1)' } } }}
+                    />
+                  ))}
+                  <Text color="gray.400" fontSize="sm">正在分析{selectedGirl?.name || '女生'}...</Text>
+                </HStack>
+              </Flex>
+            )}
+            {girlAnalysisContent && (
+              <Flex justify="flex-start" mb={4}>
+                <HStack align="flex-start" spacing={3}>
+                  <Avatar size="sm" bg="teal.500" icon={<span>🤖</span>} />
+                  <Box bg="gray.700" borderRadius="2xl" borderTopLeftRadius="sm" maxW="90%" overflow="hidden">
+                    {girlAnalysisReasoning && (
+                      <AnalysisReasoning
+                        reasoning={girlAnalysisReasoning}
+                        loading={girlAnalysisLoading}
+                      />
+                    )}
+                    <Box px={4} py={3}>
+                      <Box fontSize="13px" lineHeight="1.7" color="gray.100">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            strong: ({ children }) => <Text as="strong" color="teal.300" fontWeight="bold">{children}</Text>,
+                            p: ({ children }) => <Text mb={2}>{children}</Text>,
+                            ul: ({ children }) => <Text as="ul" pl={4} mb={2}>{children}</Text>,
+                            li: ({ children }) => <Text as="li" mb={1}>{children}</Text>,
+                          }}
+                        >{fixMarkdown(girlAnalysisContent)}</ReactMarkdown>
+                      </Box>
+                      {girlAnalysisLoading && (
+                        <Box as="span" display="inline-block" w="2px" h="16px" bg="teal.400" ml="2px"
+                          animation="blink 1s infinite" verticalAlign="text-bottom"
+                          sx={{ '@keyframes blink': { '0%,100%': { opacity: 1 }, '50%': { opacity: 0 } } }}
+                        />
+                      )}
+                    </Box>
+                  </Box>
+                </HStack>
+              </Flex>
+            )}
+
             {error && (
               <Box mt={4} p={3} bg="red.900" borderRadius="md">
                 <Text color="red.200">{error}</Text>
