@@ -12,6 +12,15 @@ frontend/node_modules/
 # Database
 *.db
 *.db-journal
+*.bak
+backend/data/
+backend/prisma/data/
+
+# Logs
+backend/logs/
+
+# GStack
+docs/superpowers/
 
 # Coverage
 coverage/

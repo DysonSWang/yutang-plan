@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>追爱AI · 统一作战室原型</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #222633;
+    --border: #2a2e3a;
+    --text: #e1e4eb;
+    --text2: #9498a3;
+    --accent: #7c5cfc;
+    --accent2: #a78bfa;
+    --green: #34d399;
+    --orange: #f59e0b;
+    --red: #f87171;
+    --blue: #60a5fa;
+    --selected: #10b981;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .topbar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px; background: var(--surface);
+    border-bottom: 1px solid var(--border); flex-shrink: 0; min-height: 52px;
+  }
+  .topbar .logo { font-size: 15px; font-weight: 700; color: var(--accent2); white-space: nowrap; }
+  .topbar select {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    padding: 6px 12px; border-radius: 8px; font-size: 13px; cursor: pointer; min-width: 180px;
+  }
+  .topbar .girl-badge { display: flex; align-items: center; gap: 8px; background: var(--surface2); padding: 4px 10px; border-radius: 8px; font-size: 12px; }
+  .topbar .badge-stage { background: rgba(124,92,252,0.2); color: var(--accent2); padding: 2px 8px; border-radius: 4px; font-size: 11px; }
+  .topbar .badge-heat { color: var(--orange); font-weight: 700; }
+  .topbar .deep-toggle {
+    padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text2); cursor: pointer; font-size: 11px;
+    display: flex; align-items: center; gap: 4px; transition: all .15s;
+  }
+  .topbar .deep-toggle.active { background: rgba(124,92,252,0.2); border-color: var(--accent); color: var(--accent2); }
+  .topbar .toggle-btn {
+    padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text); cursor: pointer; font-size: 12px;
+  }
+  .topbar .toggle-btn.active { background: rgba(124,92,252,0.2); border-color: var(--accent); color: var(--accent2); }
+
+  .main { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+
+  .left { flex: 1; display: flex; flex-direction: column; min-width: 0; border-right: 1px solid var(--border); }
+
+  /* Tabs */
+  .left .tabs { display: flex; gap: 0; padding: 0 12px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .left .tab {
+    padding: 10px 16px; font-size: 13px; color: var(--text2); cursor: pointer;
+    border-bottom: 2px solid transparent; transition: all .15s;
+    background: none; border-left: none; border-right: none; border-top: none;
+  }
+  .left .tab.active { color: var(--accent2); border-bottom-color: var(--accent); }
+
+  /* Session bar */
+  .session-bar {
+    display: flex; gap: 8px; align-items: center;
+    padding: 8px 16px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .session-bar select {
+    flex: 1; background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer;
+  }
+  .session-bar .session-new-btn {
+    padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border);
+    background: transparent; color: var(--text2); cursor: pointer; font-size: 12px;
+    white-space: nowrap; transition: all .15s;
+  }
+  .session-bar .session-new-btn:hover { border-color: var(--accent); color: var(--accent2); }
+
+  /* Chat area */
+  .chat-area { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+
+  /* Messages */
+  .coach-msg { display: flex; gap: 10px; align-items: flex-start; }
+  .coach-msg .avatar {
+    width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #3b82f6);
+    display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0;
+  }
+  .coach-msg .bubble {
+    background: var(--surface2); padding: 10px 14px; border-radius: 12px;
+    border-top-left-radius: 4px; font-size: 13px; line-height: 1.7; max-width: 90%;
+  }
+  .coach-msg .bubble strong { color: var(--accent2); }
+  .coach-msg .bubble ul { margin: 6px 0 0 16px; }
+  .coach-msg .bubble li { margin-bottom: 4px; }
+
+  .coach-user-msg { display: flex; gap: 10px; align-items: flex-start; justify-content: flex-end; }
+  .coach-user-msg .bubble {
+    background: rgba(124,92,252,0.15); padding: 10px 14px; border-radius: 12px;
+    border-top-right-radius: 4px; font-size: 13px; line-height: 1.7; max-width: 85%;
+  }
+  .user-label { font-size: 11px; color: var(--text2); margin-bottom: 2px; text-align: right; }
+
+  /* Chat message bubbles for girl/me history */
+  .chat-bubble { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.6; }
+  .chat-bubble.her { align-self: flex-start; background: var(--surface2); border-bottom-left-radius: 4px; }
+  .chat-bubble.me { align-self: flex-end; background: rgba(124,92,252,0.15); border-bottom-right-radius: 4px; }
+  .chat-bubble .sender { font-size: 11px; color: var(--text2); margin-bottom: 4px; }
+
+  /* Suggestion cards in chat */
+  .suggestion-group {
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 8px 0; border-left: 2px solid var(--accent); padding-left: 12px; margin: 4px 0;
+  }
+  .suggestion-group .group-label {
+    font-size: 11px; color: var(--text2); letter-spacing: .5px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .suggestion-group .group-actions { display: flex; gap: 8px; }
+  .suggestion-group .group-actions button {
+    font-size: 10px; padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border);
+    background: transparent; color: var(--text2); cursor: pointer;
+  }
+  .suggestion-group .group-actions button:hover { border-color: var(--accent); color: var(--accent2); }
+
+  .suggestion-card {
+    background: var(--surface2); padding: 12px 14px; border-radius: 10px;
+    border: 1px solid var(--border); cursor: pointer; transition: all .2s;
+    position: relative;
+  }
+  .suggestion-card:hover { border-color: var(--accent2); background: rgba(124,92,252,0.06); }
+  .suggestion-card.selected {
+    border-color: var(--selected); background: rgba(16,185,129,0.1);
+    box-shadow: 0 0 8px rgba(16,185,129,0.15);
+  }
+  .suggestion-card.selected::after {
+    content: '✓ 已选用'; position: absolute; top: 8px; right: 10px;
+    font-size: 10px; color: var(--selected); font-weight: 700;
+  }
+  .suggestion-card.dismissed {
+    opacity: 0.3; transform: scale(0.95); pointer-events: none;
+    transition: all .3s;
+  }
+  .suggestion-card .style-tag { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 4px; margin-bottom: 6px; }
+  .style-tease { background: rgba(245,158,11,0.2); color: var(--orange); }
+  .style-calm { background: rgba(96,165,250,0.2); color: var(--blue); }
+  .style-push { background: rgba(248,113,113,0.2); color: var(--red); }
+  .style-humor { background: rgba(52,211,153,0.2); color: var(--green); }
+  .suggestion-card .text { font-size: 13px; line-height: 1.6; margin-bottom: 4px; }
+
+  /* === Input bar with mode toggle === */
+  .input-bar {
+    background: var(--surface); border-top: 1px solid var(--border); flex-shrink: 0;
+    padding: 10px 16px;
+  }
+  .input-modes { display: flex; gap: 4px; margin-bottom: 8px; }
+  .input-mode-btn {
+    padding: 4px 14px; border-radius: 6px 6px 0 0; border: 1px solid var(--border);
+    background: transparent; color: var(--text2); cursor: pointer; font-size: 12px;
+    transition: all .15s;
+  }
+  .input-mode-btn.active {
+    background: var(--surface2); border-bottom-color: var(--accent); color: var(--accent2);
+    font-weight: 600;
+  }
+  .input-row { display: flex; gap: 10px; }
+  .input-row input { flex: 1; background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 10px 14px; border-radius: 10px; font-size: 13px; font-family: inherit; }
+  .input-row input:focus { outline: none; border-color: var(--accent); }
+  .input-row button { padding: 10px 20px; border-radius: 10px; border: none; background: var(--accent); color: #fff; cursor: pointer; font-size: 13px; font-weight: 600; }
+  .input-row select {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; min-width: 100px;
+  }
+
+  /* === Right Panel === */
+  .right { width: 320px; flex-shrink: 0; background: var(--surface); display: flex; flex-direction: column; overflow-y: auto; padding: 16px; gap: 14px; }
+  .right .section { background: var(--surface2); border-radius: 10px; padding: 14px; border: 1px solid var(--border); }
+  .right .section-title { font-size: 12px; font-weight: 700; color: var(--text2); letter-spacing: .5px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .right .section-title .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .context-card .row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; padding: 4px 0; }
+  .context-card .label { color: var(--text2); }
+  .context-card .value { font-weight: 600; }
+  .alert-line { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .alert-line:last-child { border-bottom: none; }
+  .alert-icon { font-size: 14px; }
+
+  /* Loading */
+  .loading-dots { display: flex; gap: 4px; align-items: center; padding: 4px 0; }
+  .loading-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--accent2); animation: bounce 1.4s infinite; }
+  .loading-dots span:nth-child(2) { animation-delay: .2s; }
+  .loading-dots span:nth-child(3) { animation-delay: .4s; }
+  @keyframes bounce { 0%,80%,100% { transform: translateY(0); } 40% { transform: translateY(-6px); } }
+
+  .hidden { display: none !important; }
+
+  @media (max-width: 820px) {
+    .right { display: none; }
+    .right.open { display: flex; width: 100%; position: absolute; top: 52px; right: 0; bottom: 0; z-index: 10; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="logo">⚡ 追爱AI</span>
+  <select id="girlSelect">
+    <option value="">🔄 通用咨询</option>
+    <option value="xiaoyu" selected>小雨 · 25岁 · 设计师</option>
+    <option value="mengyao">梦瑶 · 23岁 · 医学生</option>
+    <option value="siting">思婷 · 27岁 · 产品经理</option>
+  </select>
+  <div class="girl-badge" id="girlBadge">
+    <span class="badge-stage">暧昧期</span>
+    <span class="badge-heat">&#128293; 7.5/10</span>
+  </div>
+  <button class="deep-toggle" id="deepToggle">⚡ 快速</button>
+  <button class="toggle-btn active" id="panelToggle">📊 AI 面板</button>
+</div>
+
+<div class="main">
+  <div class="left">
+    <!-- === 通用咨询 Tabs === -->
+    <div class="tabs hidden" id="tabBarGeneral">
+      <button class="tab active" data-tab="coach-general">🤖 AI 教练</button>
+      <button class="tab" data-tab="reply-tool">💡 回复建议</button>
+      <button class="tab" data-tab="optimize-tool">⚡ 话术优化</button>
+    </div>
+
+    <!-- === 选女生 Tabs === -->
+    <div class="tabs" id="tabBarGirl">
+      <button class="tab active" data-tab="coach-girl">🤖 AI 教练</button>
+      <button class="tab" data-tab="chat-girl">💬 聊天实战</button>
+    </div>
+
+    <!-- SessionBar -->
+    <div class="session-bar hidden" id="sessionBar">
+      <select id="sessionSelect">
+        <option value="">🆕 新会话</option>
+        <option value="s1">会话 #1 · 和女生聊了两个...</option>
+        <option value="s2">会话 #2 · 约会后她突然冷...</option>
+      </select>
+      <button class="session-new-btn">＋ 新建</button>
+    </div>
+
+    <!-- ========== CHAT AREA (dynamic content) ========== -->
+    <div class="chat-area" id="chatArea">
+      <!-- Filled by JS -->
+    </div>
+
+    <!-- ========== INPUT BAR ========== -->
+    <div class="input-bar" id="inputBar">
+      <!-- 有女生时的双模式 -->
+      <div class="input-modes" id="inputModesGirl">
+        <button class="input-mode-btn active" data-mode="suggest">💡 回复建议</button>
+        <button class="input-mode-btn" data-mode="optimize">⚡ 话术优化</button>
+      </div>
+      <!-- 通用咨询时的单一模式 -->
+      <div class="input-modes hidden" id="inputModesGeneral"></div>
+      <div class="input-row" id="inputRow">
+        <input type="text" id="inputField" placeholder="粘贴女生说的消息..." />
+        <button>发送</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== 右侧面板 ====== -->
+  <div class="right" id="rightPanel">
+    <div class="section context-card" id="ctxCard">
+      <div class="section-title"><span class="dot"></span>女生上下文</div>
+      <div id="ctxInner">
+        <div class="row"><span class="label">姓名</span><span class="value">小雨</span></div>
+        <div class="row"><span class="label">年龄/职业</span><span class="value">25岁 · 设计师</span></div>
+        <div class="row"><span class="label">关系阶段</span><span class="value" style="color:var(--accent2)">暧昧期</span></div>
+        <div class="row"><span class="label">热度</span><span class="value" style="color:var(--orange)">7.5 / 10</span></div>
+        <div class="row"><span class="label">亲密度</span><span class="value">4 / 5</span></div>
+        <div class="row"><span class="label">MBTI</span><span class="value">INFJ</span></div>
+      </div>
+    </div>
+
+    <div class="section" id="strategySection">
+      <div class="section-title" id="stratTitle"><span class="dot"></span>🎯 阶段策略 · 暧昧期</div>
+      <div class="alert-line txt-line"><span class="alert-icon">✅</span><span>她已经给了你窗口，"说好了哦"，72小时内主动约见</span></div>
+      <div class="alert-line txt-line"><span class="alert-icon">⚠️</span><span>不要过度道歉或解释，她测试的是你的态度</span></div>
+      <div class="alert-line txt-line"><span class="alert-icon">🔑</span><span>暧昧期核心目标：制造一个她有感觉的「在一起」时刻</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var girlSelect = document.getElementById('girlSelect');
+  var girlBadge = document.getElementById('girlBadge');
+  var rightPanel = document.getElementById('rightPanel');
+  var panelToggle = document.getElementById('panelToggle');
+  var ctxCard = document.getElementById('ctxCard');
+  var ctxInner = document.getElementById('ctxInner');
+  var strategySection = document.getElementById('strategySection');
+  var stratTitle = document.getElementById('stratTitle');
+  var tabBarGirl = document.getElementById('tabBarGirl');
+  var tabBarGeneral = document.getElementById('tabBarGeneral');
+  var sessionBar = document.getElementById('sessionBar');
+  var deepToggle = document.getElementById('deepToggle');
+  var chatArea = document.getElementById('chatArea');
+  var inputBar = document.getElementById('inputBar');
+  var inputModesGirl = document.getElementById('inputModesGirl');
+  var inputModesGeneral = document.getElementById('inputModesGeneral');
+  var inputField = document.getElementById('inputField');
+  var inputRow = document.getElementById('inputRow');
+
+  // State
+  var currentGirl = null;
+  var currentMode = 'suggest'; // 'suggest' | 'optimize' | 'coach'
+  var suggestionGroupActive = false; // suggestions currently visible in chat
+  var lastDraft = ''; // 话术优化模式下的原始草稿
+
+  var girlData = {
+    xiaoyu: {
+      name: '小雨', stage: '暧昧期', heat: '7.5', age: '25', job: '设计师', intimacy: '4', mbti: 'INFJ',
+      strategy: [
+        ['✅', '她已经给了你窗口，"说好了哦"，72小时内主动约见'],
+        ['⚠️', '不要过度道歉或解释，她测试的是你的态度，不是语言'],
+        ['🔑', '暧昧期核心目标：制造一个她有感觉的「在一起」时刻']
+      ],
+      recentMsg: { her: '昨天那个事情我想了想，感觉你好像不太在意我的感受...', me: '怎么会，我后来给你发消息你一直没回，我以为你在忙' },
+      analysis: [
+        '小雨目前的情绪基调是<strong>测试性冷淡</strong>——不是真的冷淡，而是在观察你的反应。',
+        '"你好像不太在意我的感受" → 她在表达需求，说明对你还有期待。隔夜才回复 → 她在控制节奏，给你制造紧迫感。最后说了"说好了哦" → <strong>窗口打开了</strong>。',
+        '我建议<strong>趁热打铁</strong>，今天就约一个具体的时间见面。不需要很夸张的约会——一个轻松的下午茶就够了。'
+      ]
+    },
+    mengyao: {
+      name: '梦瑶', stage: '朋友期', heat: '4.0', age: '23', job: '医学生', intimacy: '2', mbti: 'ISFP',
+      strategy: [
+        ['🐢', '热度偏低，先建立舒适感，不要急于推进关系'],
+        ['💊', '她学业压力大，可以关心她的学习状态作为切入'],
+        ['🔑', '朋友期目标：让她习惯你的存在，成为她的情绪出口']
+      ],
+      recentMsg: { her: '今天又加班到11点 好累...', me: '辛苦了 好好休息' },
+      analysis: [
+        '梦瑶目前处于<strong>低热度朋友期</strong>，她对你的态度更像是普通朋友。',
+        '她的生活重心在学业上，"又加班"暗示她压力大且需要被理解。你之前的回复偏弱——"辛苦了好好休息"太安全，没有差异化。',
+        '建议：<strong>不要追</strong>。先成为她的情绪出口，在她累的时候提供情绪价值而非推进关系。等她主动找你倾诉的频率增加，再考虑升级。'
+      ]
+    },
+    siting: {
+      name: '思婷', stage: '约会期', heat: '8.0', age: '27', job: '产品经理', intimacy: '3', mbti: 'ENTJ',
+      strategy: [
+        ['🔥', '热度高，她对你兴趣明确，可以更激进地推进'],
+        ['💼', '她事业心强，约会要体现你的专业和价值感'],
+        ['🔑', '约会期目标：升级肢体接触，明确关系预期']
+      ],
+      recentMsg: { her: '上次那家餐厅还不错 😊', me: '那就好 下次再约别的' },
+      analysis: [
+        '思婷热度很高（8.0），上次约会反馈正面——"还不错😊"是ENTJ难得的含蓄好评。',
+        '但她事业心强，<strong>不要让她觉得你在浪费她的时间</strong>。下次约会要有质量感——不是"约别的"，而是具体的、有质感的地点。',
+        '建议：本周内约她，给具体方案而非问题。"周六下午三里屯那家新开的画廊，我提前预约了——你来吗？"<strong>展示你的决策力</strong>。'
+      ]
+    }
+  };
+
+  // ==== Render Functions ====
+
+  function renderCoachAnalysis(data) {
+    var h = '';
+    h += '<div style="margin-bottom:12px;font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px;">' +
+      '<span style="background:rgba(124,92,252,0.2);color:var(--accent2);padding:2px 8px;border-radius:4px;">最新分析</span> ' +
+      '基于' + data.name + '的聊天记录和档案' +
+      '</div>';
+    data.analysis.forEach(function(para, i) {
+      if (i === 0) {
+        h += '<div class="coach-msg" style="margin-bottom:8px;">' +
+          '<div class="avatar">🤖</div>' +
+          '<div class="bubble">' + para + '</div></div>';
+      } else {
+        h += '<div class="coach-msg" style="margin-bottom:8px;">' +
+          '<div style="width:32px;flex-shrink:0;"></div>' +
+          '<div class="bubble">' + para + '</div></div>';
+      }
+    });
+    return h;
+  }
+
+  function renderEmptySuggest() {
+    return '<div style="text-align:center;padding:40px 20px;color:var(--text2);">' +
+      '<div style="font-size:36px;margin-bottom:12px;">💬</div>' +
+      '<div style="font-size:14px;">在下方粘贴女生的消息，点击发送</div>' +
+      '<div style="font-size:12px;margin-top:4px;">AI 会生成回复建议，选中后自动成为你的回复</div></div>';
+  }
+
+  function renderSuggestionGroup() {
+    var h = '<div class="suggestion-group" id="suggestionGroup">';
+    h += '<div class="group-label">' +
+      '<span>' + (currentMode === 'suggest' ? '💡 回复建议 (' + (currentGirl ? currentGirl.name : '') + ')' : '⚡ 话术优化') + '</span>' +
+      '<div class="group-actions" style="margin-left:auto;">' +
+        '<button onclick="window._protoAction(\'regenerate\')">🔄 重新生成</button>' +
+        (currentMode === 'optimize' ? '<button onclick="window._protoAction(\'sendDirect\')" style="border-color:var(--green);color:var(--green);">📤 直接发送原文</button>' : '') +
+        '<button onclick="window._protoAction(\'dismissAll\')">✕ 全部删除</button>' +
+      '</div></div>';
+
+    var cards = currentMode === 'suggest' ? [
+      { cls: 'style-tease', tag: '调侃型', text: '"哈哈哈那我得好好表现，不然某人又要说我不在意她了 😏 周六下午有空吗？"' },
+      { cls: 'style-calm', tag: '稳妥型', text: '"说好了，这周末带你去看那个新展，我提前买票。"' },
+      { cls: 'style-push', tag: '推进型', text: '"光说不练可不行——周五晚上7点，老地方见？"' }
+    ] : [
+      { cls: 'style-humor', tag: '更幽默', text: '"收到！记在小本本上了 📝 下次再犯罚我请火锅"' },
+      { cls: '', tag: '更暧昧', text: '"知道了。不过你要是不提醒我，我可能会一直盯着手机等你的消息 😌"' },
+      { cls: 'style-calm', tag: '更自然', text: '"好，记住了。不过我觉得咱俩可以当面聊聊——周末有空吗？"' }
+    ];
+
+    cards.forEach(function(c, i) {
+      h += '<div class="suggestion-card" onclick="window._protoAction(\'select\',' + i + ')" id="sc-' + i + '">';
+      if (c.cls) h += '<span class="style-tag ' + c.cls + '">' + c.tag + '</span>';
+      else h += '<span class="style-tag" style="background:rgba(167,139,250,0.2);color:var(--accent2)">' + c.tag + '</span>';
+      h += '<div class="text">' + c.text + '</div>';
+      h += '</div>';
+    });
+
+    h += '</div>';
+    return h;
+  }
+
+  function renderChatHistory(data) {
+    var h = '';
+    h += '<div class="chat-bubble her">' +
+      '<div class="sender">' + data.name + ' · 昨天 21:42</div>' +
+      data.recentMsg.her + '</div>';
+    h += '<div class="chat-bubble me">' +
+      '<div class="sender">我 · 昨天 21:45</div>' +
+      data.recentMsg.me + '</div>';
+    return h;
+  }
+
+  // ==== Mode Switching ====
+
+  function setInputMode(mode) {
+    currentMode = mode;
+    document.querySelectorAll('.input-mode-btn').forEach(function(b) {
+      b.classList.toggle('active', b.dataset.mode === mode);
+    });
+    if (mode === 'suggest') {
+      inputField.placeholder = '粘贴' + (currentGirl ? currentGirl.name : '女生') + '说的消息...';
+    } else {
+      inputField.placeholder = '粘贴你要优化的回复草稿...';
+    }
+  }
+
+  function removeSuggestionGroup() {
+    var sg = document.getElementById('suggestionGroup');
+    if (sg) sg.remove();
+    suggestionGroupActive = false;
+  }
+
+  function showChatContent(html) {
+    chatArea.innerHTML = html;
+    chatArea.scrollTop = 0;
+  }
+
+  function switchToGeneral() {
+    tabBarGirl.classList.add('hidden');
+    tabBarGeneral.classList.remove('hidden');
+    sessionBar.classList.remove('hidden');
+    girlBadge.classList.add('hidden');
+    ctxCard.classList.add('hidden');
+    strategySection.classList.add('hidden');
+    inputModesGirl.classList.add('hidden');
+    inputModesGeneral.classList.remove('hidden');
+    currentGirl = null;
+    currentMode = 'coach';
+    // Activate first general tab
+    var gt = tabBarGeneral.querySelector('[data-tab="coach-general"]');
+    document.querySelectorAll('.left .tab').forEach(function(t) { t.classList.remove('active'); });
+    gt.classList.add('active');
+    // Render general coach conversation
+    showChatContent(
+      '<div class="coach-user-msg"><div class="bubble"><div class="user-label">我</div>和一个女生聊了两个月，她回复很热情但从不主动找我，是什么情况？</div></div>' +
+      '<div class="coach-msg"><div class="avatar">🤖</div><div class="bubble">很常见——她可能是<strong>被动型人格</strong>，习惯等别人主动。也可能是<strong>不够喜欢但不说破</strong>。<br><br>判断关键不是"从不主动找你"，而是<strong>对你主动的回应质量</strong>。</div></div>' +
+      '<div class="coach-user-msg"><div class="bubble"><div class="user-label">我</div>那怎么测试？</div></div>' +
+      '<div class="coach-msg"><div class="avatar">🤖</div><div class="bubble">最直接的方法：<strong>约一次线下见面</strong>。线上聊天再热情也可能是礼貌，线下需要投入真实时间和精力。<br><br>约的时候不要说"你想去哪"，给具体方案。</div></div>'
+    );
+    inputField.placeholder = '向 AI 教练提问...';
+  }
+
+  function switchToGirl(data) {
+    tabBarGirl.classList.remove('hidden');
+    tabBarGeneral.classList.add('hidden');
+    sessionBar.classList.add('hidden');
+    girlBadge.classList.remove('hidden');
+    ctxCard.classList.remove('hidden');
+    strategySection.classList.remove('hidden');
+    inputModesGirl.classList.add('hidden');
+    inputModesGeneral.classList.add('hidden');
+    currentGirl = data;
+    currentMode = 'coach';
+
+    // Update context
+    ctxInner.innerHTML =
+      '<div class="row"><span class="label">姓名</span><span class="value">' + data.name + '</span></div>' +
+      '<div class="row"><span class="label">年龄/职业</span><span class="value">' + data.age + '岁 · ' + data.job + '</span></div>' +
+      '<div class="row"><span class="label">关系阶段</span><span class="value" style="color:var(--accent2)">' + data.stage + '</span></div>' +
+      '<div class="row"><span class="label">热度</span><span class="value" style="color:var(--orange)">' + data.heat + ' / 10</span></div>' +
+      '<div class="row"><span class="label">亲密度</span><span class="value">' + data.intimacy + ' / 5</span></div>' +
+      '<div class="row"><span class="label">MBTI</span><span class="value">' + data.mbti + '</span></div>';
+    girlBadge.innerHTML = '<span class="badge-stage">' + data.stage + '</span><span class="badge-heat">&#128293; ' + data.heat + '/10</span>';
+    stratTitle.innerHTML = '<span class="dot"></span>🎯 阶段策略 · ' + data.stage;
+
+    var lines = strategySection.querySelectorAll('.txt-line');
+    data.strategy.forEach(function(s, i) {
+      if (lines[i]) {
+        lines[i].querySelector('.alert-icon').textContent = s[0];
+        lines[i].querySelector('span:last-child').textContent = s[1];
+        lines[i].style.display = 'flex';
+      }
+    });
+    for (var j = data.strategy.length; j < lines.length; j++) { lines[j].style.display = 'none'; }
+
+    // Activate AI coach tab (first) and render analysis
+    var gc = tabBarGirl.querySelector('[data-tab="coach-girl"]');
+    document.querySelectorAll('.left .tab').forEach(function(t) { t.classList.remove('active'); });
+    gc.classList.add('active');
+    inputField.placeholder = '向 AI 教练提问...';
+    showChatContent(renderCoachAnalysis(data));
+    suggestionGroupActive = false;
+  }
+
+  // ==== Event Handlers ====
+
+  // Girl select change
+  girlSelect.addEventListener('change', function() {
+    var data = girlData[this.value];
+    if (data) { switchToGirl(data); } else { switchToGeneral(); }
+  });
+
+  // Input mode toggle
+  document.querySelectorAll('.input-mode-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() { setInputMode(this.dataset.mode); });
+  });
+
+  // Tab switching
+  document.querySelectorAll('.left .tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      var tabId = this.dataset.tab;
+      document.querySelectorAll('.left .tab').forEach(function(t) { t.classList.remove('active'); });
+      this.classList.add('active');
+
+      if (tabId === 'coach-general') {
+        inputBar.classList.remove('hidden');
+        inputModesGirl.classList.add('hidden');
+        inputField.placeholder = '向 AI 教练提问...';
+        showChatContent(
+          '<div class="coach-user-msg"><div class="bubble"><div class="user-label">我</div>和一个女生聊了两个月...</div></div>' +
+          '<div class="coach-msg"><div class="avatar">🤖</div><div class="bubble">很常见——她可能是<strong>被动型人格</strong>...</div></div>'
+        );
+      } else if (tabId === 'reply-tool') {
+        inputBar.classList.add('hidden');
+        showChatContent(
+          '<div style="padding:8px 0;font-size:13px;color:var(--text2);">粘贴女生的最后一条消息，选择风格后生成回复建议</div>' +
+          '<input type="text" placeholder="例：昨天那个事情..." style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:8px;" value="昨天那个事情我想了想，感觉你好像不太在意我的感受...">' +
+          '<div style="display:flex;gap:8px;margin-bottom:10px;"><span class="style-chip selected" style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:rgba(124,92,252,0.2);border-color:var(--accent);color:var(--accent2);cursor:pointer;font-size:12px;">稳妥型</span><span class="style-chip" style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);cursor:pointer;font-size:12px;color:var(--text2);">调侃型</span><span class="style-chip" style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);cursor:pointer;font-size:12px;color:var(--text2);">推进型</span></div>' +
+          '<button class="btn-primary" style="padding:8px 18px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-size:13px;font-weight:600;">生成回复建议</button>'
+        );
+      } else if (tabId === 'optimize-tool') {
+        inputBar.classList.add('hidden');
+        showChatContent(
+          '<div style="padding:8px 0;font-size:13px;color:var(--text2);">粘贴你要优化的回复草稿</div>' +
+          '<textarea placeholder="好的我知道了 我会注意的" style="width:100%;min-height:80px;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:8px;resize:vertical;font-family:inherit;">好的我知道了 我会注意的</textarea>' +
+          '<div style="display:flex;gap:8px;align-items:center;"><select style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:12px;"><option>更暧昧</option><option>更幽默</option><option>更自然</option><option>更真诚</option></select>' +
+          '<button class="btn-primary" style="padding:8px 18px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-size:13px;font-weight:600;">优化话术</button></div>'
+        );
+      } else if (tabId === 'coach-girl') {
+        inputBar.classList.remove('hidden');
+        inputModesGirl.classList.add('hidden');
+        currentMode = 'coach';
+        inputField.placeholder = '向 AI 教练提问...';
+        showChatContent(currentGirl ? renderCoachAnalysis(currentGirl) : '');
+        suggestionGroupActive = false;
+      } else if (tabId === 'chat-girl') {
+        inputBar.classList.remove('hidden');
+        inputModesGirl.classList.remove('hidden');
+        setInputMode('suggest');
+        showChatContent(currentGirl ? renderChatHistory(currentGirl) + renderEmptySuggest() : '');
+        suggestionGroupActive = false;
+      }
+    });
+  });
+
+  // Send button: simulate generating suggestions
+  inputRow.querySelector('button').addEventListener('click', function() {
+    var val = inputField.value.trim();
+    if (!val) return;
+
+    if (currentGirl && currentMode === 'suggest') {
+      // 回复建议：粘贴的内容是女生说的原话，显示为她的气泡
+      removeSuggestionGroup();
+      var herMsg = '<div class="chat-bubble her"><div class="sender">' + currentGirl.name + '</div>' + val + '</div>';
+      var sg1 = renderSuggestionGroup();
+      chatArea.innerHTML += herMsg + sg1;
+      chatArea.scrollTop = chatArea.scrollHeight;
+      suggestionGroupActive = true;
+    } else if (currentGirl && currentMode === 'optimize') {
+      // 话术优化：粘贴的是自己的草稿，显示为"我"的气泡
+      removeSuggestionGroup();
+      lastDraft = val;
+      var myMsg = '<div class="chat-bubble me"><div class="sender">我 · 草稿</div>' + val + '</div>';
+      var sg2 = renderSuggestionGroup();
+      chatArea.innerHTML += myMsg + sg2;
+      chatArea.scrollTop = chatArea.scrollHeight;
+      suggestionGroupActive = true;
+    } else {
+      // General mode: add user message + loading
+      chatArea.innerHTML = chatArea.innerHTML +
+        '<div class="coach-user-msg"><div class="bubble"><div class="user-label">我</div>' + val + '</div></div>' +
+        '<div class="coach-msg"><div class="avatar">🤖</div><div class="bubble"><div class="loading-dots"><span></span><span></span><span></span></div></div></div>';
+      chatArea.scrollTop = chatArea.scrollHeight;
+    }
+    inputField.value = '';
+  });
+
+  // Enter key
+  inputField.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      inputRow.querySelector('button').click();
+    }
+  });
+
+  // Proto actions (window-level for inline onclick)
+  window._protoAction = function(action, idx) {
+    if (action === 'select' && idx !== undefined) {
+      var cards = document.querySelectorAll('.suggestion-card');
+      var selectedText = '';
+      cards.forEach(function(c, i) {
+        if (i === idx) {
+          c.classList.add('selected');
+          selectedText = c.querySelector('.text').textContent;
+        } else {
+          c.classList.add('dismissed');
+        }
+      });
+      // Add selected reply as "me" bubble after suggestion group
+      var sg = document.getElementById('suggestionGroup');
+      if (sg && selectedText) {
+        var meBubble = document.createElement('div');
+        meBubble.className = 'chat-bubble me';
+        meBubble.innerHTML = '<div class="sender">我</div>' + selectedText;
+        sg.parentNode.insertBefore(meBubble, sg.nextSibling);
+        chatArea.scrollTop = chatArea.scrollHeight;
+      }
+      // Add confirmation
+      var selCard = document.getElementById('sc-' + idx);
+      if (selCard) {
+        var confirm = document.createElement('div');
+        confirm.style.cssText = 'text-align:center;padding:8px;font-size:12px;color:var(--green);margin-top:4px;';
+        confirm.textContent = '✅ 已选用';
+        selCard.parentElement.appendChild(confirm);
+      }
+    } else if (action === 'sendDirect') {
+      // 话术优化：不选 AI 建议，直接发送原始草稿
+      var draft = lastDraft;
+      removeSuggestionGroup();
+      if (draft) {
+        var meBubble = document.createElement('div');
+        meBubble.className = 'chat-bubble me';
+        meBubble.innerHTML = '<div class="sender">我</div>' + draft;
+        chatArea.appendChild(meBubble);
+        chatArea.scrollTop = chatArea.scrollHeight;
+      }
+    } else if (action === 'regenerate') {
+      // Remove old group, add loading, then re-add
+      var group = document.getElementById('suggestionGroup');
+      if (group) {
+        group.innerHTML = '<div style="text-align:center;padding:16px;"><div class="loading-dots"><span></span><span></span><span></span></div></div>';
+        setTimeout(function() {
+          if (document.getElementById('suggestionGroup')) {
+            document.getElementById('suggestionGroup').outerHTML = renderSuggestionGroup();
+          }
+        }, 1000);
+      }
+    } else if (action === 'dismissAll') {
+      var group = document.getElementById('suggestionGroup');
+      if (group) {
+        group.style.opacity = '0';
+        group.style.transform = 'translateY(-10px)';
+        group.style.transition = 'all .3s';
+        setTimeout(function() { if (group.parentNode) group.remove(); }, 300);
+      }
+      suggestionGroupActive = false;
+    }
+  };
+
+  // Panel toggle
+  panelToggle.addEventListener('click', function() {
+    this.classList.toggle('active');
+    rightPanel.style.display = rightPanel.style.display === 'none' ? 'flex' : 'none';
+  });
+
+  // Deep toggle
+  deepToggle.addEventListener('click', function() {
+    this.classList.toggle('active');
+    this.innerHTML = this.classList.contains('active') ? '&#128302; 深度' : '&#9889; 快速';
+  });
+
+  // Style chips
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('style-chip')) {
+      e.target.parentElement.querySelectorAll('.style-chip').forEach(function(c) { c.classList.remove('selected'); });
+      e.target.classList.add('selected');
+    }
+  });
+
+  // Init: start with girl selected
+  switchToGirl(girlData.xiaoyu);
+})();
+</script>
+</body>
+</html>
