@@ -3,10 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
     <!-- PWA / Theme -->
-    <meta name="theme-color" content="#0a0f1a" />
+    <meta name="theme-color" content="#111110" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="追爱AI" />
@@ -22,7 +24,7 @@
     <style>
       #app-splash {
         position: fixed; inset: 0;
-        background: #0a0f1a;
+        background: #111110;
         display: flex; flex-direction: column;
         align-items: center; justify-content: center;
         z-index: 99999;
@@ -31,7 +33,7 @@
       #app-splash.hidden { opacity: 0; pointer-events: none; }
       #app-splash .logo {
         width: 80px; height: 80px;
-        background: linear-gradient(135deg, #f472b6 0%, #c084fc 50%, #818cf8 100%);
+        background: linear-gradient(135deg, #d4a853, #c17f59);
         border-radius: 22px;
         display: flex; align-items: center; justify-content: center;
         margin-bottom: 24px;
@@ -52,7 +54,7 @@
       #app-splash .dot-bounce { display: flex; gap: 8px; }
       #app-splash .dot-bounce span {
         width: 8px; height: 8px;
-        background: rgba(255,255,255,0.3);
+        background: rgba(212,168,83,0.25);
         border-radius: 50%;
         animation: dot-bounce 1.4s ease-in-out infinite both;
       }
