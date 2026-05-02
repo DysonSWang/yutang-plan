@@ -859,7 +859,6 @@ export default function ClientDates() {
             <Badge ml={2} colorScheme={selected?.status === 'confirmed' ? 'green' : selected?.status === 'pending_client_confirm' ? 'purple' : selected?.status === 'planned' ? 'teal' : 'orange'}>
               {selected?.status === 'confirmed' ? '已确认' : selected?.status === 'pending_client_confirm' ? '待确认' : selected?.status === 'planned' ? '已策划' : '待策划'}
             </Badge>
-            {!selected?.conditions && <Badge ml={2} colorScheme="gray">自建</Badge>}
             <Button ml={3} size="sm" colorScheme="red" variant="outline" onClick={() => handleDeleteDate()} isLoading={deleting}>
               删除约会
             </Button>
