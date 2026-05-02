@@ -15,7 +15,7 @@ export default function AppLogo({ size = 64, shadow = true }) {
       {...(shadow ? { boxShadow: '0 4px 20px rgba(226,176,68,0.2)' } : {})}
     >
       <Image
-        src="/logo.svg"
+        src="/logo.png"
         alt="追爱AI"
         w={`${Math.round(size * 0.65)}px`}
         h={`${Math.round(size * 0.65)}px`}
