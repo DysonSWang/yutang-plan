@@ -9,6 +9,7 @@ import {
   Image, Checkbox
 } from '@chakra-ui/react';
 import { clients as clientsApi, girls as girlsApi } from '../../utils/api';
+import { captureError } from '../../utils/frontendErrorCapture';
 import { FireIcon, SnowIcon, UsersIcon, CalendarIcon } from '../../components/Icons';
 import ClientCalendar from '../../components/ClientCalendar';
 
@@ -311,7 +312,7 @@ export default function AdminClients() {
     try {
       const res = await girlsApi.list({ clientId });
       if (res.success) setGirlList(res.girls);
-    } catch (e) { console.error(e); }
+    } catch (e) { captureError(e); }
   }, []);
 
   const loadClients = async () => {
@@ -321,7 +322,7 @@ export default function AdminClients() {
         setClientList(res.clients);
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     }
   };
 
@@ -353,6 +354,7 @@ export default function AdminClients() {
         headers: { 'Authorization': `Bearer ${token}` },
         body: fd
       });
+      if (!res.ok) throw new Error(`截图提取失败 (${res.status})`);
       const data = await res.json();
 
       if (data.success) {
@@ -369,7 +371,7 @@ export default function AdminClients() {
         toast({ title: data.error || '提取失败', status: 'error', duration: 2000 });
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
       toast({ title: '提取失败', status: 'error', duration: 2000 });
     } finally {
       setScreenshotUploading(false);
@@ -466,7 +468,7 @@ export default function AdminClients() {
         toast({ title: '提取失败，请重试', status: 'error' });
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
       toast({ title: '提取失败，请重试', status: 'error' });
     } finally {
       setExtracting(false);
@@ -529,7 +531,7 @@ export default function AdminClients() {
         toast({ title: res.error || '提取失败', status: 'error' });
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
       toast({ title: '提取失败，请重试', status: 'error' });
     } finally {
       setChatExtracting(false);
@@ -598,7 +600,7 @@ export default function AdminClients() {
         loadGirlsForClient(client.id);
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     }
   };
 

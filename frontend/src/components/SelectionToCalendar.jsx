@@ -12,6 +12,7 @@ import {
   Text, useToast, useDisclosure, Portal
 } from '@chakra-ui/react';
 import { events as eventsApi } from '../utils/api';
+import { captureError } from '../utils/frontendErrorCapture';
 import { CalendarIcon } from './Icons';
 
 export default function SelectionToCalendar({ clientId, girlList }) {
@@ -149,7 +150,7 @@ export default function SelectionToCalendar({ clientId, girlList }) {
         toast({ title: res.error || '添加失败', status: 'error', duration: 2000 });
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
       toast({ title: '添加失败', status: 'error', duration: 2000 });
     } finally {
       setLoading(false);

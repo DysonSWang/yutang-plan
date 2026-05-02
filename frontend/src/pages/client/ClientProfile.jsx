@@ -3,6 +3,7 @@ import { Box, Heading, Card, CardBody, SimpleGrid, Badge, Text, VStack, HStack, 
 import { CrownIcon, CheckIcon } from '../../components/Icons';
 import { FiEdit2, FiEye, FiEyeOff } from 'react-icons/fi';
 import { api, clients, membership as membershipApi, auth, upload } from '../../utils/api';
+import { captureError } from '../../utils/frontendErrorCapture';
 import RegionSelector from '../../components/RegionSelector';
 import { checkVersion, VERSION } from '../../utils/version';
 import VersionUpdateModal from '../../components/VersionUpdateModal';
@@ -262,7 +263,7 @@ export default function ClientProfile() {
         setEditData(data);
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     } finally {
       setLoading(false);
     }
@@ -272,14 +273,14 @@ export default function ClientProfile() {
     try {
       const res = await membershipApi.status().catch(() => ({ success: false }));
       if (res.success) setMemberStatus(res);
-    } catch (e) { console.error(e); }
+    } catch (e) { captureError(e); }
   };
 
   const loadCompleteness = async () => {
     try {
       const res = await membershipApi.profileCompleteness();
       if (res.success) setCompleteness(res.completeness);
-    } catch (e) { console.error(e); }
+    } catch (e) { captureError(e); }
   };
 
   const handleFieldChange = useCallback((key, val) => {
@@ -311,7 +312,7 @@ export default function ClientProfile() {
         toast({ title: '保存失败', status: 'error' });
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
       toast({ title: '保存失败', status: 'error' });
     } finally {
       setSaving(false);
@@ -413,7 +414,7 @@ export default function ClientProfile() {
         }
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
       if (e.name === 'AbortError') {
         toast({ title: 'AI 分析超时', description: '请稍后重试', status: 'error' });
       } else {
@@ -447,7 +448,7 @@ export default function ClientProfile() {
         toast({ title: res.message || '未识别到信息', status: 'warning' });
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
       toast({ title: '截图分析失败', description: e.message || '请重试', status: 'error' });
     } finally {
       setAiExtracting(false);

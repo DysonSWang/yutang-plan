@@ -7,6 +7,7 @@ import {
 } from '@chakra-ui/react';
 import { useAuth } from '../../contexts/AuthContext';
 import { girls as girlsApi } from '../../utils/api';
+import { captureError } from '../../utils/frontendErrorCapture';
 import { FireIcon, SnowIcon, SparklesIcon, BrainIcon } from '../../components/Icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -267,6 +268,7 @@ const ReplySuggestionsPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ girlId: selectedGirlId || undefined, lastMessage: replyInput, style: style || undefined })
       });
+      if (!res.ok) throw new Error(`回复建议请求失败 (${res.status})`);
       const data = await res.json();
       if (data.success) setReplySuggestions(data.suggestions);
       else toast({ title: data.error || '获取失败', status: 'error', duration: 3000 });
@@ -384,6 +386,7 @@ const OptimizeReplyPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ originalReply: optimizeInput, girlId: selectedGirlId || undefined, goal: goal || undefined })
       });
+      if (!res.ok) throw new Error(`话术优化请求失败 (${res.status})`);
       const data = await res.json();
       if (data.success) setOptimizedReplies(data.optimizations);
       else toast({ title: data.error || '优化失败', status: 'error', duration: 3000 });
@@ -1055,6 +1058,29 @@ export default function AICoach() {
   // Track active tab (0 = AI教练, 1 = 聊天实战/回复建议)
   const [activeTabIndex, setActiveTabIndex] = useState(0);
 
+  // 前端缓存：避免女生档案未变化时重复调用 AI（参考 Workbench 的 hash 比对机制）
+  const coachCacheRef = useRef({}); // { [girlId]: { content, girlDataHash, timestamp } }
+
+  // 计算女生侧 dataHash（与后端 computeGirlDataHash 对应，仅取关键变动字段）
+  const computeGirlDataHash = useCallback((girl) => {
+    if (!girl) return '';
+    const signals = girl.signals ? (Array.isArray(girl.signals) ? girl.signals : (() => { try { return JSON.parse(girl.signals); } catch { return []; } })()) : [];
+    const pendingActions = girl.pendingActions ? (Array.isArray(girl.pendingActions) ? girl.pendingActions : (() => { try { return JSON.parse(girl.pendingActions); } catch { return []; } })()) : [];
+    const raw = [
+      girl.tensionScore ?? 5.0,
+      girl.intimacyLevel ?? 1,
+      girl.stage || '',
+      signals.length,
+      pendingActions.length
+    ].join('|');
+    let hash = 0;
+    for (let i = 0; i < raw.length; i++) {
+      hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+      hash |= 0;
+    }
+    return hash.toString(16);
+  }, []);
+
   const getCurrentCombatHistory = useCallback(() => {
     return selectedGirlId ? (combatHistories[selectedGirlId] || []) : [];
   }, [selectedGirlId, combatHistories]);
@@ -1163,7 +1189,7 @@ export default function AICoach() {
         setGirls(res.girls);
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     }
   };
 
@@ -1195,7 +1221,7 @@ export default function AICoach() {
         }
       }
     } catch (e) {
-      console.error('[AICoach] load history failed:', e);
+      captureError(e, { context: '[AICoach] load history failed:' });
     } finally {
       setLoadingHistory(false);
     }
@@ -1243,7 +1269,7 @@ export default function AICoach() {
       setCopiedId(messageId);
       setTimeout(() => setCopiedId(null), 2000);
     } catch (e) {
-      console.error(e);
+      captureError(e);
     }
   }, []);
 
@@ -1390,7 +1416,7 @@ export default function AICoach() {
         );
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
       setError(e.message || '网络错误，请重试');
       setMessages(prev => prev.filter(m => m.id !== assistantId));
     } finally {
@@ -1410,7 +1436,7 @@ export default function AICoach() {
     setHelpfulId(messageId);
     try {
       const token = localStorage.getItem('zhuiai_token');
-      await fetch(`${apiUrl}/api/ai-coach/feedback`, {
+      const feedbackRes = await fetch(`${apiUrl}/api/ai-coach/feedback`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1421,6 +1447,7 @@ export default function AICoach() {
           routedType: 'situation'
         })
       });
+      if (!feedbackRes.ok) throw new Error(`反馈请求失败 (${feedbackRes.status})`);
       toast({
         title: '感谢反馈',
         status: 'success',
@@ -1428,7 +1455,7 @@ export default function AICoach() {
         isClosable: true,
       });
     } catch (e) {
-      console.error('[Feedback] 提交失败:', e);
+      captureError(e, { context: '[Feedback] 提交失败:' });
     }
   }, [apiUrl, toast]);
 
@@ -1467,7 +1494,7 @@ export default function AICoach() {
         isClosable: true,
       });
     } catch (e) {
-      console.error('[AICoach] new-session failed:', e);
+      captureError(e, { context: '[AICoach] new-session failed:' });
       toast({
         title: '新建会话失败',
         description: e.message,
@@ -1480,14 +1507,33 @@ export default function AICoach() {
 
   // ====== 聊天实战 Handler ======
 
-  // SSE 流式加载女生分析
-  const loadGirlAnalysis = useCallback(async (girlId) => {
+  // SSE 流式加载女生分析（含前端 hash 缓存 + 实时流式显示）
+  const loadGirlAnalysis = useCallback(async (girlId, options = {}) => {
     if (!girlId) return;
+    const { forceRefresh = false } = options;
+    const girl = girls.find(g => g.id === girlId);
+    const currentGirlHash = computeGirlDataHash(girl);
+
+    // 检查前端缓存：hash 匹配则直接复用，不调 API
+    if (!forceRefresh) {
+      const cached = coachCacheRef.current[girlId];
+      if (cached && cached.girlDataHash === currentGirlHash) {
+        setGirlAnalysisContent(cached.content);
+        setGirlAnalysisLoading(false);
+        return;
+      }
+    }
+
     setGirlAnalysisLoading(true);
     setGirlAnalysisContent('');
     const token = localStorage.getItem('zhuiai_token');
     try {
-      const res = await fetch(`${apiUrl}/api/ai-coach/girl-summary/${girlId}`, {
+      // 带上 hash 参数，让后端也可判断缓存命中
+      let url = `${apiUrl}/api/ai-coach/girl-summary/${girlId}`;
+      if (currentGirlHash) {
+        url += `?cachedGirlHash=${encodeURIComponent(currentGirlHash)}`;
+      }
+      const res = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!res.ok) throw new Error('请求失败');
@@ -1495,6 +1541,7 @@ export default function AICoach() {
       const decoder = new TextDecoder();
       let buffer = '';
       let accumulated = '';
+      let metaReceived = false;
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -1507,20 +1554,35 @@ export default function AICoach() {
           if (trimmed.startsWith('data: ')) {
             try {
               const parsed = JSON.parse(trimmed.substring(6));
+              // 处理 meta 帧（第一帧：cached / changeReason / staleAlert）
+              if (!metaReceived && parsed.cached !== undefined) {
+                metaReceived = true;
+                if (parsed.cached === true) {
+                  // 后端缓存命中，流式返回中，继续接收 content chunk
+                }
+                continue;
+              }
               if (parsed.content) { accumulated += parsed.content; setGirlAnalysisContent(accumulated); }
             } catch {}
           }
         }
       }
-      // fallback: 如果流中没有 content
       if (!accumulated) setGirlAnalysisContent('分析加载完成，可向我提问');
+      // 写入前端缓存
+      if (accumulated) {
+        coachCacheRef.current[girlId] = {
+          content: accumulated,
+          girlDataHash: currentGirlHash,
+          timestamp: Date.now()
+        };
+      }
     } catch (e) {
       console.warn('[AICoach] loadGirlAnalysis failed:', e.message);
       setGirlAnalysisContent('暂无法加载分析，可直接向我提问');
     } finally {
       setGirlAnalysisLoading(false);
     }
-  }, [apiUrl]);
+  }, [apiUrl, girls, computeGirlDataHash]);
 
   // 聊天实战 - 发送
   const handleCombatSend = useCallback(async () => {
@@ -1547,6 +1609,7 @@ export default function AICoach() {
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ girlId: selectedGirlId, lastMessage: text })
         });
+        if (!res.ok) throw new Error(`回复建议请求失败 (${res.status})`);
         const data = await res.json();
         if (data.success && data.suggestions?.options?.length) {
           setCombatSuggestions({ type: 'suggestions', items: data.suggestions.options });
@@ -1571,6 +1634,7 @@ export default function AICoach() {
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ girlId: selectedGirlId, originalReply: text })
         });
+        if (!res.ok) throw new Error(`话术优化请求失败 (${res.status})`);
         const data = await res.json();
         if (data.success && data.optimizations?.length) {
           setCombatSuggestions({ type: 'optimizations', items: data.optimizations });
@@ -1821,7 +1885,7 @@ export default function AICoach() {
         scrollToBottom();
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
       setError(e.message || '网络错误，请重试');
       // 移除失败的消息
       setMessages(prev => prev.filter(m => m.id !== tempId && m.id !== assistantId));
@@ -1883,20 +1947,8 @@ export default function AICoach() {
       <>
         <Box flex="1" minH="0" display="flex" flexDirection="column" bg="gray.800" borderRadius="md" mb={2} overflow="hidden">
           <Box id="chat-scroll-container" flex="1" overflowY="auto" p={4} ref={scrollContainerRef} overflowAnchor="none">
-            {/* 女生分析内容 */}
-            {girlAnalysisLoading ? (
-              <Flex justify="flex-start" mb={4}>
-                <HStack bg="gray.700" px={4} py={3} borderRadius="2xl" spacing={2}>
-                  {[0, 150, 300].map((delay) => (
-                    <Box key={delay} w="8px" h="8px" bg="teal.400" borderRadius="full"
-                      animation={`bounce 1.4s infinite ease-in-out ${delay}ms`}
-                      sx={{ '@keyframes bounce': { '0%,80%,100%': { transform: 'scale(0)' }, '40%': { transform: 'scale(1)' } } }}
-                    />
-                  ))}
-                  <Text color="gray.400" fontSize="sm">正在分析{selectedGirl?.name || '女生'}...</Text>
-                </HStack>
-              </Flex>
-            ) : girlAnalysisContent ? (
+            {/* 女生分析内容 — 内容优先于 loading，实现实时流式显示 */}
+            {girlAnalysisContent ? (
               <Flex justify="flex-start" mb={4}>
                 <HStack align="flex-start" spacing={3}>
                   <Avatar size="sm" bg="teal.500" icon={<span>🤖</span>} />
@@ -1912,7 +1964,26 @@ export default function AICoach() {
                         }}
                       >{fixMarkdown(girlAnalysisContent)}</ReactMarkdown>
                     </Box>
+                    {/* 流式输出中显示光标闪烁 */}
+                    {girlAnalysisLoading && (
+                      <Box as="span" display="inline-block" w="2px" h="16px" bg="teal.400" ml="2px"
+                        animation="blink 1s infinite" verticalAlign="text-bottom"
+                        sx={{ '@keyframes blink': { '0%,100%': { opacity: 1 }, '50%': { opacity: 0 } } }}
+                      />
+                    )}
                   </Box>
+                </HStack>
+              </Flex>
+            ) : girlAnalysisLoading ? (
+              <Flex justify="flex-start" mb={4}>
+                <HStack bg="gray.700" px={4} py={3} borderRadius="2xl" spacing={2}>
+                  {[0, 150, 300].map((delay) => (
+                    <Box key={delay} w="8px" h="8px" bg="teal.400" borderRadius="full"
+                      animation={`bounce 1.4s infinite ease-in-out ${delay}ms`}
+                      sx={{ '@keyframes bounce': { '0%,80%,100%': { transform: 'scale(0)' }, '40%': { transform: 'scale(1)' } } }}
+                    />
+                  ))}
+                  <Text color="gray.400" fontSize="sm">正在分析{selectedGirl?.name || '女生'}...</Text>
                 </HStack>
               </Flex>
             ) : (

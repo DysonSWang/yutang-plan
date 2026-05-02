@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Box, Heading, Text, SimpleGrid, Card, CardBody, Badge, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure, HStack, VStack, Icon, Flex, Input, Button, useToast, NumberInput, NumberInputField, NumberInputStepper, NumberIncrementStepper, NumberDecrementStepper, Select, FormControl, FormLabel } from '@chakra-ui/react';
 import { HeartIcon } from '../../components/Icons';
 import { girls } from '../../utils/api';
+import { captureError } from '../../utils/frontendErrorCapture';
 
 const STAGE_COLORS = {
   '陌生': 'gray',
@@ -27,7 +28,7 @@ export default function MyPond() {
     try {
       const res = await girls.list();
       if (res.success) setGirls(res.girls);
-    } catch (e) { console.error(e); }
+    } catch (e) { captureError(e); }
   };
 
   const handleAddGirl = async () => {

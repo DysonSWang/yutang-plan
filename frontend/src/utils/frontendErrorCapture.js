@@ -3,6 +3,8 @@
  * 全局监听未捕获错误、Promise 拒绝，统一上报到后端日志系统
  */
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3005';
+
 const MAX_PER_MINUTE = 20; // 每分钟最多上报 20 条
 const DEDUP_WINDOW = 5000; // 5 秒内相同错误去重
 
@@ -25,7 +27,7 @@ function flush() {
 
   const batch = reportQueue.splice(0, 5);
   batch.forEach((entry) => {
-    fetch('/api/logs/frontend-error', {
+    fetch(`${API_BASE}/api/logs/frontend-error`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(entry),

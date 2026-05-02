@@ -292,6 +292,7 @@ export const clients = {
         body: formData,
         signal: controller.signal
       });
+      if (!res.ok) throw new Error(`截图提取失败 (${res.status})`);
       return res.json();
     } finally {
       clearTimeout(timeoutId);
@@ -344,6 +345,7 @@ export const upload = {
       headers: { 'Authorization': `Bearer ${token}` },
       body: formData
     });
+    if (!res.ok) throw new Error(`上传图片失败 (${res.status})`);
     const json = await res.json();
     json.originalSize = file.size;
     json.compressedSize = compressed.size;
@@ -360,6 +362,7 @@ export const upload = {
       headers: { 'Authorization': `Bearer ${token}` },
       body: formData
     });
+    if (!res.ok) throw new Error(`上传视频失败 (${res.status})`);
     return res.json();
   },
   audio: async (file) => {
@@ -371,6 +374,7 @@ export const upload = {
       headers: { 'Authorization': `Bearer ${token}` },
       body: formData
     });
+    if (!res.ok) throw new Error(`上传音频失败 (${res.status})`);
     return res.json();
   }
 };
@@ -539,6 +543,7 @@ export const chatScreenshots = {
       headers: { 'Authorization': `Bearer ${token}` },
       body: formData
     });
+    if (!res.ok) throw new Error(`上传截图失败 (${res.status})`);
     return res.json();
   },
   updateNotes: (id, notes) => api.patch(`/api/chat-screenshots/${id}/notes`, { notes }),
@@ -633,6 +638,7 @@ export const membership = {
       headers: { 'Authorization': `Bearer ${token}` },
       body: formData
     });
+    if (!res.ok) throw new Error(`上传截图失败 (${res.status})`);
     return res.json();
   },
   screenshotProfiles: (status) => api.get('/api/membership/screenshot/profiles' + (status ? '?status=' + status : '')),

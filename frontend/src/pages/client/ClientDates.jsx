@@ -13,6 +13,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { CalendarIcon, SparklesIcon, QuestionIcon, CopyIcon, MapPinIcon, ClockIcon, FireIcon } from '../../components/Icons';
 import ClientCalendar from '../../components/ClientCalendar';
 import { dates, membership as membershipApi, clients, getMediaUrl } from '../../utils/api';
+import { captureError } from '../../utils/frontendErrorCapture';
 
 function formatLocalDateTime(date) {
   if (!date) return '';
@@ -293,7 +294,7 @@ export default function ClientDates() {
       if (allDatesRes.success) setAllDates(allDatesRes.dates || []);
       if (interviewsRes?.success) setPendingInterviews(interviewsRes.interviews || []);
       if (aiPlansRes?.success) setAiPlans(aiPlansRes.plans || []);
-    } catch (e) { console.error(e); }
+    } catch (e) { captureError(e); }
     setLoading(false);
   };
 
@@ -315,7 +316,7 @@ export default function ClientDates() {
             transportMode: res.client.preferredTransportMode || prev.transportMode,
           }));
         }
-      } catch (e) { console.error(e); }
+      } catch (e) { captureError(e); }
     };
     loadClientInfo();
   }, []);
@@ -363,7 +364,7 @@ export default function ClientDates() {
         toast({ title: res.error || '确认失败', status: 'error', duration: 2500 });
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
       toast({ title: '确认失败', status: 'error', duration: 2500 });
     }
     setConfirming(false);
@@ -388,7 +389,7 @@ export default function ClientDates() {
         toast({ title: res.error || '提交失败', status: 'error', duration: 2500 });
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
       toast({ title: '提交失败', status: 'error', duration: 2500 });
     }
     setSubmitting(false);
@@ -620,7 +621,7 @@ export default function ClientDates() {
           }
         }
       } catch (err) {
-        console.error('轮询方案状态失败:', err);
+        captureError(err, { context: 'poll_plan_status' });
       }
     }
 
@@ -662,7 +663,7 @@ export default function ClientDates() {
         toast({ title: res.error || '提交失败', status: 'error', duration: 2500 });
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
       toast({ title: '提交失败', status: 'error', duration: 2500 });
     }
     setInterviewSubmitting(false);

@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useCallback, useState } from 'react';
+import { captureError } from '../utils/frontendErrorCapture';
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 
@@ -37,7 +38,7 @@ export function SocketProvider({ children }) {
     });
 
     socketRef.current.on('connect_error', (err) => {
-      console.error('[SocketContext] 连接错误:', err.message);
+      captureError(new Error(`Socket 连接错误: ${err.message}`), { context: 'socket_connect_error' });
     });
 
     socketRef.current.on('disconnect', (reason) => {
@@ -50,7 +51,7 @@ export function SocketProvider({ children }) {
     });
 
     socketRef.current.on('reconnect_failed', () => {
-      console.error('[SocketContext] 重连失败');
+      captureError(new Error('Socket 重连失败'), { context: 'socket_reconnect_failed' });
     });
 
     return () => {

@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Box, Flex, VStack, HStack, Input, Button, Text, Heading, IconButton, Image, Spinner, useDisclosure, Menu, MenuButton, MenuList, MenuItem, Badge, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton, Select, List, ListItem } from '@chakra-ui/react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { api, chat, upload, clients } from '../../utils/api';
+import { captureError } from '../../utils/frontendErrorCapture';
 import { useSocket } from '../../contexts/SocketContext';
 import ProfileSuggestModal from './ProfileSuggestModal';
 import FlashImageViewer from '../../components/FlashImageViewer';
@@ -91,7 +92,7 @@ export default function AdminChat() {
         }
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     }
   }, [currentSession]);
 
@@ -104,7 +105,7 @@ export default function AdminChat() {
         setAllClients(clientUsers);
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     }
   };
 
@@ -123,7 +124,7 @@ export default function AdminChat() {
         }
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     }
   };
 
@@ -138,7 +139,7 @@ export default function AdminChat() {
         }
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     }
   };
 
@@ -165,7 +166,7 @@ export default function AdminChat() {
         });
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     }
   }, []);
 
@@ -214,7 +215,7 @@ export default function AdminChat() {
         });
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     }
   }, [startBurnTimer]);
 
@@ -335,7 +336,7 @@ export default function AdminChat() {
         }));
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     } finally {
       setSending(false);
       setPreviewFile(null);
@@ -363,7 +364,7 @@ export default function AdminChat() {
             setFlashMode(false);
           }
         } catch (e) {
-          console.error(e);
+          captureError(e);
         } finally {
           setSending(false);
         }
@@ -390,7 +391,7 @@ export default function AdminChat() {
       setBurnMode(false);
       setFlashMode(false);
     } catch (e) {
-      console.error(e);
+      captureError(e);
     } finally {
       setSending(false);
     }
@@ -408,7 +409,7 @@ export default function AdminChat() {
         setFlashMode(false);
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     } finally {
       setUploading(false);
     }
@@ -441,7 +442,7 @@ export default function AdminChat() {
         setRecordTime(prev => prev + 1);
       }, 1000);
     } catch (e) {
-      console.error('无法访问麦克风', e);
+      captureError(e, { context: '无法访问麦克风' });
     }
   };
 
@@ -461,10 +462,10 @@ export default function AdminChat() {
       if (res.url) {
         await sendMediaMessage(res.url, 'audio', previewFile.duration || recordTime);
       } else {
-        console.error('上传失败', res);
+        captureError(new Error('上传失败: ' + JSON.stringify(res)), { context: 'upload_fail' });
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     } finally {
       setUploading(false);
     }
@@ -495,7 +496,7 @@ export default function AdminChat() {
         }));
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     } finally {
       setSending(false);
     }
@@ -509,7 +510,7 @@ export default function AdminChat() {
         setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, content: '[消息已撤回]', mediaUrl: null, recalledAt: new Date() } : m));
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     }
   };
 

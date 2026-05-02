@@ -7,6 +7,7 @@ import {
 } from '@chakra-ui/react';
 import { FiX, FiArrowRight, FiAlertTriangle } from 'react-icons/fi';
 import { girls, clients, chatScreenshots, alerts as alertsApi } from '../../utils/api';
+import { captureError } from '../../utils/frontendErrorCapture';
 import { HeartIcon, FireIcon, SnowIcon, SparklesIcon } from '../../components/Icons';
 
 const STAGES = ['陌生', '搭讪', '聊天', '暧昧', '约会', '长期'];
@@ -110,7 +111,7 @@ export default function AdminGirls() {
         setGirlsList(res.girls);
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     }
   };
 
@@ -121,7 +122,7 @@ export default function AdminGirls() {
         setClientList(res.clients);
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     }
   };
 
@@ -203,7 +204,7 @@ export default function AdminGirls() {
         setScreenshots(res.screenshots);
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     }
   };
 
@@ -367,7 +368,7 @@ export default function AdminGirls() {
       onClose();
       toast({ title: '保存成功', status: 'success', duration: 2000 });
     } catch (e) {
-      console.error(e);
+      captureError(e);
       const msg = e?.response?.data?.error || '';
       if (msg.includes('额度') || msg.includes('配额')) {
         toast({ title: msg, status: 'warning', duration: 4000 });
@@ -383,7 +384,7 @@ export default function AdminGirls() {
       await girls.delete(id);
       loadGirls();
     } catch (e) {
-      console.error(e);
+      captureError(e);
     }
   };
 
@@ -401,7 +402,7 @@ export default function AdminGirls() {
         toast({ title: res.error || '评估失败', status: 'error', duration: 3000 });
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
       toast({ title: '评估失败', status: 'error', duration: 3000 });
     }
     setStageEvaluating(false);
@@ -427,7 +428,7 @@ export default function AdminGirls() {
         toast({ title: res.error || '设置失败', status: 'error', duration: 3000 });
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
       toast({ title: '设置失败', status: 'error', duration: 3000 });
     }
   };
@@ -446,7 +447,7 @@ export default function AdminGirls() {
         toast({ title: res.error || '分析失败', status: 'error', duration: 3000 });
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
       toast({ title: '分析失败', status: 'error', duration: 3000 });
     }
     setReversalAnalyzing(false);
@@ -487,7 +488,7 @@ export default function AdminGirls() {
         toast({ title: res.error || '上传失败', status: 'error', duration: 2000 });
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
       toast({ title: '上传失败', status: 'error', duration: 2000 });
     } finally {
       setUploading(false);
@@ -516,7 +517,7 @@ export default function AdminGirls() {
         toast({ title: res.error || '确认失败', status: 'error', duration: 2000 });
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
       toast({ title: '确认失败', status: 'error', duration: 2000 });
     } finally {
       onConfirmClose();
@@ -534,7 +535,7 @@ export default function AdminGirls() {
         await loadScreenshots(selectedGirl.id);
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
       toast({ title: 'AI生成失败', status: 'error', duration: 2000 });
     } finally {
       setAiGenerating(false);
@@ -547,7 +548,7 @@ export default function AdminGirls() {
       await loadScreenshots(selectedGirl.id);
       toast({ title: '备注已更新', status: 'success', duration: 1500 });
     } catch (e) {
-      console.error(e);
+      captureError(e);
     }
   };
 
@@ -558,7 +559,7 @@ export default function AdminGirls() {
       await loadScreenshots(selectedGirl.id);
       toast({ title: '已删除', status: 'success', duration: 1500 });
     } catch (e) {
-      console.error(e);
+      captureError(e);
     }
   };
 
@@ -581,6 +582,7 @@ export default function AdminGirls() {
         headers: { 'Authorization': `Bearer ${token}` },
         body: fd
       });
+      if (!res.ok) throw new Error(`上传截图失败 (${res.status})`);
       const data = await res.json();
 
       if (data.success) {
@@ -630,7 +632,7 @@ export default function AdminGirls() {
         toast({ title: data.error || '上传失败', status: 'error', duration: 2000 });
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
       toast({ title: '上传失败', status: 'error', duration: 2000 });
     } finally {
       setUploadingMoment(false);

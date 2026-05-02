@@ -7,6 +7,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Text, Flex, Image, IconButton, Spinner } from '@chakra-ui/react';
 import { chat } from '../utils/api';
+import { captureError } from '../utils/frontendErrorCapture';
 
 // sessionStorage 持久化：刷新页面/切换路由后倒计时不丢失，关标签页自动清除
 const BURN_KEY_PREFIX = 'flash_burn_';
@@ -97,7 +98,7 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
     try {
       await chat.burn(mid);
     } catch (e) {
-      console.error('[FlashImage] 销毁失败:', e);
+      captureError(e, { context: '[FlashImage] 销毁失败:' });
     }
     onCloseRef.current();
   }, []);

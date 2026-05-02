@@ -3,6 +3,7 @@ import { Box, Heading, Text, SimpleGrid, Card, CardBody, Icon, HStack, Badge, Bu
 import { ChatIcon, SparklesIcon, FishIcon, BookIcon, GiftIcon, CrownIcon, CheckIcon, CalendarIcon } from '../../components/Icons';
 import { useEffect, useState } from 'react';
 import { clients, girls, membership as membershipApi } from '../../utils/api';
+import { captureError } from '../../utils/frontendErrorCapture';
 import ServiceProgressBoard from '../../components/client/ServiceProgressBoard';
 
 const TYPE_LABEL = { monthly: '普惠月付', yearly: '普惠年付', premium: '高端会员' };
@@ -68,7 +69,7 @@ export default function ClientHome() {
         setMemberStatus(memberRes);
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     } finally {
       setLoading(false);
     }

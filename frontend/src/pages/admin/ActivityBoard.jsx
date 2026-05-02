@@ -7,6 +7,7 @@ import {
 } from '@chakra-ui/react';
 import { FiTrendingUp } from 'react-icons/fi';
 import { membership as membershipApi } from '../../utils/api';
+import { captureError } from '../../utils/frontendErrorCapture';
 const activityApi = membershipApi.activity;
 
 const LEVEL_COLORS = {
@@ -46,7 +47,7 @@ export default function ActivityBoard() {
         setTrend(res.dailyTrend || []);
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     } finally {
       setLoading(false);
     }
@@ -59,7 +60,7 @@ export default function ActivityBoard() {
         setClients(res.clients);
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     }
   }, []);
 
@@ -70,7 +71,7 @@ export default function ActivityBoard() {
         setDormantUsers(res.dormantUsers);
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     }
   }, []);
 
@@ -81,7 +82,7 @@ export default function ActivityBoard() {
         setGrowth(res.growth || []);
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     }
   }, []);
 

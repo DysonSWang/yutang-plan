@@ -10,6 +10,7 @@ import {
   Menu, MenuButton, MenuList, MenuItem, IconButton, Tooltip
 } from '@chakra-ui/react';
 import { events as eventsApi, dates as datesApi } from '../utils/api';
+import { captureError } from '../utils/frontendErrorCapture';
 import { FireIcon, CalendarIcon, PlusIcon, TrashIcon, EditIcon, CheckIcon } from './Icons';
 
 const DATE_STATUS_CONFIG = {
@@ -98,7 +99,7 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
         setEvents(res.events || []);
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     } finally {
       setLoading(false);
     }
@@ -313,7 +314,7 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
         }
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
       toast({ title: '操作失败', status: 'error', duration: 2000 });
     } finally {
       setSaving(false);
@@ -341,7 +342,7 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
         toast({ title: res.error || '操作失败', status: 'error', duration: 2000 });
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
       toast({ title: '操作失败', status: 'error', duration: 2000 });
     } finally {
       setDeleting(false);

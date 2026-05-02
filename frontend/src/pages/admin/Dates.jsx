@@ -7,6 +7,7 @@ import {
   AlertIcon, AlertDescription, Wrap, WrapItem, Tag
 } from '@chakra-ui/react';
 import { dates, clients, girls as girlsApi, events as eventsApi } from '../../utils/api';
+import { captureError } from '../../utils/frontendErrorCapture';
 import { CalendarIcon, SparklesIcon, FireIcon, WarningIcon, CheckCircleIcon, QuestionIcon } from '../../components/Icons';
 import ClientCalendar from '../../components/ClientCalendar';
 
@@ -109,14 +110,14 @@ export default function AdminDates() {
     try {
       const res = await clients.list();
       if (res.success) setClientList(res.clients);
-    } catch (e) { console.error(e); }
+    } catch (e) { captureError(e); }
   }, []);
 
   const loadGirlsForClient = useCallback(async (clientId) => {
     try {
       const res = await girlsApi.list({ clientId });
       if (res.success) setGirlList(res.girls);
-    } catch (e) { console.error(e); }
+    } catch (e) { captureError(e); }
   }, []);
 
   const loadDates = useCallback(async () => {
@@ -127,7 +128,7 @@ export default function AdminDates() {
       if (statusFilter) params.status = statusFilter;
       const res = await dates.list(params);
       if (res.success) setDatesList(res.dates);
-    } catch (e) { console.error(e); }
+    } catch (e) { captureError(e); }
     setLoading(false);
   }, [selectedClient, statusFilter]);
 
@@ -201,7 +202,7 @@ export default function AdminDates() {
         loadDates();
         setRefreshKey(n => n + 1);
       }
-    } catch (e) { console.error(e); toast({ title: '创建失败', status: 'error', duration: 2000 }); }
+    } catch (e) { captureError(e); toast({ title: '创建失败', status: 'error', duration: 2000 }); }
   };
 
   const openDetail = async (date) => {
@@ -232,7 +233,7 @@ export default function AdminDates() {
         } catch { setDateEvents([]); }
         openDetailModal();
       }
-    } catch (e) { console.error(e); }
+    } catch (e) { captureError(e); }
   };
 
   const toggleEventStatus = async (eventId, currentStatus) => {
@@ -240,14 +241,14 @@ export default function AdminDates() {
     try {
       await eventsApi.updateStatus(eventId, nextStatus);
       setDateEvents(prev => prev.map(ev => ev.id === eventId ? { ...ev, status: nextStatus } : ev));
-    } catch (e) { console.error(e); }
+    } catch (e) { captureError(e); }
   };
 
   const deleteEvent = async (eventId) => {
     try {
       await eventsApi.delete(eventId);
       setDateEvents(prev => prev.filter(ev => ev.id !== eventId));
-    } catch (e) { console.error(e); }
+    } catch (e) { captureError(e); }
   };
 
   const addReminder = async () => {
@@ -267,7 +268,7 @@ export default function AdminDates() {
       if (res.success && res.event) {
         setDateEvents(prev => [...prev, res.event]);
       }
-    } catch (e) { console.error(e); }
+    } catch (e) { captureError(e); }
   };
 
   const openEval = () => {
@@ -333,7 +334,7 @@ export default function AdminDates() {
         setDiscussMsg(msg);
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
       toast({ title: '讨论失败', status: 'error', duration: 2500 });
       setDiscussMsg(msg);
     }
@@ -354,7 +355,7 @@ export default function AdminDates() {
         toast({ title: res.error || '推送失败', status: 'error', duration: 2500 });
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
       toast({ title: '推送失败', status: 'error', duration: 2500 });
     }
   };
@@ -373,7 +374,7 @@ export default function AdminDates() {
         toast({ title: res.error || '删除失败', status: 'error', duration: 2500 });
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
       toast({ title: '删除失败', status: 'error', duration: 2500 });
     }
   };
@@ -392,7 +393,7 @@ export default function AdminDates() {
       } else {
         toast({ title: res.error || '生成失败', status: 'error', duration: 3000 });
       }
-    } catch (e) { console.error(e); toast({ title: '生成失败', status: 'error', duration: 3000 }); }
+    } catch (e) { captureError(e); toast({ title: '生成失败', status: 'error', duration: 3000 }); }
     setGeneratingInterview(false);
   };
 
@@ -409,7 +410,7 @@ export default function AdminDates() {
       } else {
         toast({ title: res.error || '推送失败', status: 'error', duration: 2500 });
       }
-    } catch (e) { console.error(e); toast({ title: '推送失败', status: 'error', duration: 2500 }); }
+    } catch (e) { captureError(e); toast({ title: '推送失败', status: 'error', duration: 2500 }); }
     setPushingInterview(false);
   };
 
@@ -426,7 +427,7 @@ export default function AdminDates() {
       } else {
         toast({ title: res.error || '生成失败', status: 'error', duration: 3000 });
       }
-    } catch (e) { console.error(e); toast({ title: '生成失败', status: 'error', duration: 3000 }); }
+    } catch (e) { captureError(e); toast({ title: '生成失败', status: 'error', duration: 3000 }); }
     setGeneratingReport(false);
   };
 
@@ -460,7 +461,7 @@ export default function AdminDates() {
         loadDates();
         setRefreshKey(n => n + 1);
       }
-    } catch (e) { console.error(e); toast({ title: '保存失败', status: 'error', duration: 2000 }); }
+    } catch (e) { captureError(e); toast({ title: '保存失败', status: 'error', duration: 2000 }); }
     setEvaluating(false);
   };
 
@@ -476,7 +477,7 @@ export default function AdminDates() {
           setRefreshKey(n => n + 1);
         }
       }
-    } catch (e) { console.error(e); }
+    } catch (e) { captureError(e); }
   };
 
   const toggleChecklistItem = (catIndex, itemIndex) => {
@@ -500,7 +501,7 @@ export default function AdminDates() {
       await dates.updateChecklist(selectedDate.id, checklist);
       toast({ title: '检查清单已保存', status: 'success', duration: 1500 });
     } catch (e) {
-      console.error(e);
+      captureError(e);
       toast({ title: '保存失败', status: 'error', duration: 1500 });
     }
     setChecklistSaving(false);

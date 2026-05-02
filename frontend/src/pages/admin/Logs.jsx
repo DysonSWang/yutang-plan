@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
+import { captureError } from '../../utils/frontendErrorCapture';
 import {
   Box, Heading, HStack, VStack, Select, Input, Button, Badge, Text, Flex, Card,
   CardBody, Stat, StatLabel, StatNumber, StatHelpText, useToast, Table, Thead,
@@ -11,6 +12,8 @@ import {
   useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton,
 } from '@chakra-ui/react';
 import { useSocket } from '../../contexts/SocketContext';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3005';
 
 function beijingDateStr() {
   const bj = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Shanghai' }));
@@ -169,7 +172,7 @@ export default function Logs() {
 
   // 加载日志文件列表
   useEffect(() => {
-    fetch('/api/logs/files')
+    fetch(`${API_BASE}/api/logs/files`)
       .then(r => r.json())
       .then(d => {
         setFiles(d.files || []);
@@ -223,7 +226,7 @@ export default function Logs() {
   // 加载慢请求分析
   const loadSlowAnalysis = () => {
     setSlowAnalysisLoading(true);
-    fetch('/api/logs/slow-analysis?days=7&limit=15')
+    fetch(`${API_BASE}/api/logs/slow-analysis?days=7&limit=15`)
       .then(r => r.json())
       .then(d => {
         setSlowAnalysis(d);

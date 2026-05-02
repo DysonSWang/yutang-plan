@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSocket } from '../../contexts/SocketContext';
 import { notifications as notifApi } from '../../utils/api';
+import { captureError } from '../../utils/frontendErrorCapture';
 import { FishIcon, ChatIcon, SparklesIcon, BellIcon, UserIcon, CalendarIcon, BookIcon, GiftIcon } from '../../components/Icons';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3005';
@@ -235,7 +236,7 @@ export default function ClientLayout() {
         setChatUnread(totalUnread);
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     }
   }, []);
 
@@ -280,7 +281,7 @@ export default function ClientLayout() {
       await notifApi.readAll();
       setUnreadCount(0);
     } catch (e) {
-      console.error(e);
+      captureError(e);
     }
   };
 

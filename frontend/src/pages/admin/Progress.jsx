@@ -12,6 +12,7 @@ import {
   Progress, Icon
 } from '@chakra-ui/react';
 import { clients, progress } from '../../utils/api';
+import { captureError } from '../../utils/frontendErrorCapture';
 import { SearchIcon, FishIcon, HeartIcon, LockIcon, SparklesIcon, ChartIcon } from '../../components/Icons';
 
 const SERVICE_STAGES = [
@@ -48,7 +49,7 @@ export default function AdminProgress() {
         setClientList(res.clients);
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     }
   };
 
@@ -70,7 +71,7 @@ export default function AdminProgress() {
         setNewStage(1);
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
       setClientProgress([]);
     }
 
@@ -96,7 +97,7 @@ export default function AdminProgress() {
         onClose();
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     } finally {
       setLoading(false);
     }

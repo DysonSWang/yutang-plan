@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Flex, Heading, Text, Card, CardBody, CardHeader, Button, Select, Textarea, SimpleGrid, Badge, VStack, HStack, Divider, Spinner, useToast, Tabs, TabList, TabPanels, Tab, TabPanel, Icon, Input, Checkbox, Collapse, Alert, AlertIcon, Image, FormControl, FormLabel, Text as CText } from '@chakra-ui/react';
 import { clients, girls, chat, chatPartner, aiCoach, events as eventsApi } from '../../utils/api';
+import { captureError } from '../../utils/frontendErrorCapture';
 import { useSocket } from '../../contexts/SocketContext';
 import { FiSend, FiMessageSquare, FiTarget, FiZap, FiAlertCircle, FiCheck, FiCopy, FiUser, FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import { HeartIcon } from '../../components/Icons';
@@ -296,7 +297,7 @@ export default function AdminWorkbench() {
     } catch (err) {
       // abort 或网络错误：恢复旧文本
       if (err.name !== 'AbortError') {
-        console.error('[coach] SSE error:', err);
+        captureError(err, { context: 'coach_sse' });
         setActiveCoachText(prevText);
         if (activeCoachRef.current) activeCoachRef.current.textContent = prevText;
       }
@@ -333,7 +334,7 @@ export default function AdminWorkbench() {
         setClientSession(res.session);
       }
     } catch {
-      console.error('请求错误');
+      captureError(new Error('请求错误'), { context: 'workbench_api' });
     }
   }, [selectedClient]);
 
@@ -343,7 +344,7 @@ export default function AdminWorkbench() {
       const res = await chat.messages(clientSession.id);
       if (res.success) setClientMessages(res.messages || []);
     } catch {
-      console.error('请求错误');
+      captureError(new Error('请求错误'), { context: 'workbench_api' });
     }
   }, [clientSession]);
 
@@ -358,7 +359,7 @@ export default function AdminWorkbench() {
         // 主动教练在空客户时会调用 /overview 全局分析
       }
     } catch {
-      console.error('请求错误');
+      captureError(new Error('请求错误'), { context: 'workbench_api' });
     }
   }, []);
 
@@ -446,7 +447,7 @@ export default function AdminWorkbench() {
       const res = await girls.list({ clientId: client.id });
       if (res.success) setGirlsList(res.girls);
     } catch {
-      console.error('请求错误');
+      captureError(new Error('请求错误'), { context: 'workbench_api' });
     }
   };
 
@@ -622,7 +623,7 @@ export default function AdminWorkbench() {
       } else {
         toast({ title: res.error || '添加失败', status: 'error', duration: 2000 });
       }
-    } catch (e) { console.error(e); toast({ title: '添加失败', status: 'error', duration: 2000 }); }
+    } catch (e) { captureError(e); toast({ title: '添加失败', status: 'error', duration: 2000 }); }
     finally { setAddingRecommendation(null); }
   };
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, VStack, HStack, Input, Button, Text, Flex, IconButton, Image, Badge, useToast, Center, Spinner } from '@chakra-ui/react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { api, chat, upload } from '../../utils/api';
+import { captureError } from '../../utils/frontendErrorCapture';
 import { useSocket } from '../../contexts/SocketContext';
 import FlashImageViewer from '../../components/FlashImageViewer';
 import EmojiPanel from '../../components/EmojiPanel';
@@ -84,7 +85,7 @@ export default function ClientChat() {
         setMessages([]);
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     } finally {
       setLoading(false);
     }
@@ -104,7 +105,7 @@ export default function ClientChat() {
         }));
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     }
   }, []);
 
@@ -153,7 +154,7 @@ export default function ClientChat() {
         });
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     }
   };
 
@@ -226,7 +227,7 @@ export default function ClientChat() {
         setMessages(prev => [...prev, res.message]);
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     } finally {
       setSending(false);
       setPreviewFile(null);
@@ -254,7 +255,7 @@ export default function ClientChat() {
             setFlashMode(false);
           }
         } catch (e) {
-          console.error(e);
+          captureError(e);
         } finally {
           setSending(false);
         }
@@ -284,7 +285,7 @@ export default function ClientChat() {
       setBurnMode(false);
       setFlashMode(false);
     } catch (e) {
-      console.error(e);
+      captureError(e);
     } finally {
       setSending(false);
     }
@@ -304,7 +305,7 @@ export default function ClientChat() {
         setFlashMode(false);
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     } finally {
       setUploading(false);
     }
@@ -337,7 +338,7 @@ export default function ClientChat() {
         setRecordTime(prev => prev + 1);
       }, 1000);
     } catch (e) {
-      console.error('无法访问麦克风', e);
+      captureError(e, { context: '无法访问麦克风' });
     }
   };
 
@@ -358,7 +359,7 @@ export default function ClientChat() {
         await sendMediaMessage(res.url, 'audio', previewFile.duration || recordTime);
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     } finally {
       setUploading(false);
     }
@@ -382,7 +383,7 @@ export default function ClientChat() {
           toast({ title: '创建会话失败，请稍后重试', status: 'error', duration: 3000 });
         }
       } catch (e) {
-        console.error(e);
+        captureError(e);
         toast({ title: '发送失败', status: 'error', duration: 2000 });
       }
       return;
@@ -404,7 +405,7 @@ export default function ClientChat() {
         }
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
       toast({ title: '发送失败', status: 'error', duration: 2000 });
     } finally {
       setSending(false);
@@ -419,7 +420,7 @@ export default function ClientChat() {
         setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, content: '[消息已撤回]', mediaUrl: null, recalledAt: new Date() } : m));
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     }
   };
 

@@ -5,6 +5,7 @@ import {
   Spinner, Progress, Divider, Icon
 } from '@chakra-ui/react';
 import { dashboard as dashboardApi, clients as clientsApi, weeklyReview as weeklyReviewApi } from '../../utils/api';
+import { captureError } from '../../utils/frontendErrorCapture';
 import { RefreshIcon, SparklesIcon, ClipboardIcon, WarningIcon, CalendarIcon, FireIcon, SnowIcon, InfoIcon, ChartIcon } from '../../components/Icons';
 
 const STAGE_COLORS = {
@@ -49,7 +50,7 @@ export default function AdminDashboard() {
         });
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     } finally {
       setLoading(false);
     }
@@ -62,7 +63,7 @@ export default function AdminDashboard() {
         setClientList(res.clients);
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
     }
   };
 
@@ -90,7 +91,7 @@ export default function AdminDashboard() {
         // 更新进度提示
         setAnalyzeProgress(`分析中... ${Math.min(100, Math.round((i / maxAttempts) * 100))}%`);
       } catch (e) {
-        console.error('轮询失败:', e);
+        captureError(e, { context: '轮询失败:' });
       }
     }
     return { success: false, error: '超时' };
@@ -117,7 +118,7 @@ export default function AdminDashboard() {
         }
       }
     } catch (e) {
-      console.error(e);
+      captureError(e);
       setAnalyzeProgress('分析失败');
     } finally {
       setAnalyzing(false);
@@ -136,7 +137,7 @@ export default function AdminDashboard() {
       const res = await weeklyReviewApi.get(selectedClientId);
       if (res.success) setWeeklyReport(res.data);
     } catch (e) {
-      console.error('加载周报失败:', e);
+      captureError(e, { context: '加载周报失败:' });
     } finally {
       setWeeklyLoading(false);
     }
@@ -449,7 +450,7 @@ export default function AdminDashboard() {
                         const res = await weeklyReviewApi.generate(selectedClientId);
                         if (res.success) setWeeklyReport(res.data);
                       } catch (e) {
-                        console.error('生成周报失败:', e);
+                        captureError(e, { context: '生成周报失败:' });
                       } finally {
                         setWeeklyLoading(false);
                       }
