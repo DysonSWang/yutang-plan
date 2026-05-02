@@ -792,13 +792,13 @@ export default function ClientDates() {
         <Heading color="white">约会与方案</Heading>
         <HStack spacing={2}>
           <Button variant="outline" colorScheme="gray" size="sm" onClick={loadAll} isLoading={loading}>刷新</Button>
-          <Button colorScheme="brand" leftIcon={<SparklesIcon />} onClick={() => setShowAddModal(true)}>
+          <Button colorScheme="gold" leftIcon={<SparklesIcon />} onClick={() => setShowAddModal(true)}>
             添加约会
           </Button>
         </HStack>
       </Flex>
 
-      <Tabs colorScheme="brand" variant="soft-rounded" mb={6} defaultIndex={window.location.hash === '#calendar' ? 1 : 0} isLazy lazyBehavior="keepMounted">
+      <Tabs colorScheme="gold" variant="soft-rounded" mb={6} defaultIndex={window.location.hash === '#calendar' ? 1 : 0} isLazy lazyBehavior="keepMounted">
         <TabList>
           <Tab>约会方案</Tab>
           <Tab>我的日历</Tab>
@@ -913,23 +913,23 @@ export default function ClientDates() {
             {!loading && upcomingDate && (
               <Box mb={6}>
                 <Text fontSize="lg" fontWeight="bold" mb={3} color="white">
-                  <Box as="span" display="inline-block" w="4px" h="20px" bg="brand.500" borderRadius="2px" mr={3} verticalAlign="middle"></Box>
+                  <Box as="span" display="inline-block" w="4px" h="20px" bg="gold.500" borderRadius="2px" mr={3} verticalAlign="middle"></Box>
                   即将到来
                 </Text>
                 <Card
                   bg="linear-gradient(135deg, rgba(0,212,170,0.15) 0%, rgba(168,85,247,0.15) 100%)"
                   border="1px solid"
-                  borderColor="brand.500"
+                  borderColor="gold.500"
                   cursor="pointer"
                   onClick={() => openDetail(upcomingDate)}
-                  _hover={{ borderColor: 'brand.400', transform: 'translateY(-2px)' }}
+                  _hover={{ borderColor: 'gold.400', transform: 'translateY(-2px)' }}
                   transition="all 0.2s"
                 >
                   <CardBody py={5} px={6}>
                     <Flex align="center" gap={6} wrap="wrap">
                       {/* 日期突出显示 */}
                       <Box textAlign="center" minW="70px">
-                        <Text fontSize="36px" fontWeight="bold" color="brand.400" lineHeight="1">
+                        <Text fontSize="36px" fontWeight="bold" color="gold.400" lineHeight="1">
                           {new Date(upcomingDate.dateTime).getDate()}
                         </Text>
                         <Text fontSize="sm" color="gray.400">
@@ -963,7 +963,7 @@ export default function ClientDates() {
                       </Box>
                       {/* 操作 */}
                       <HStack spacing={2}>
-                        <Button colorScheme="brand" size="sm">查看方案</Button>
+                        <Button colorScheme="gold" size="sm">查看方案</Button>
                       </HStack>
                     </Flex>
                   </CardBody>
@@ -989,7 +989,7 @@ export default function ClientDates() {
                 {/* 图例 */}
                 <HStack spacing={4} p={3} bg="rgba(255,255,255,0.02)" borderRadius="md" flexWrap="wrap">
                   <HStack spacing={2}>
-                    <Box w="10px" h="10px" borderRadius="full" bg="brand.500"></Box>
+                    <Box w="10px" h="10px" borderRadius="full" bg="gold.500"></Box>
                     <Text fontSize="xs" color="gray.500">AI 策划</Text>
                   </HStack>
                   <HStack spacing={2}>
@@ -1057,9 +1057,9 @@ export default function ClientDates() {
                     key={plan.id}
                     bg="gray.800"
                     border="1px solid"
-                    borderColor="brand.500"
+                    borderColor="gold.500"
                     cursor="pointer"
-                    _hover={{ borderColor: 'brand.400', transform: 'translateY(-2px)' }}
+                    _hover={{ borderColor: 'gold.400', transform: 'translateY(-2px)' }}
                     onClick={() => setSelectedAiPlan(plan)}
                     transition="all 0.2s"
                   >
@@ -1072,7 +1072,7 @@ export default function ClientDates() {
                           <Flex justify="space-between" align="flex-start" mb={2}>
                             <Box>
                               <HStack spacing={2} mb={1}>
-                                <Icon as={SparklesIcon} color="brand.400" />
+                                <Icon as={SparklesIcon} color="gold.400" />
                                 <Heading size="md" color="white">{plan.title || 'AI 约会方案'}</Heading>
                               </HStack>
                               {plan.scene && <Text color="gray.400" fontSize="sm">{plan.scene}</Text>}
@@ -1093,7 +1093,7 @@ export default function ClientDates() {
                             <Progress
                               value={plan.planStatus === 'generated' ? 100 : 50}
                               size="xs"
-                              colorScheme="brand"
+                              colorScheme="gold"
                               borderRadius="full"
                               bg="gray.700"
                             />
@@ -1482,7 +1482,7 @@ export default function ClientDates() {
         <ModalContent bg="gray.800" maxH="85vh" overflow="auto">
           <ModalHeader color="white">
             {selectedAiPlan?.title || 'AI 约会方案'}
-            <Badge ml={2} colorScheme="brand">AI</Badge>
+            <Badge ml={2} colorScheme="gold">AI</Badge>
           </ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={6}>
@@ -1553,51 +1553,51 @@ export default function ClientDates() {
                     position="relative"
                     overflow="hidden"
                     sx={{
-                      '& h1': { fontSize: '22px', fontWeight: 'bold', color: '#38B2AC', mb: 4, mt: 6, pb: 2, borderBottom: '1px solid rgba(255,255,255,0.1)' },
-                      '& h2': { fontSize: '18px', fontWeight: 'bold', color: '#F6AD55', mb: 3, mt: 5 },
-                      '& h3': { fontSize: '16px', fontWeight: 'bold', color: '#FC8181', mb: 2, mt: 4 },
-                      '& p': { mb: 4, color: '#E2E8F0', lineHeight: '1.8' },
-                      '& ul': { pl: 5, mb: 4, '& li': { mb: 2, color: '#CBD5E0' } },
-                      '& ol': { pl: 5, mb: 4, counterReset: 'item', '& li': { mb: 2, color: '#CBD5E0' } },
+                      '& h1': { fontSize: '22px', fontWeight: 'bold', color: 'var(--gold)', mb: 4, mt: 6, pb: 2, borderBottom: '1px solid rgba(255,255,255,0.1)' },
+                      '& h2': { fontSize: '18px', fontWeight: 'bold', color: 'var(--rose)', mb: 3, mt: 5 },
+                      '& h3': { fontSize: '16px', fontWeight: 'bold', color: 'var(--w80)', mb: 2, mt: 4 },
+                      '& p': { mb: 4, color: 'var(--w80)', lineHeight: '1.8' },
+                      '& ul': { pl: 5, mb: 4, '& li': { mb: 2, color: 'var(--w60)' } },
+                      '& ol': { pl: 5, mb: 4, counterReset: 'item', '& li': { mb: 2, color: 'var(--w60)' } },
                       '& li': { mb: 1 },
-                      '& strong': { fontWeight: 'bold', color: '#F6E05E' },
-                      '& em': { fontStyle: 'italic', color: '#A0AEC0' },
-                      '& blockquote': { borderLeft: '3px solid #38B2AC', pl: 4, py: 2, my: 3, bg: 'rgba(56,178,172,0.08)', color: '#A0AEC0', fontStyle: 'italic', borderRadius: '0 8px 8px 0' },
+                      '& strong': { fontWeight: 'bold', color: 'var(--gold)' },
+                      '& em': { fontStyle: 'italic', color: 'var(--w40)' },
+                      '& blockquote': { borderLeft: '3px solid var(--gold)', pl: 4, py: 2, my: 3, bg: 'rgba(212,168,83,0.08)', color: 'var(--w40)', fontStyle: 'italic', borderRadius: '0 8px 8px 0' },
                       '& table': { width: '100%', my: 4, borderCollapse: 'collapse' },
-                      '& thead': { bg: 'rgba(56,178,172,0.15)' },
-                      '& th': { color: '#38B2AC', fontWeight: 'bold', py: 2, px: 4, textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.1)' },
-                      '& td': { color: '#E2E8F0', py: 2, px: 4, borderBottom: '1px solid rgba(255,255,255,0.05)' },
+                      '& thead': { bg: 'rgba(212,168,83,0.15)' },
+                      '& th': { color: 'var(--gold)', fontWeight: 'bold', py: 2, px: 4, textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.1)' },
+                      '& td': { color: 'var(--w80)', py: 2, px: 4, borderBottom: '1px solid rgba(255,255,255,0.05)' },
                       '& tr': { '&:hover': { bg: 'rgba(255,255,255,0.02)' } },
-                      '& code': { bg: 'rgba(237,100,166,0.15)', color: '#F687B3', px: 2, py: 0.5, borderRadius: '4px', fontSize: '13px', fontFamily: 'mono' },
-                      '& pre': { bg: 'rgba(26,32,44,0.8)', p: 4, borderRadius: '8px', overflowX: 'auto', my: 4, border: '1px solid rgba(255,255,255,0.05)' },
+                      '& code': { bg: 'rgba(193,127,89,0.12)', color: 'var(--rose)', px: 2, py: 0.5, borderRadius: '4px', fontSize: '13px', fontFamily: 'mono' },
+                      '& pre': { bg: 'var(--warm-matte)', p: 4, borderRadius: '8px', overflowX: 'auto', my: 4, border: '1px solid rgba(255,255,255,0.05)' },
                       '& hr': { my: 6, borderColor: 'rgba(255,255,255,0.1)' },
-                      '& a': { color: '#38B2AC', textDecoration: 'underline', '&:hover': { color: '#4FD1C5' } },
+                      '& a': { color: 'var(--gold)', textDecoration: 'underline', '&:hover': { color: 'var(--gold-hover)' } },
                     }}
                   >
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       components={{
-                        h1: ({ node, ...props }) => <Text as="h1" fontSize="22px" fontWeight="bold" color="#38B2AC" mb={4} mt={6} pb={2} borderBottom="1px solid rgba(255,255,255,0.1)" {...props} />,
-                        h2: ({ node, ...props }) => <Text as="h2" fontSize="18px" fontWeight="bold" color="#F6AD55" mb={3} mt={5} {...props} />,
-                        h3: ({ node, ...props }) => <Text as="h3" fontSize="16px" fontWeight="bold" color="#FC8181" mb={2} mt={4} {...props} />,
-                        p: ({ node, ...props }) => <Text mb={4} color="#E2E8F0" lineHeight="1.8" {...props} />,
+                        h1: ({ node, ...props }) => <Text as="h1" fontSize="22px" fontWeight="bold" color="var(--gold)" mb={4} mt={6} pb={2} borderBottom="1px solid rgba(255,255,255,0.1)" {...props} />,
+                        h2: ({ node, ...props }) => <Text as="h2" fontSize="18px" fontWeight="bold" color="var(--rose)" mb={3} mt={5} {...props} />,
+                        h3: ({ node, ...props }) => <Text as="h3" fontSize="16px" fontWeight="bold" color="var(--w80)" mb={2} mt={4} {...props} />,
+                        p: ({ node, ...props }) => <Text mb={4} color="var(--w80)" lineHeight="1.8" {...props} />,
                         ul: ({ node, ...props }) => <Box as="ul" pl={5} mb={4} {...props} />,
                         ol: ({ node, ...props }) => <Box as="ol" pl={5} mb={4} {...props} />,
-                        li: ({ node, ...props }) => <Text as="li" mb={2} color="#CBD5E0" {...props} />,
-                        strong: ({ node, ...props }) => <Text as="strong" fontWeight="bold" color="#F6E05E" {...props} />,
-                        em: ({ node, ...props }) => <Text as="em" fontStyle="italic" color="#A0AEC0" {...props} />,
-                        blockquote: ({ node, ...props }) => <Box as="blockquote" borderLeft="3px solid #38B2AC" pl={4} py={2} my={3} bg="rgba(56,178,172,0.08)" color="#A0AEC0" fontStyle="italic" borderRadius="0 8px 8px 0" {...props} />,
+                        li: ({ node, ...props }) => <Text as="li" mb={2} color="var(--w60)" {...props} />,
+                        strong: ({ node, ...props }) => <Text as="strong" fontWeight="bold" color="var(--gold)" {...props} />,
+                        em: ({ node, ...props }) => <Text as="em" fontStyle="italic" color="var(--w40)" {...props} />,
+                        blockquote: ({ node, ...props }) => <Box as="blockquote" borderLeft="3px solid var(--gold)" pl={4} py={2} my={3} bg="rgba(212,168,83,0.08)" color="var(--w40)" fontStyle="italic" borderRadius="0 8px 8px 0" {...props} />,
                         table: ({ node, ...props }) => <Box as="table" width="100%" my={4} borderCollapse="collapse" {...props} />,
-                        thead: ({ node, ...props }) => <Box as="thead" bg="rgba(56,178,172,0.15)" {...props} />,
-                        th: ({ node, ...props }) => <Text as="th" color="#38B2AC" fontWeight="bold" py={2} px={4} textAlign="left" borderBottom="1px solid rgba(255,255,255,0.1)" {...props} />,
-                        td: ({ node, ...props }) => <Text as="td" color="#E2E8F0" py={2} px={4} borderBottom="1px solid rgba(255,255,255,0.05)" {...props} />,
+                        thead: ({ node, ...props }) => <Box as="thead" bg="rgba(212,168,83,0.15)" {...props} />,
+                        th: ({ node, ...props }) => <Text as="th" color="var(--gold)" fontWeight="bold" py={2} px={4} textAlign="left" borderBottom="1px solid rgba(255,255,255,0.1)" {...props} />,
+                        td: ({ node, ...props }) => <Text as="td" color="var(--w80)" py={2} px={4} borderBottom="1px solid rgba(255,255,255,0.05)" {...props} />,
                         tr: ({ node, ...props }) => <Box as="tr" _hover={{ bg: 'rgba(255,255,255,0.02)' }} {...props} />,
                         code: ({ node, inline, ...props }) => inline
-                          ? <Text as="code" bg="rgba(237,100,166,0.15)" color="#F687B3" px={2} py={0.5} borderRadius="4px" fontSize="13px" fontFamily="monospace" {...props} />
-                          : <Box as="code" display="block" bg="rgba(26,32,44,0.8)" p={4} borderRadius="8px" overflowX="auto" my={4} border="1px solid rgba(255,255,255,0.05)" fontFamily="monospace" fontSize="13px" color="#E2E8F0" {...props} />,
-                        pre: ({ node, ...props }) => <Box as="pre" bg="rgba(26,32,44,0.8)" p={4} borderRadius="8px" overflowX="auto" my={4} border="1px solid rgba(255,255,255,0.05)" fontSize="13px" color="#E2E8F0" whiteSpace="pre-wrap" {...props} />,
+                          ? <Text as="code" bg="rgba(193,127,89,0.12)" color="var(--rose)" px={2} py={0.5} borderRadius="4px" fontSize="13px" fontFamily="monospace" {...props} />
+                          : <Box as="code" display="block" bg="var(--warm-matte)" p={4} borderRadius="8px" overflowX="auto" my={4} border="1px solid rgba(255,255,255,0.05)" fontFamily="monospace" fontSize="13px" color="var(--w80)" {...props} />,
+                        pre: ({ node, ...props }) => <Box as="pre" bg="var(--warm-matte)" p={4} borderRadius="8px" overflowX="auto" my={4} border="1px solid rgba(255,255,255,0.05)" fontSize="13px" color="var(--w80)" whiteSpace="pre-wrap" {...props} />,
                         hr: ({ node, ...props }) => <Divider my={6} borderColor="rgba(255,255,255,0.1)" {...props} />,
-                        a: ({ node, ...props }) => <Link color="#38B2AC" textDecoration="underline" {...props} />,
+                        a: ({ node, ...props }) => <Link color="var(--gold)" textDecoration="underline" {...props} />,
                       }}
                     >
                       {unwrapMarkdown(selectedAiPlan.content)}
@@ -1618,7 +1618,7 @@ export default function ClientDates() {
                   <Button
                     leftIcon={<CopyIcon />}
                     variant="outline"
-                    colorScheme="brand"
+                    colorScheme="gold"
                     onClick={() => {
                       if (selectedAiPlan.content) {
                         navigator.clipboard.writeText(unwrapMarkdown(selectedAiPlan.content));
@@ -1652,7 +1652,7 @@ export default function ClientDates() {
                   w={addStep === step ? '32px' : '8px'}
                   h="8px"
                   borderRadius="full"
-                  bg={addStep >= step ? 'brand.500' : 'gray.600'}
+                  bg={addStep >= step ? 'gold.500' : 'gray.600'}
                   transition="all 0.3s"
                 />
               ))}
@@ -1684,7 +1684,7 @@ export default function ClientDates() {
                       cursor="pointer"
                       bg={selectedGirlForDate?.id === girl.id ? 'rgba(0,212,170,0.15)' : 'gray.750'}
                       border="2px solid"
-                      borderColor={selectedGirlForDate?.id === girl.id ? 'brand.500' : 'gray.600'}
+                      borderColor={selectedGirlForDate?.id === girl.id ? 'gold.500' : 'gray.600'}
                       onClick={() => {
                         setSelectedGirlForDate(girl);
                         setAddStep(2);
@@ -1705,7 +1705,7 @@ export default function ClientDates() {
                             : prev.specialRequirements
                         }));
                       }}
-                      _hover={{ borderColor: 'brand.400' }}
+                      _hover={{ borderColor: 'gold.400' }}
                       transition="all 0.2s"
                     >
                       <CardBody py={3} px={4}>
@@ -1730,7 +1730,7 @@ export default function ClientDates() {
                             )}
                           </Box>
                           {selectedGirlForDate?.id === girl.id && (
-                            <Box color="brand.400" fontSize="20px">✓</Box>
+                            <Box color="gold.400" fontSize="20px">✓</Box>
                           )}
                         </HStack>
                       </CardBody>
@@ -1738,7 +1738,7 @@ export default function ClientDates() {
                   )})}
                 </VStack>
                 <Button
-                  colorScheme="brand"
+                  colorScheme="gold"
                   size="lg"
                   mt={4}
                   isDisabled={!selectedGirlForDate}
@@ -1754,7 +1754,7 @@ export default function ClientDates() {
               <VStack spacing={4} align="stretch">
                 {/* 已选女生信息卡片 */}
                 {selectedGirlForDate && (
-                  <Card bg="gray.750" border="1px solid" borderColor="brand.500">
+                  <Card bg="gray.750" border="1px solid" borderColor="gold.500">
                     <CardBody py={3} px={4}>
                       <Flex align="center" gap={3}>
                         <Avatar size="md" name={selectedGirlForDate.name} src={getAvatar(selectedGirlForDate)} />
@@ -1767,7 +1767,7 @@ export default function ClientDates() {
                             {selectedGirlForDate.interests && <Tag size="sm" colorScheme="pink">{selectedGirlForDate.interests}</Tag>}
                           </HStack>
                         </Box>
-                        <Button size="xs" variant="ghost" colorScheme="brand" onClick={() => setAddStep(1)}>修改</Button>
+                        <Button size="xs" variant="ghost" colorScheme="gold" onClick={() => setAddStep(1)}>修改</Button>
                       </Flex>
                     </CardBody>
                   </Card>
@@ -1853,7 +1853,7 @@ export default function ClientDates() {
                 {showAiFields && (
                   <VStack spacing={4} align="stretch" mt={2}>
                     <Divider />
-                    <Text color="brand.400" fontWeight="bold" fontSize="sm">✨ AI 增强信息（可选填，填得越详细方案越精准）</Text>
+                    <Text color="gold.400" fontWeight="bold" fontSize="sm">✨ AI 增强信息（可选填，填得越详细方案越精准）</Text>
 
                     <FormControl>
                       <FormLabel color="gray.400" fontSize="sm">出行方式</FormLabel>
@@ -1933,7 +1933,7 @@ export default function ClientDates() {
                     </HStack>
 
                     <Button
-                      colorScheme="brand"
+                      colorScheme="gold"
                       leftIcon={<SparklesIcon />}
                       size="lg"
                       mt={2}
