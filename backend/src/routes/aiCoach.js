@@ -193,6 +193,8 @@ async function processStreamResponse(response, opts = {}) {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
+    let totalReasoningChars = 0;
+    let totalContentChars = 0;
 
     while (true) {
       const { done, value } = await reader.read();
@@ -205,7 +207,10 @@ async function processStreamResponse(response, opts = {}) {
       for (const line of lines) {
         if (line.startsWith('data: ')) {
           const data = line.slice(6);
-          if (data === '[DONE]') { onDone?.(); return; }
+          if (data === '[DONE]') {
+            logger.info(`[AICoach] 响应完成 | 思考: ${totalReasoningChars} chars | 正文: ${totalContentChars} chars | 正文约 ${Math.round(totalContentChars / 2.5)} tokens`);
+            onDone?.(); return;
+          }
           try {
             const parsed = JSON.parse(data);
             const delta = parsed.choices?.[0]?.delta || {};
@@ -213,18 +218,22 @@ async function processStreamResponse(response, opts = {}) {
             // 检测截断
             const finishReason = parsed.choices?.[0]?.finish_reason;
             if (finishReason === 'length') {
-              logger.warn('[AICoach] 响应被 max_tokens 截断，需增大限制');
+              logger.warn(`[AICoach] 响应被 max_tokens 截断！思考: ${totalReasoningChars} 正文: ${totalContentChars}`);
+            } else if (finishReason === 'stop') {
+              logger.info(`[AICoach] 模型主动停止 (finish_reason=stop) | 思考: ${totalReasoningChars} 正文: ${totalContentChars}`);
             }
 
             // DeepSeek 思考模式：reasoning_content 先于 content 到达
             const reasoning = delta.reasoning_content || '';
             if (reasoning) {
+              totalReasoningChars += reasoning.length;
               onReasoning?.(reasoning);
               continue;
             }
 
             let content = delta.content || '';
             if (!content) continue;
+            totalContentChars += content.length;
 
             // Guardrails: 过滤大师名字
             const guardResult = streamGuardrails(content);
@@ -439,6 +448,11 @@ router.post('/situation', authMiddleware, async (req, res) => {
     const personaSection = await buildFullPersona({ clientProfile, clientId: req.user.id, girlId });
     const systemPrompt = basePrompt + buildPersonaSection(personaSection);
 
+    // ---- Debug: 测量 prompt 大小 ----
+    const promptChars = systemPrompt.length;
+    const estimatedTokens = Math.round(promptChars / 2.5); // 中英混合估算
+    logger.info(`[AICoach] Prompt 大小: ${promptChars} chars ≈ ${estimatedTokens} tokens | 路由: ${routingMeta.routedType} | 教练数: ${routingMeta.coachCount} | 历史轮次: ${turnCount} | 剩余预算: ${contextBudget} chars`);
+
     const aiConfig = getAIConfig('pro'); // 默认使用深度模式（deepseek-v4-pro + thinking）
 
     // ---- 输入 Guardrail 检查（仅深度模式） ----
@@ -490,7 +504,7 @@ router.post('/situation', authMiddleware, async (req, res) => {
       const streamParams = {
         messages: [{ role: 'user', content: systemPrompt }],
         temperature: 0.7,
-        max_tokens: 65536,
+        max_tokens: 131072,
         stream: true
       };
       // deepseek-v4-pro 启用思考过程（deepseek-chat 不支持）

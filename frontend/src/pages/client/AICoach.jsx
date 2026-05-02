@@ -32,13 +32,19 @@ function fixMarkdown(text) {
   // 有序列表：1.text → 1. text
   fixed = fixed.replace(/^(\d+\.)([^\s\n])/gm, '$1 $2');
 
-  // ---- 第二步：修复行内 Markdown（非行首的 ###/--- 需要加换行）----
-  // 行内 ###：text###heading → text\n\n### heading（DeepSeek 常见问题）
-  // 匹配：非换行符 + ### + 非空格/换行（确保是标题语法而非普通文本）
+  // ---- 第二步：修复行内 Markdown（非行首的 >/###/--- 需要加换行）----
+  // 行内 > 引用：text>回复 → text\n\n> 回复（DeepSeek 常见问题）
+  // 排除 ->、=> 等箭头符号，只匹配 > 后跟中文/字母（真正的引用内容）
+  fixed = fixed.replace(/([^\n>\-=>])(>)([一-鿿㐀-䶿a-zA-Z])/gm, '$1\n\n$2 $3');
+
+  // 行内 ###：text###heading → text\n\n### heading
   fixed = fixed.replace(/([^\n#])(#{1,3})([^\s#\n])/gm, '$1\n\n$2 $3');
 
   // 行内 ---（分隔线）：text---text → text\n\n---\n\ntext
-  fixed = fixed.replace(/([^\n-])(---)([^\n-])/g, '$1\n\n$2\n\n$3');
+  // 但 --- 后跟 ## 或 ** 时只加换行不加额外空行（避免破坏标题/粗体格式）
+  fixed = fixed.replace(/(---)(#{1,3})([^\s#\n])/g, '$1\n\n$2 $3');
+  fixed = fixed.replace(/(---)(\*\*[^*]+\*\*)/g, '$1\n\n$2');
+  fixed = fixed.replace(/([^\n-])(---)([^\n#*\-])/g, '$1\n\n$2\n\n$3');
   fixed = fixed.replace(/([^\n-])(---)$/gm, '$1\n\n$2');
 
   // 清理多余空行（最多保留两个连续换行）
