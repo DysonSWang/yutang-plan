@@ -52,7 +52,7 @@ function DesktopSidebar() {
               bgClip="text"
               letterSpacing="wider"
             >
-              追爱
+              追AI
             </Text>
             <Text fontSize="10px" color="rgba(245,240,232,0.2)" letterSpacing="2px">
               Z H U I A I

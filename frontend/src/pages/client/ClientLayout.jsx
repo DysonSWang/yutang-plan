@@ -41,7 +41,7 @@ function DesktopSidebar({ chatUnread, unreadCount, notifications, showNotificati
         <Flex justify="space-between" align="center" mb={4}>
           <Flex align="center" gap={2}>
             <Icon as={FishIcon} color="gold.500" />
-            <Text fontSize="lg" fontWeight="bold" color="gold.500" fontFamily="heading">追爱</Text>
+            <Text fontSize="lg" fontWeight="bold" color="gold.500" fontFamily="heading">追AI</Text>
           </Flex>
           <Popover isOpen={showNotifications} onClose={() => setShowNotifications(false)}>
             <PopoverTrigger>

@@ -16,7 +16,7 @@ export default function AppLogo({ size = 64, shadow = true }) {
     >
       <Image
         src="/logo.png"
-        alt="追爱AI"
+        alt="追AI"
         w={`${Math.round(size * 0.65)}px`}
         h={`${Math.round(size * 0.65)}px`}
         objectFit="contain"

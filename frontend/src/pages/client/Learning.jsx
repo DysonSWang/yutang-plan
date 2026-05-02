@@ -98,7 +98,6 @@ export default function ClientLearning() {
   const [loading, setLoading] = useState(true);
   const [showPreface, setShowPreface] = useState(false);
   const [prefaceData, setPrefaceData] = useState(null); // { title, personalized, content }
-  const [prefaceRegenerating, setPrefaceRegenerating] = useState(false);
 
   useEffect(() => {
     load();
@@ -144,20 +143,6 @@ export default function ClientLearning() {
       toast({ title: '加载失败', description: err.message, status: 'error' });
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function regeneratePreface() {
-    setPrefaceRegenerating(true);
-    try {
-      const res = await membershipApi.regenerateChapter('00');
-      if (res.success) {
-        toast({ title: '正在重新生成前言...', status: 'info', duration: 2000 });
-      }
-    } catch (err) {
-      toast({ title: '生成失败', description: err.message, status: 'error' });
-    } finally {
-      setPrefaceRegenerating(false);
     }
   }
 
@@ -212,17 +197,6 @@ export default function ClientLearning() {
             </Text>
           </Box>
           <HStack gap={3} onClick={(e) => e.stopPropagation()}>
-            {prefaceData?.personalized && (
-              <Button
-                size="xs"
-                variant="ghost"
-                colorScheme="gold"
-                isLoading={prefaceRegenerating}
-                onClick={regeneratePreface}
-              >
-                重新生成
-              </Button>
-            )}
             <Icon
               as={showPreface ? FiChevronUp : FiChevronDown}
               color="gold.300"
@@ -298,7 +272,7 @@ export default function ClientLearning() {
                   <Badge colorScheme="orange" variant="subtle">90+心理学原理</Badge>
                 </HStack>
                 <Text color="rgba(245,240,232,0.4)" fontSize="xs" pt={2} fontStyle="italic">
-                  追爱不是终点，幸福才是。—— Mo哥
+                  追AI不是终点，幸福才是。—— Mo哥
                 </Text>
               </VStack>
             )}

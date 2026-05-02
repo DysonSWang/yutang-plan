@@ -13,8 +13,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons/*.png', 'logo.png'],
       manifest: {
-        name: '追爱AI',
-        short_name: '追爱',
+        name: '追AI',
+        short_name: '追AI',
         description: 'AI智能恋爱助手',
         theme_color: '#0a0f1a',
         background_color: '#0a0f1a',
