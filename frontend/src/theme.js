@@ -184,6 +184,9 @@ const theme = extendTheme({
       },
     },
     Modal: {
+      defaultProps: {
+        motionPreset: 'scale',
+      },
       baseStyle: {
         dialog: {
           bg: 'warm.900',
@@ -240,6 +243,12 @@ const theme = extendTheme({
           borderColor: 'rgba(255,255,255,0.08)',
           borderRadius: { base: 'md', md: 'lg' },
           p: { base: 3, md: 4 },
+          transition: 'all 400ms ease-out',
+          _hover: {
+            transform: 'translateY(-3px)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 24px rgba(226,176,68,0.08)',
+            borderColor: 'rgba(226,176,68,0.15)',
+          },
         },
       },
     },
@@ -263,13 +272,24 @@ const theme = extendTheme({
       baseStyle: { color: 'warm.50' },
     },
     Button: {
+      baseStyle: {
+        borderRadius: 'md',
+        fontWeight: 'semibold',
+        transition: 'all 250ms ease-out',
+        position: 'relative',
+        overflow: 'hidden',
+      },
       variants: {
         solid: {
           bgGradient: 'linear(135deg, gold.500, gold.600)',
           color: 'warm.950',
           fontWeight: 'bold',
-          _hover: { bgGradient: 'linear(135deg, gold.300, gold.400)', boxShadow: '0 0 28px rgba(226,176,68,0.30)', transform: 'translateY(-1px)' },
-          _active: { bg: 'gold.700' },
+          _hover: {
+            bgGradient: 'linear(135deg, gold.300, gold.400)',
+            boxShadow: '0 0 28px rgba(226,176,68,0.30)',
+            transform: 'scale(1.02)',
+          },
+          _active: { bg: 'gold.700', transform: 'scale(0.97)', transition: 'transform 100ms ease-in' },
         },
         ghost: {
           color: 'rgba(245,240,232,0.6)',
@@ -278,7 +298,7 @@ const theme = extendTheme({
         outline: {
           borderColor: 'gold.500',
           color: 'gold.500',
-          _hover: { bg: 'rgba(226,176,68,0.12)', borderColor: 'gold.400' },
+          _hover: { bg: 'rgba(226,176,68,0.12)', borderColor: 'gold.400', boxShadow: '0 0 16px rgba(226,176,68,0.12)' },
         },
       },
     },

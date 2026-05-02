@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ChakraProvider, Spinner, Center, useDisclosure, useToast } from '@chakra-ui/react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -40,7 +41,7 @@ const ChapterEditor = lazy(() => import('./pages/admin/ChapterEditor'));
 function PageLoader() {
   return (
     <Center h="100vh">
-      <Spinner size="xl" color="blue.500" />
+      <Spinner size="xl" color="gold.500" />
     </Center>
   );
 }
@@ -86,6 +87,7 @@ function OnboardingRoute() {
 
 function AppRoutes() {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
   // 认证加载完成后隐藏启动屏，避免 splash→黑屏→内容的闪烁
   useEffect(() => {
@@ -101,38 +103,48 @@ function AppRoutes() {
   if (loading) return null;
 
   return (
-    <Suspense fallback={<PageLoader />}>
-    <Routes>
-      <Route path="/login" element={user ? <Navigate to={user.role === 'client' ? '/' : '/admin'} /> : <Login />} />
-      <Route path="/onboarding" element={<OnboardingRoute />} />
-      <Route path="/" element={<ProtectedRoute><ClientLayout /></ProtectedRoute>}>
-        <Route index element={<ClientHome />} />
-        <Route path="profile" element={<ClientProfile />} />
-        <Route path="chat" element={<ClientChat />} />
-        <Route path="ai-coach" element={<AICoach />} />
-        <Route path="my-pond" element={<MyPond />} />
-        <Route path="my-pond/:girlId" element={<GirlDetail />} />
-        <Route path="dates" element={<ClientDates />} />
-        <Route path="learning" element={<ClientLearning />} />
-        <Route path="learning/:chapterId" element={<ChapterDetail />} />
-      </Route>
-      <Route path="/admin" element={<ProtectedRoute requireOperator><AdminLayout /></ProtectedRoute>}>
-        <Route index element={<AdminDashboard />} />
-        <Route path="clients" element={<AdminClients />} />
-        <Route path="girls" element={<AdminGirls />} />
-        <Route path="chat" element={<AdminChat />} />
-        <Route path="workbench" element={<AdminWorkbench />} />
-        <Route path="progress" element={<AdminProgress />} />
-        <Route path="dates" element={<AdminDates />} />
-        <Route path="membership" element={<MembershipManagement />} />
-        <Route path="logs" element={<AdminLogs />} />
-        <Route path="activity" element={<ActivityBoard />} />
-        <Route path="chapters/new" element={<ChapterEditor />} />
-        <Route path="chapters/:chapterId/edit" element={<ChapterEditor />} />
-        <Route path="chapters" element={<ChapterManagement />} />
-      </Route>
-    </Routes>
-    </Suspense>
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={location.pathname}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.22, ease: 'easeInOut' }}
+      >
+        <Suspense fallback={<PageLoader />}>
+        <Routes location={location}>
+          <Route path="/login" element={user ? <Navigate to={user.role === 'client' ? '/' : '/admin'} /> : <Login />} />
+          <Route path="/onboarding" element={<OnboardingRoute />} />
+          <Route path="/" element={<ProtectedRoute><ClientLayout /></ProtectedRoute>}>
+            <Route index element={<ClientHome />} />
+            <Route path="profile" element={<ClientProfile />} />
+            <Route path="chat" element={<ClientChat />} />
+            <Route path="ai-coach" element={<AICoach />} />
+            <Route path="my-pond" element={<MyPond />} />
+            <Route path="my-pond/:girlId" element={<GirlDetail />} />
+            <Route path="dates" element={<ClientDates />} />
+            <Route path="learning" element={<ClientLearning />} />
+            <Route path="learning/:chapterId" element={<ChapterDetail />} />
+          </Route>
+          <Route path="/admin" element={<ProtectedRoute requireOperator><AdminLayout /></ProtectedRoute>}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="clients" element={<AdminClients />} />
+            <Route path="girls" element={<AdminGirls />} />
+            <Route path="chat" element={<AdminChat />} />
+            <Route path="workbench" element={<AdminWorkbench />} />
+            <Route path="progress" element={<AdminProgress />} />
+            <Route path="dates" element={<AdminDates />} />
+            <Route path="membership" element={<MembershipManagement />} />
+            <Route path="logs" element={<AdminLogs />} />
+            <Route path="activity" element={<ActivityBoard />} />
+            <Route path="chapters/new" element={<ChapterEditor />} />
+            <Route path="chapters/:chapterId/edit" element={<ChapterEditor />} />
+            <Route path="chapters" element={<ChapterManagement />} />
+          </Route>
+        </Routes>
+        </Suspense>
+      </motion.div>
+    </AnimatePresence>
   );
 }
 
