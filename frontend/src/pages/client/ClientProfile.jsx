@@ -41,12 +41,12 @@ const STAGE_COLORS = {
 const CLIENT_EDITABLE_FIELDS = [
   { key: 'nickname', label: '昵称', type: 'input' },
   { key: 'phone', label: '电话', type: 'input' },
-  { key: 'age', label: '年龄', type: 'input' },
+  { key: 'age', label: '年龄', type: 'number-select', range: [18, 80], default: 28 },
   { key: 'occupation', label: '职业', type: 'select', options: ['企业主', '企业高管', '公务员', '医生', '律师', '教师', '工程师', '程序员', '销售', '金融从业者', '自由职业', '退休', '其他'] },
   { key: 'education', label: '学历', type: 'select', options: ['小学', '初中', '中专', '高中', '大专', '本科', '硕士', '博士'] },
   { key: 'income', label: '收入水平', type: 'select', options: ['10万以下', '10-30万', '30-50万', '50-100万', '100-300万', '300万以上', '其他'] },
-  { key: 'height', label: '身高(cm)', type: 'input' },
-  { key: 'weight', label: '体重(kg)', type: 'input' },
+  { key: 'height', label: '身高(cm)', type: 'number-select', range: [140, 200], step: 5, default: 170 },
+  { key: 'weight', label: '体重(kg)', type: 'number-select', range: [80, 200], step: 5, default: 130 },
   { key: 'residence', label: '所在地', type: 'input' },
   { key: 'hometown', label: '籍贯', type: 'input' },
   { key: 'appearance', label: '外貌描述', type: 'input' },
@@ -126,6 +126,29 @@ Object.assign(ALL_FIELD_LABELS, {
 
 // 单个字段组件（避免整体重渲染）
 function ProfileField({ field, value, onChange }) {
+  // 数字选择器：生成范围选项
+  if (field.type === 'number-select') {
+    const [min, max] = field.range;
+    const step = field.step || 1;
+    const options = [];
+    for (let i = min; i <= max; i += step) options.push(i);
+    return (
+      <FormControl key={field.key}>
+        <FormLabel color="gray.400" fontSize="sm">{field.label}</FormLabel>
+        <Select
+          value={value || (field.default ? String(field.default) : '')}
+          onChange={e => onChange(field.key, e.target.value)}
+          bg="gray.700" color="white" border="1px solid" borderColor="gray.600"
+          _hover={{ borderColor: 'gray.500' }}
+          _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }}
+        >
+          {options.map(n => (
+            <option key={n} value={String(n)}>{n}</option>
+          ))}
+        </Select>
+      </FormControl>
+    );
+  }
   if (field.type === 'input') {
     return (
       <FormControl key={field.key}>
@@ -149,7 +172,7 @@ function ProfileField({ field, value, onChange }) {
         <FormLabel color="gray.400" fontSize="sm">{field.label}</FormLabel>
         <Select
           value={isCustom ? '其他' : (value || '')}
-          onChange={e => onChange(field.key, e.target.value === '其他' ? '' : e.target.value)}
+          onChange={e => onChange(field.key, e.target.value)}
           bg="gray.700" color="white" border="1px solid" borderColor="gray.600"
           _hover={{ borderColor: 'gray.500' }}
           _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }}
@@ -163,7 +186,7 @@ function ProfileField({ field, value, onChange }) {
           <Input
             mt={2}
             value={isCustom ? value : ''}
-            placeholder="请输入自定义内容"
+            placeholder="请输入"
             onChange={e => onChange(field.key, e.target.value)}
             bg="gray.700" color="white" border="1px solid" borderColor="gray.600"
             _hover={{ borderColor: 'gray.500' }}
@@ -322,7 +345,7 @@ export default function ClientProfile() {
   const openEdit = () => {
     const data = {};
     CLIENT_EDITABLE_FIELDS.forEach(f => {
-      data[f.key] = profile[f.key] || '';
+      data[f.key] = profile[f.key] || (f.default ? String(f.default) : '');
     });
     setEditData(data);
     setAiMode('manual');
