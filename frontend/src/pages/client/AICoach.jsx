@@ -1130,9 +1130,10 @@ export default function AICoach() {
     return hash.toString(16);
   }, []);
 
+  const combatHistoryKey = selectedGirlId || '__general__';
   const getCurrentCombatHistory = useCallback(() => {
-    return selectedGirlId ? (combatHistories[selectedGirlId] || []) : [];
-  }, [selectedGirlId, combatHistories]);
+    return combatHistories[combatHistoryKey] || [];
+  }, [combatHistoryKey, combatHistories]);
 
   // 使用 useCallback 稳定 deepMode 切换函数
   const handleDeepModeToggle = useCallback(() => {
@@ -1142,6 +1143,7 @@ export default function AICoach() {
   useEffect(() => {
     loadGirls();
     loadHistory();
+    loadCombatHistory('__general__');
   }, []);
 
   useEffect(() => {
@@ -1326,6 +1328,7 @@ export default function AICoach() {
       setMessages([]);
       setActiveSessionId(null);
       loadHistory('');
+      loadCombatHistory('__general__');
     }
   };
 
@@ -1684,19 +1687,20 @@ export default function AICoach() {
   // 聊天实战 - 发送
   const handleCombatSend = useCallback(async () => {
     const text = combatInput.trim();
-    if (!text || combatLoading || !selectedGirlId) return;
+    if (!text || combatLoading) return;
     setCombatInput('');
     const now = new Date().toISOString();
     const girlName = selectedGirl?.name || '女生';
+    const key = combatHistoryKey;
 
     if (combatMode === 'suggest') {
       // 回复建议：先追加女生消息气泡
       const herMsg = { id: `combat-${Date.now()}`, role: 'girl', content: text, timestamp: now };
       setCombatHistories(prev => ({
         ...prev,
-        [selectedGirlId]: [...(prev[selectedGirlId] || []), herMsg]
+        [key]: [...(prev[key] || []), herMsg]
       }));
-      persistCombatMessages(selectedGirlId, [herMsg]);
+      persistCombatMessages(key, [herMsg]);
       setCombatSuggestions(null);
       setSelectedSuggestionIndex(null);
       setCombatLoading(true);
@@ -1705,7 +1709,7 @@ export default function AICoach() {
         const res = await fetch(`${apiUrl}/api/ai-coach/reply-suggestions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ girlId: selectedGirlId, lastMessage: text })
+          body: JSON.stringify({ girlId: selectedGirlId || undefined, lastMessage: text })
         });
         if (!res.ok) throw new Error(`回复建议请求失败 (${res.status})`);
         const data = await res.json();
@@ -1730,7 +1734,7 @@ export default function AICoach() {
         const res = await fetch(`${apiUrl}/api/ai-coach/optimize-reply`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ girlId: selectedGirlId, originalReply: text })
+          body: JSON.stringify({ girlId: selectedGirlId || undefined, originalReply: text })
         });
         if (!res.ok) throw new Error(`话术优化请求失败 (${res.status})`);
         const data = await res.json();
@@ -1745,7 +1749,7 @@ export default function AICoach() {
         setCombatLoading(false);
       }
     }
-  }, [combatInput, combatLoading, combatMode, selectedGirlId, selectedGirl, apiUrl, toast]);
+  }, [combatInput, combatLoading, combatMode, combatHistoryKey, selectedGirlId, selectedGirl, apiUrl, toast, persistCombatMessages]);
 
   // 聊天实战 - 选中建议卡片
   const handleSelectSuggestion = useCallback((index) => {
@@ -1759,12 +1763,12 @@ export default function AICoach() {
     const myMsg = { id: `combat-${Date.now()}`, role: 'user', content: replyText, timestamp: now };
     setCombatHistories(prev => ({
       ...prev,
-      [selectedGirlId]: [...(prev[selectedGirlId] || []), myMsg]
+      [combatHistoryKey]: [...(prev[combatHistoryKey] || []), myMsg]
     }));
-    persistCombatMessages(selectedGirlId, [myMsg]);
+    persistCombatMessages(combatHistoryKey, [myMsg]);
     // 选中后清除建议卡片
     setCombatSuggestions(null);
-  }, [selectedSuggestionIndex, combatSuggestions, selectedGirlId, persistCombatMessages]);
+  }, [selectedSuggestionIndex, combatSuggestions, combatHistoryKey, persistCombatMessages]);
 
   // 聊天实战 - 全部删除
   const handleDismissAllSuggestions = useCallback(() => {
@@ -1780,16 +1784,16 @@ export default function AICoach() {
     // 模拟延迟后重新发送请求
     setTimeout(() => {
       const token = localStorage.getItem('zhuiai_token');
-      const lastId = selectedGirlId;
-      if (!lastId) { setCombatLoading(false); return; }
-      const history = combatHistories[lastId] || [];
+      const key = combatHistoryKey;
+      const history = combatHistories[key] || [];
+      const girlIdParam = selectedGirlId || undefined;
       if (combatMode === 'suggest') {
         const lastGirlMsg = [...history].reverse().find(m => m.role === 'girl');
         if (!lastGirlMsg) { setCombatLoading(false); return; }
         fetch(`${apiUrl}/api/ai-coach/reply-suggestions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ girlId: lastId, lastMessage: lastGirlMsg.content })
+          body: JSON.stringify({ girlId: girlIdParam, lastMessage: lastGirlMsg.content })
         }).then(r => r.json()).then(data => {
           if (data.success && data.suggestions?.options?.length) {
             setCombatSuggestions({ type: 'suggestions', items: data.suggestions.options });
@@ -1800,7 +1804,7 @@ export default function AICoach() {
         fetch(`${apiUrl}/api/ai-coach/optimize-reply`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ girlId: lastId, originalReply: lastDraftText })
+          body: JSON.stringify({ girlId: girlIdParam, originalReply: lastDraftText })
         }).then(r => r.json()).then(data => {
           if (data.success && data.optimizations?.length) {
             setCombatSuggestions({ type: 'optimizations', items: data.optimizations });
@@ -1817,13 +1821,13 @@ export default function AICoach() {
     const myMsg = { id: `combat-${Date.now()}`, role: 'user', content: lastDraftText, timestamp: now };
     setCombatHistories(prev => ({
       ...prev,
-      [selectedGirlId]: [...(prev[selectedGirlId] || []), myMsg]
+      [combatHistoryKey]: [...(prev[combatHistoryKey] || []), myMsg]
     }));
-    persistCombatMessages(selectedGirlId, [myMsg]);
+    persistCombatMessages(combatHistoryKey, [myMsg]);
     setCombatSuggestions(null);
     setSelectedSuggestionIndex(null);
     setLastDraftText('');
-  }, [lastDraftText, selectedGirlId, persistCombatMessages]);
+  }, [lastDraftText, combatHistoryKey, persistCombatMessages]);
 
   // 聊天实战 - 模式切换
   const handleCombatModeChange = useCallback((mode) => {
@@ -2042,7 +2046,7 @@ export default function AICoach() {
 
   // ====== State 2: 选中女生 — 双 Tab 布局 ======
   if (hasGirl) {
-    const currentCombatHistory = combatHistories[selectedGirlId] || [];
+    const currentCombatHistory = combatHistories[combatHistoryKey] || [];
 
     // AI教练 with girl — 聊天面板（内联 JSX，避免每次渲染重置 DOM）
     const girlCoachChatContent = (
@@ -2389,10 +2393,7 @@ export default function AICoach() {
             🤖 AI教练
           </Tab>
           <Tab color="rgba(245,240,232,0.4)" _selected={{ color: 'white', bg: 'gold.600' }} fontSize="sm">
-            💡 回复建议
-          </Tab>
-          <Tab color="rgba(245,240,232,0.4)" _selected={{ color: 'white', bg: 'gold.600' }} fontSize="sm">
-            ✨ 话术优化
+            💬 聊天实战
           </Tab>
         </TabList>
 
@@ -2402,11 +2403,28 @@ export default function AICoach() {
               {aiCoachContent}
             </Box>
           </TabPanel>
-          <TabPanel px={0} pt={4} overflowY="auto">
-            <ReplySuggestionsPanel apiUrl={apiUrl} selectedGirlId={selectedGirlId} toast={toast} />
-          </TabPanel>
-          <TabPanel px={0} pt={4} overflowY="auto">
-            <OptimizeReplyPanel apiUrl={apiUrl} selectedGirlId={selectedGirlId} toast={toast} />
+          <TabPanel px={0} py={2} sx={{ display: 'flex', flexDirection: 'column', flex: 1, minH: 0, overflow: 'hidden' }}>
+            <Box flex="1" minH="0" display="flex" flexDirection="column" overflow="hidden">
+              <CombatChatPanel
+                history={currentCombatHistory}
+                suggestions={combatSuggestions}
+                selectedIndex={selectedSuggestionIndex}
+                onSelect={handleSelectSuggestion}
+                onRegenerate={handleRegenerateSuggestions}
+                onDismissAll={handleDismissAllSuggestions}
+                onSendDirect={handleSendDirect}
+                loading={combatLoading}
+                combatMode={combatMode}
+              />
+              <CombatInputBar
+                mode={combatMode}
+                onModeChange={handleCombatModeChange}
+                value={combatInput}
+                onChange={setCombatInput}
+                onSubmit={handleCombatSend}
+                loading={combatLoading}
+              />
+            </Box>
           </TabPanel>
         </TabPanels>
       </Tabs>
