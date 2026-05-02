@@ -31,7 +31,7 @@ function DesktopSidebar() {
   return (
     <Box
       w="220px"
-      bg="gray.800"
+      bg="warm.900"
       p={4}
       position="fixed"
       h="100vh"
@@ -43,10 +43,10 @@ function DesktopSidebar() {
       <VStack spacing={2} align="stretch">
         <Flex align="center" gap={3} mb={6} py={2}>
           <Box
-            bg="linear-gradient(135deg, #319795 0%, #00B5D8 50%, #38B2AC 100%)"
+            bg="linear-gradient(135deg, var(--gold), var(--rose))"
             p={2}
             borderRadius="xl"
-            boxShadow="0 4px 20px rgba(49, 151, 149, 0.4)"
+            boxShadow="0 4px 20px rgba(212, 168, 83, 0.2)"
           >
             <Icon as={FishIcon} color="white" boxSize={6} />
           </Box>
@@ -54,28 +54,28 @@ function DesktopSidebar() {
             <Text
               fontSize="2xl"
               fontWeight="bold"
-              bgGradient="linear(to-r, teal.300, cyan.400, teal.300)"
+              bgGradient="linear(to-r, gold.300, gold.400, gold.300)"
               bgClip="text"
               letterSpacing="wider"
             >
               追爱
             </Text>
-            <Text fontSize="10px" color="gray.500" letterSpacing="2px">
+            <Text fontSize="10px" color="rgba(245,240,232,0.2)" letterSpacing="2px">
               Z H U I A I
             </Text>
           </Box>
         </Flex>
 
-        <Divider borderColor="gray.700" />
+        <Divider borderColor="rgba(245,240,232,0.08)" />
 
         {navItems.map(item => (
           <NavLink key={item.path} to={item.path}>
             <Flex
               p={3}
               borderRadius="md"
-              bg={location.pathname === item.path ? 'teal.600' : 'transparent'}
-              color={location.pathname === item.path ? 'white' : 'gray.300'}
-              _hover={{ bg: location.pathname === item.path ? 'teal.600' : 'gray.700' }}
+              bg={location.pathname === item.path ? 'gold.600' : 'transparent'}
+              color={location.pathname === item.path ? 'white' : 'rgba(245,240,232,0.6)'}
+              _hover={{ bg: location.pathname === item.path ? 'gold.600' : 'warm.700' }}
               align="center"
               gap={3}
               transition="all 0.15s ease"
@@ -107,10 +107,10 @@ function DesktopSidebar() {
           </NavLink>
         ))}
       </VStack>
-      <Box mt="auto" pt={4} borderTop="1px" borderColor="gray.700">
-        <Text color="gray.400" fontSize="sm" mb={1}>操盘手</Text>
+      <Box mt="auto" pt={4} borderTop="1px" borderColor="rgba(245,240,232,0.08)">
+        <Text color="rgba(245,240,232,0.4)" fontSize="sm" mb={1}>操盘手</Text>
         <Text color="white">{user?.nickname}</Text>
-        <Badge colorScheme="purple" mt={1}>管理员</Badge>
+        <Badge colorScheme="gold" mt={1}>管理员</Badge>
         <Button
           size="sm"
           variant="ghost"
@@ -139,9 +139,9 @@ function MobileBottomNav() {
       bottom={0}
       left={0}
       right={0}
-      bg="gray.800"
+      bg="warm.900"
       borderTop="1px"
-      borderColor="gray.700"
+      borderColor="rgba(245,240,232,0.08)"
       zIndex={50}
       pb="env(safe-area-inset-bottom)"
     >
@@ -156,9 +156,9 @@ function MobileBottomNav() {
                 py={2}
                 px={3}
                 cursor="pointer"
-                color={isActive ? 'teal.400' : 'gray.400'}
+                color={isActive ? 'gold.400' : 'rgba(245,240,232,0.4)'}
                 transition="all 0.15s ease"
-                _hover={{ color: 'teal.300' }}
+                _hover={{ color: 'gold.300' }}
                 minW="60px"
                 position="relative"
               >
@@ -195,7 +195,7 @@ function MobileBottomNav() {
 
 export default function AdminLayout() {
   return (
-    <Box minH="100vh" bg="gray.900">
+    <Box minH="100vh" bg="warm.950">
       <DesktopSidebar />
 
       <Box
