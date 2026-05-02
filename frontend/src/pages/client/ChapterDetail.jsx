@@ -44,6 +44,23 @@ export default function ChapterDetail() {
     load();
   }, [chapterId]);
 
+  // 禁止复制：全局键盘拦截
+  useEffect(() => {
+    function block(e) {
+      if (e.ctrlKey || e.metaKey) {
+        const key = e.key?.toLowerCase();
+        if (['c', 'a', 'u', 's', 'p'].includes(key) || key === 'f12') {
+          e.preventDefault();
+        }
+      }
+      if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
+        e.preventDefault();
+      }
+    }
+    document.addEventListener('keydown', block);
+    return () => document.removeEventListener('keydown', block);
+  }, []);
+
   // 切换章节时滚动到顶部
   useEffect(() => {
     if (contentRef.current) {
@@ -199,6 +216,8 @@ export default function ChapterDetail() {
         pb={8}
         px={6}
         onScroll={handleScroll}
+        onContextMenu={(e) => e.preventDefault()}
+        userSelect="none"
         css={{
           '&::-webkit-scrollbar': { width: '4px' },
           '&::-webkit-scrollbar-thumb': { background: 'rgba(255,255,255,0.1)', borderRadius: '2px' },
