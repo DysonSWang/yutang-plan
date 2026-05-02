@@ -515,14 +515,15 @@ export default function AdminChat() {
   };
 
   const renderMessageContent = (msg) => {
+    const destroyedColor = msg.senderRole === 'operator' ? 'rgba(245,240,232,0.4)' : 'rgba(255,255,255,0.4)';
     if (msg.recalledAt) {
-      return <Text color="gray.500" fontStyle="italic">{msg.content}</Text>;
+      return <Text color={destroyedColor} fontStyle="italic">{msg.content}</Text>;
     }
     if (msg.burnedAt) {
-      return <Text color="gray.500" fontStyle="italic">{msg.content}</Text>;
+      return <Text color={destroyedColor} fontStyle="italic">{msg.content}</Text>;
     }
     if (msg.isFlashImage && msg.flashBurnedByMe) {
-      return <Text color="gray.500" fontStyle="italic">⚡ 闪图已销毁</Text>;
+      return <Text color={destroyedColor} fontStyle="italic">⚡ 闪图已销毁</Text>;
     }
     if (msg.type === 'image') {
       const isClickable = msg.isBurnAfterRead && msg.senderRole !== 'operator' && msg.senderRole !== 'admin' && !msg.burnedAt;
@@ -549,7 +550,7 @@ export default function AdminChat() {
             <Box
               w="120px"
               h="90px"
-              bg="gray.800"
+              bg="warm.800"
               borderRadius="md"
               display="flex"
               flexDirection="column"
@@ -581,7 +582,7 @@ export default function AdminChat() {
           <Box
             w="120px"
             h="90px"
-            bg="gray.800"
+            bg="warm.800"
             borderRadius="md"
             display="flex"
             flexDirection="column"
@@ -613,7 +614,7 @@ export default function AdminChat() {
           <Text fontSize="lg">🔊</Text>
           <audio src={`${API_BASE}${msg.mediaUrl}`} style={{ height: '28px' }} controls={!msg.isBurnAfterRead || msg.burnedAt} />
           {msg.duration && (
-            <Text fontSize="xs" color="gray.300">{msg.duration}"</Text>
+            <Text fontSize="xs" color="rgba(245,240,232,0.5)">{msg.duration}"</Text>
           )}
         </HStack>
       );
@@ -630,14 +631,14 @@ export default function AdminChat() {
         <Button
           size="sm"
           variant={showChat ? 'outline' : 'solid'}
-          colorScheme="teal"
+          colorScheme="gold"
           onClick={() => setShowChat(false)}
           mr={2}
         >
           {showChat ? '返回列表' : '会话列表'}
         </Button>
         {currentSession && (
-          <Text color="gray.400" fontSize="sm" alignSelf="center">
+          <Text color="rgba(245,240,232,0.4)" fontSize="sm" alignSelf="center">
             正在与 {currentSession.client?.nickname || '客户'} 聊天
           </Text>
         )}
@@ -652,7 +653,7 @@ export default function AdminChat() {
         <Box
           w={{ base: showChat ? '0' : '100%', lg: '280px' }}
           flex={{ base: showChat ? '0' : '1', lg: 'none' }}
-          bg="gray.800"
+          bg="warm.800"
           borderRadius="md"
           p={4}
           display={{ base: showChat ? 'none' : 'block', lg: 'block' }}
@@ -663,10 +664,10 @@ export default function AdminChat() {
           zIndex={10}
         >
           <Flex justify="space-between" align="center" mb={4}>
-            <Text color="gray.400" fontSize="sm">客户会话</Text>
+            <Text color="rgba(245,240,232,0.4)" fontSize="sm">客户会话</Text>
             <Button
               size="xs"
-              colorScheme="teal"
+              colorScheme="gold"
               onClick={() => {
                 loadAllClients();
                 onNewChatOpen();
@@ -680,7 +681,7 @@ export default function AdminChat() {
               <Box
                 key={session.id}
                 p={3}
-                bg={currentSession?.id === session.id ? 'teal.600' : 'gray.700'}
+                bg={currentSession?.id === session.id ? 'warm.600' : 'warm.700'}
                 borderRadius="md"
                 cursor="pointer"
                 onClick={() => {
@@ -712,7 +713,7 @@ export default function AdminChat() {
                 <Text color="white" fontWeight="bold" fontSize="sm">
                   {session.client?.nickname || '客户'}
                 </Text>
-                <Text color="gray.400" fontSize="xs" noOfLines={1}>
+                <Text color="rgba(245,240,232,0.4)" fontSize="xs" noOfLines={1}>
                   {session.lastMessage || '暂无消息'}
                 </Text>
                 {session.unreadCount > 0 && (
@@ -723,7 +724,7 @@ export default function AdminChat() {
               </Box>
             ))}
             {sessions.length === 0 && (
-              <Text color="gray.500" fontSize="sm">暂无会话</Text>
+              <Text color="rgba(245,240,232,0.2)" fontSize="sm">暂无会话</Text>
             )}
           </VStack>
         </Box>
@@ -731,7 +732,7 @@ export default function AdminChat() {
         {/* 聊天区域 */}
         <Box
           flex={1}
-          bg="gray.800"
+          bg="warm.800"
           borderRadius="md"
           display="flex"
           flexDirection="column"
@@ -740,13 +741,13 @@ export default function AdminChat() {
         >
           {currentSession ? (
             <>
-              <Box p={3} borderBottom="1px" borderColor="gray.700">
+              <Box p={3} borderBottom="1px" borderColor="rgba(255,255,255,0.06)">
                 <HStack justify="space-between">
                   <Box>
                     <Text color="white" fontWeight="bold" fontSize="sm">
                       {currentSession.client?.nickname || '客户'}
                     </Text>
-                    <Text color="gray.500" fontSize="xs">
+                    <Text color="rgba(245,240,232,0.2)" fontSize="xs">
                       服务阶段: {currentSession.client?.serviceStage || '-'}
                     </Text>
                   </Box>
@@ -755,7 +756,7 @@ export default function AdminChat() {
                     <IconButton
                       icon={<Text>←</Text>}
                       variant="ghost"
-                      color="gray.400"
+                      color="rgba(245,240,232,0.4)"
                       onClick={() => setShowChat(false)}
                       aria-label="返回列表"
                       size="sm"
@@ -764,7 +765,7 @@ export default function AdminChat() {
                     <IconButton
                       icon={<Text>📋</Text>}
                       variant="ghost"
-                      color="gray.400"
+                      color="rgba(245,240,232,0.4)"
                       onClick={onModalOpen}
                       aria-label="完善客户信息"
                       title="完善客户信息"
@@ -806,7 +807,7 @@ export default function AdminChat() {
                         pb={3}
                       >
                         {showTime && (
-                          <Text color="gray.500" fontSize="xs" textAlign="center" w="100%" my={2}>
+                          <Text color="rgba(245,240,232,0.2)" fontSize="xs" textAlign="center" w="100%" my={2}>
                             {new Date(msg.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })}
                           </Text>
                         )}
@@ -816,7 +817,7 @@ export default function AdminChat() {
                               w="28px"
                               h="28px"
                               borderRadius="full"
-                              bg="gray.600"
+                              bg="warm.600"
                               display="flex"
                               alignItems="center"
                               justifyContent="center"
@@ -831,7 +832,7 @@ export default function AdminChat() {
                             borderRadius="lg"
                             bg={msg.isBurnAfterRead && !msg.burnedAt
                               ? 'linear-gradient(135deg, rgba(255,140,0,0.3), rgba(255,80,0,0.15))'
-                              : isOperator ? 'teal.600' : 'gray.700'}
+                              : isOperator ? 'warm.600' : 'warm.700'}
                             border={msg.isBurnAfterRead && !msg.burnedAt ? '1px solid rgba(255,140,0,0.4)' : 'none'}
                             color="white"
                             position="relative"
@@ -853,7 +854,7 @@ export default function AdminChat() {
                                 icon={<Text fontSize="xs">↩</Text>}
                                 size="xs"
                                 variant="ghost"
-                                color="gray.400"
+                                color="rgba(245,240,232,0.4)"
                                 opacity={0}
                                 position="absolute"
                                 top={1}
@@ -871,7 +872,7 @@ export default function AdminChat() {
                               w="28px"
                               h="28px"
                               borderRadius="full"
-                              bg="teal.600"
+                              bg="warm.600"
                               display="flex"
                               alignItems="center"
                               justifyContent="center"
@@ -887,10 +888,10 @@ export default function AdminChat() {
                 </Box>
               </Box>
 
-              <Box p={4} borderTop="1px" borderColor="gray.700">
+              <Box p={4} borderTop="1px" borderColor="rgba(255,255,255,0.06)">
                 {/* 媒体预览（仅视频/语音需要确认） */}
                 {previewFile && (
-                  <Box mb={2} p={2} bg="gray.700" borderRadius="md">
+                  <Box mb={2} p={2} bg="warm.700" borderRadius="md">
                     <HStack>
                       {previewFile.type === 'video' && (
                         <video src={previewFile.preview} style={{ maxHeight: '80px', borderRadius: '4px' }} />
@@ -907,13 +908,13 @@ export default function AdminChat() {
                         icon={<Text>✕</Text>}
                         size="sm"
                         variant="ghost"
-                        color="gray.400"
+                        color="rgba(245,240,232,0.4)"
                         onClick={cancelPreview}
                         aria-label="取消"
                       />
                       <Button
                         size="sm"
-                        colorScheme="teal"
+                        colorScheme="gold"
                         isLoading={uploading}
                         loadingText={uploading && previewFile.type === 'video' ? '压缩中...' : '发送中'}
                         onClick={previewFile.type === 'audio' ? confirmSendAudio : confirmSendVideo}
@@ -931,7 +932,7 @@ export default function AdminChat() {
                       icon={<Text>📷</Text>}
                       variant="ghost"
                       size="sm"
-                      color="gray.400"
+                      color="rgba(245,240,232,0.4)"
                       onClick={() => fileInputRef.current?.click()}
                       aria-label="发送图片/视频"
                       isDisabled={sending || !!previewFile}
@@ -948,7 +949,7 @@ export default function AdminChat() {
                       icon={<Text>🎤</Text>}
                       variant="ghost"
                       size="sm"
-                      color={recording ? 'red.400' : 'gray.400'}
+                      color={recording ? 'red.400' : 'rgba(245,240,232,0.4)'}
                       onClick={recording ? stopRecording : startRecording}
                       aria-label="录制语音"
                       isDisabled={sending || !!previewFile}
@@ -959,17 +960,17 @@ export default function AdminChat() {
                         icon={<Text>🔥{burnMode ? `${burnSeconds}s` : ''}</Text>}
                         variant="ghost"
                         size="sm"
-                        color={burnMode ? 'orange.400' : 'gray.500'}
+                        color={burnMode ? 'orange.400' : 'rgba(245,240,232,0.2)'}
                         aria-label="阅后即焚模式"
                         isDisabled={sending || !!previewFile || flashMode}
                         title={burnMode ? `阅后即焚：${burnSeconds}s后自动销毁` : '阅后即焚：关'}
                       />
-                      <MenuList bg="gray.700" borderColor="gray.600">
-                        <MenuItem bg="gray.700" _hover={{ bg: 'gray.600' }} onClick={() => { setBurnMode(false); setBurnSeconds(5); }}>
-                          <HStack><Text color="gray.400">关闭</Text></HStack>
+                      <MenuList bg="warm.700" borderColor="rgba(255,255,255,0.06)">
+                        <MenuItem bg="warm.700" _hover={{ bg: 'warm.600' }} onClick={() => { setBurnMode(false); setBurnSeconds(5); }}>
+                          <HStack><Text color="rgba(245,240,232,0.4)">关闭</Text></HStack>
                         </MenuItem>
                         {[3, 5, 10, 15, 30, 60].map(s => (
-                          <MenuItem key={s} bg="gray.700" _hover={{ bg: 'gray.600' }} onClick={() => { setBurnMode(true); setBurnSeconds(s); }}>
+                          <MenuItem key={s} bg="warm.700" _hover={{ bg: 'warm.600' }} onClick={() => { setBurnMode(true); setBurnSeconds(s); }}>
                             <HStack>
                               <Text color="orange.300">🔥</Text>
                               <Text color="white">{s}秒</Text>
@@ -982,7 +983,7 @@ export default function AdminChat() {
                     <IconButton
                       icon={<Text>⚡{flashMode ? '闪图' : ''}</Text>}
                       variant="ghost"
-                      color={flashMode ? 'yellow.400' : 'gray.500'}
+                      color={flashMode ? 'yellow.400' : 'rgba(245,240,232,0.2)'}
                       aria-label="闪图模式"
                       isDisabled={sending || !!previewFile || burnMode}
                       title={flashMode ? '闪图：查阅后5秒自动销毁' : '闪图模式'}
@@ -1006,19 +1007,19 @@ export default function AdminChat() {
                       placeholder="输入回复..."
                       flex={1}
                       minW="0"
-                      bg="gray.700"
+                      bg="warm.700"
                       border="none"
                       color="white"
-                      _placeholder={{ color: 'gray.400' }}
+                      _placeholder={{ color: 'rgba(245,240,232,0.4)' }}
                     />
-                    <Button colorScheme="teal" onClick={sendMessage} isLoading={sending} size="sm">发送</Button>
+                    <Button colorScheme="gold" onClick={sendMessage} isLoading={sending} size="sm">发送</Button>
                   </HStack>
                 </Stack>
               </Box>
             </>
           ) : (
             <Flex flex={1} align="center" justify="center">
-              <Text color="gray.500">选择客户开始聊天</Text>
+              <Text color="rgba(245,240,232,0.2)">选择客户开始聊天</Text>
             </Flex>
           )}
         </Box>
@@ -1027,7 +1028,7 @@ export default function AdminChat() {
       {/* 发起新聊天 Modal */}
       <Modal isOpen={isNewChatOpen} onClose={onNewChatClose} size="md">
         <ModalOverlay />
-        <ModalContent bg="gray.800" color="white">
+        <ModalContent bg="warm.800" color="white">
           <ModalHeader>发起新聊天</ModalHeader>
           <ModalCloseButton />
           <ModalBody maxH="400px" overflow="hidden" display="flex" flexDirection="column">
@@ -1036,8 +1037,8 @@ export default function AdminChat() {
               value={clientSearch}
               onChange={(e) => setClientSearch(e.target.value)}
               mb={3}
-              bg="gray.700"
-              border="gray.600"
+              bg="warm.700"
+              border="rgba(255,255,255,0.06)"
             />
             <Box flex={1} overflowY="auto" maxH="300px">
               <List spacing={1}>
@@ -1054,8 +1055,8 @@ export default function AdminChat() {
                       p={2}
                       borderRadius="md"
                       cursor="pointer"
-                      bg={selectedClientId === client.id ? 'teal.600' : 'gray.700'}
-                      _hover={{ bg: selectedClientId === client.id ? 'teal.600' : 'gray.600' }}
+                      bg={selectedClientId === client.id ? 'warm.600' : 'warm.700'}
+                      _hover={{ bg: selectedClientId === client.id ? 'warm.600' : 'warm.600' }}
                       onClick={() => {
                         setSelectedClientId(client.id);
                         setClientSearch('');
@@ -1067,7 +1068,7 @@ export default function AdminChat() {
                         {client.nickname || client.username || '客户'}
                       </Text>
                       {client.phone && (
-                        <Text fontSize="xs" color="gray.400">{client.phone}</Text>
+                        <Text fontSize="xs" color="rgba(245,240,232,0.4)">{client.phone}</Text>
                       )}
                     </ListItem>
                   ))}
@@ -1077,7 +1078,7 @@ export default function AdminChat() {
                   const phone = (c.phone || '').toLowerCase();
                   return name.includes(keyword) || phone.includes(keyword);
                 }).length === 0 && (
-                  <Text color="gray.500" textAlign="center" py={4}>
+                  <Text color="rgba(245,240,232,0.2)" textAlign="center" py={4}>
                     未找到匹配的客户
                   </Text>
                 )}
@@ -1093,7 +1094,7 @@ export default function AdminChat() {
               取消
             </Button>
             <Button
-              colorScheme="teal"
+              colorScheme="gold"
               onClick={handleStartNewChat}
               isDisabled={!selectedClientId}
             >

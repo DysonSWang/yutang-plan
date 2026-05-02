@@ -425,9 +425,10 @@ export default function ClientChat() {
   };
 
   const renderMessageContent = (msg) => {
-    if (msg.recalledAt) return <Text color="gray.500" fontStyle="italic">{msg.content}</Text>;
-    if (msg.burnedAt) return <Text color="gray.500" fontStyle="italic">{msg.content}</Text>;
-    if (msg.isFlashImage && msg.flashBurnedByMe) return <Text color="gray.500" fontStyle="italic">⚡ 闪图已销毁</Text>;
+    const destroyedColor = msg.senderRole === 'client' ? 'rgba(30,20,0,0.55)' : 'rgba(255,255,255,0.5)';
+    if (msg.recalledAt) return <Text color={destroyedColor} fontStyle="italic">{msg.content}</Text>;
+    if (msg.burnedAt) return <Text color={destroyedColor} fontStyle="italic">{msg.content}</Text>;
+    if (msg.isFlashImage && msg.flashBurnedByMe) return <Text color={destroyedColor} fontStyle="italic">⚡ 闪图已销毁</Text>;
     if (msg.type === 'image') {
       const isClickable = msg.isBurnAfterRead && msg.senderRole !== 'client' && !msg.burnedAt;
       const imageUrl = getMediaUrl(msg);
@@ -578,7 +579,7 @@ export default function ClientChat() {
                     pb={3}
                   >
                     {showTime && (
-                      <Text color="rgba(245,240,232,0.2)" fontSize="xs" textAlign="center" w="100%" my={2}>
+                      <Text color="rgba(245,240,232,0.45)" fontSize="xs" textAlign="center" w="100%" my={2}>
                         {new Date(msg.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })}
                       </Text>
                     )}
@@ -606,7 +607,7 @@ export default function ClientChat() {
                           ? 'linear-gradient(135deg, rgba(255,140,0,0.25), rgba(255,80,0,0.15))'
                           : isClient ? 'gold.500' : 'rgba(255,255,255,0.08)'}
                         border={msg.isBurnAfterRead && !msg.burnedAt ? '1px solid rgba(255,140,0,0.35)' : 'none'}
-                        color="white"
+                        color={isClient ? 'rgba(30,20,0,0.9)' : 'rgba(255,255,255,0.92)'}
                         role="group"
                         _hover={{ '.recall-btn': { opacity: 1 } }}
                       >
