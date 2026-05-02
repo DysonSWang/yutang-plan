@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Heading, Text, SimpleGrid, Card, CardBody, Badge, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure, HStack, VStack, Icon, Flex, Input, Button, useToast, NumberInput, NumberInputField, NumberInputStepper, NumberIncrementStepper, NumberDecrementStepper, Select, FormControl, FormLabel } from '@chakra-ui/react';
-import { HeartIcon } from '../../components/Icons';
+import { Box, Heading, Text, SimpleGrid, Card, CardBody, Badge, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure, HStack, VStack, Icon, Flex, Input, Button, useToast, NumberInput, NumberInputField, NumberInputStepper, NumberIncrementStepper, NumberDecrementStepper, Select, FormControl, FormLabel, Skeleton } from '@chakra-ui/react';
+import { HeartIcon, FishIcon } from '../../components/Icons';
 import { girls } from '../../utils/api';
 import { captureError } from '../../utils/frontendErrorCapture';
+import EmptyState from '../../components/EmptyState';
+import AnimatedNumber from '../../components/AnimatedNumber';
 
 const STAGE_COLORS = {
   '陌生': 'gray',
@@ -17,6 +19,7 @@ const STAGE_COLORS = {
 export default function MyPond() {
   const navigate = useNavigate();
   const [girlsList, setGirls] = useState([]);
+  const [loading, setLoading] = useState(true);
   const { isOpen: isAddOpen, onOpen: onAddOpen, onClose: onAddClose } = useDisclosure();
   const [addForm, setAddForm] = useState({ name: '', age: '', occupation: '' });
   const [adding, setAdding] = useState(false);
@@ -25,10 +28,12 @@ export default function MyPond() {
   useEffect(() => { loadGirls(); }, []);
 
   const loadGirls = async () => {
+    setLoading(true);
     try {
       const res = await girls.list();
       if (res.success) setGirls(res.girls);
     } catch (e) { captureError(e); }
+    finally { setLoading(false); }
   };
 
   const handleAddGirl = async () => {
@@ -61,38 +66,59 @@ export default function MyPond() {
 
   return (
     <Box>
-      <Heading color="white" mb={6}>我的缘分</Heading>
+      {/* ---- Header ---- */}
+      <Flex justify="space-between" align="start" mb={8} className="stagger-1">
+        <Box>
+          <Heading color="white" fontFamily="heading" fontWeight="700" fontSize={{ base: '2xl', md: '3xl' }}>
+            我的缘分
+          </Heading>
+          <Text color="rgba(245,240,232,0.25)" fontSize="sm" mt={1}>
+            已添加 <Text as="span" color="gold.400"><AnimatedNumber value={girlsList.length} duration={800} /></Text> 位缘分
+          </Text>
+        </Box>
+        <Button colorScheme="gold" size="sm" onClick={onAddOpen} leftIcon={<Icon as={HeartIcon} w={3} h={3} />}>
+          添加女生
+        </Button>
+      </Flex>
 
-      <HStack mb={4} justify="flex-end">
-        <Button colorScheme="gold" size="sm" onClick={onAddOpen}>+ 添加女生</Button>
-      </HStack>
-
-      {/* 女生卡片网格 */}
-      <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4}>
-        {girlsList.map(girl => (
-          <Card key={girl.id} bg="warm.800" cursor="pointer"
-            onClick={() => navigate(`/my-pond/${girl.id}`)}
-            _hover={{ bg: 'warm.700', transform: 'translateY(-2px)' }}
-            transition="all 0.2s">
-            <CardBody>
-              <HStack justify="space-between" mb={2}>
-                <Text color="white" fontWeight="bold">{girl.name}</Text>
-                <Badge colorScheme={STAGE_COLORS[girl.stage] || 'gray'}>{girl.stage || '未知'}</Badge>
-              </HStack>
-              <Text color="rgba(245,240,232,0.4)" fontSize="sm">
-                {[girl.age ? `${girl.age}岁` : '', girl.occupation || ''].filter(Boolean).join(' · ') || '待完善'}
-              </Text>
-              <HStack mt={2} spacing={1}>
-                <Icon as={HeartIcon} color="red.400" w={3} h={3} />
-                <Text color="rgba(245,240,232,0.2)" fontSize="xs">亲密度 x{girl.intimacyLevel || 1}</Text>
-              </HStack>
-            </CardBody>
-          </Card>
-        ))}
-        {girlsList.length === 0 && (
-          <Text color="rgba(245,240,232,0.2)" gridColumn="1 / -1" textAlign="center" py={10}>暂无女生资源，点击右上角添加</Text>
-        )}
-      </SimpleGrid>
+      {loading ? (
+        <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4}>
+          {[1,2,3].map(i => <Skeleton key={i} height="120px" borderRadius="lg" />)}
+        </SimpleGrid>
+      ) : girlsList.length === 0 ? (
+        <EmptyState
+          type="pond"
+          onAction={onAddOpen}
+          actionLabel="添加第一个"
+        />
+      ) : (
+        <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4}>
+          {girlsList.map(girl => (
+            <Card
+              key={girl.id}
+              bg="warm.800"
+              cursor="pointer"
+              onClick={() => navigate(`/my-pond/${girl.id}`)}
+              _hover={{ bg: 'warm.700', transform: 'translateY(-2px)' }}
+              transition="all 0.2s"
+            >
+              <CardBody>
+                <HStack justify="space-between" mb={2}>
+                  <Text color="white" fontWeight="bold" fontFamily="heading" fontSize="lg">{girl.name}</Text>
+                  <Badge colorScheme={STAGE_COLORS[girl.stage] || 'gray'} fontSize="xs">{girl.stage || '未知'}</Badge>
+                </HStack>
+                <Text color="rgba(245,240,232,0.4)" fontSize="sm">
+                  {[girl.age ? `${girl.age}岁` : '', girl.occupation || ''].filter(Boolean).join(' · ') || '待完善'}
+                </Text>
+                <HStack mt={3} spacing={2}>
+                  <Icon as={HeartIcon} color="rose.400" w={3} h={3} />
+                  <Text color="rgba(245,240,232,0.25)" fontSize="xs">亲密度 <Text as="span" color="gold.400" fontWeight="600">x{girl.intimacyLevel || 1}</Text></Text>
+                </HStack>
+              </CardBody>
+            </Card>
+          ))}
+        </SimpleGrid>
+      )}
 
       {/* 添加女生弹窗 */}
       <Modal isOpen={isAddOpen} onClose={onAddClose} size="md">

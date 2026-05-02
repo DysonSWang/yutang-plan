@@ -28,7 +28,7 @@ const FIELD_GROUPS = {
     fields: ['age', 'occupation', 'education', 'major', 'residence', 'workplace', 'hometown']
   },
   appearance: {
-    title: '外貌特征', color: 'teal.400',
+    title: '外貌特征', color: 'gold.400',
     fields: ['appearance', 'height', 'weight', 'bodyType', 'styleTags']
   },
   family: {
@@ -40,7 +40,7 @@ const FIELD_GROUPS = {
     fields: ['workSchedule', 'socialActivity', 'financialHabits']
   },
   interests: {
-    title: '兴趣爱好', color: 'teal.400',
+    title: '兴趣爱好', color: 'gold.400',
     fields: ['interests', 'dietPreferences', 'dietRestrictions', 'hobbiesDetail']
   },
   emotional: {
@@ -155,9 +155,9 @@ function EQBar({ label, value }) {
     <HStack spacing={3} mb={2}>
       <Text color="rgba(245,240,232,0.2)" fontSize="xs" w="80px" flexShrink={0}>{label}</Text>
       <Box flex={1} bg="warm.600" borderRadius="full" h="6px">
-        <Box bg="teal.400" h="6px" borderRadius="full" w={`${pct}%`} transition="width 0.3s" />
+        <Box bg="gold.400" h="6px" borderRadius="full" w={`${pct}%`} transition="width 0.3s" />
       </Box>
-      <Text color="teal.400" fontSize="xs" fontWeight="bold" w="30px" textAlign="right">{value}</Text>
+      <Text color="gold.400" fontSize="xs" fontWeight="bold" w="30px" textAlign="right">{value}</Text>
     </HStack>
   );
 }
@@ -210,7 +210,7 @@ function MediaUploadField({ field, value, onChange }) {
             {urls.map((url, i) => (
               <HStack key={i} bg="warm.600" p={1} borderRadius="md" justify="space-between">
                 {url.match(/\.(mp4|mov|webm|avi)(\?|$)/i) ? (
-                  <Text color="teal.300" fontSize="xs" flex={1} isTruncated>{url.split('/').pop()}</Text>
+                  <Text color="gold.300" fontSize="xs" flex={1} isTruncated>{url.split('/').pop()}</Text>
                 ) : (
                   <Image src={getMediaUrl(url)} alt="" h="40px" w="40px" objectFit="cover" borderRadius="md" flexShrink={0} />
                 )}
@@ -259,7 +259,7 @@ function ProfileField({ field, value, onChange }) {
           onChange={e => onChange(field.key, e.target.value === '其他' ? '' : e.target.value)}
           bg="warm.700" color="white" border="1px solid" borderColor="warm.600"
           _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
-          _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }}
+          _focus={{ borderColor: 'gold.500', boxShadow: '0 0 0 1px var(--chakra-colors-gold-500)' }}
         >
           <option value="">请选择</option>
           {field.options.map(o => <option key={o} value={o}>{o}</option>)}
@@ -272,7 +272,7 @@ function ProfileField({ field, value, onChange }) {
             onChange={e => onChange(field.key, e.target.value)}
             bg="warm.700" color="white" border="1px solid" borderColor="warm.600"
             _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
-            _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }}
+            _focus={{ borderColor: 'gold.500', boxShadow: '0 0 0 1px var(--chakra-colors-gold-500)' }}
           />
         )}
       </FormControl>
@@ -287,7 +287,7 @@ function ProfileField({ field, value, onChange }) {
           onChange={e => onChange(field.key, e.target.value)}
           bg="warm.700" color="white" border="1px solid" borderColor="warm.600"
           _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
-          _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }}
+          _focus={{ borderColor: 'gold.500', boxShadow: '0 0 0 1px var(--chakra-colors-gold-500)' }}
           rows={3}
         />
       </FormControl>
@@ -301,7 +301,7 @@ function ProfileField({ field, value, onChange }) {
         onChange={e => onChange(field.key, e.target.value)}
         bg="warm.700" color="white" border="1px solid" borderColor="warm.600"
         _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
-        _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }}
+        _focus={{ borderColor: 'gold.500', boxShadow: '0 0 0 1px var(--chakra-colors-gold-500)' }}
       />
     </FormControl>
   );
@@ -668,7 +668,7 @@ export default function GirlDetail() {
   if (loading) {
     return (
       <Flex flex={1} align="center" justify="center" minH="60vh">
-        <Spinner color="teal.400" />
+        <Spinner color="gold.400" />
       </Flex>
     );
   }
@@ -706,7 +706,7 @@ export default function GirlDetail() {
         <Flex direction={{ base: 'column', md: 'row' }} align={{ base: 'start', md: 'center' }} gap={4}>
           {/* 头像 + 身份 */}
           <Box position="relative" flexShrink={0}>
-            <Avatar size="xl" name={girl.name} src={getMediaUrl(girl.avatar) || undefined} bg="teal.500" />
+            <Avatar size="xl" name={girl.name} src={getMediaUrl(girl.avatar) || undefined} bg="gold.500" />
             <IconButton
               aria-label="编辑头像"
               icon={<Icon as={FiCamera} />}
@@ -722,7 +722,7 @@ export default function GirlDetail() {
               <Box position="absolute" top="100%" left={0} mt={2} p={3} bg="warm.700" borderRadius="md" border="1px solid" borderColor="warm.600" zIndex={10} w="240px">
                 <VStack spacing={2} align="stretch">
                   <Input type="file" accept="image/*" onChange={handleAvatarFileChange} bg="warm.600" color="white" border="1px solid" borderColor="rgba(245,240,232,0.2)" p={1} size="sm"
-                    sx={{ '::file-selector-button': { bg: 'teal.600', color: 'white', border: 'none', borderRadius: 'md', px: 2, py: 0.5, mr: 2, cursor: 'pointer', _hover: { bg: 'teal.500' } } }}
+                    sx={{ '::file-selector-button': { bg: 'gold.600', color: 'white', border: 'none', borderRadius: 'md', px: 2, py: 0.5, mr: 2, cursor: 'pointer', _hover: { bg: 'gold.500' } } }}
                   />
                   {avatarPreview && <Avatar size="sm" src={avatarPreview} />}
                   <HStack spacing={2}>
@@ -984,11 +984,11 @@ export default function GirlDetail() {
         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
           {/* 主页与来源 */}
           <Box bg="warm.700" p={4} borderRadius="md">
-            <Text color="teal.400" fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">主页与来源</Text>
+            <Text color="gold.400" fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">主页与来源</Text>
             <VStack spacing={3} align="stretch">
               <EmptyValue value={girl.homepageUrl}>
                 <Text color="rgba(245,240,232,0.2)" fontSize="xs">主页链接</Text>
-                <Text color="teal.300" fontSize="sm" noOfLines={1} wordBreak="break-all">{girl.homepageUrl}</Text>
+                <Text color="gold.300" fontSize="sm" noOfLines={1} wordBreak="break-all">{girl.homepageUrl}</Text>
               </EmptyValue>
               <EmptyValue value={girl.sourcePlatform}>
                 <Text color="rgba(245,240,232,0.2)" fontSize="xs">来源平台</Text>
@@ -1003,7 +1003,7 @@ export default function GirlDetail() {
 
           {/* 照片 */}
           <Box bg="warm.700" p={4} borderRadius="md">
-            <Text color="teal.400" fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">
+            <Text color="gold.400" fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">
               照片{photos?.length ? ` (${photos.length})` : ''}
             </Text>
             {photos && photos.length > 0 ? (
@@ -1035,7 +1035,7 @@ export default function GirlDetail() {
 
           {/* 视频 */}
           <Box bg="warm.700" p={4} borderRadius="md">
-            <Text color="teal.400" fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">
+            <Text color="gold.400" fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">
               视频{videos?.length ? ` (${videos.length})` : ''}
             </Text>
             {videos && videos.length > 0 ? (
@@ -1102,7 +1102,7 @@ export default function GirlDetail() {
           {girl.matchScore ? (
             <HStack mb={3}>
               <Text color="rgba(245,240,232,0.2)" fontSize="xs">匹配度</Text>
-              <Text color="teal.400" fontSize="2xl" fontWeight="bold">{girl.matchScore}</Text>
+              <Text color="gold.400" fontSize="2xl" fontWeight="bold">{girl.matchScore}</Text>
               <Text color="rgba(245,240,232,0.2)" fontSize="xs">/ 100</Text>
             </HStack>
           ) : <Text color="warm.600" fontSize="sm" mb={3}>暂无评分</Text>}
@@ -1115,12 +1115,12 @@ export default function GirlDetail() {
       {(signals.length > 0 || pendingActions.length > 0 || observations.length > 0 || girl.conversationSummary) && (
         <>
           <Flex align="center" mb={4} mt={6}>
-            <Box w="3px" h="18px" bg="teal.400" borderRadius="full" mr={2} />
+            <Box w="3px" h="18px" bg="gold.400" borderRadius="full" mr={2} />
             <Heading color="white" size="md">上下文记忆</Heading>
           </Flex>
           <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} mb={6}>
             {girl.conversationSummary && (
-              <SectionCard title="对话摘要" color="teal.400">
+              <SectionCard title="对话摘要" color="gold.400">
                 <Text color="gray.200" fontSize="sm" whiteSpace="pre-wrap">{girl.conversationSummary}</Text>
               </SectionCard>
             )}
@@ -1336,12 +1336,12 @@ export default function GirlDetail() {
 
                 {/* AI 提取结果 */}
                 {aiResult && Object.keys(aiResult).length > 0 && (
-                  <Box bg="warm.700" border="1px solid" borderColor="teal.600" borderRadius="md" overflow="hidden">
+                  <Box bg="warm.700" border="1px solid" borderColor="warm.600" borderRadius="md" overflow="hidden">
                     <Box px={4} py={3} borderBottom="1px solid" borderColor="warm.600">
                       <HStack justify="space-between">
                         <HStack>
-                          <Icon as={FiZap} color="teal.400" />
-                          <Text color="teal.300" fontWeight="bold" fontSize="sm">AI 识别结果（共 {Object.keys(aiResult).length} 个字段）</Text>
+                          <Icon as={FiZap} color="gold.400" />
+                          <Text color="gold.300" fontWeight="bold" fontSize="sm">AI 识别结果（共 {Object.keys(aiResult).length} 个字段）</Text>
                         </HStack>
                         <HStack spacing={2}>
                           <Button size="xs" variant="ghost" color="rgba(245,240,232,0.4)" onClick={() => setAiResult(null)} leftIcon={<Icon as={FiX} />}>清除</Button>

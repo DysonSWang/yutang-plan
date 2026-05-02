@@ -1,8 +1,7 @@
-import { Modal, ModalOverlay, ModalContent, ModalBody, ModalFooter, Button, Text, VStack, Flex, Progress } from '@chakra-ui/react';
+import { Modal, ModalOverlay, ModalContent, ModalBody, ModalFooter, Button, Text, VStack, Flex, Progress, Box } from '@chakra-ui/react';
 import { useState } from 'react';
-import { Http } from '@capacitor-community/http';
-import { FileOpener } from '@capawesome-team/capacitor-file-opener';
 import { Filesystem, Directory } from '@capacitor/filesystem';
+import { FileOpener } from '@capawesome-team/capacitor-file-opener';
 import { captureError } from '../utils/frontendErrorCapture';
 
 export default function VersionUpdateModal({ isOpen, onClose, upgradeType, latestVersion, updateDescription, downloadUrl, onForceUpdate }) {
@@ -17,23 +16,51 @@ export default function VersionUpdateModal({ isOpen, onClose, upgradeType, lates
     setProgress(0);
 
     try {
-      // 1. 直接下载 APK 到手机
-      const downloadResult = await Http.downloadFile({
-        url: downloadUrl,
-        filePath: `zhuiai-${latestVersion}.apk`,
-        fileDirectory: Directory.Documents,
-        method: 'GET',
-        progress: true,
-        progressCallback: (data) => {
-          if (data.totalExpected && data.totalReceived) {
-            setProgress(Math.round((data.totalReceived / data.totalExpected) * 100));
-          }
-        },
+      // 1. fetch 下载 APK 为 blob
+      const response = await fetch(downloadUrl, { method: 'GET' });
+      if (!response.ok) throw new Error(`下载失败 (${response.status})`);
+
+      const contentLength = response.headers.get('content-length');
+      const totalSize = contentLength ? parseInt(contentLength, 10) : 0;
+      let loaded = 0;
+
+      const reader = response.body.getReader();
+      const chunks = [];
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        loaded += value.length;
+        if (totalSize) {
+          setProgress(Math.round((loaded / totalSize) * 100));
+        }
+      }
+
+      // 2. 拼接为 base64
+      const blob = new Blob(chunks);
+      const base64 = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result.split(',')[1]);
+        reader.readAsDataURL(blob);
       });
 
-      // 2. 打开 APK 触发系统安装
+      // 3. 写入手机存储
+      const filename = `zhuiai-${latestVersion}.apk`;
+      await Filesystem.writeFile({
+        path: filename,
+        data: base64,
+        directory: Directory.Documents,
+      });
+
+      // 4. 获取文件路径并打开
+      const fileUri = await Filesystem.getUri({
+        path: filename,
+        directory: Directory.Documents,
+      });
+
       await FileOpener.openFile({
-        path: downloadResult.path,
+        path: fileUri.uri,
         contentType: 'application/vnd.android.package-archive',
       });
 
@@ -73,12 +100,15 @@ export default function VersionUpdateModal({ isOpen, onClose, upgradeType, lates
               w="64px"
               h="64px"
               borderRadius="full"
-              bg="gold.500"
+              bgGradient="linear(135deg, gold.500, gold.400)"
               align="center"
               justify="center"
-              boxShadow="0 4px 20px rgba(0,212,170,0.3)"
+              boxShadow="0 4px 20px rgba(226,176,68,0.3)"
+              position="relative"
+              overflow="hidden"
             >
-              <Text fontSize="3xl">🚀</Text>
+              <Box position="absolute" top={0} left={0} right={0} h="50%" bg="rgba(255,255,255,0.15)" borderRadius="full" />
+              <Text fontSize="3xl" position="relative" zIndex={1}>⬆️</Text>
             </Flex>
 
             {/* 标题 */}
@@ -121,11 +151,6 @@ export default function VersionUpdateModal({ isOpen, onClose, upgradeType, lates
                   size="sm"
                   colorScheme="gold"
                   borderRadius="full"
-                  sx={{
-                    'div[role="progressbar"]': {
-                      background: 'linear-gradient(135deg, #00d4aa, #00e0b8)',
-                    },
-                  }}
                 />
               </VStack>
             )}
@@ -133,10 +158,10 @@ export default function VersionUpdateModal({ isOpen, onClose, upgradeType, lates
             {/* 下载错误 */}
             {error && (
               <Text
-                color="red.400"
+                color="rgba(240,120,100,0.9)"
                 fontSize="xs"
                 textAlign="center"
-                bg="red.900"
+                bg="rgba(220,80,60,0.1)"
                 p={2}
                 borderRadius="8px"
                 w="100%"
@@ -148,10 +173,10 @@ export default function VersionUpdateModal({ isOpen, onClose, upgradeType, lates
             {/* 强制升级提示 */}
             {isForce && !downloading && (
               <Text
-                color="red.400"
+                color="rgba(240,120,100,0.9)"
                 fontSize="xs"
                 textAlign="center"
-                bg="red.900"
+                bg="rgba(220,80,60,0.1)"
                 p={2}
                 borderRadius="8px"
                 w="100%"

@@ -403,21 +403,21 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
       </Flex>
 
       {loading ? (
-        <Flex justify="center" py={8}><Spinner color="teal.400" /></Flex>
+        <Flex justify="center" py={8}><Spinner color="gold.400" /></Flex>
       ) : (
         <Box ref={containerRef} minH="500px" sx={{
           '.fc': { fontFamily: 'inherit' },
           '.fc .fc-toolbar-title': { color: 'rgba(245,240,232,0.6)', fontSize: 'md !important' },
           '.fc .fc-button': {
-            backgroundColor: 'teal.600 !important', borderColor: 'teal.600 !important',
+            backgroundColor: 'gold.600 !important', borderColor: 'gold.600 !important',
             fontSize: 'xs !important', padding: '4px 8px !important',
           },
           '.fc .fc-button-primary:not(:disabled).fc-button-active': {
-            backgroundColor: 'teal.700 !important', borderColor: 'teal.700 !important',
+            backgroundColor: 'gold.700 !important', borderColor: 'gold.700 !important',
           },
-          '.fc .fc-button-primary:hover': { backgroundColor: 'teal.500 !important' },
+          '.fc .fc-button-primary:hover': { backgroundColor: 'gold.500 !important' },
           '.fc .fc-col-header-cell-cushion': { color: 'rgba(245,240,232,0.4)', fontSize: 'xs' },
-          '.fc .fc-daygrid-day-number': { color: 'gray.300', fontSize: 'xs' },
+          '.fc .fc-daygrid-day-number': { color: 'rgba(245,240,232,0.4)', fontSize: 'xs' },
           '.fc .fc-daygrid-day.fc-day-today': { backgroundColor: 'rgba(226,176,68,0.1) !important' },
           '.fc .fc-daygrid-event': { fontSize: '11px', borderRadius: '3px', padding: '1px 3px' },
           '.fc .fc-timegrid-event': { fontSize: '11px', borderRadius: '3px' },

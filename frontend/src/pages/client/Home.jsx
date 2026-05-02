@@ -1,10 +1,12 @@
 import { useNavigate } from 'react-router-dom';
-import { Box, Heading, Text, SimpleGrid, Card, CardBody, Icon, HStack, Badge, Button, VStack, Divider, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, Skeleton, SkeletonCircle, Center, Spinner } from '@chakra-ui/react';
+import { Box, Heading, Text, SimpleGrid, Card, CardBody, Icon, HStack, Badge, Button, VStack, Divider, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, Skeleton, SkeletonCircle, Center } from '@chakra-ui/react';
 import { ChatIcon, SparklesIcon, FishIcon, BookIcon, GiftIcon, CrownIcon, CheckIcon, CalendarIcon } from '../../components/Icons';
 import { useEffect, useState } from 'react';
 import { clients, girls, membership as membershipApi } from '../../utils/api';
 import { captureError } from '../../utils/frontendErrorCapture';
 import ServiceProgressBoard from '../../components/client/ServiceProgressBoard';
+import AnimatedNumber from '../../components/AnimatedNumber';
+import EmptyState from '../../components/EmptyState';
 
 const TYPE_LABEL = { monthly: '普惠月付', yearly: '普惠年付', premium: '高端会员' };
 const TYPE_BADGE_COLOR = { monthly: 'green', yearly: 'blue', premium: 'purple' };
@@ -17,24 +19,76 @@ const PRICING_DATA = [
 ];
 
 const STAGE_MAP = {
-  '背调': 1,
-  '建池': 2,
-  '约会': 3,
-  '锁定': 4,
-  '维护': 5,
-  '未开始': 0
+  '背调': 1, '建池': 2, '约会': 3, '锁定': 4, '维护': 5, '未开始': 0
 };
+
+/** 图标容器 — 快捷入口卡片的底座 */
+function IconBox({ icon, bg = 'gold.500', size = '48px' }) {
+  return (
+    <Box
+      w={size} h={size}
+      borderRadius="14px"
+      bgGradient={`linear(135deg, ${bg}, ${bg === 'gold.500' ? 'gold.400' : bg})`}
+      display="flex" alignItems="center" justifyContent="center"
+      boxShadow={`0 4px 16px ${bg === 'gold.500' ? 'rgba(226,176,68,0.25)' : 'rgba(0,0,0,0.2)'}`}
+      position="relative"
+      overflow="hidden"
+      _before={{
+        content: '""',
+        position: 'absolute',
+        top: 0, left: 0, right: 0,
+        h: '50%',
+        bg: 'rgba(255,255,255,0.15)',
+        borderRadius: '14px 14px 0 0',
+      }}
+    >
+      <Icon as={icon} w={5} h={5} color="warm.950" position="relative" zIndex={1} />
+    </Box>
+  );
+}
+
+/** 数据概览卡片（hero 区域用） */
+function StatCard({ label, value, icon, accent = 'gold', subtitle }) {
+  return (
+    <Card
+      bg="rgba(255,255,255,0.03)"
+      border="1px solid rgba(255,255,255,0.08)"
+      borderRadius="xl"
+      _hover={{ bg: 'rgba(226,176,68,0.04)', borderColor: 'rgba(226,176,68,0.15)' }}
+    >
+      <CardBody>
+        <HStack justify="space-between">
+          <VStack align="start" spacing={1}>
+            <Text color="rgba(245,240,232,0.35)" fontSize="xs" letterSpacing="0.05em">{label}</Text>
+            <Text color="white" fontSize="2xl" fontWeight="700" fontFamily="heading">
+              <AnimatedNumber value={value} />
+            </Text>
+            {subtitle && <Text color="rgba(245,240,232,0.2)" fontSize="xs">{subtitle}</Text>}
+          </VStack>
+          <Box opacity={0.6}>
+            <Icon as={icon} boxSize={6} color={`${accent}.400`} />
+          </Box>
+        </HStack>
+      </CardBody>
+    </Card>
+  );
+}
+
+const QUICK_ENTRIES = [
+  { path: null, label: '联系专属顾问', desc: '人工沟通，更私密', icon: ChatIcon, gradient: 'linear(135deg, gold.500, gold.400)' },
+  { path: '/ai-coach', label: 'AI教练咨询', desc: '24小时在线', icon: SparklesIcon, gradient: 'linear(135deg, gold.500, gold.400)' },
+  { path: '/my-pond', label: '查看我的缘分', desc: '管理女生资源', icon: FishIcon, gradient: 'linear(135deg, rose.500, rose.400)' },
+  { path: '/learning', label: '学习中心', desc: 'Mo哥宝典章节学习', icon: BookIcon, gradient: 'linear(135deg, gold.500, gold.400)' },
+  { path: '/dates', label: '约会与方案', desc: '约会确认和AI方案', icon: GiftIcon, gradient: 'linear(135deg, gold.500, gold.400)' },
+  { path: '/dates#calendar', label: '我的日历', desc: '查看约会与活动', icon: CalendarIcon, gradient: 'linear(135deg, gold.500, gold.400)' },
+];
 
 export default function ClientHome() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
-    girlCount: 0,
-    dateCount: 0,
-    serviceStage: '',
-    currentStage: 0,
-    intimacyCount: 0,
-    longTermCount: 0
+    girlCount: 0, dateCount: 0, serviceStage: '', currentStage: 0,
+    intimacyCount: 0, longTermCount: 0
   });
   const [memberStatus, setMemberStatus] = useState(null);
   const { isOpen: isPricingOpen, onOpen: onPricingOpen, onClose: onPricingClose } = useDisclosure();
@@ -52,9 +106,7 @@ export default function ClientHome() {
         const dateCount = client.dateCount || 0;
         const serviceStage = client.serviceStage || '未开始';
         const currentStage = STAGE_MAP[serviceStage] || 0;
-
-        let intimacyCount = 0;
-        let longTermCount = 0;
+        let intimacyCount = 0, longTermCount = 0;
         try {
           const girlsRes = await girls.list();
           if (girlsRes.success) {
@@ -62,162 +114,117 @@ export default function ClientHome() {
             longTermCount = girlsRes.girls.filter(g => g.stage === '长期').length;
           }
         } catch (e) { /* ignore */ }
-
         setStats({ girlCount, dateCount, serviceStage, currentStage, intimacyCount, longTermCount });
       }
-      if (memberRes.success) {
-        setMemberStatus(memberRes);
-      }
-    } catch (e) {
-      captureError(e);
-    } finally {
-      setLoading(false);
-    }
+      if (memberRes.success) setMemberStatus(memberRes);
+    } catch (e) { captureError(e); }
+    finally { setLoading(false); }
   };
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadStats();
-  }, []);
+  useEffect(() => { loadStats(); }, []);
 
   if (loading) {
     return (
       <Box>
-        <Skeleton height="40px" mb={8} />
-        <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4} mb={8}>
-          <Skeleton height="120px" borderRadius="xl" />
-          <Skeleton height="120px" borderRadius="xl" />
-          <Skeleton height="120px" borderRadius="xl" />
+        <Skeleton height="80px" mb={8} borderRadius="xl" />
+        <SimpleGrid columns={{ base: 2, md: 4 }} spacing={3} mb={8}>
+          {[1,2,3,4].map(i => <Skeleton key={i} height="90px" borderRadius="xl" />)}
         </SimpleGrid>
-        <Skeleton height="200px" borderRadius="xl" mb={8} />
-        <Skeleton height="100px" borderRadius="xl" />
+        <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4} mb={8}>
+          {[1,2,3,4,5,6].map(i => <Skeleton key={i} height="120px" borderRadius="xl" />)}
+        </SimpleGrid>
       </Box>
     );
   }
 
+  const hasAnyData = stats.girlCount > 0 || stats.dateCount > 0;
+
   return (
     <Box>
-      <Heading color="white" mb={8} fontFamily="heading" fontWeight="700" fontSize="2xl" className="stagger-1">
-        欢迎回来
-      </Heading>
+      {/* ---- Hero 问候 ---- */}
+      <Box className="stagger-1">
+        <Heading
+          color="white" mb={2}
+          fontFamily="heading" fontWeight="700" fontSize={{ base: '2xl', md: '3xl' }}
+        >
+          欢迎回来
+        </Heading>
+        <Text color="rgba(245,240,232,0.3)" fontSize="sm" mb={8}>
+          {stats.serviceStage !== '未开始'
+            ? `服务阶段 · ${stats.serviceStage}`
+            : '开启你的缘分之旅'}
+        </Text>
+      </Box>
 
-      {/* 进度看板 - 仅高端用户可见 */}
-      {memberStatus?.membership?.type === 'premium' && (
-        <Box className="stagger-2">
-          <ServiceProgressBoard
-            currentStage={stats.currentStage}
-            stats={{
-              girlCount: stats.girlCount,
-              intimacyCount: stats.intimacyCount,
-              longTermCount: stats.longTermCount,
-              dateCount: stats.dateCount
-            }}
+      {/* ---- 数据概览（有数据时展示） ---- */}
+      {hasAnyData ? (
+        <Box className="stagger-2" mb={10}>
+          <Text color="rgba(245,240,232,0.25)" fontSize="xs" mb={3} letterSpacing="0.1em" textTransform="uppercase">
+            数据概览
+          </Text>
+          <SimpleGrid columns={{ base: 2, md: 4 }} spacing={3}>
+            <StatCard label="缘分" value={stats.girlCount} icon={FishIcon} accent="rose" subtitle="已添加" />
+            <StatCard label="约会" value={stats.dateCount} icon={CalendarIcon} accent="gold" subtitle="已完成" />
+            <StatCard label="暧昧" value={stats.intimacyCount} icon={SparklesIcon} accent="yellow" subtitle="进行中" />
+            <StatCard label="长期" value={stats.longTermCount} icon={CrownIcon} accent="green" subtitle="已锁定" />
+          </SimpleGrid>
+        </Box>
+      ) : (
+        <Box className="stagger-2" mb={10}>
+          <EmptyState
+            type="pond"
+            onAction={() => navigate('/my-pond')}
+            actionLabel="开始添加"
           />
         </Box>
       )}
 
-      {/* 快捷入口 */}
-      <Box mt={10}>
-        <Heading size="md" color="white" mb={5} fontFamily="heading" fontWeight="600" fontSize="lg" className="stagger-3">
+      {/* ---- 高端用户进度看板 ---- */}
+      {memberStatus?.membership?.type === 'premium' && (
+        <Box className="stagger-3" mb={10}>
+          <ServiceProgressBoard
+            currentStage={stats.currentStage}
+            stats={{ girlCount: stats.girlCount, intimacyCount: stats.intimacyCount, longTermCount: stats.longTermCount, dateCount: stats.dateCount }}
+          />
+        </Box>
+      )}
+
+      {/* ---- 快捷入口 ---- */}
+      <Box className="stagger-4">
+        <Text color="rgba(245,240,232,0.25)" fontSize="xs" mb={4} letterSpacing="0.1em" textTransform="uppercase">
           快捷入口
-        </Heading>
+        </Text>
         <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4}>
-          <Card
-            className="stagger-4 hover-lift"
-            bg="rgba(255,255,255,0.03)"
-            border="1px solid rgba(255,255,255,0.08)"
-            backdropFilter="blur(12px)"
-            cursor="pointer"
-            _hover={{ bg: 'rgba(226,176,68,0.06)', borderColor: 'rgba(226,176,68,0.2)', transform: 'translateY(-3px)' }}
-            transition="all 0.25s ease"
-          >
-            <CardBody>
-              <Icon as={ChatIcon} w={8} h={8} color="gold.500" mb={3} />
-              <Text color="white" mt={2} fontWeight="500">联系专属顾问</Text>
-              <Text color="rgba(245,240,232,0.2)" fontSize="sm">人工沟通，更私密</Text>
-            </CardBody>
-          </Card>
-          <Card
-            className="stagger-5 hover-lift"
-            bg="rgba(255,255,255,0.03)"
-            border="1px solid rgba(255,255,255,0.08)"
-            backdropFilter="blur(12px)"
-            cursor="pointer"
-            _hover={{ bg: 'rgba(226,176,68,0.06)', borderColor: 'rgba(226,176,68,0.2)', transform: 'translateY(-3px)' }}
-            transition="all 0.25s ease"
-          >
-            <CardBody>
-              <Icon as={SparklesIcon} w={8} h={8} color="gold.500" mb={3} />
-              <Text color="white" mt={2} fontWeight="500">AI教练咨询</Text>
-              <Text color="rgba(245,240,232,0.2)" fontSize="sm">24小时在线</Text>
-            </CardBody>
-          </Card>
-          <Card
-            className="stagger-6 hover-lift"
-            bg="rgba(255,255,255,0.03)"
-            border="1px solid rgba(255,255,255,0.08)"
-            backdropFilter="blur(12px)"
-            cursor="pointer"
-            _hover={{ bg: 'rgba(226,176,68,0.06)', borderColor: 'rgba(226,176,68,0.2)', transform: 'translateY(-3px)' }}
-            transition="all 0.25s ease"
-          >
-            <CardBody>
-              <Icon as={FishIcon} w={8} h={8} color="gold.500" mb={3} />
-              <Text color="white" mt={2} fontWeight="500">查看我的缘分</Text>
-              <Text color="rgba(245,240,232,0.2)" fontSize="sm">管理女生资源</Text>
-            </CardBody>
-          </Card>
-          <Card
-            className="stagger-7 hover-lift"
-            bg="rgba(255,255,255,0.03)"
-            border="1px solid rgba(255,255,255,0.08)"
-            backdropFilter="blur(12px)"
-            cursor="pointer"
-            _hover={{ bg: 'rgba(226,176,68,0.06)', borderColor: 'rgba(226,176,68,0.2)', transform: 'translateY(-3px)' }}
-            transition="all 0.25s ease"
-          >
-            <CardBody>
-              <Icon as={BookIcon} w={8} h={8} color="gold.500" mb={3} />
-              <Text color="white" mt={2} fontWeight="500">学习中心</Text>
-              <Text color="rgba(245,240,232,0.2)" fontSize="sm">Mo哥宝典章节学习</Text>
-            </CardBody>
-          </Card>
-          <Card
-            className="stagger-8 hover-lift"
-            bg="rgba(255,255,255,0.03)"
-            border="1px solid rgba(255,255,255,0.08)"
-            backdropFilter="blur(12px)"
-            cursor="pointer"
-            onClick={() => navigate('/dates')}
-            _hover={{ bg: 'rgba(226,176,68,0.06)', borderColor: 'rgba(226,176,68,0.2)', transform: 'translateY(-3px)' }}
-            transition="all 0.25s ease"
-          >
-            <CardBody>
-              <Icon as={GiftIcon} w={8} h={8} color="gold.500" mb={3} />
-              <Text color="white" mt={2} fontWeight="500">约会与方案</Text>
-              <Text color="rgba(245,240,232,0.2)" fontSize="sm">约会确认和AI方案</Text>
-            </CardBody>
-          </Card>
-          <Card
-            className="stagger-9 hover-lift"
-            bg="rgba(255,255,255,0.03)"
-            border="1px solid rgba(255,255,255,0.08)"
-            backdropFilter="blur(12px)"
-            cursor="pointer"
-            onClick={() => navigate('/dates#calendar')}
-            _hover={{ bg: 'rgba(226,176,68,0.06)', borderColor: 'rgba(226,176,68,0.2)', transform: 'translateY(-3px)' }}
-            transition="all 0.25s ease"
-          >
-            <CardBody>
-              <Icon as={CalendarIcon} w={8} h={8} color="gold.500" mb={3} />
-              <Text color="white" mt={2} fontWeight="500">我的日历</Text>
-              <Text color="rgba(245,240,232,0.2)" fontSize="sm">查看约会与活动</Text>
-            </CardBody>
-          </Card>
+          {QUICK_ENTRIES.map((entry, i) => (
+            <Card
+              key={entry.label}
+              bg="rgba(255,255,255,0.02)"
+              border="1px solid rgba(255,255,255,0.06)"
+              backdropFilter="blur(12px)"
+              cursor="pointer"
+              onClick={() => entry.path ? navigate(entry.path) : null}
+              _hover={{
+                bg: 'rgba(226,176,68,0.04)',
+                borderColor: 'rgba(226,176,68,0.15)',
+                transform: 'translateY(-2px)',
+              }}
+              transition="all 0.25s ease"
+            >
+              <CardBody>
+                <HStack spacing={4} align="start">
+                  <IconBox icon={entry.icon} />
+                  <Box>
+                    <Text color="white" fontWeight="500" fontSize="sm" mb={0.5}>{entry.label}</Text>
+                    <Text color="rgba(245,240,232,0.25)" fontSize="xs">{entry.desc}</Text>
+                  </Box>
+                </HStack>
+              </CardBody>
+            </Card>
+          ))}
         </SimpleGrid>
       </Box>
 
-      {/* 定价方案弹窗 */}
+      {/* ---- 定价方案弹窗 ---- */}
       <Modal isOpen={isPricingOpen} onClose={onPricingClose} size="2xl">
         <ModalOverlay backdropFilter="blur(4px)" />
         <ModalContent bg="warm.900" color="white" borderRadius="xl">
@@ -234,28 +241,20 @@ export default function ClientHome() {
                   key={plan.type}
                   bg="warm.800"
                   border="1px solid"
-                  borderColor={plan.type === 'premium' ? 'gold.500' : plan.type === 'yearly' ? 'gold.500' : 'rgba(245,240,232,0.08)'}
-                  borderRadius="xl"
-                  position="relative"
-                  overflow="hidden"
+                  borderColor={plan.type === 'premium' || plan.type === 'yearly' ? 'gold.500' : 'rgba(245,240,232,0.08)'}
+                  borderRadius="xl" position="relative" overflow="hidden"
                 >
                   {plan.type === 'premium' && (
-                    <Box position="absolute" top={0} left={0} right={0} bg="gold.600" textAlign="center" py={1} fontSize="xs" fontWeight="bold">
-                      最高端
-                    </Box>
+                    <Box position="absolute" top={0} left={0} right={0} bg="gold.600" textAlign="center" py={1} fontSize="xs" fontWeight="bold">最高端</Box>
                   )}
                   {plan.type === 'yearly' && (
-                    <Box position="absolute" top={0} left={0} right={0} bg="gold.500" textAlign="center" py={1} fontSize="xs" fontWeight="bold">
-                      推荐
-                    </Box>
+                    <Box position="absolute" top={0} left={0} right={0} bg="gold.500" textAlign="center" py={1} fontSize="xs" fontWeight="bold">推荐</Box>
                   )}
                   <CardBody pt={plan.type !== 'monthly' ? 8 : 4}>
                     <VStack spacing={2} align="start">
                       <Text color="rgba(245,240,232,0.6)" fontWeight="600">{plan.label}</Text>
                       <HStack align="baseline" spacing={1}>
-                        <Text color="white" fontSize="3xl" fontWeight="700">
-                          {plan.price.toLocaleString()}
-                        </Text>
+                        <Text color="white" fontSize="3xl" fontWeight="700">{plan.price.toLocaleString()}</Text>
                         <Text color="rgba(245,240,232,0.4)" fontSize="sm">元/{plan.period}</Text>
                       </HStack>
                       <Text color="rgba(245,240,232,0.2)" fontSize="xs">约{Math.round(plan.perMonth).toLocaleString()}元/月</Text>
@@ -267,21 +266,11 @@ export default function ClientHome() {
                         </HStack>
                       ))}
                     </VStack>
-                    <Button
-                      mt={4}
-                      w="full"
-                      colorScheme="gold"
-                      variant="outline"
-                      size="sm"
-                      onClick={onPricingClose}
-                    >
-                      联系客服获取方案
-                    </Button>
+                    <Button mt={4} w="full" colorScheme="gold" variant="outline" size="sm" onClick={onPricingClose}>联系客服获取方案</Button>
                   </CardBody>
                 </Card>
               ))}
             </SimpleGrid>
-
             <Box mt={5} p={4} bg="warm.800" borderRadius="lg">
               <Text color="rgba(245,240,232,0.6)" fontWeight="600" mb={2}>邀请机制</Text>
               <Text color="rgba(245,240,232,0.4)" fontSize="sm" mb={2}>每成功邀请一位新用户付费，双方均可获得优惠：</Text>
@@ -293,9 +282,7 @@ export default function ClientHome() {
                   </Box>
                 ))}
               </SimpleGrid>
-              <Text color="rgba(245,240,232,0.2)" fontSize="xs" mt={2}>
-                积分只能用于续费抵扣，无有效期限制。被邀请人首单可享8折优惠
-              </Text>
+              <Text color="rgba(245,240,232,0.2)" fontSize="xs" mt={2}>积分只能用于续费抵扣，无有效期限制。被邀请人首单可享8折优惠</Text>
             </Box>
           </ModalBody>
         </ModalContent>

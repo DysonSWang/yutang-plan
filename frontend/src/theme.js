@@ -249,6 +249,17 @@ const theme = extendTheme({
             boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 24px rgba(226,176,68,0.08)',
             borderColor: 'rgba(226,176,68,0.15)',
           },
+          // 微妙内光签名
+          _before: {
+            content: '""',
+            position: 'absolute',
+            inset: 0,
+            borderRadius: 'inherit',
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 50%)',
+            pointerEvents: 'none',
+          },
+          position: 'relative',
+          overflow: 'hidden',
         },
       },
     },
@@ -269,7 +280,11 @@ const theme = extendTheme({
       },
     },
     Badge: {
-      baseStyle: { color: 'warm.50' },
+      baseStyle: {
+        color: 'warm.50',
+        fontWeight: 'medium',
+        letterSpacing: '0.02em',
+      },
     },
     Button: {
       baseStyle: {
@@ -304,7 +319,8 @@ const theme = extendTheme({
     },
     Progress: {
       baseStyle: { track: { bg: 'warm.800' } },
-      variants: { brand: { filledTrack: { bg: 'gold.500' } } },
+      variants: { brand: { filledTrack: { bgGradient: 'linear(135deg, gold.500, gold.400)' } } },
+      defaultProps: { colorScheme: 'gold', variant: 'brand' },
     },
     Popover: {
       baseStyle: {

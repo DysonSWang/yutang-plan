@@ -445,7 +445,7 @@ export default function ClientDates() {
         {p.venue && (
           <Card bg="warm.800" mb={4}>
             <CardBody>
-              <Text color="teal.400" fontWeight="bold" mb={2}>推荐地点</Text>
+              <Text color="gold.400" fontWeight="bold" mb={2}>推荐地点</Text>
               <SimpleGrid columns={2} spacing={3}>
                 <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">名称</Text><Text color="white">{p.venue.name}</Text></Box>
                 <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">类型</Text><Text color="white">{p.venue.type}</Text></Box>
@@ -460,7 +460,7 @@ export default function ClientDates() {
         {p.schedule?.length > 0 && (
           <Card bg="warm.800" mb={4}>
             <CardBody>
-              <Text color="teal.400" fontWeight="bold" mb={3}>约会时间表</Text>
+              <Text color="gold.400" fontWeight="bold" mb={3}>约会时间表</Text>
               <VStack spacing={2} align="stretch">
                 {p.schedule.map((s, i) => (
                   <Flex key={i} gap={3} p={2} bg="warm.700" borderRadius="md" align="center">
@@ -572,7 +572,7 @@ export default function ClientDates() {
                 <Alert status="cyan" mb={4} borderRadius="md">
                   <AlertIcon />
                   <AlertDescription fontSize="sm">
-                    您有 <strong>{pendingInterviews.length}</strong> 份约会反馈访谈等待填写，顾问需要了解您的约会体验来优化后续方案。
+                    您有 <strong>{pendingInterviews.length}</strong> 份约会反馈等待填写，顾问需要了解您的约会体验来优化后续方案。
                   </AlertDescription>
                 </Alert>
                 <VStack spacing={3} align="stretch">
@@ -594,7 +594,7 @@ export default function ClientDates() {
                             </Text>
                           </Box>
                           <Button colorScheme="cyan" size="sm" onClick={() => openInterview(iv)}>
-                            填写访谈
+                            填写反馈
                           </Button>
                         </Flex>
                       </CardBody>
@@ -613,7 +613,7 @@ export default function ClientDates() {
                       <Box w="40px" h="40px" borderRadius="10px" bg="rgba(249,115,22,0.2)" display="flex" alignItems="center" justifyContent="center" fontSize="20px">📋</Box>
                       <Box>
                         <Text fontSize="2xl" fontWeight="bold" color="orange.400">{stats.interviews}</Text>
-                        <Text fontSize="xs" color="rgba(245,240,232,0.4)">待访谈</Text>
+                        <Text fontSize="xs" color="rgba(245,240,232,0.4)">待反馈</Text>
                         <Text fontSize="10px" color="warm.600">约会后填写</Text>
                       </Box>
                     </Flex>
@@ -870,9 +870,9 @@ export default function ClientDates() {
             {reoptimizing && (
               <Box mb={4}>
                 {/* 状态条 */}
-                <Box p={3} bg="teal.900" border="1px solid" borderColor="teal.600" borderRadius="md" mb={streamReasoning ? 2 : 0}>
+                <Box p={3} bg="gold.900" border="1px solid" borderColor="warm.600" borderRadius="md" mb={streamReasoning ? 2 : 0}>
                   <HStack spacing={3} justify="center">
-                    <Spinner size="sm" color="teal.300" />
+                    <Spinner size="sm" color="gold.300" />
                     <Text color="teal.200" fontWeight="bold" fontSize="md">{streamStatus || 'AI 正在重新生成方案...'}</Text>
                     <Progress size="xs" isIndeterminate colorScheme="gold" w="100px" borderRadius="full" />
                   </HStack>
@@ -918,7 +918,7 @@ export default function ClientDates() {
                 <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4} mb={4}>
                   <Box bg="warm.800" p={3} borderRadius="md">
                     <Text color="rgba(245,240,232,0.4)" fontSize="sm">约会对象</Text>
-                    <Text color="teal.300">{selected.girl?.name}</Text>
+                    <Text color="gold.300">{selected.girl?.name}</Text>
                   </Box>
                   <Box bg="warm.800" p={3} borderRadius="md">
                     <Text color="rgba(245,240,232,0.4)" fontSize="sm">约会时间</Text>
@@ -938,7 +938,7 @@ export default function ClientDates() {
                   streamContent ? null : (
                     <Flex justify="center" py={8}>
                       <VStack spacing={3}>
-                        <Spinner size="lg" color="teal.400" />
+                        <Spinner size="lg" color="gold.400" />
                         <Text color="rgba(245,240,232,0.4)" fontSize="sm">方案生成中，请稍候...</Text>
                       </VStack>
                     </Flex>

@@ -6,6 +6,7 @@ import { useSocket } from '../../contexts/SocketContext';
 import { notifications as notifApi } from '../../utils/api';
 import { captureError } from '../../utils/frontendErrorCapture';
 import { FishIcon, ChatIcon, SparklesIcon, BellIcon, UserIcon, CalendarIcon, BookIcon, GiftIcon } from '../../components/Icons';
+import EmptyState from '../../components/EmptyState';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3005';
 
@@ -76,7 +77,7 @@ function DesktopSidebar({ chatUnread, unreadCount, notifications, showNotificati
               </PopoverHeader>
               <PopoverBody maxH="300px" overflowY="auto">
                 {notifications.length === 0 ? (
-                  <Text color="rgba(245,240,232,0.2)" textAlign="center">暂无通知</Text>
+                  <EmptyState type="notification" size="sm" />
                 ) : (
                   <VStack spacing={2} align="stretch">
                     {notifications.slice(0, 10).map(n => (
