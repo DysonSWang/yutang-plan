@@ -196,7 +196,7 @@ const FieldLabel = ({ fieldKey, isEditing }) => {
 };
 
 // 字段卡片组件
-const FieldCard = ({ children, title, icon: Icon, colorScheme = 'teal' }) => (
+const FieldCard = ({ children, title, icon: Icon, colorScheme = 'gold' }) => (
   <Box bg="warm.800" borderRadius="lg" p={4} borderLeft="3px solid" borderLeftColor={`${colorScheme}.500`}>
     <HStack mb={3}>
       {Icon && <Box color={`${colorScheme}.400`}><Icon /></Box>}
@@ -207,7 +207,7 @@ const FieldCard = ({ children, title, icon: Icon, colorScheme = 'teal' }) => (
 );
 
 // 数值指示器
-const ScoreIndicator = ({ label, value, max = 10, colorScheme = 'teal' }) => {
+const ScoreIndicator = ({ label, value, max = 10, colorScheme = 'gold' }) => {
   const percentage = (value / max) * 100;
   const color = percentage >= 70 ? 'green.400' : percentage >= 40 ? 'yellow.400' : 'red.400';
   return (
@@ -963,19 +963,19 @@ export default function AdminClients() {
             <VStack spacing={4}>
               <FormControl isRequired>
                 <FieldLabel fieldKey="username" isEditing={true} />
-                <Input value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} placeholder="用于登录" bg="warm.700" color="white" border="1px solid" borderColor="warm.600" _hover={{ borderColor: 'rgba(245,240,232,0.2)' }} _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }} />
+                <Input value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} placeholder="用于登录" bg="warm.700" color="white" border="1px solid" borderColor="warm.600" _hover={{ borderColor: 'rgba(245,240,232,0.2)' }} _focus={{ borderColor: 'gold.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }} />
               </FormControl>
               <FormControl isRequired>
                 <FieldLabel fieldKey="password" isEditing={true} />
-                <Input type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} placeholder="登录密码" bg="warm.700" color="white" border="1px solid" borderColor="warm.600" _hover={{ borderColor: 'rgba(245,240,232,0.2)' }} _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }} />
+                <Input type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} placeholder="登录密码" bg="warm.700" color="white" border="1px solid" borderColor="warm.600" _hover={{ borderColor: 'rgba(245,240,232,0.2)' }} _focus={{ borderColor: 'gold.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }} />
               </FormControl>
               <FormControl>
                 <FieldLabel fieldKey="nickname" isEditing={true} />
-                <Input value={formData.nickname} onChange={e => setFormData({...formData, nickname: e.target.value})} placeholder="客户昵称" bg="warm.700" color="white" border="1px solid" borderColor="warm.600" _hover={{ borderColor: 'rgba(245,240,232,0.2)' }} _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }} />
+                <Input value={formData.nickname} onChange={e => setFormData({...formData, nickname: e.target.value})} placeholder="客户昵称" bg="warm.700" color="white" border="1px solid" borderColor="warm.600" _hover={{ borderColor: 'rgba(245,240,232,0.2)' }} _focus={{ borderColor: 'gold.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }} />
               </FormControl>
               <FormControl>
                 <FieldLabel fieldKey="phone" isEditing={true} />
-                <Input value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} placeholder="联系方式" bg="warm.700" color="white" border="1px solid" borderColor="warm.600" _hover={{ borderColor: 'rgba(245,240,232,0.2)' }} _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }} />
+                <Input value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} placeholder="联系方式" bg="warm.700" color="white" border="1px solid" borderColor="warm.600" _hover={{ borderColor: 'rgba(245,240,232,0.2)' }} _focus={{ borderColor: 'gold.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }} />
               </FormControl>
             </VStack>
           </ModalBody>
@@ -1011,7 +1011,7 @@ export default function AdminClients() {
                   placeholder={`示例：\n我今年38岁，制造业老板，本科学历，年收入100-300万。身高175，微胖，戴眼镜，商务休闲风格。\n上海人，城市家庭，双亲健在，家庭和睦。ENFP性格，直接沟通，社交达人。\n认真找对象，想谈一段长期的恋爱。配合度高，学习能力强。资产A8水平。\n优点是有钱幽默真诚，缺点是情商低不太会聊天。稳健型节奏，喜欢独立女性。`}
                   bg="warm.700" color="white" border="1px solid" borderColor="warm.600"
                   _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
-                  _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }}
+                  _focus={{ borderColor: 'gold.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }}
                   rows={10}
                   fontSize="sm"
                 />
@@ -1108,7 +1108,7 @@ export default function AdminClients() {
                     <Text color="rgba(245,240,232,0.4)" fontSize="xs">信任</Text>
                     <HStack spacing={1}>
                       {[1,2,3,4,5].map(i => (
-                        <Box key={i} color={i <= (selectedClient?.trustLevel || 1) ? 'teal.400' : 'warm.600'}>●</Box>
+                        <Box key={i} color={i <= (selectedClient?.trustLevel || 1) ? 'gold.400' : 'warm.600'}>●</Box>
                       ))}
                     </HStack>
                   </Box>
@@ -1359,7 +1359,7 @@ export default function AdminClients() {
                           ) : (
                             <HStack spacing={1}>
                               {[1,2,3,4,5].map(i => (
-                                <Box key={i} color={i <= (selectedClient?.trustLevel || 1) ? 'teal.400' : 'warm.600'}>●</Box>
+                                <Box key={i} color={i <= (selectedClient?.trustLevel || 1) ? 'gold.400' : 'warm.600'}>●</Box>
                               ))}
                             </HStack>
                           )}
@@ -2461,7 +2461,7 @@ export default function AdminClients() {
                             p={3}
                             borderRadius="md"
                             borderLeft="3px solid"
-                            borderLeftColor={isStrategic ? 'purple.400' : 'teal.400'}
+                            borderLeftColor={isStrategic ? 'purple.400' : 'gold.400'}
                           >
                             <Switch
                               colorScheme="purple"

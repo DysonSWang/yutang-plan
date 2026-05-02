@@ -1168,7 +1168,7 @@ export default function AdminWorkbench() {
                   <Box
                     key={girl.id}
                     p={3}
-                    bg={selectedGirl?.id === girl.id ? 'teal.600' : 'warm.700'}
+                    bg={selectedGirl?.id === girl.id ? 'gold.600' : 'warm.700'}
                     borderRadius="md"
                     cursor="pointer"
                     onClick={() => selectGirl(girl)}
@@ -1285,7 +1285,7 @@ export default function AdminWorkbench() {
                         py={2}
                         borderRadius="md"
                         cursor="pointer"
-                        bg={workbenchChatMode === 'girl' ? 'teal.600' : 'transparent'}
+                        bg={workbenchChatMode === 'girl' ? 'gold.600' : 'transparent'}
                         onClick={() => switchWorkbenchChatMode('girl')}
                       >
                         <HStack spacing={2}>
@@ -1300,7 +1300,7 @@ export default function AdminWorkbench() {
                         py={2}
                         borderRadius="md"
                         cursor="pointer"
-                        bg={workbenchChatMode === 'client' ? 'teal.600' : 'transparent'}
+                        bg={workbenchChatMode === 'client' ? 'gold.600' : 'transparent'}
                         onClick={() => switchWorkbenchChatMode('client')}
                       >
                         <HStack spacing={2}>
@@ -1452,7 +1452,7 @@ export default function AdminWorkbench() {
                             py={2}
                             borderRadius="md"
                             cursor="pointer"
-                            bg={clientChatMode === 'suggest' ? 'teal.600' : 'transparent'}
+                            bg={clientChatMode === 'suggest' ? 'gold.600' : 'transparent'}
                             onClick={() => switchClientChatMode('suggest')}
                           >
                             <Text color="white" fontSize="sm" fontWeight="bold">回复建议</Text>
@@ -1562,13 +1562,13 @@ export default function AdminWorkbench() {
                                 maxW="80%"
                                 p={3}
                                 borderRadius="lg"
-                                bg={msg.role === 'operator' ? 'teal.700' : 'warm.700'}
+                                bg={msg.role === 'operator' ? 'gold.700' : 'warm.700'}
                               >
                                 <HStack mb={1} spacing={1}>
                                   <Icon
                                     as={msg.role === 'operator' ? FiSend : FiMessageSquare}
                                     boxSize={3}
-                                    color={msg.role === 'operator' ? 'teal.300' : 'rgba(245,240,232,0.4)'}
+                                    color={msg.role === 'operator' ? 'gold.300' : 'rgba(245,240,232,0.4)'}
                                   />
                                   <Text fontSize="xs" color="gray.300">
                                     {msg.role === 'operator' ? '操盘手' : (selectedClient?.nickname || '客户')}
@@ -1693,7 +1693,7 @@ export default function AdminWorkbench() {
                                       bg="warm.700"
                                       borderRadius="md"
                                       cursor="pointer"
-                                      _hover={{ bg: 'teal.700', transform: 'translateX(4px)' }}
+                                      _hover={{ bg: 'gold.700', transform: 'translateX(4px)' }}
                                       transition="all 0.15s"
                                       onClick={() => handleClientSelectSuggestion(s)}
                                     >
@@ -1706,7 +1706,7 @@ export default function AdminWorkbench() {
                                             color="rgba(245,240,232,0.2)"
                                             boxSize={3}
                                             cursor="pointer"
-                                            _hover={{ color: 'teal.400' }}
+                                            _hover={{ color: 'gold.400' }}
                                             onClick={(e) => {
                                               e.stopPropagation();
                                               navigator.clipboard.writeText(s.text || s.reply || s);
@@ -1738,7 +1738,7 @@ export default function AdminWorkbench() {
                                       bg="warm.700"
                                       borderRadius="md"
                                       cursor="pointer"
-                                      _hover={{ bg: 'teal.700', transform: 'translateX(4px)' }}
+                                      _hover={{ bg: 'gold.700', transform: 'translateX(4px)' }}
                                       transition="all 0.15s"
                                       onClick={() => handleClientSelectOptimization(opt)}
                                     >
@@ -1751,7 +1751,7 @@ export default function AdminWorkbench() {
                                             color="rgba(245,240,232,0.2)"
                                             boxSize={3}
                                             cursor="pointer"
-                                            _hover={{ color: 'teal.400' }}
+                                            _hover={{ color: 'gold.400' }}
                                             onClick={(e) => {
                                               e.stopPropagation();
                                               navigator.clipboard.writeText(opt.text || opt.reply || opt);
@@ -1856,7 +1856,7 @@ export default function AdminWorkbench() {
                                 py={2}
                                 borderRadius="md"
                                 cursor="pointer"
-                                bg={chatMode === 'suggest' ? 'teal.600' : 'transparent'}
+                                bg={chatMode === 'suggest' ? 'gold.600' : 'transparent'}
                                 onClick={() => {
                                   setChatMode('suggest');
                                   setOptimizations([]);
@@ -2096,13 +2096,13 @@ export default function AdminWorkbench() {
                                 maxW="80%"
                                 p={3}
                                 borderRadius="lg"
-                                bg={msg.role === 'user' ? 'teal.600' : 'warm.700'}
+                                bg={msg.role === 'user' ? 'gold.600' : 'warm.700'}
                               >
                                 <HStack mb={1} spacing={1}>
                                   <Icon
                                     as={msg.role === 'user' ? FiSend : FiMessageSquare}
                                     boxSize={3}
-                                    color={msg.role === 'user' ? 'teal.300' : 'rgba(245,240,232,0.4)'}
+                                    color={msg.role === 'user' ? 'gold.300' : 'rgba(245,240,232,0.4)'}
                                   />
                                   <Text fontSize="xs" color="gray.300">
                                     {msg.role === 'user'
@@ -2187,7 +2187,7 @@ export default function AdminWorkbench() {
                                       bg="warm.700"
                                       borderRadius="md"
                                       cursor="pointer"
-                                      _hover={{ bg: 'teal.700', transform: 'translateX(4px)' }}
+                                      _hover={{ bg: 'gold.700', transform: 'translateX(4px)' }}
                                       transition="all 0.15s"
                                       onClick={() => handleSelectSuggestion(s)}
                                     >
@@ -2200,7 +2200,7 @@ export default function AdminWorkbench() {
                                             color="rgba(245,240,232,0.2)"
                                             boxSize={3}
                                             cursor="pointer"
-                                            _hover={{ color: 'teal.400' }}
+                                            _hover={{ color: 'gold.400' }}
                                             onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(s.text || s.reply || s); toast({ description: '已复制到剪贴板', duration: 1500, isClosable: false, position: 'top' }); }}
                                             title="一键复制"
                                           />
@@ -2228,7 +2228,7 @@ export default function AdminWorkbench() {
                                       bg="warm.700"
                                       borderRadius="md"
                                       cursor="pointer"
-                                      _hover={{ bg: 'teal.700', transform: 'translateX(4px)' }}
+                                      _hover={{ bg: 'gold.700', transform: 'translateX(4px)' }}
                                       transition="all 0.15s"
                                       onClick={() => handleSelectSuggestion(opt)}
                                     >
@@ -2241,7 +2241,7 @@ export default function AdminWorkbench() {
                                             color="rgba(245,240,232,0.2)"
                                             boxSize={3}
                                             cursor="pointer"
-                                            _hover={{ color: 'teal.400' }}
+                                            _hover={{ color: 'gold.400' }}
                                             onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(opt.text || opt.reply || opt); toast({ description: '已复制到剪贴板', duration: 1500, isClosable: false, position: 'top' }); }}
                                             title="一键复制"
                                           />

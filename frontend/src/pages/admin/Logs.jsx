@@ -407,7 +407,7 @@ export default function Logs() {
               <HStack spacing={2} align="end" h="80px">
                 {slowAnalysis.dailyDistribution?.map(d => (
                   <Tooltip key={d.date} label={`${d.date} - ${d.count}次`}>
-                    <Box flex={1} bg="teal.500" borderRadius="sm" textAlign="center"
+                    <Box flex={1} bg="gold.500" borderRadius="sm" textAlign="center"
                       h={`${Math.max(10, (d.count / Math.max(...slowAnalysis.dailyDistribution.map(x => x.count), 1)) * 100)}%`}
                       minH="10px"
                     />

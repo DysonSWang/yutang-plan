@@ -704,10 +704,10 @@ export default function AdminDates() {
 
       <Tabs colorScheme="gold" variant="enclosed">
         <TabList bg="warm.800" borderRadius="lg" p={1} mb={4}>
-          <Tab _selected={{ bg: 'teal.600', color: 'white' }} color="rgba(245,240,232,0.4)" borderRadius="md" fontSize="sm">
+          <Tab _selected={{ bg: 'gold.600', color: 'white' }} color="rgba(245,240,232,0.4)" borderRadius="md" fontSize="sm">
             表格 ({datesList.length})
           </Tab>
-          <Tab _selected={{ bg: 'teal.600', color: 'white' }} color="rgba(245,240,232,0.4)" borderRadius="md" fontSize="sm">
+          <Tab _selected={{ bg: 'gold.600', color: 'white' }} color="rgba(245,240,232,0.4)" borderRadius="md" fontSize="sm">
             日历
           </Tab>
         </TabList>
@@ -1213,7 +1213,7 @@ export default function AdminDates() {
                             opacity={ev.status === 'completed' ? 0.5 : 1}>
                             <Icon
                               as={ev.status === 'completed' ? CheckCircleIcon : CalendarIcon}
-                              color={ev.status === 'completed' ? 'green.400' : ev.type === 'date' ? 'teal.400' : 'orange.400'}
+                              color={ev.status === 'completed' ? 'green.400' : ev.type === 'date' ? 'gold.400' : 'orange.400'}
                               boxSize={4}
                               cursor="pointer"
                               onClick={() => toggleEventStatus(ev.id, ev.status)}

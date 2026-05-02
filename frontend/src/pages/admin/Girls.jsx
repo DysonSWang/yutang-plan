@@ -1623,7 +1623,7 @@ export default function AdminGirls() {
                     <Box mt={4}>
                       <Text color="rgba(245,240,232,0.4)" fontSize="sm">主页链接</Text>
                       {selectedGirl.homepageUrl ? (
-                        <Text as="a" href={selectedGirl.homepageUrl} color="teal.400" fontSize="sm" wordBreak="break-all" target="_blank">{selectedGirl.homepageUrl}</Text>
+                        <Text as="a" href={selectedGirl.homepageUrl} color="gold.400" fontSize="sm" wordBreak="break-all" target="_blank">{selectedGirl.homepageUrl}</Text>
                       ) : <Text color="rgba(245,240,232,0.2)">-</Text>}
                     </Box>
                     <Divider my={4} borderColor="warm.600" />
@@ -1654,7 +1654,7 @@ export default function AdminGirls() {
                         <VStack spacing={2} align="stretch">
                           {(parseJSONField(selectedGirl.videos) || []).map((url, i) => (
                             <Box key={i} p={2} bg="warm.700" borderRadius="md">
-                              <Text as="a" href={url} color="teal.400" fontSize="sm" target="_blank">{url}</Text>
+                              <Text as="a" href={url} color="gold.400" fontSize="sm" target="_blank">{url}</Text>
                             </Box>
                           ))}
                         </VStack>
@@ -1723,7 +1723,7 @@ export default function AdminGirls() {
                       ].map(item => (
                         <Box key={item.key}>
                           <Text color="rgba(245,240,232,0.4)" fontSize="sm">{item.label}</Text>
-                          <Text color={selectedGirl[item.key] ? 'teal.400' : 'rgba(245,240,232,0.2)'}>
+                          <Text color={selectedGirl[item.key] ? 'gold.400' : 'rgba(245,240,232,0.2)'}>
                             {selectedGirl[item.key] ? selectedGirl[item.key] + '/10' : '-'}
                           </Text>
                         </Box>
@@ -2048,7 +2048,7 @@ export default function AdminGirls() {
                           {reversalAnalysis.suggestion && (
                             <Box mb={3}>
                               <Text color="rgba(245,240,232,0.4)" fontSize="sm" mb={1}>操盘手建议</Text>
-                              <Text color="teal.300" fontSize="sm">{reversalAnalysis.suggestion}</Text>
+                              <Text color="gold.300" fontSize="sm">{reversalAnalysis.suggestion}</Text>
                             </Box>
                           )}
 

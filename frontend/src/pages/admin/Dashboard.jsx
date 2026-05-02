@@ -201,14 +201,14 @@ export default function AdminDashboard() {
 
       {/* 分析进度提示 */}
       {analyzeProgress && (
-        <Box mb={4} p={3} bg="teal.900" borderRadius="md">
-          <Text color="teal.200" fontSize="sm">{analyzeProgress}</Text>
+        <Box mb={4} p={3} bg="gold.900" borderRadius="md">
+          <Text color="gold.200" fontSize="sm">{analyzeProgress}</Text>
         </Box>
       )}
 
       {loading ? (
         <Box textAlign="center" py={20}>
-          <Spinner size="xl" color="teal.400" />
+          <Spinner size="xl" color="gold.400" />
           <Text color="rgba(245,240,232,0.4)" mt={4}>加载中...</Text>
         </Box>
       ) : (
@@ -219,7 +219,7 @@ export default function AdminDashboard() {
               <CardBody py={4}>
                 <Stat size="sm">
                   <StatLabel color="rgba(245,240,232,0.4)">客户数量</StatLabel>
-                  <StatNumber color="teal.400">{stats.clientCount}</StatNumber>
+                  <StatNumber color="gold.400">{stats.clientCount}</StatNumber>
                   <StatHelpText color="rgba(245,240,232,0.2)">活跃客户</StatHelpText>
                 </Stat>
               </CardBody>
@@ -228,7 +228,7 @@ export default function AdminDashboard() {
               <CardBody py={4}>
                 <Stat size="sm">
                   <StatLabel color="rgba(245,240,232,0.4)">女生资源</StatLabel>
-                  <StatNumber color="teal.400">{stats.girlCount}</StatNumber>
+                  <StatNumber color="gold.400">{stats.girlCount}</StatNumber>
                   <StatHelpText color="rgba(245,240,232,0.2)">总数</StatHelpText>
                 </Stat>
               </CardBody>
@@ -294,7 +294,7 @@ export default function AdminDashboard() {
               <CardBody>
                 <Flex justify="space-between" align="center" mb={4}>
                   <HStack>
-                    <Icon as={ClipboardIcon} color="teal.400" />
+                    <Icon as={ClipboardIcon} color="gold.400" />
                     <Text color="white" fontWeight="bold">今日待办 ({todayTasks.length})</Text>
                   </HStack>
                   {briefUpdatedAt && (
@@ -308,7 +308,7 @@ export default function AdminDashboard() {
                 ) : (
                   <VStack spacing={3} align="stretch">
                     {todayTasks.slice(0, 5).map((task, idx) => (
-                      <Card key={idx} bg="warm.700" variant="outline" _hover={{ borderColor: 'teal.500', transform: 'translateY(-1px)' }} transition="all 0.15s ease" cursor="pointer">
+                      <Card key={idx} bg="warm.700" variant="outline" _hover={{ borderColor: 'gold.500', transform: 'translateY(-1px)' }} transition="all 0.15s ease" cursor="pointer">
                         <CardBody py={3} px={4}>
                           <Flex justify="space-between" align="flex-start" wrap="wrap" gap={2}>
                             <Box>
@@ -384,7 +384,7 @@ export default function AdminDashboard() {
           <Card bg="warm.800">
             <CardBody>
               <HStack mb={4}>
-                <Icon as={CalendarIcon} color="teal.400" />
+                <Icon as={CalendarIcon} color="gold.400" />
                 <Text color="white" fontWeight="bold">本周待办 ({weekTasks.length})</Text>
               </HStack>
               {weekTasks.length === 0 ? (
@@ -421,7 +421,7 @@ export default function AdminDashboard() {
             <CardBody>
               <Flex justify="space-between" align="center" mb={4} wrap="wrap" gap={2}>
                 <HStack>
-                  <Icon as={ChartIcon} color="teal.400" />
+                  <Icon as={ChartIcon} color="gold.400" />
                   <Text color="white" fontWeight="bold">本周复盘报告</Text>
                   {weeklyReport?.generatedAt && (
                     <Text color="rgba(245,240,232,0.2)" fontSize="xs">
@@ -472,7 +472,7 @@ export default function AdminDashboard() {
                   {/* 数据总览 */}
                   <SimpleGrid columns={{ base: 2, md: 6 }} spacing={3}>
                     {[
-                      { label: '女生总数', value: weeklyReport.totalGirls, color: 'teal.400' },
+                      { label: '女生总数', value: weeklyReport.totalGirls, color: 'gold.400' },
                       { label: '新增', value: weeklyReport.newGirlsThisWeek, color: 'green.400', help: '本周新增' },
                       { label: '约会', value: weeklyReport.datesThisWeek, color: 'blue.400', help: `完成${weeklyReport.completedDates}次` },
                       { label: '聊天', value: weeklyReport.chatLogsThisWeek, color: 'orange.400', help: `${weeklyReport.chatTrend > 0 ? '↑' : weeklyReport.chatTrend < 0 ? '↓' : ''}${Math.abs(weeklyReport.chatTrend)}%` },

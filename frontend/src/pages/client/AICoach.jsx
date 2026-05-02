@@ -72,7 +72,7 @@ const STAGE_COLORS = {
   '聊天': 'cyan',
   '暧昧': 'orange',
   '约会': 'green',
-  '长期': 'teal'
+  '长期': 'gold'
 };
 
 function getHeatLevel(score) {
