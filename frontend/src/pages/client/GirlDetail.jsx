@@ -340,11 +340,14 @@ export default function GirlDetail() {
   const [avatarPreview, setAvatarPreview] = useState('');
   const [savingAvatar, setSavingAvatar] = useState(false);
 
-  // 快速追加
+  // 快速追加 — 文字 + 图片
   const [quickText, setQuickText] = useState('');
+  const [quickImages, setQuickImages] = useState([]);           // File[]
+  const [quickImagePreviews, setQuickImagePreviews] = useState([]); // dataURL[]
   const [quickAnalyzing, setQuickAnalyzing] = useState(false);
   const [quickResult, setQuickResult] = useState(null);
-  // quickResult: { fields: [{key, label, value}], count } | null
+  // quickResult: { fields: [{key, label, value}], count, imageUrls } | null
+  const [isDragOver, setIsDragOver] = useState(false);
 
   useEffect(() => { loadGirl(); loadRelated(); }, [girlId]);
 
@@ -421,31 +424,88 @@ export default function GirlDetail() {
     } finally { setSaving(false); }
   };
 
-  // ---- AI 快速追加 ----
-  const handleQuickExtract = async () => {
-    if (!quickText.trim() || quickText.trim().length < 10) {
-      toast({ title: '请输入至少10个字的描述', status: 'warning' }); return;
+  // ---- 图片处理 ----
+  const handleQuickImageSelect = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (quickImages.length + files.length > 5) {
+      toast({ title: '最多上传5张图片', status: 'warning' }); return;
     }
+    setQuickImages(prev => [...prev, ...files]);
+    setQuickImagePreviews(prev => [...prev, ...files.map(f => URL.createObjectURL(f))]);
+    e.target.value = '';
+  };
+
+  const handleQuickPaste = (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (!item.type.startsWith('image/')) continue;
+      if (quickImages.length >= 5) {
+        toast({ title: '最多上传5张图片', status: 'warning' }); return;
+      }
+      const file = item.getAsFile();
+      if (file) {
+        setQuickImages(prev => [...prev, file]);
+        setQuickImagePreviews(prev => [...prev, URL.createObjectURL(file)]);
+        toast({ title: '已粘贴图片', status: 'info', duration: 1500 });
+      }
+    }
+  };
+
+  const handleQuickDragOver = (e) => { e.preventDefault(); setIsDragOver(true); };
+  const handleQuickDragLeave = () => setIsDragOver(false);
+  const handleQuickDrop = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+    if (!files.length) return;
+    if (quickImages.length + files.length > 5) {
+      toast({ title: '最多上传5张图片', status: 'warning' }); return;
+    }
+    setQuickImages(prev => [...prev, ...files]);
+    setQuickImagePreviews(prev => [...prev, ...files.map(f => URL.createObjectURL(f))]);
+  };
+
+  const handleQuickRemoveImage = (index) => {
+    URL.revokeObjectURL(quickImagePreviews[index]);
+    setQuickImages(prev => prev.filter((_, i) => i !== index));
+    setQuickImagePreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // ---- AI 快速追加（文字 + 图片）----
+  const handleQuickExtract = async () => {
+    const hasText = quickText.trim().length >= 10;
+    const hasImages = quickImages.length > 0;
+
+    if (!hasText && !hasImages) {
+      toast({ title: '请至少输入10个字的描述或上传图片', status: 'warning' }); return;
+    }
+
     setQuickAnalyzing(true);
     setQuickResult(null);
-    let aiFields = [];
     try {
-      await girls.extractText(girlId, quickText.trim(), {
-        onDone: (data) => {
-          if (data.pendingFields && Object.keys(data.pendingFields).length > 0) {
-            aiFields = Object.entries(data.pendingFields).map(([key, info]) => ({
-              key,
-              label: ALL_FIELD_LABELS[key] || key,
-              value: info.value
-            }));
-          }
-        },
-        onError: (err) => toast({ title: err, status: 'error' }),
+      const res = await girls.extractNote(girlId, {
+        text: hasText ? quickText.trim() : '',
+        images: quickImages,
       });
+
+      if (!res.success) {
+        toast({ title: res.error || '分析失败', status: 'error' }); return;
+      }
+
+      let aiFields = [];
+      if (res.pendingFields && Object.keys(res.pendingFields).length > 0) {
+        aiFields = Object.entries(res.pendingFields).map(([key, info]) => ({
+          key,
+          label: ALL_FIELD_LABELS[key] || key,
+          value: info.value
+        }));
+      }
 
       const newNote = {
         id: crypto.randomUUID(),
-        text: quickText.trim(),
+        text: quickText.trim() || '',
+        images: res.imageUrls || [],
         extractedFields: aiFields,
         createdAt: new Date().toISOString(),
       };
@@ -454,17 +514,20 @@ export default function GirlDetail() {
       aiFields.forEach(f => { payload[f.key] = f.value; });
       payload.infoNotes = [...infoNotes, newNote];
 
-      const res = await girls.clientUpdate(girlId, payload);
-      if (res.success) {
+      const updateRes = await girls.clientUpdate(girlId, payload);
+      if (updateRes.success) {
         if (aiFields.length > 0) {
-          setQuickResult({ fields: aiFields, count: aiFields.length });
+          setQuickResult({ fields: aiFields, count: aiFields.length, imageUrls: res.imageUrls || [] });
           toast({ title: `AI 学到了 ${aiFields.length} 个新信息`, status: 'success', duration: 2000 });
         } else {
-          setQuickResult({ fields: [], count: 0 });
+          setQuickResult({ fields: [], count: 0, imageUrls: res.imageUrls || [] });
           toast({ title: '未发现新信息，但已记录', status: 'info', duration: 2000 });
         }
         setQuickText('');
-        setGirl(res.girl);
+        quickImagePreviews.forEach(url => URL.revokeObjectURL(url));
+        setQuickImages([]);
+        setQuickImagePreviews([]);
+        setGirl(updateRes.girl);
       }
     } catch (e) {
       toast({ title: e.response?.data?.error || e.message || '分析保存失败', status: 'error' });
@@ -708,12 +771,13 @@ export default function GirlDetail() {
       <Box bg="gray.750" bgGradient="linear(to-b, gray.700, gray.750)" borderRadius="lg" p={5} mb={6}>
         <Heading color="white" size="sm" mb={3}>
           ⚡ 快速记录
-          <Text as="span" color="gray.500" fontWeight="normal" fontSize="sm" ml={2}>随时记录新发现，AI 自动学习完善档案</Text>
+          <Text as="span" color="gray.500" fontWeight="normal" fontSize="sm" ml={2}>输入文字或粘贴图片，AI 自动学习完善档案</Text>
         </Heading>
         <VStack spacing={3} align="stretch">
           <Textarea
             value={quickText}
             onChange={e => setQuickText(e.target.value)}
+            onPaste={handleQuickPaste}
             placeholder="粘贴关于她的信息，如：她身高165、喜欢瑜伽、是杭州人..."
             bg="gray.800"
             color="white"
@@ -725,8 +789,82 @@ export default function GirlDetail() {
             maxLength={2000}
             resize="vertical"
           />
+
+          {/* 图片上传区 */}
+          <Box
+            onDragOver={handleQuickDragOver}
+            onDragLeave={handleQuickDragLeave}
+            onDrop={handleQuickDrop}
+            border="1px dashed"
+            borderColor={isDragOver ? 'yellow.400' : 'gray.600'}
+            borderRadius="md"
+            p={3}
+            bg={isDragOver ? 'gray.600' : 'gray.800'}
+            transition="all 0.2s"
+          >
+            {quickImagePreviews.length > 0 ? (
+              <SimpleGrid columns={{ base: 3, md: 5 }} spacing={2} mb={2}>
+                {quickImagePreviews.map((preview, i) => (
+                  <Box key={i} position="relative" borderRadius="md" overflow="hidden">
+                    <Image
+                      src={preview}
+                      alt={`图片 ${i + 1}`}
+                      h="80px"
+                      w="100%"
+                      objectFit="cover"
+                      borderRadius="md"
+                    />
+                    <IconButton
+                      aria-label="移除图片"
+                      icon={<Icon as={FiX} />}
+                      size="xs"
+                      colorScheme="red"
+                      position="absolute"
+                      top={1}
+                      right={1}
+                      borderRadius="full"
+                      onClick={() => handleQuickRemoveImage(i)}
+                    />
+                  </Box>
+                ))}
+              </SimpleGrid>
+            ) : (
+              <Text color="gray.600" fontSize="xs" textAlign="center" py={2}>
+                拖拽图片到此处，或点击下方按钮选择（最多 5 张）
+              </Text>
+            )}
+
+            <HStack spacing={2} justify="center">
+              <Input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleQuickImageSelect}
+                display="none"
+                id="quick-note-image-input"
+              />
+              <Button
+                size="xs"
+                variant="outline"
+                colorScheme="gray"
+                leftIcon={<Icon as={FiCamera} />}
+                onClick={() => document.getElementById('quick-note-image-input')?.click()}
+                isDisabled={quickImages.length >= 5}
+              >
+                {quickImages.length > 0 ? `${quickImages.length}/5` : '添加图片'}
+              </Button>
+              <Text color="gray.600" fontSize="xs">支持粘贴、拖拽或点击上传</Text>
+            </HStack>
+          </Box>
+
+          {/* 底部栏 */}
           <HStack justify="space-between" align="center">
-            <Text color="gray.600" fontSize="xs">{quickText.length} / 2000</Text>
+            <HStack spacing={3}>
+              <Text color="gray.600" fontSize="xs">{quickText.length} / 2000</Text>
+              {quickImages.length > 0 && (
+                <Text color="gray.500" fontSize="xs">{quickImages.length} 张图片</Text>
+              )}
+            </HStack>
             <Button
               colorScheme="yellow"
               size="sm"
@@ -734,6 +872,7 @@ export default function GirlDetail() {
               onClick={handleQuickExtract}
               isLoading={quickAnalyzing}
               loadingText="AI分析中..."
+              isDisabled={quickText.trim().length < 10 && quickImages.length === 0}
             >
               分析保存
             </Button>
@@ -754,7 +893,14 @@ export default function GirlDetail() {
                   </HStack>
                 </>
               ) : (
-                <Text color="blue.200" fontSize="sm">未发现新信息，但文字已记录</Text>
+                <Text color="blue.200" fontSize="sm">未发现新信息，但文字和图片已记录</Text>
+              )}
+              {quickResult.imageUrls?.length > 0 && (
+                <HStack mt={2} spacing={2}>
+                  {quickResult.imageUrls.map((url, i) => (
+                    <Image key={i} src={getMediaUrl(url)} alt="" h="40px" w="40px" objectFit="cover" borderRadius="md" />
+                  ))}
+                </HStack>
               )}
             </Box>
           )}
@@ -771,7 +917,27 @@ export default function GirlDetail() {
                   <Text color="gray.500" fontSize="xs" mb={1}>
                     {new Date(note.createdAt).toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </Text>
-                  <Text color="gray.300" fontSize="sm" noOfLines={2} mb={note.extractedFields?.length > 0 ? 2 : 0}>{note.text}</Text>
+                  {note.text ? (
+                    <Text color="gray.300" fontSize="sm" noOfLines={2} mb={(note.images?.length > 0 || note.extractedFields?.length > 0) ? 2 : 0}>{note.text}</Text>
+                  ) : null}
+                  {note.images?.length > 0 && (
+                    <HStack spacing={2} mb={note.extractedFields?.length > 0 ? 2 : 0} overflowX="auto">
+                      {note.images.map((url, i) => (
+                        <Image
+                          key={i}
+                          src={getMediaUrl(url)}
+                          alt={`历史图片 ${i + 1}`}
+                          h="50px"
+                          w="50px"
+                          objectFit="cover"
+                          borderRadius="md"
+                          flexShrink={0}
+                          cursor="pointer"
+                          onClick={() => window.open(getMediaUrl(url), '_blank')}
+                        />
+                      ))}
+                    </HStack>
+                  )}
                   {note.extractedFields?.length > 0 && (
                     <HStack wrap="wrap" spacing={1.5}>
                       {note.extractedFields.map(f => (

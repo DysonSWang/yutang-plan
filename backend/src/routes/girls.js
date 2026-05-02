@@ -38,6 +38,29 @@ const girlScreenshotUpload = multer({
   }
 });
 
+// ---- 快速记录图片上传 multer 配置 ----
+const GIRL_NOTE_IMAGE_DIR = path.join(__dirname, '../../uploads/girl-note-images');
+if (!fs.existsSync(GIRL_NOTE_IMAGE_DIR)) {
+  fs.mkdirSync(GIRL_NOTE_IMAGE_DIR, { recursive: true });
+}
+const girlNoteImageUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, GIRL_NOTE_IMAGE_DIR),
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = /jpeg|jpg|png|gif|webp/;
+    const ext = allowed.test(path.extname(file.originalname).toLowerCase());
+    const mime = allowed.test(file.mimetype);
+    if (ext && mime) cb(null, true);
+    else cb(new Error('仅支持图片格式：jpeg, jpg, png, gif, webp'));
+  }
+});
+
 // 客户可编辑的女生档案字段（不含系统分析/AI生成字段）
 const GIRL_CLIENT_EDITABLE_FIELDS = new Set([
   'name', 'age', 'occupation', 'education', 'major', 'hometown', 'residence', 'workplace',
@@ -883,6 +906,111 @@ router.post('/:id/extract-screenshot', authMiddleware, (req, res) => {
       }
     } catch (error) {
       console.error('[Girls] 截图提取失败:', error);
+      res.status(500).json({ error: error.message || '分析失败' });
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 统一快速记录：文字 + 图片（最多5张），AI 提取档案字段
+// ---------------------------------------------------------------------------
+router.post('/:id/extract-note', authMiddleware, (req, res) => {
+  girlNoteImageUpload.array('images', 5)(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({ error: err.message || '上传失败' });
+    }
+
+    try {
+      if (req.user.role !== 'client') {
+        return res.status(403).json({ error: '无权限' });
+      }
+
+      const girl = await prisma.girl.findUnique({ where: { id: req.params.id } });
+      if (!girl) return res.status(404).json({ error: '女生不存在' });
+      if (girl.clientId !== req.user.id) return res.status(403).json({ error: '无权限' });
+
+      const text = req.body.text?.trim() || '';
+      const files = req.files || [];
+      const hasText = text.length >= 10;
+      const hasImages = files.length > 0;
+
+      if (!hasText && !hasImages) {
+        return res.status(400).json({ error: '请至少输入10个字的描述或上传图片' });
+      }
+
+      const girlProfile = {
+        name: girl.name,
+        age: girl.age,
+        occupation: girl.occupation,
+        education: girl.education,
+        major: girl.major,
+        hometown: girl.hometown,
+        residence: girl.residence,
+        workplace: girl.workplace,
+        stage: girl.stage,
+        tensionScore: girl.tensionScore,
+        recentSignals: girl.signals ? JSON.parse(girl.signals) : []
+      };
+
+      // 并行分析：文字 + 每张图片
+      const analysisTasks = [];
+      if (hasText) {
+        analysisTasks.push(
+          analyzeGirlText(girlProfile, text).then(r => ({ source: 'text', result: r }))
+        );
+      }
+      const imageUrls = [];
+      for (const file of files) {
+        const imageUrl = `/uploads/girl-note-images/${file.filename}`;
+        imageUrls.push(imageUrl);
+        analysisTasks.push(
+          analyzeGirlImage(girlProfile, imageUrl).then(r => ({ source: 'image', imageUrl, result: r }))
+        );
+      }
+
+      const analysisResults = await Promise.allSettled(analysisTasks);
+
+      // 合并所有成功的分析结果
+      const mergedUpdates = {};
+      for (const r of analysisResults) {
+        if (r.status === 'rejected') continue;
+        const updates = r.value.result?.profileUpdates || r.value.result || {};
+        Object.assign(mergedUpdates, updates);
+      }
+
+      // 过滤 pendingFields：仅空字段 + 白名单内
+      const pendingFields = {};
+      const skipKeys = ['signals', 'pendingActions', 'observations', 'tensionScore', 'stage'];
+      const { GIRL_FIELD_LABELS } = require('../services/profileEngine');
+
+      for (const [key, value] of Object.entries(mergedUpdates)) {
+        if (skipKeys.includes(key)) continue;
+        if (value === null || value === undefined || value === '') continue;
+        if (typeof value === 'object') continue;
+        const strValue = String(value).trim();
+        if (!strValue || strValue === '未知' || strValue === '空' || strValue === '无' || strValue === '暂无') continue;
+        const label = GIRL_FIELD_LABELS[key];
+        if (!label) continue;
+        if (!GIRL_CLIENT_EDITABLE_FIELDS.has(key)) continue;
+        const currentValue = girl[key];
+        if (currentValue !== null && currentValue !== undefined && currentValue !== '') continue;
+        pendingFields[key] = { label, value: strValue };
+      }
+
+      const failedCount = analysisResults.filter(r => r.status === 'rejected').length;
+      res.json({
+        success: true,
+        pendingFields,
+        imageUrls,
+        text: hasText ? text : '',
+        analysisSummary: {
+          total: analysisTasks.length,
+          succeeded: analysisResults.filter(r => r.status === 'fulfilled').length,
+          failed: failedCount
+        }
+      });
+    } catch (error) {
+      console.error('[Girls] 快速记录分析失败:', error);
       res.status(500).json({ error: error.message || '分析失败' });
     }
   });

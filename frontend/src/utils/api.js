@@ -267,6 +267,38 @@ export const girls = {
       clearTimeout(timeoutId);
     }
   },
+  // 统一快速记录：文字 + 多张图片，AI 提取档案字段
+  extractNote: async (id, { text, images } = {}) => {
+    const token = api.getToken();
+    const formData = new FormData();
+    if (text) formData.append('text', text);
+    if (images && images.length > 0) {
+      images.forEach(file => formData.append('images', file));
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 180000);
+
+    try {
+      const response = await fetch(`${API_BASE}/api/girls/${id}/extract-note`, {
+        method: 'POST',
+        headers: {
+          Authorization: token ? `Bearer ${token}` : ''
+        },
+        body: formData,
+        signal: controller.signal
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: '请求失败' }));
+        throw new Error(err.error || '请求失败');
+      }
+
+      return response.json();
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  },
   // 获取女生关联数据
   getRelated: (id) => api.get(`/api/girls/${id}/related`),
 };
