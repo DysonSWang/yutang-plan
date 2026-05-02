@@ -26,7 +26,7 @@ function DesktopSidebar({ chatUnread, unreadCount, notifications, showNotificati
   return (
     <Box
       w="220px"
-      bg="rgba(255,255,255,0.025)"
+      bg="rgba(255,255,255,0.02)"
       backdropFilter="blur(20px)"
       borderRight="1px solid"
       borderColor="rgba(255,255,255,0.07)"
@@ -40,8 +40,8 @@ function DesktopSidebar({ chatUnread, unreadCount, notifications, showNotificati
       <VStack spacing={2} align="stretch">
         <Flex justify="space-between" align="center" mb={4}>
           <Flex align="center" gap={2}>
-            <Icon as={FishIcon} color="brand.500" />
-            <Text fontSize="lg" fontWeight="bold" color="brand.500" fontFamily="heading">追爱</Text>
+            <Icon as={FishIcon} color="gold.500" />
+            <Text fontSize="lg" fontWeight="bold" color="gold.500" fontFamily="heading">追爱</Text>
           </Flex>
           <Popover isOpen={showNotifications} onClose={() => setShowNotifications(false)}>
             <PopoverTrigger>
@@ -50,7 +50,7 @@ function DesktopSidebar({ chatUnread, unreadCount, notifications, showNotificati
                 cursor="pointer"
                 onClick={() => setShowNotifications(!showNotifications)}
               >
-                <Icon as={BellIcon} color="abyss.400" />
+                <Icon as={BellIcon} color="rgba(245,240,232,0.4)" />
                 {unreadCount > 0 && (
                   <Badge
                     position="absolute"
@@ -65,25 +65,25 @@ function DesktopSidebar({ chatUnread, unreadCount, notifications, showNotificati
                 )}
               </Box>
             </PopoverTrigger>
-            <PopoverContent bg="abyss.900" border="1px solid rgba(255,255,255,0.08)" w="300px">
+            <PopoverContent bg="warm.900" border="1px solid rgba(255,255,255,0.08)" w="300px">
               <PopoverHeader borderColor="rgba(255,255,255,0.06)" display="flex" justifyContent="space-between" alignItems="center">
                 <Text color="white" fontWeight="bold">通知</Text>
                 {unreadCount > 0 && (
-                  <Button size="xs" variant="ghost" color="brand.500" onClick={markAllAsRead}>
+                  <Button size="xs" variant="ghost" color="gold.500" onClick={markAllAsRead}>
                     全部已读
                   </Button>
                 )}
               </PopoverHeader>
               <PopoverBody maxH="300px" overflowY="auto">
                 {notifications.length === 0 ? (
-                  <Text color="abyss.500" textAlign="center">暂无通知</Text>
+                  <Text color="rgba(245,240,232,0.2)" textAlign="center">暂无通知</Text>
                 ) : (
                   <VStack spacing={2} align="stretch">
                     {notifications.slice(0, 10).map(n => (
                       <Box key={n.id} p={3} bg="rgba(255,255,255,0.04)" borderRadius="md" border="1px solid rgba(255,255,255,0.06)">
                         <Text color="white" fontSize="sm" fontWeight="bold">{n.title}</Text>
-                        <Text color="abyss.300" fontSize="xs" mt={1}>{n.content}</Text>
-                        <Text color="abyss.500" fontSize="xs" mt={1}>
+                        <Text color="rgba(245,240,232,0.6)" fontSize="xs" mt={1}>{n.content}</Text>
+                        <Text color="rgba(245,240,232,0.2)" fontSize="xs" mt={1}>
                           {new Date(n.createdAt).toLocaleString()}
                         </Text>
                       </Box>
@@ -99,8 +99,8 @@ function DesktopSidebar({ chatUnread, unreadCount, notifications, showNotificati
             <Flex
               p={3}
               borderRadius="md"
-              bg={location.pathname === item.path ? 'rgba(0, 212, 170, 0.15)' : 'transparent'}
-              color={location.pathname === item.path ? 'brand.400' : 'abyss.300'}
+              bg={location.pathname === item.path ? 'rgba(212,168,83,0.12)' : 'transparent'}
+              color={location.pathname === item.path ? 'gold.400' : 'rgba(245,240,232,0.6)'}
               _hover={{ bg: 'rgba(255,255,255,0.06)', color: 'white' }}
               align="center"
               gap={3}
@@ -122,8 +122,8 @@ function DesktopSidebar({ chatUnread, unreadCount, notifications, showNotificati
         ))}
       </VStack>
       <Box mt="auto" pt={4} borderTop="1px solid rgba(255,255,255,0.06)">
-        <Text fontSize="sm" color="abyss.300" mb={1}>{user?.nickname}</Text>
-        <Text fontSize="xs" color="abyss.500">{user?.role === 'client' ? '客户' : '其他'}</Text>
+        <Text fontSize="sm" color="rgba(245,240,232,0.6)" mb={1}>{user?.nickname}</Text>
+        <Text fontSize="xs" color="rgba(245,240,232,0.2)">{user?.role === 'client' ? '客户' : '其他'}</Text>
       </Box>
     </Box>
   );
@@ -140,7 +140,7 @@ function MobileBottomNav({ chatUnread, unreadCount }) {
       bottom={0}
       left={0}
       right={0}
-      bg="rgba(10,15,26,0.95)"
+      bg="rgba(17,17,16,0.95)"
       backdropFilter="blur(20px)"
       borderTop="1px solid rgba(255,255,255,0.07)"
       zIndex={50}
@@ -158,9 +158,9 @@ function MobileBottomNav({ chatUnread, unreadCount }) {
                 py={2}
                 px={3}
                 cursor="pointer"
-                color={isActive ? 'brand.500' : 'abyss.400'}
+                color={isActive ? 'gold.500' : 'rgba(245,240,232,0.4)'}
                 transition="all 0.15s ease"
-                _hover={{ color: 'brand.400' }}
+                _hover={{ color: 'gold.400' }}
                 minW="60px"
                 position="relative"
               >
@@ -286,7 +286,7 @@ export default function ClientLayout() {
   };
 
   return (
-    <Box minH="100vh" bg="abyss.950">
+    <Box minH="100vh" bg="warm.950">
       <DesktopSidebar
         chatUnread={chatUnread}
         unreadCount={unreadCount}
