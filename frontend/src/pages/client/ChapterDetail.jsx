@@ -33,7 +33,6 @@ export default function ChapterDetail() {
   const [allChapters, setAllChapters] = useState([]);
   const [progress, setProgress] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [version, setVersion] = useState('personalized'); // 'standard' | 'personalized'
   const [personalizedContent, setPersonalizedContent] = useState(null);
   const [personalizedStale, setPersonalizedStale] = useState(false);
   const [headerVisible, setHeaderVisible] = useState(true);
@@ -95,9 +94,6 @@ export default function ChapterDetail() {
       if (perRes?.success && perRes.personalized) {
         setPersonalizedContent(perRes.personalized.content);
         setPersonalizedStale(perRes.personalized.isStale);
-        setVersion('personalized');
-      } else {
-        setVersion('standard');
       }
     } catch (err) {
       toast({ title: '加载失败', description: err.message, status: 'error' });
@@ -230,10 +226,7 @@ export default function ChapterDetail() {
             pb={12}
           >
             {/* 个性化 Banner */}
-            <PersonalizationBanner
-              currentVersion={version}
-              onSwitchVersion={(v) => setVersion(v)}
-            />
+            <PersonalizationBanner />
 
             {/* 章节引导信息 */}
             <Box mb={8} pb={6} borderBottom="1px solid" borderColor="warm.800">
@@ -271,9 +264,7 @@ export default function ChapterDetail() {
               fontFamily="'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif"
             >
               {(() => {
-                const displayContent = version === 'personalized' && personalizedContent
-                  ? personalizedContent
-                  : chapter.content;
+                const displayContent = personalizedContent || chapter.content;
                 const lines = displayContent.split('\n');
                 const usedIndices = new Set();
                 const elements = [];

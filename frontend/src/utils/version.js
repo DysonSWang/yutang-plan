@@ -3,8 +3,8 @@
  */
 import { captureError } from './frontendErrorCapture';
 
-const VERSION = '1.0.9';  // 当前 App 版本，需与后端 VERSION_CONFIG.latestVersion 保持一致
-const BUILD = 13;
+const VERSION = '1.0.10';  // 当前 App 版本，需与后端 VERSION_CONFIG.latestVersion 保持一致
+const BUILD = 14;
 
 export { VERSION, BUILD };
 
