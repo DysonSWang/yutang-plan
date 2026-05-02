@@ -331,6 +331,7 @@ model Girl {
   sourcePlatform String? // 平台来源
   sourceUrl      String? // 主页链接
   notes          String? // 备注
+  infoNotes      String? // JSON array - 快速信息记录历史 [{id, text, extractedFields, createdAt}]
 
   // ===== 关系 =====
   clientId String

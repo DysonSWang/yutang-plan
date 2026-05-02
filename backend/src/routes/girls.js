@@ -47,7 +47,7 @@ const GIRL_CLIENT_EDITABLE_FIELDS = new Set([
   'interests', 'dietPreferences', 'dietRestrictions', 'hobbiesDetail',
   'relationshipAttitude', 'pastRelationshipSummary', 'emotionalWounds', 'attachmentStyle', 'dealbreakers',
   'isKinkOriented', 'kinkIdentity', 'kinkBoundaries', 'kinkInterests', 'kinkExperience', 'kinkNotes',
-  'sourcePlatform', 'sourceUrl', 'notes', 'momentPhotos'
+  'sourcePlatform', 'sourceUrl', 'notes', 'momentPhotos', 'infoNotes'
 ]);
 
 // Auth middleware
@@ -674,7 +674,7 @@ router.put('/:id/client-update', authMiddleware, async (req, res) => {
       'sourcePlatform', 'sourceUrl', 'notes'];
     const intFields = ['age', 'height'];
     const floatFields = ['weight'];
-    const jsonFields = ['photos', 'videos', 'momentPhotos'];
+    const jsonFields = ['photos', 'videos', 'momentPhotos', 'infoNotes'];
     const boolFields = ['isKinkOriented'];
 
     for (const key of stringFields) {

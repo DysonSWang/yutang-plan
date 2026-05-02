@@ -340,6 +340,12 @@ export default function GirlDetail() {
   const [avatarPreview, setAvatarPreview] = useState('');
   const [savingAvatar, setSavingAvatar] = useState(false);
 
+  // 快速追加
+  const [quickText, setQuickText] = useState('');
+  const [quickAnalyzing, setQuickAnalyzing] = useState(false);
+  const [quickResult, setQuickResult] = useState(null);
+  // quickResult: { fields: [{key, label, value}], count } | null
+
   useEffect(() => { loadGirl(); loadRelated(); }, [girlId]);
 
   const loadGirl = async () => {
@@ -413,6 +419,56 @@ export default function GirlDetail() {
     } catch (e) {
       toast({ title: e.response?.data?.error || '保存失败', status: 'error' });
     } finally { setSaving(false); }
+  };
+
+  // ---- AI 快速追加 ----
+  const handleQuickExtract = async () => {
+    if (!quickText.trim() || quickText.trim().length < 10) {
+      toast({ title: '请输入至少10个字的描述', status: 'warning' }); return;
+    }
+    setQuickAnalyzing(true);
+    setQuickResult(null);
+    let aiFields = [];
+    try {
+      await girls.extractText(girlId, quickText.trim(), {
+        onDone: (data) => {
+          if (data.pendingFields && Object.keys(data.pendingFields).length > 0) {
+            aiFields = Object.entries(data.pendingFields).map(([key, info]) => ({
+              key,
+              label: ALL_FIELD_LABELS[key] || key,
+              value: info.value
+            }));
+          }
+        },
+        onError: (err) => toast({ title: err, status: 'error' }),
+      });
+
+      const newNote = {
+        id: crypto.randomUUID(),
+        text: quickText.trim(),
+        extractedFields: aiFields,
+        createdAt: new Date().toISOString(),
+      };
+
+      const payload = {};
+      aiFields.forEach(f => { payload[f.key] = f.value; });
+      payload.infoNotes = [...infoNotes, newNote];
+
+      const res = await girls.clientUpdate(girlId, payload);
+      if (res.success) {
+        if (aiFields.length > 0) {
+          setQuickResult({ fields: aiFields, count: aiFields.length });
+          toast({ title: `AI 学到了 ${aiFields.length} 个新信息`, status: 'success', duration: 2000 });
+        } else {
+          setQuickResult({ fields: [], count: 0 });
+          toast({ title: '未发现新信息，但已记录', status: 'info', duration: 2000 });
+        }
+        setQuickText('');
+        setGirl(res.girl);
+      }
+    } catch (e) {
+      toast({ title: e.response?.data?.error || e.message || '分析保存失败', status: 'error' });
+    } finally { setQuickAnalyzing(false); }
   };
 
   // ---- AI 文字提取 ----
@@ -568,6 +624,7 @@ export default function GirlDetail() {
   const photos = parseJSONField(girl.photos);
   const momentPhotos = parseJSONField(girl.momentPhotos);
   const videos = parseJSONField(girl.videos);
+  const infoNotes = parseJSONField(girl.infoNotes) || [];
   const relationshipStage = girl.relationshipStage;
   const lastContact = girl.lastContact
     ? new Date(girl.lastContact).toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -618,6 +675,88 @@ export default function GirlDetail() {
           <HStack spacing={2}><Text color="gray.500" fontSize="xs">最后联系</Text><Text color="white" fontSize="xs">{lastContact || '未记录'}</Text></HStack>
           <HStack spacing={2}><Text color="gray.500" fontSize="xs">约会</Text><Text color="white" fontWeight="bold" fontSize="sm">{related?.dates?.length || 0} 次</Text></HStack>
         </SimpleGrid>
+      </Box>
+
+      {/* ====== 快速记录 ====== */}
+      <Box bg="gray.750" bgGradient="linear(to-b, gray.700, gray.750)" borderRadius="lg" p={5} mb={6}>
+        <Heading color="white" size="sm" mb={3}>
+          ⚡ 快速记录
+          <Text as="span" color="gray.500" fontWeight="normal" fontSize="sm" ml={2}>随时记录新发现，AI 自动学习完善档案</Text>
+        </Heading>
+        <VStack spacing={3} align="stretch">
+          <Textarea
+            value={quickText}
+            onChange={e => setQuickText(e.target.value)}
+            placeholder="粘贴关于她的信息，如：她身高165、喜欢瑜伽、是杭州人..."
+            bg="gray.800"
+            color="white"
+            border="1px solid"
+            borderColor="gray.600"
+            _hover={{ borderColor: 'gray.500' }}
+            _focus={{ borderColor: 'yellow.500', boxShadow: '0 0 0 1px var(--chakra-colors-yellow-500)' }}
+            rows={3}
+            maxLength={2000}
+            resize="vertical"
+          />
+          <HStack justify="space-between" align="center">
+            <Text color="gray.600" fontSize="xs">{quickText.length} / 2000</Text>
+            <Button
+              colorScheme="yellow"
+              size="sm"
+              leftIcon={<Icon as={FiZap} />}
+              onClick={handleQuickExtract}
+              isLoading={quickAnalyzing}
+              loadingText="AI分析中..."
+            >
+              分析保存
+            </Button>
+          </HStack>
+
+          {/* 本次结果 */}
+          {quickResult && (
+            <Box bg={quickResult.count > 0 ? 'green.800' : 'blue.800'} p={3} borderRadius="md" borderLeft="3px solid" borderColor={quickResult.count > 0 ? 'green.400' : 'blue.400'}>
+              {quickResult.count > 0 ? (
+                <>
+                  <Text color="green.200" fontSize="sm" mb={2}>AI 学到了 {quickResult.count} 个新信息：</Text>
+                  <HStack wrap="wrap" spacing={2}>
+                    {quickResult.fields.map(f => (
+                      <Tag key={f.key} size="sm" colorScheme="green" variant="subtle">
+                        {f.label}: {f.value}
+                      </Tag>
+                    ))}
+                  </HStack>
+                </>
+              ) : (
+                <Text color="blue.200" fontSize="sm">未发现新信息，但文字已记录</Text>
+              )}
+            </Box>
+          )}
+        </VStack>
+
+        {/* 历史记录 */}
+        {infoNotes.length > 0 && (
+          <>
+            <Divider my={4} borderColor="gray.600" />
+            <Heading color="gray.400" size="xs" textTransform="uppercase" letterSpacing="wider" mb={3}>历史记录</Heading>
+            <VStack spacing={3} align="stretch">
+              {[...infoNotes].reverse().map(note => (
+                <Box key={note.id} bg="gray.800" p={3} borderRadius="md" borderLeft="3px solid" borderColor="gray.600">
+                  <Text color="gray.500" fontSize="xs" mb={1}>
+                    {new Date(note.createdAt).toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                  <Text color="gray.300" fontSize="sm" noOfLines={2} mb={note.extractedFields?.length > 0 ? 2 : 0}>{note.text}</Text>
+                  {note.extractedFields?.length > 0 && (
+                    <HStack wrap="wrap" spacing={1.5}>
+                      {note.extractedFields.map(f => (
+                        <Tag key={f.key} size="sm" colorScheme="teal" variant="subtle">{f.label}: {f.value}</Tag>
+                      ))}
+                    </HStack>
+                  )}
+                </Box>
+              ))}
+            </VStack>
+          </>
+        )}
       </Box>
 
       {/* ====== 第一区：档案信息 ====== */}
