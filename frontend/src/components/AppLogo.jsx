@@ -1,4 +1,4 @@
-import { Box } from '@chakra-ui/react';
+import { Box, Image } from '@chakra-ui/react';
 
 export default function AppLogo({ size = 64, shadow = true }) {
   return (
@@ -14,33 +14,14 @@ export default function AppLogo({ size = 64, shadow = true }) {
       overflow="hidden"
       {...(shadow ? { boxShadow: '0 4px 20px rgba(226,176,68,0.2)' } : {})}
     >
-      <svg
-        width={Math.round(size * 0.6)}
-        height={Math.round(size * 0.6)}
-        viewBox="0 0 52 52"
-        fill="none"
-      >
-        {/* left heart */}
-        <g transform="translate(18, 22) rotate(-12) scale(1.0)">
-          <path
-            d="M 0,-4 C -12,-16 -22,-4 -22,8 C -22,20 -4,30 0,36 C 4,30 22,20 22,8 C 22,-4 12,-16 0,-4 Z"
-            fill="url(#applogo-heart)"
-          />
-        </g>
-        {/* right heart */}
-        <g transform="translate(36, 25) rotate(8) scale(0.82)">
-          <path
-            d="M 0,-4 C -12,-16 -22,-4 -22,8 C -22,20 -4,30 0,36 C 4,30 22,20 22,8 C 22,-4 12,-16 0,-4 Z"
-            fill="url(#applogo-heart)"
-          />
-        </g>
-        <defs>
-          <linearGradient id="applogo-heart" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#ffffff" />
-            <stop offset="100%" stopColor="#f5efe5" />
-          </linearGradient>
-        </defs>
-      </svg>
+      <Image
+        src="/logo.svg"
+        alt="追爱AI"
+        w={`${Math.round(size * 0.65)}px`}
+        h={`${Math.round(size * 0.65)}px`}
+        objectFit="contain"
+        fallback={<Box w={`${Math.round(size * 0.5)}px`} h={`${Math.round(size * 0.5)}px`} />}
+      />
     </Box>
   );
 }

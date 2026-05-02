@@ -40,9 +40,10 @@
         animation: splash-pulse 2s ease-in-out infinite;
         box-shadow: 0 4px 24px rgba(226,176,68,0.25);
       }
-      #app-splash .logo svg {
-        width: 48px;
-        height: 48px;
+      #app-splash .logo img {
+        width: 52px;
+        height: 52px;
+        object-fit: contain;
       }
       #app-splash .logo-text {
         font-size: 32px;
@@ -78,11 +79,7 @@
   <body>
     <div id="app-splash">
       <div class="logo">
-        <svg viewBox="0 0 52 52" fill="none">
-          <g transform="translate(18,22) rotate(-12)"><path d="M0,-4 C-12,-16 -22,-4 -22,8 C-22,20 -4,30 0,36 C4,30 22,20 22,8 C22,-4 12,-16 0,-4Z" fill="url(#splash-heart)"/></g>
-          <g transform="translate(36,25) rotate(8) scale(0.82)"><path d="M0,-4 C-12,-16 -22,-4 -22,8 C-22,20 -4,30 0,36 C4,30 22,20 22,8 C22,-4 12,-16 0,-4Z" fill="url(#splash-heart)"/></g>
-          <defs><linearGradient id="splash-heart" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fff"/><stop offset="100%" stop-color="#f5efe5"/></linearGradient></defs>
-        </svg>
+        <img src="/logo.svg" alt="追爱AI" />
       </div>
       <div class="logo-text">追爱AI</div>
       <div class="sub-text">AI智能恋爱助手</div>
