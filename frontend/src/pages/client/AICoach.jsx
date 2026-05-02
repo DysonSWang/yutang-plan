@@ -2052,7 +2052,7 @@ export default function AICoach() {
     const girlCoachChatContent = (
       <>
         <Box flex="1" minH="0" display="flex" flexDirection="column" bg="warm.800" borderRadius="md" mb={2} overflow="hidden">
-          <Box id="chat-scroll-container" flex="1" overflowY="auto" p={4} ref={scrollContainerRef} overflowAnchor="none">
+          <Box id="chat-scroll-container" flex="1" overflowY="auto" p={4} ref={scrollContainerRef} sx={{ overflowAnchor: 'none' }}>
             {/* 空状态：无消息且无分析内容时显示引导 */}
             {messages.length === 0 && !girlAnalysisContent && !girlAnalysisLoading && (
               <VStack spacing={4} py={8} justify="center" minH="200px">
@@ -2281,7 +2281,7 @@ export default function AICoach() {
       {/* 固定高度的消息容器，flex布局 */}
       <Box flex="1" minH="0" display="flex" flexDirection="column" bg="warm.800" borderRadius="md" mb={2} overflow="hidden">
         {/* 消息列表区域 - 可滚动 */}
-        <Box id="chat-scroll-container" flex="1" overflowY="auto" p={4} ref={scrollContainerRef} overflowAnchor="none">
+        <Box id="chat-scroll-container" flex="1" overflowY="auto" p={4} ref={scrollContainerRef} sx={{ overflowAnchor: 'none' }}>
           {messages.length === 0 ? (
             <VStack spacing={4} py={8} justify="center" minH="200px">
               <Text color="rgba(245,240,232,0.4)" textAlign="center">
