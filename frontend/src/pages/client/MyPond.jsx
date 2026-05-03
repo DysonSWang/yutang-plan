@@ -98,7 +98,7 @@ function GirlsTab({ girlsList, isInitialLoad, onAddGirl, onGirlClick }) {
     <Box>
       <Flex justify="space-between" align="start" mb={6}>
         <Box>
-          <Heading color="white" fontFamily="heading" fontSize="2xl">我的缘分</Heading>
+          <Heading color="white" fontFamily="heading" fontSize="2xl">缘分</Heading>
           <Text color="rgba(245,240,232,0.25)" fontSize="sm" mt={1}>
             已添加 <Text as="span" color="gold.400"><AnimatedNumber value={(girlsList ?? []).length} /></Text> 位
           </Text>
