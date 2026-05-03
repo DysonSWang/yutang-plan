@@ -3,7 +3,8 @@
  * 操盘手更新客户服务进度
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import useKeepAliveData from '../../hooks/useKeepAliveData';
 import {
   Box, Heading, Text, Card, CardBody, Table, Thead, Tbody, Tr, Th, Td,
   Button, Badge, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody,
@@ -38,11 +39,7 @@ export default function AdminProgress() {
   const [loading, setLoading] = useState(false);
   const { isOpen, onOpen, onClose } = useDisclosure();
 
-  useEffect(() => {
-    loadClients();
-  }, []);
-
-  const loadClients = async () => {
+  const { refresh } = useKeepAliveData(async () => {
     try {
       const res = await clients.list();
       if (res.success) {
@@ -51,7 +48,7 @@ export default function AdminProgress() {
     } catch (e) {
       captureError(e);
     }
-  };
+  }, { key: '/admin/progress', refreshOnActivate: true });
 
   const openProgressModal = async (client) => {
     setSelectedClient(client);

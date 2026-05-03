@@ -1,4 +1,5 @@
-import { useEffect, useState, useRef } from 'react';
+import { useState, useRef } from 'react';
+import useKeepAliveData from '../../hooks/useKeepAliveData';
 import {
   Box, Heading, Card, CardBody, Table, Thead, Tbody, Tr, Th, Td, Button, Badge, Modal, ModalOverlay, ModalContent,
   ModalHeader, ModalBody, ModalCloseButton, useDisclosure, SimpleGrid, FormControl, FormLabel, Input, Select,
@@ -98,51 +99,36 @@ export default function AdminGirls() {
 
   const toast = useToast();
 
+  const { refresh } = useKeepAliveData(async () => {
+    const [girlsRes, clientsRes, alertsRes] = await Promise.allSettled([
+      girls.list(),
+      clients.list(),
+      alertsApi.list({ status: 'active' }),
+    ]);
+
+    if (girlsRes.status === 'fulfilled' && girlsRes.value.success) {
+      setGirlsList(girlsRes.value.girls);
+    }
+    if (clientsRes.status === 'fulfilled' && clientsRes.value.success) {
+      setClientList(clientsRes.value.clients);
+    }
+    if (alertsRes.status === 'fulfilled' && alertsRes.value.success) {
+      const grouped = {};
+      (alertsRes.value.alerts || []).forEach(a => {
+        if (a.girlId) {
+          if (!grouped[a.girlId]) grouped[a.girlId] = [];
+          grouped[a.girlId].push(a);
+        }
+      });
+      setGirlAlerts(grouped);
+    }
+  }, { key: '/admin/girls', refreshOnActivate: true });
+
   // 搜索和过滤状态
   const [searchKeyword, setSearchKeyword] = useState('');
   const [filterStage, setFilterStage] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterClientId, setFilterClientId] = useState('');
-
-  const loadGirls = async () => {
-    try {
-      const res = await girls.list();
-      if (res.success) {
-        setGirlsList(res.girls);
-      }
-    } catch (e) {
-      captureError(e);
-    }
-  };
-
-  const loadClients = async () => {
-    try {
-      const res = await clients.list();
-      if (res.success) {
-        setClientList(res.clients);
-      }
-    } catch (e) {
-      captureError(e);
-    }
-  };
-
-  useEffect(() => {
-    loadGirls();
-    loadClients();
-    // M007 S02: 加载预警数据
-    alertsApi.list({ status: 'active' }).then(res => {
-      if (res.success && res.alerts) {
-        const grouped = {};
-        res.alerts.forEach(a => {
-          if (a.girlId) {
-            if (!grouped[a.girlId]) grouped[a.girlId] = [];
-            grouped[a.girlId].push(a);
-          }
-        });
-        setGirlAlerts(grouped);
-      }
-    }).catch(() => {});
-  }, []);
 
   function getInitialFormData() {
     return {

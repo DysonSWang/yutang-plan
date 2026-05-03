@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
+import useKeepAliveData from '../../hooks/useKeepAliveData';
 import { useNavigate } from 'react-router-dom';
 import {
   Box, Heading, Card, CardBody, Table, Thead, Tbody, Tr, Th, Td, Button, Badge, Modal, ModalOverlay,
@@ -303,19 +304,7 @@ export default function AdminClients() {
   const [screenshotConfirmSelections, setScreenshotConfirmSelections] = useState({});
   const screenshotInputRef = useRef(null);
 
-  // 页面加载时获取客户列表
-  useEffect(() => {
-    loadClients();
-  }, []);
-
-  const loadGirlsForClient = useCallback(async (clientId) => {
-    try {
-      const res = await girlsApi.list({ clientId });
-      if (res.success) setGirlList(res.girls);
-    } catch (e) { captureError(e); }
-  }, []);
-
-  const loadClients = async () => {
+  const { refresh } = useKeepAliveData(async () => {
     try {
       const res = await clientsApi.list();
       if (res.success) {
@@ -324,7 +313,14 @@ export default function AdminClients() {
     } catch (e) {
       captureError(e);
     }
-  };
+  }, { key: '/admin/clients', refreshOnActivate: true });
+
+  const loadGirlsForClient = useCallback(async (clientId) => {
+    try {
+      const res = await girlsApi.list({ clientId });
+      if (res.success) setGirlList(res.girls);
+    } catch (e) { captureError(e); }
+  }, []);
 
   // 截图提取处理函数
   const handleScreenshotFileSelect = (e) => {
@@ -728,7 +724,7 @@ export default function AdminClients() {
       if (res.success) {
         toast({ title: '保存成功', status: 'success' });
         setIsEditing(false);
-        loadClients();
+        refresh();
         const updated = await clientsApi.get(selectedClient.id);
         if (updated.success) setSelectedClient(updated.client);
       }
@@ -752,7 +748,7 @@ export default function AdminClients() {
         toast({ title: '客户创建成功', status: 'success' });
         setFormData(getInitialFormData());
         onCreateClose();
-        loadClients();
+        refresh();
       }
     } catch {
       toast({ title: '创建失败', status: 'error' });
