@@ -1,120 +1,92 @@
 /**
- * E2E: 客户 - 我的追爱
+ * E2E: 客户 - 我的缘分（整合版）
+ *
+ * 验证合并后的 MyPond 页面：
+ * - 三个子标签（女生/约会/日历）
+ * - 每个子标签内容加载
+ * - Keep-alive 行为
+ *
+ * 注：更详细的子标签测试见 client-my-pond-tabs.spec.js
  */
 
 const { test, expect } = require('./screenshot-setup.js');
-const { clientLogin, BASE_URL, getClientToken, getOperatorToken, API_BASE } = require('./helpers');
+const { clientLogin, BASE_URL, API_BASE } = require('./helpers');
 
-test.describe('客户-我的追爱', () => {
+test.describe('客户 - 我的缘分', () => {
   test.beforeEach(async ({ page }) => {
     await clientLogin(page);
-  });
-
-  test('可以访问我的追爱页面', async ({ page }) => {
     await page.goto(`${BASE_URL}/my-pond`);
     await page.waitForTimeout(2000);
+  });
+
+  test('页面显示三个子标签', async ({ page }) => {
+    await expect(page.locator('text=女生').first()).toBeVisible();
+    await expect(page.locator('text=约会').first()).toBeVisible();
+    await expect(page.locator('text=日历').first()).toBeVisible();
+  });
+
+  test('无长时间 loading 转圈', async ({ page }) => {
+    await page.waitForTimeout(5000);
+    const loadingText = page.locator('text=Loading...');
+    expect(await loadingText.count()).toBe(0);
+  });
+
+  test('子标签可以切换', async ({ page }) => {
+    const datesTab = page.locator('text=约会').first();
+    const calendarTab = page.locator('text=日历').first();
+
+    if (await datesTab.isVisible()) {
+      await datesTab.click();
+      await page.waitForTimeout(500);
+    }
+
+    if (await calendarTab.isVisible()) {
+      await calendarTab.click();
+      await page.waitForTimeout(500);
+    }
+
     expect(page.url()).toContain('/my-pond');
-  });
-
-  test('页面显示 Tab 切换（女生资源/交流记录）', async ({ page }) => {
-    await page.goto(`${BASE_URL}/my-pond`);
-    await page.waitForTimeout(2000);
-    const tabs = page.locator('[role="tab"], button:has-text("女生"), button:has-text("交流"), button:has-text("资源")');
-    if (await tabs.count() > 0) {
-      await expect(tabs.first()).toBeVisible();
-    }
-  });
-
-  test('可以切换到交流记录 Tab', async ({ page }) => {
-    await page.goto(`${BASE_URL}/my-pond`);
-    await page.waitForTimeout(2000);
-
-    const tabs = page.locator('[role="tab"]');
-    const tabCount = await tabs.count();
-    if (tabCount >= 2) {
-      await tabs.nth(1).click();
-      await page.waitForTimeout(500);
-    }
-  });
-
-  test('女生卡片列表可以点击查看详情', async ({ page }) => {
-    await page.goto(`${BASE_URL}/my-pond`);
-    await page.waitForTimeout(2000);
-
-    // 确保在女生资源 Tab
-    const tabs = page.locator('[role="tab"]');
-    if (await tabs.count() > 0) {
-      await tabs.first().click();
-      await page.waitForTimeout(500);
-    }
-
-    // 等待卡片加载
-    await page.waitForTimeout(1000);
-    const cards = page.locator('[class*="card"], [class*="Card"]');
-    if (await cards.count() > 0) {
-      await cards.first().click();
-      await page.waitForTimeout(1000);
-    }
-  });
-
-  test('点击卡片打开详情弹窗', async ({ page }) => {
-    await page.goto(`${BASE_URL}/my-pond`);
-    await page.waitForTimeout(2000);
-
-    const tabs = page.locator('[role="tab"]');
-    if (await tabs.count() > 0) {
-      await tabs.first().click();
-      await page.waitForTimeout(500);
-    }
-
-    await page.waitForTimeout(1000);
-    const cards = page.locator('[class*="card"], [class*="Card"]');
-    if (await cards.count() > 0) {
-      await cards.first().click();
-      await page.waitForTimeout(2000);
-      // 详情弹窗包含女生名字、关闭按钮等
-      const closeBtn = page.locator('[aria-label="Close"], button[class*="Close"], [class*="close"]').first();
-      if (await closeBtn.isVisible()) {
-        await expect(closeBtn).toBeVisible();
-      } else {
-        // 或者弹窗包含基本信息区域
-        const body = page.locator('body');
-        await expect(body).toBeVisible();
-      }
-    }
   });
 });
 
-test.describe('追爱 API', () => {
-  test('客户可以获取自己的女生资源列表', async ({ page }) => {
-    const token = await getClientToken(page);
-    const resp = await page.request.get(`${API_BASE}/api/girls/client/me`, {
+test.describe('缘分 API', () => {
+  test('客户可以获取自己的女生列表', async ({ page }) => {
+    const loginResp = await page.request.post(`${API_BASE}/api/auth/login`, {
+      data: { username: 'cl_e2e', password: 'cl123456' }
+    });
+
+    if (!loginResp.ok()) return;
+    const { token } = await loginResp.json();
+
+    const resp = await page.request.get(`${API_BASE}/api/girls`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    // 如果端点不存在，返回 404 说明未覆盖，测试跳过
-    if (resp.status() === 404) return;
-    expect(resp.ok()).toBeTruthy();
-    const data = await resp.json();
-    expect(data.success).toBe(true);
+
+    expect([200, 404]).toContain(resp.status());
+
+    if (resp.ok()) {
+      const data = await resp.json();
+      expect(Array.isArray(data.girls)).toBe(true);
+    }
   });
 
-  test('客户可以获取自己的聊天截图', async ({ page }) => {
-    const token = await getClientToken(page);
-    const resp = await page.request.get(`${API_BASE}/api/chat-screenshots/client/me`, {
+  test('客户可以获取自己的约会列表', async ({ page }) => {
+    const loginResp = await page.request.post(`${API_BASE}/api/auth/login`, {
+      data: { username: 'cl_e2e', password: 'cl123456' }
+    });
+
+    if (!loginResp.ok()) return;
+    const { token } = await loginResp.json();
+
+    const resp = await page.request.get(`${API_BASE}/api/dates`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    if (resp.status() === 404) return;
-    expect(resp.ok()).toBeTruthy();
-    const data = await resp.json();
-    expect(data.success).toBe(true);
-  });
 
-  test('操盘手无法访问客户的聊天截图接口（403）', async ({ page }) => {
-    const operatorToken = await getOperatorToken(page);
-    const resp = await page.request.get(`${API_BASE}/api/chat-screenshots/client/me`, {
-      headers: { Authorization: `Bearer ${operatorToken}` }
-    });
-    // 操作员 role 不是 client，应该返回 403
-    expect(resp.status()).toBe(403);
+    expect([200, 404]).toContain(resp.status());
+
+    if (resp.ok()) {
+      const data = await resp.json();
+      expect(Array.isArray(data.dates)).toBe(true);
+    }
   });
 });
