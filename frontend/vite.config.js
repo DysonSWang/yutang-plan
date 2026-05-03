@@ -5,7 +5,9 @@ import { VitePWA } from 'vite-plugin-pwa'
 const isProduction = process.env.NODE_ENV === 'production'
 
 export default defineConfig({
-  base: './',
+  // 开发环境用 /（npm run dev 时直接访问 localhost:5181/）
+  // 生产环境用 /app/（部署在 nginx 子目录）
+  base: isProduction ? '/app/' : '/',
   plugins: [
     react(),
     // 开发模式下禁用 PWA service worker，避免缓存导致代码更新不可见

@@ -63,6 +63,8 @@ export default function useKeepAliveData(fetcher, { key, refreshOnActivate = tru
 
   // 挂载时自动触发首次加载
   useEffect(() => {
+    // 每次 effect 执行时重置 mounted 状态（处理 StrictMode 重复挂载）
+    mountedRef.current = true;
     fetchData(true);
     initialFetchDoneRef.current = true;
     return () => { mountedRef.current = false; };
