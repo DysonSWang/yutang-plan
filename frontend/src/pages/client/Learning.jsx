@@ -9,16 +9,11 @@ import { useSocket } from '../../contexts/SocketContext';
 import useKeepAliveData from '../../hooks/useKeepAliveData';
 
 // Chapter card component
-function ChapterCard({ chapter, progress, personalizationStatus, onUpdate }) {
+function ChapterCard({ chapter, progress, onUpdate }) {
   const navigate = useNavigate();
   const p = progress.find(p => p.chapterId === chapter.chapterId);
-  // 状态：已学习(studied) vs 未学习(not_studied)
   const isStudied = p?.status === 'completed' || p?.status === 'in_progress';
   const statusColor = isStudied ? 'green' : 'gray';
-  // 个性化状态
-  const perCh = personalizationStatus?.find(c => c.chapterId === chapter.chapterId);
-  const perBadge = perCh?.status === 'completed' ? { label: '已定制', color: 'purple' }
-    : perCh?.status === 'generating' ? { label: '生成中', color: 'blue' } : null;
 
   return (
     <Box
@@ -55,14 +50,9 @@ function ChapterCard({ chapter, progress, personalizationStatus, onUpdate }) {
             )}
           </Box>
         </HStack>
-        <HStack gap={1}>
-          {perBadge && (
-            <Badge colorScheme={perBadge.color} variant="subtle">{perBadge.label}</Badge>
-          )}
-          <Badge colorScheme={statusColor} variant="subtle">
-            {isStudied ? '已学习' : '未学习'}
-          </Badge>
-        </HStack>
+        <Badge colorScheme={statusColor} variant="subtle">
+          {isStudied ? '已学习' : '未学习'}
+        </Badge>
       </HStack>
 
       <HStack mt={4} gap={2}>
@@ -96,7 +86,6 @@ export default function ClientLearning() {
   const navigate = useNavigate();
   const [showPreface, setShowPreface] = useState(false);
   const [prefaceData, setPrefaceData] = useState(null);
-  const [personalizationStatus, setPersonalizationStatus] = useState([]);
 
   const { data, isInitialLoad } = useKeepAliveData(async () => {
     // 先加载核心数据（章节和进度），个性化状态可延迟
@@ -137,15 +126,6 @@ export default function ClientLearning() {
       setPrefaceData(data.preface);
     }
   }, [data]);
-
-  // 后台静默加载个性化状态（不影响首屏速度）
-  useEffect(() => {
-    membershipApi.personalizedStatus().then(perRes => {
-      if (perRes?.success) {
-        setPersonalizationStatus(perRes.chapters || []);
-      }
-    }).catch(() => {});
-  }, []);
 
   // 监听前言个性化生成完成，自动刷新内容
   useEffect(() => {
@@ -329,7 +309,6 @@ export default function ClientLearning() {
             key={chapter.chapterId}
             chapter={chapter}
             progress={progress}
-            personalizationStatus={personalizationStatus}
             onUpdate={updateProgress}
           />
         ))}
