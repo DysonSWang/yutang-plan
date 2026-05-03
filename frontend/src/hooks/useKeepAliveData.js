@@ -67,11 +67,11 @@ export default function useKeepAliveData(fetcher, { key, refreshOnActivate = tru
     if (!key) return;
 
     const handleActivate = () => {
+      // 标记为非首次加载（确保 isInitialLoad 不再为 true）
+      firstLoadRef.current = false;
+
       if (configRef.current.refreshOnActivate) {
-        // 非首次激活才静默刷新（首次由上面的 effect 处理）
-        if (!firstLoadRef.current) {
-          fetchData(false);
-        }
+        fetchData(false);
       }
     };
 
@@ -102,7 +102,7 @@ export default function useKeepAliveData(fetcher, { key, refreshOnActivate = tru
     data,
     loading,       // 首次加载时为 true
     error,
-    isInitialLoad: loading && firstLoadRef.current,  // 仅首次加载为 true
+    isInitialLoad: firstLoadRef.current && loading,  // 仅首次加载且仍在 loading 时为 true
     isFetching,    // 任何 fetch 进行中为 true
     refresh,
   };
