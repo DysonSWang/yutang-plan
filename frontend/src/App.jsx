@@ -94,13 +94,23 @@ function AppRoutes() {
 
   // 认证加载完成后隐藏启动屏，避免 splash→黑屏→内容的闪烁
   useEffect(() => {
-    if (!loading) {
-      const splash = document.getElementById('app-splash');
-      if (splash) {
-        splash.classList.add('hidden');
-        setTimeout(() => splash.remove(), 400);
+    // 至少显示 2.5 秒再隐藏
+    const minDisplay = setTimeout(() => {
+      if (!loading) {
+        const splash = document.getElementById('app-splash');
+        if (splash) {
+          splash.classList.add('hidden');
+          setTimeout(() => splash.remove(), 500);
+        }
       }
+    }, 2000);
+
+    // 如果加载完成得早，等够 minDisplay 再走
+    if (!loading) {
+      return () => clearTimeout(minDisplay);
     }
+
+    return () => clearTimeout(minDisplay);
   }, [loading]);
 
   if (loading) return null;

@@ -3,6 +3,7 @@ import { Box, Heading, Card, CardBody, SimpleGrid, Badge, Text, VStack, HStack, 
 import { CrownIcon, CheckIcon } from '../../components/Icons';
 import { FiEdit2, FiEye, FiEyeOff } from 'react-icons/fi';
 import { api, clients, membership as membershipApi, auth, upload } from '../../utils/api';
+import { useAuth } from '../../contexts/AuthContext';
 import { captureError } from '../../utils/frontendErrorCapture';
 import RegionSelector from '../../components/RegionSelector';
 import { checkVersion, VERSION } from '../../utils/version';
@@ -226,6 +227,7 @@ function ProfileField({ field, value, onChange }) {
 }
 
 export default function ClientProfile() {
+  const { logout } = useAuth();
   const [saving, setSaving] = useState(false);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { isOpen: isPricingOpen, onOpen: onPricingOpen, onClose: onPricingClose } = useDisclosure();
@@ -982,6 +984,17 @@ export default function ClientProfile() {
                 修改密码
               </Button>
             </HStack>
+            <Button
+              size="sm"
+              variant="ghost"
+              w="full"
+              mt={2}
+              color="rgba(245,240,232,0.3)"
+              _hover={{ color: 'white', bg: 'rgba(255,255,255,0.06)' }}
+              onClick={logout}
+            >
+              退出登录
+            </Button>
           </VStack>
         </CardBody>
       </Card>

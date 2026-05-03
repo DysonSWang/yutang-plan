@@ -72,8 +72,8 @@ export default function ChapterDetail() {
 
   const { isInitialLoad } = useKeepAliveData(async () => {
     const [chRes, progRes, perRes] = await Promise.all([
-      membershipApi.chapters(),
-      membershipApi.learningProgress(),
+      membershipApi.chapters().catch(() => ({ success: false })),
+      membershipApi.learningProgress().catch(() => ({ success: false })),
       membershipApi.getPersonalizedChapter(chapterId).catch(() => null),
     ]);
     if (chRes.success) {

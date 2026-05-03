@@ -114,7 +114,7 @@ const InputArea = memo(({ onSubmit, loading, deepMode, onNewConversation, placeh
     }
   }, [input, onSubmit]);
 
-  const defaultPlaceholder = deepMode ? '描述当前情况，深度分析会调用工具...' : '描述你的情况...';
+  const defaultPlaceholder = deepMode ? '描述情况，深度分析...' : '描述你的情况...';
 
   return (
     <Box bg="warm.800" borderRadius="md" p={3} flexShrink={0}>

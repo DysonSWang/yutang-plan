@@ -28,61 +28,185 @@
         display: flex; flex-direction: column;
         align-items: center; justify-content: center;
         z-index: 99999;
-        transition: opacity 0.3s ease-out;
+        overflow: hidden;
       }
-      #app-splash.hidden { opacity: 0; pointer-events: none; }
+
+      /* 底部柔和光晕 */
+      #app-splash::before {
+        content: '';
+        position: absolute;
+        bottom: -20%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 120vw;
+        height: 60vh;
+        background: radial-gradient(ellipse at center, rgba(226,176,68,0.12) 0%, rgba(193,127,89,0.06) 40%, transparent 70%);
+        pointer-events: none;
+        animation: glow-breathe 4s ease-in-out infinite;
+      }
+
+      /* 顶部微弱光 */
+      #app-splash::after {
+        content: '';
+        position: absolute;
+        top: -10%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 80vw;
+        height: 40vh;
+        background: radial-gradient(ellipse at center, rgba(226,176,68,0.05) 0%, transparent 60%);
+        pointer-events: none;
+      }
+
+      /* 浮动的金色粒子 */
+      .splash-particle {
+        position: absolute;
+        width: 3px;
+        height: 3px;
+        background: rgba(226,176,68,0.5);
+        border-radius: 50%;
+        animation: float-up linear infinite;
+        pointer-events: none;
+      }
+      .splash-particle:nth-child(1) { left: 15%; animation-duration: 6s; animation-delay: 0s; }
+      .splash-particle:nth-child(2) { left: 25%; animation-duration: 8s; animation-delay: 1s; width: 2px; height: 2px; }
+      .splash-particle:nth-child(3) { left: 40%; animation-duration: 7s; animation-delay: 2s; }
+      .splash-particle:nth-child(4) { left: 60%; animation-duration: 9s; animation-delay: 0.5s; width: 2px; height: 2px; }
+      .splash-particle:nth-child(5) { left: 75%; animation-duration: 6.5s; animation-delay: 3s; }
+      .splash-particle:nth-child(6) { left: 85%; animation-duration: 7.5s; animation-delay: 1.5s; width: 4px; height: 4px; opacity: 0.3; }
+      .splash-particle:nth-child(7) { left: 50%; animation-duration: 10s; animation-delay: 4s; width: 2px; height: 2px; }
+
+      @keyframes float-up {
+        0%   { transform: translateY(100vh) scale(0); opacity: 0; }
+        10%  { opacity: 1; }
+        90%  { opacity: 0.6; }
+        100% { transform: translateY(-10vh) scale(1.5); opacity: 0; }
+      }
+
+      @keyframes glow-breathe {
+        0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
+        50% { opacity: 0.7; transform: translateX(-50%) scale(1.08); }
+      }
+
+      /* Logo 主體 */
+      #app-splash .logo-wrap {
+        position: relative;
+        display: flex; flex-direction: column;
+        align-items: center;
+        animation: logo-enter 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        opacity: 0;
+        animation-delay: 0.2s;
+      }
+
+      @keyframes logo-enter {
+        from { opacity: 0; transform: translateY(20px) scale(0.95); }
+        to   { opacity: 1; transform: translateY(0) scale(1); }
+      }
+
+      /* Logo 外圈光晕 */
+      #app-splash .logo-glow {
+        position: absolute;
+        inset: -30px;
+        border-radius: 40px;
+        background: radial-gradient(circle, rgba(226,176,68,0.18) 0%, transparent 65%);
+        animation: glow-pulse 3s ease-in-out infinite;
+        pointer-events: none;
+      }
+      @keyframes glow-pulse {
+        0%, 100% { opacity: 0.6; transform: scale(1); }
+        50% { opacity: 1; transform: scale(1.06); }
+      }
+
+      /* Logo 主体 */
       #app-splash .logo {
-        width: 80px; height: 80px;
-        background: linear-gradient(135deg, #e2b044, #c17f59);
-        border-radius: 20px;
+        position: relative;
+        width: 88px; height: 88px;
+        background: linear-gradient(135deg, #e2b044 0%, #c17f59 100%);
+        border-radius: 22px;
         display: flex; align-items: center; justify-content: center;
-        margin-bottom: 24px;
-        animation: splash-pulse 2s ease-in-out infinite;
-        box-shadow: 0 4px 24px rgba(226,176,68,0.25);
+        box-shadow:
+          0 0 0 1px rgba(226,176,68,0.3),
+          0 8px 32px rgba(226,176,68,0.25),
+          0 2px 8px rgba(0,0,0,0.4);
+        animation: logo-breathe 3s ease-in-out infinite;
+        z-index: 1;
+      }
+      @keyframes logo-breathe {
+        0%, 100% { transform: scale(1); box-shadow: 0 0 0 1px rgba(226,176,68,0.3), 0 8px 32px rgba(226,176,68,0.25), 0 2px 8px rgba(0,0,0,0.4); }
+        50% { transform: scale(1.04); box-shadow: 0 0 0 2px rgba(226,176,68,0.4), 0 12px 48px rgba(226,176,68,0.35), 0 4px 12px rgba(0,0,0,0.4); }
       }
       #app-splash .logo img {
-        width: 52px;
-        height: 52px;
+        width: 54px; height: 54px;
         object-fit: contain;
       }
+
+      /* Logo 文字 */
       #app-splash .logo-text {
-        font-size: 32px;
+        font-size: 34px;
         font-weight: 700;
         color: #fff;
-        margin-bottom: 4px;
-        letter-spacing: 2px;
+        margin-top: 20px;
+        margin-bottom: 6px;
+        letter-spacing: 3px;
+        font-family: 'DM Serif Display', 'Noto Serif SC', serif;
+        text-shadow: 0 2px 20px rgba(226,176,68,0.3);
       }
       #app-splash .sub-text {
-        font-size: 14px;
-        color: rgba(255,255,255,0.4);
-        margin-bottom: 32px;
+        font-size: 13px;
+        color: rgba(255,255,255,0.35);
+        letter-spacing: 0.35em;
+        margin-bottom: 48px;
       }
-      #app-splash .dot-bounce { display: flex; gap: 8px; }
+
+      /* 加载指示器 */
+      #app-splash .dot-bounce {
+        display: flex; gap: 8px;
+        position: absolute;
+        bottom: 12%;
+      }
       #app-splash .dot-bounce span {
-        width: 8px; height: 8px;
-        background: rgba(226,176,68,0.30);
+        width: 6px; height: 6px;
+        background: rgba(226,176,68,0.4);
         border-radius: 50%;
         animation: dot-bounce 1.4s ease-in-out infinite both;
       }
       #app-splash .dot-bounce span:nth-child(1) { animation-delay: -0.32s; }
       #app-splash .dot-bounce span:nth-child(2) { animation-delay: -0.16s; }
-      @keyframes splash-pulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.05); }
-      }
       @keyframes dot-bounce {
         0%, 80%, 100% { transform: scale(0); opacity: 0.2; }
         40% { transform: scale(1); opacity: 1; }
+      }
+
+      /* 隐藏过渡 */
+      #app-splash.hidden {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.8s ease-out;
       }
     </style>
   </head>
   <body>
     <div id="app-splash">
-      <div class="logo">
-        <img src="/logo.png" alt="追AI" />
+      <!-- 浮动的金色粒子 -->
+      <div class="splash-particle"></div>
+      <div class="splash-particle"></div>
+      <div class="splash-particle"></div>
+      <div class="splash-particle"></div>
+      <div class="splash-particle"></div>
+      <div class="splash-particle"></div>
+      <div class="splash-particle"></div>
+
+      <!-- Logo 区域 -->
+      <div class="logo-wrap">
+        <div class="logo-glow"></div>
+        <div class="logo">
+          <img src="/logo.png" alt="追AI" />
+        </div>
+        <div class="logo-text">追AI</div>
+        <div class="sub-text">AI智能恋爱助手</div>
       </div>
-      <div class="logo-text">追AI</div>
-      <div class="sub-text">AI智能恋爱助手</div>
+
+      <!-- 加载动画 -->
       <div class="dot-bounce">
         <span></span><span></span><span></span>
       </div>

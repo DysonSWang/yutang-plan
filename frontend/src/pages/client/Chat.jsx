@@ -599,7 +599,7 @@ export default function ClientChat() {
             <Center h="100%" px={4}>
               <VStack spacing={6}>
                 <Text fontSize="lg" color="rgba(245,240,232,0.6)" fontWeight="medium">
-                  你好，我是Mo哥 👋
+                  你好，我是Mo哥
                 </Text>
                 <Text fontSize="sm" color="rgba(245,240,232,0.35)" textAlign="center" maxW="280px">
                   不知道聊什么？试试下面这些话题
