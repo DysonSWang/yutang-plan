@@ -551,7 +551,7 @@ export default function MyPond() {
               <VStack spacing={4} align="stretch">
                 <Text color="rgba(245,240,232,0.4)" textAlign="center" mb={2}>选择约会对象</Text>
                 <VStack spacing={3} align="stretch" maxH="300px" overflowY="auto">
-                  {girlsList.length === 0 ? (
+                  {(girlsList ?? []).length === 0 ? (
                     <Text color="rgba(245,240,232,0.2)" textAlign="center" py={8}>暂无比心仪的女生</Text>
                   ) : girlsList.map(girl => (
                     <Card key={girl.id}
