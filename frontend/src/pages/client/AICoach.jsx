@@ -2754,8 +2754,16 @@ export default function AICoach() {
                 <Wrap spacing={2} justify="center">
                   {QUICK_QUESTIONS.map((q, i) => (
                     <WrapItem key={i}>
-                      <Button size="sm" variant="outline" colorScheme="gold"
-                        onClick={() => handleSubmitInternal(q)} isDisabled={loading}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        colorScheme="gold"
+                        onClick={() => handleSubmitInternal(q)}
+                        isDisabled={loading}
+                        borderRadius="xl"
+                        px={4}
+                        _hover={{ bg: 'rgba(226,176,68,0.12)', borderColor: 'gold.400' }}
+                      >
                         {q}
                       </Button>
                     </WrapItem>
@@ -2984,6 +2992,9 @@ export default function AICoach() {
                       colorScheme="gold"
                       onClick={() => handleSubmitInternal(q)}
                       isDisabled={loading}
+                      borderRadius="xl"
+                      px={4}
+                      _hover={{ bg: 'rgba(226,176,68,0.12)', borderColor: 'gold.400' }}
                     >
                       {q}
                     </Button>

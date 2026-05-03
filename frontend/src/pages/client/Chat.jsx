@@ -783,6 +783,7 @@ export default function ClientChat() {
                 onClick={() => fileInputRef.current?.click()}
                 aria-label="发送图片/视频"
                 isDisabled={sending || !!previewFile}
+                title="发送图片"
               />
               <input
                 type="file"
@@ -808,8 +809,9 @@ export default function ClientChat() {
                   color={burnMode ? 'orange.400' : 'rgba(245,240,232,0.4)'}
                   onClick={() => setBurnMode(!burnMode)}
                   isDisabled={!!previewFile || flashMode}
+                  title="阅后即焚"
                 >
-                  🔥{burnMode ? `${burnSeconds}s` : ''}
+                  🔥 焚{burnMode ? `${burnSeconds}s` : ''}
                 </Button>
                 {burnMode && (
                   <Box
@@ -841,12 +843,12 @@ export default function ClientChat() {
                 )}
               </Box>
               <IconButton
-                icon={<Text>⚡{flashMode ? '闪图' : ''}</Text>}
+                icon={<Text>⚡ {flashMode ? '闪图' : '闪'}</Text>}
                 variant="ghost"
                 color={flashMode ? 'yellow.400' : 'rgba(245,240,232,0.4)'}
                 aria-label="闪图模式"
                 isDisabled={sending || !!previewFile || burnMode}
-                title={flashMode ? '闪图：查阅后5秒自动销毁' : '闪图模式'}
+                title="闪图：查阅后自动销毁"
                 onClick={() => {
                   const newMode = !flashMode;
                   setFlashMode(newMode);

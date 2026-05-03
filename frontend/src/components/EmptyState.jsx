@@ -6,7 +6,7 @@ import { Box, VStack, Text, Button, Icon } from '@chakra-ui/react';
 
 const PRESETS = {
   pond: {
-    icon: '🐟',
+    icon: '💫',
     title: '缘分还未开始',
     desc: '添加缘分对象，获得个性化追爱服务',
     actionLabel: '添加女生',
@@ -48,7 +48,19 @@ export default function EmptyState({
 
   return (
     <VStack py={padding} spacing={4}>
-      <Text fontSize={iconSize} opacity={0.4}>{icon || preset.icon}</Text>
+      <Box
+        fontSize={iconSize}
+        opacity={0.4}
+        animation="breathe 3s ease-in-out infinite"
+        sx={{
+          '@keyframes breathe': {
+            '0%, 100%': { transform: 'scale(1)', opacity: 0.4 },
+            '50%': { transform: 'scale(1.08)', opacity: 0.55 },
+          },
+        }}
+      >
+        {icon || preset.icon}
+      </Box>
       <Text fontWeight="600" color="white" fontSize="md" textAlign="center">
         {title || preset.title}
       </Text>

@@ -343,8 +343,8 @@ export default function Login() {
                     记事本
                   </Button>
                 )}
-                <Text color="rgba(245,240,232,0.15)" fontSize="xs" textAlign="center">
-                  如需账号请联系管理员创建
+                <Text color="rgba(245,240,232,0.35)" fontSize="xs" textAlign="center">
+                  如需账号或忘记密码，请联系管理员
                 </Text>
               </VStack>
             </form>

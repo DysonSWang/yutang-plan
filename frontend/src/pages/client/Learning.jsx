@@ -1,4 +1,4 @@
-import { Box, Heading, Text, VStack, HStack, Button, Badge, Progress, SimpleGrid, useToast, Spinner, Center, Collapse, Icon, Flex } from '@chakra-ui/react';
+import { Box, Heading, Text, VStack, HStack, Button, Badge, Progress, SimpleGrid, useToast, Spinner, Center, Collapse, Icon, Flex, Skeleton } from '@chakra-ui/react';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { membership as membershipApi } from '../../utils/api';
@@ -183,7 +183,20 @@ export default function ClientLearning() {
   const totalCount = chapters.length;
   const percent = totalCount > 0 ? Math.round((studiedCount / totalCount) * 100) : 0;
 
-  if (isInitialLoad) return <Center h="200px"><Spinner /></Center>;
+  if (isInitialLoad) return (
+    <Box>
+      <HStack mb={6} gap={4}>
+        <Skeleton h="32px" w="120px" borderRadius="md" />
+      </HStack>
+      <Skeleton h="80px" borderRadius="xl" mb={6} />
+      <Skeleton h="60px" borderRadius="lg" mb={6} />
+      <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
+        {[1,2,3].map(i => (
+          <Skeleton key={i} h="120px" borderRadius="xl" />
+        ))}
+      </SimpleGrid>
+    </Box>
+  );
 
   return (
     <Box>

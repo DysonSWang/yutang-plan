@@ -503,10 +503,10 @@ export default function MyPond() {
       </Flex>
 
       <Tabs colorScheme="gold" variant="soft-rounded" defaultIndex={window.location.hash === '#calendar' ? 2 : window.location.hash === '#dates' ? 1 : 0} isLazy lazyBehavior="keepMounted">
-        <TabList>
-          <Tab>女生</Tab>
-          <Tab>约会</Tab>
-          <Tab>日历</Tab>
+        <TabList sx={{ '& button': { transition: 'all 0.2s ease' } }}>
+          <Tab _selected={{ color: 'warm.950', bg: 'gold.500' }}>女生</Tab>
+          <Tab _selected={{ color: 'warm.950', bg: 'gold.500' }}>约会</Tab>
+          <Tab _selected={{ color: 'warm.950', bg: 'gold.500' }}>日历</Tab>
         </TabList>
         <TabPanels>
           <TabPanel px={0}>

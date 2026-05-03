@@ -76,7 +76,7 @@ function StatCard({ label, value, icon, accent = 'gold', subtitle }) {
 const QUICK_ENTRIES = [
   { path: null, label: '联系专属顾问', desc: '人工沟通，更私密', icon: ChatIcon, gradient: 'linear(135deg, gold.500, gold.400)' },
   { path: '/ai-coach', label: 'AI教练咨询', desc: '24小时在线', icon: SparklesIcon, gradient: 'linear(135deg, gold.500, gold.400)' },
-  { path: '/my-pond', label: '查看我的缘分', desc: '管理女生资源', icon: FishIcon, gradient: 'linear(135deg, rose.500, rose.400)' },
+  { path: '/my-pond', label: '查看我的缘分', desc: '管理我的缘分', icon: FishIcon, gradient: 'linear(135deg, rose.500, rose.400)' },
   { path: '/learning', label: '学习中心', desc: 'Mo哥宝典章节学习', icon: BookIcon, gradient: 'linear(135deg, gold.500, gold.400)' },
   { path: '/dates', label: '约会与方案', desc: '约会确认和AI方案', icon: GiftIcon, gradient: 'linear(135deg, gold.500, gold.400)' },
   { path: '/dates#calendar', label: '我的日历', desc: '查看约会与活动', icon: CalendarIcon, gradient: 'linear(135deg, gold.500, gold.400)' },
@@ -207,12 +207,15 @@ export default function ClientHome() {
               transition="all 0.25s ease"
             >
               <CardBody>
-                <HStack spacing={4} align="start">
-                  <IconBox icon={entry.icon} />
-                  <Box>
-                    <Text color="white" fontWeight="500" fontSize="sm" mb={0.5}>{entry.label}</Text>
-                    <Text color="rgba(245,240,232,0.55)" fontSize="xs">{entry.desc}</Text>
-                  </Box>
+                <HStack spacing={4} align="start" justify="space-between">
+                  <HStack spacing={4} align="start">
+                    <IconBox icon={entry.icon} />
+                    <Box>
+                      <Text color="white" fontWeight="500" fontSize="sm" mb={0.5}>{entry.label}</Text>
+                      <Text color="rgba(245,240,232,0.55)" fontSize="xs">{entry.desc}</Text>
+                    </Box>
+                  </HStack>
+                  <Text color="rgba(245,240,232,0.25)" fontSize="sm">›</Text>
                 </HStack>
               </CardBody>
             </Card>
