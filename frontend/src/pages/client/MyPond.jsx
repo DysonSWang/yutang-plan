@@ -18,6 +18,7 @@ import { captureError } from '../../utils/frontendErrorCapture';
 import useKeepAliveData from '../../hooks/useKeepAliveData';
 import EmptyState from '../../components/EmptyState';
 import AnimatedNumber from '../../components/AnimatedNumber';
+import PullToRefresh from '../../components/PullToRefresh';
 
 registerLocale('zh-CN', zhCN);
 
@@ -492,12 +493,17 @@ export default function MyPond() {
     onInterviewOpen();
   };
 
+  const handleRefresh = async () => {
+    await Promise.all([refresh(), refreshGirls()]);
+  };
+
   return (
+    <PullToRefresh onRefresh={handleRefresh} isRefreshing={isInitialLoad}>
     <Box>
       <Flex justify="space-between" align="center" mb={6}>
         <Heading color="white">缘分与约会</Heading>
         <HStack spacing={2}>
-          <Button variant="outline" colorScheme="gray" size="sm" onClick={refresh} isLoading={isInitialLoad}>刷新</Button>
+          <Button variant="outline" colorScheme="gray" size="sm" onClick={handleRefresh} isLoading={isInitialLoad}>刷新</Button>
           <Button colorScheme="gold" leftIcon={<SparklesIcon />} onClick={() => setShowAddModal(true)}>添加约会</Button>
         </HStack>
       </Flex>

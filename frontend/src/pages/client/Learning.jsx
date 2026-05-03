@@ -5,6 +5,7 @@ import { membership as membershipApi } from '../../utils/api';
 import { BookIcon, CheckIcon } from '../../components/Icons';
 import { FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import PersonalizationBanner from '../../components/PersonalizationBanner';
+import PullToRefresh from '../../components/PullToRefresh';
 import { useSocket } from '../../contexts/SocketContext';
 import useKeepAliveData from '../../hooks/useKeepAliveData';
 
@@ -98,7 +99,7 @@ export default function ClientLearning() {
   const [prefaceData, setPrefaceData] = useState(null);
   const [personalizationStatus, setPersonalizationStatus] = useState([]);
 
-  const { data, isInitialLoad } = useKeepAliveData(async () => {
+  const { data, isInitialLoad, refresh } = useKeepAliveData(async () => {
     // 先加载核心数据（章节和进度），个性化状态可延迟
     const [chRes, progRes] = await Promise.all([
       membershipApi.chapters().catch(() => ({ success: false })),
@@ -212,6 +213,7 @@ export default function ClientLearning() {
   const percent = totalCount > 0 ? Math.round((studiedCount / totalCount) * 100) : 0;
 
   if (isInitialLoad) return (
+    <PullToRefresh onRefresh={refresh} isRefreshing={true}>
     <Box>
       <HStack mb={6} gap={4}>
         <Skeleton h="32px" w="120px" borderRadius="md" />
