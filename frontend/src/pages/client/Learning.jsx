@@ -9,11 +9,16 @@ import { useSocket } from '../../contexts/SocketContext';
 import useKeepAliveData from '../../hooks/useKeepAliveData';
 
 // Chapter card component
-function ChapterCard({ chapter, progress, onUpdate }) {
+function ChapterCard({ chapter, progress, personalizationStatus, onUpdate }) {
   const navigate = useNavigate();
   const p = progress.find(p => p.chapterId === chapter.chapterId);
+  // 状态：已学习(studied) vs 未学习(not_studied)
   const isStudied = p?.status === 'completed' || p?.status === 'in_progress';
   const statusColor = isStudied ? 'green' : 'gray';
+  // 个性化状态
+  const perCh = personalizationStatus?.find(c => c.chapterId === chapter.chapterId);
+  const perBadge = perCh?.status === 'completed' ? { label: '已定制', color: 'purple' }
+    : perCh?.status === 'generating' ? { label: '生成中', color: 'blue' } : null;
 
   return (
     <Box
@@ -50,9 +55,14 @@ function ChapterCard({ chapter, progress, onUpdate }) {
             )}
           </Box>
         </HStack>
-        <Badge colorScheme={statusColor} variant="subtle">
-          {isStudied ? '已学习' : '未学习'}
-        </Badge>
+        <HStack gap={1}>
+          {perBadge && (
+            <Badge colorScheme={perBadge.color} variant="subtle">{perBadge.label}</Badge>
+          )}
+          <Badge colorScheme={statusColor} variant="subtle">
+            {isStudied ? '已学习' : '未学习'}
+          </Badge>
+        </HStack>
       </HStack>
 
       <HStack mt={4} gap={2}>
