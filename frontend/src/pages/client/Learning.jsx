@@ -96,14 +96,15 @@ export default function ClientLearning() {
   const navigate = useNavigate();
   const [showPreface, setShowPreface] = useState(false);
   const [prefaceData, setPrefaceData] = useState(null);
+  const [personalizationStatus, setPersonalizationStatus] = useState([]);
 
   const { data, isInitialLoad } = useKeepAliveData(async () => {
-    const [chRes, progRes, perRes] = await Promise.all([
+    // 先加载核心数据（章节和进度），个性化状态可延迟
+    const [chRes, progRes] = await Promise.all([
       membershipApi.chapters().catch(() => ({ success: false })),
       membershipApi.learningProgress().catch(() => ({ success: false })),
-      membershipApi.personalizedStatus().catch(() => null),
     ]);
-    // 顺便加载前言
+    // 前言单独处理，失败不影响主流程
     let preface = null;
     try {
       const preRes = await membershipApi.getPersonalizedChapter('00');
@@ -118,13 +119,12 @@ export default function ClientLearning() {
     return {
       chapters: chRes.success ? chRes.chapters : [],
       progress: progRes.success ? progRes.progress : [],
-      personalizationStatus: perRes?.success ? perRes.chapters : [],
+      personalizationStatus: [],
       preface,
     };
   }, { key: '/learning' });
 
   const chapters = data?.chapters ?? [];
-  const personalizationStatus = data?.personalizationStatus ?? [];
   // progress 用本地 state，方便 updateProgress 乐观更新
   const [progress, setProgress] = useState(data?.progress ?? []);
   useEffect(() => {
@@ -137,6 +137,15 @@ export default function ClientLearning() {
       setPrefaceData(data.preface);
     }
   }, [data]);
+
+  // 后台静默加载个性化状态（不影响首屏速度）
+  useEffect(() => {
+    membershipApi.personalizedStatus().then(perRes => {
+      if (perRes?.success) {
+        setPersonalizationStatus(perRes.chapters || []);
+      }
+    }).catch(() => {});
+  }, []);
 
   // 监听前言个性化生成完成，自动刷新内容
   useEffect(() => {

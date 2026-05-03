@@ -116,6 +116,10 @@ const theme = extendTheme({
       '::-webkit-scrollbar-thumb:hover': {
         bg: 'warm.700',
       },
+      '@keyframes skeleton-shimmer': {
+        '0%': { backgroundPosition: '-200% 0' },
+        '100%': { backgroundPosition: '200% 0' },
+      },
     },
   },
   shadows: {
@@ -330,6 +334,20 @@ const theme = extendTheme({
     Tooltip: {
       baseStyle: {
         bg: 'warm.800', color: 'warm.50', borderRadius: 'md', px: 3, py: 2,
+      },
+    },
+    Skeleton: {
+      baseStyle: {
+        startColor: 'warm.800',
+        endColor: 'warm.700',
+      },
+      variants: {
+        shimmer: {
+          bg: 'warm.800',
+          background: 'linear-gradient(90deg, warm.800 0%, warm.700 50%, warm.800 100%)',
+          backgroundSize: '200% 100%',
+          animation: 'skeleton-shimmer 1.5s ease-in-out infinite',
+        },
       },
     },
     Menu: {
