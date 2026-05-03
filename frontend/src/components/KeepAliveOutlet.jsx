@@ -24,6 +24,8 @@ export default function KeepAliveOutlet() {
   const mountedRef = useRef({});
   const [keepAliveMap, setKeepAliveMap] = useState(new Map());
   const lruOrderRef = useRef([]);
+  // 用于在 effect 同步读取上一次的 keys，避免 stale closure
+  const prevKeysRef = useRef([]);
 
   // 获取当前路由的 keepAliveKey
   const getKey = useCallback((loc) => {
@@ -33,6 +35,8 @@ export default function KeepAliveOutlet() {
   // 当路由变化时，更新 keepAliveMap
   useEffect(() => {
     const key = getKey(location);
+
+    let newKeys = [];
 
     setKeepAliveMap(prev => {
       const next = new Map(prev);
@@ -64,10 +68,11 @@ export default function KeepAliveOutlet() {
         });
       }
 
+      newKeys = Array.from(next.keys());
       return next;
     });
 
-    // 触发当前页面的激活事件
+    // 触发当前页面的激活事件（使用同步更新后的 keys）
     const emitter = window.__keepAliveEventEmitter;
     if (emitter) {
       // 非首次挂载时才触发激活（首次由组件自身的 useEffect 处理）
@@ -76,12 +81,18 @@ export default function KeepAliveOutlet() {
       }
       mountedRef.current[key] = true;
 
-      // 对所有非当前页面触发隐藏事件
-      for (const cachedKey of keepAliveMap.keys()) {
-        if (cachedKey !== key && mountedRef.current[cachedKey]) {
+      // 找出需要 deactivate 的页面：存在于 prevKeys 但不存在于 newKeys
+      // 这样即使 keepAliveMap 还未同步更新，deactivate 也不会遗漏
+      const prevKeys = prevKeysRef.current;
+      const toDeactivate = prevKeys.filter(k => k !== key && !newKeys.includes(k));
+      for (const cachedKey of toDeactivate) {
+        if (mountedRef.current[cachedKey]) {
           emitter.dispatchEvent(new CustomEvent(`${cachedKey}:deactivate`));
         }
       }
+
+      // 更新 prevKeysRef
+      prevKeysRef.current = newKeys;
     }
   }, [location.pathname, location.search]); // 当路径或参数变化时
 
