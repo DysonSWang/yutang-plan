@@ -37,7 +37,7 @@ export default function AdminDashboard() {
   const [weeklyReport, setWeeklyReport] = useState(null);
   const [weeklyLoading, setWeeklyLoading] = useState(false);
 
-  const { isInitialLoad, refresh } = useKeepAliveData(async () => {
+  const { isInitialLoad, isFetching, refresh } = useKeepAliveData(async () => {
     const cid = selectedClientIdRef.current;
     const [statsRes, clientsRes] = await Promise.all([
       dashboardApi.stats(cid),

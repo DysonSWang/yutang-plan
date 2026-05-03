@@ -26,7 +26,11 @@ export default function useKeepAliveData(fetcher, { key, refreshOnActivate = tru
   const configRef = useRef({ refreshOnActivate });
   configRef.current = { refreshOnActivate };
 
-  const firstLoadRef = useRef(true);
+  // hasLoadedRef: 跟踪数据是否已成功加载过一次
+  const hasLoadedRef = useRef(false);
+  // initialFetchDoneRef: 跟踪首次 useEffect 是否已执行
+  const initialFetchDoneRef = useRef(false);
+  // mountedRef: 跟踪组件是否"有效挂载"（用于取消进行中的请求）
   const mountedRef = useRef(true);
 
   // 核心 fetch 函数
@@ -42,11 +46,13 @@ export default function useKeepAliveData(fetcher, { key, refreshOnActivate = tru
       if (mountedRef.current) {
         setData(result);
         setLoading(false);
+        hasLoadedRef.current = true;
       }
     } catch (err) {
       if (mountedRef.current) {
         setError(err);
         setLoading(false);
+        hasLoadedRef.current = true; // 即使出错也标记为已加载，避免无限 loading
       }
     } finally {
       if (mountedRef.current) {
@@ -58,7 +64,7 @@ export default function useKeepAliveData(fetcher, { key, refreshOnActivate = tru
   // 挂载时自动触发首次加载
   useEffect(() => {
     fetchData(true);
-    firstLoadRef.current = false;
+    initialFetchDoneRef.current = true;
     return () => { mountedRef.current = false; };
   }, []);
 
@@ -67,20 +73,18 @@ export default function useKeepAliveData(fetcher, { key, refreshOnActivate = tru
     if (!key) return;
 
     const handleActivate = () => {
-      // 标记为非首次加载（确保 isInitialLoad 不再为 true）
-      firstLoadRef.current = false;
-      // 重新激活时恢复 mounted 状态
+      // 恢复 mounted 状态（页面重新可见）
       mountedRef.current = true;
 
-      if (configRef.current.refreshOnActivate) {
+      if (configRef.current.refreshOnActivate && hasLoadedRef.current) {
         fetchData(false);
       }
     };
 
     const handleDeactivate = () => {
-      // 只在非首次加载时才设置 mountedRef 为 false
-      // 首次加载期间不应该被 deactivate 影响
-      if (!firstLoadRef.current) {
+      // 只有在数据已成功加载过后，才允许 deactivate 设置 mountedRef 为 false
+      // 这防止了首次加载期间的竞态条件
+      if (hasLoadedRef.current) {
         mountedRef.current = false;
       }
     };
@@ -108,7 +112,7 @@ export default function useKeepAliveData(fetcher, { key, refreshOnActivate = tru
     data,
     loading,       // 首次加载时为 true
     error,
-    isInitialLoad: firstLoadRef.current && loading,  // 仅首次加载且仍在 loading 时为 true
+    isInitialLoad: !hasLoadedRef.current && loading,  // 尚未成功加载且正在 loading
     isFetching,    // 任何 fetch 进行中为 true
     refresh,
   };

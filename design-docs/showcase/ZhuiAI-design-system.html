@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>追爱AI 设计规范 v2.0</title>
+<style>
+  :root {
+    --gold: #d4a853;
+    --gold-hover: #e3c06b;
+    --gold-active: #bf9530;
+    --gold-pale: rgba(212,168,83,0.12);
+    --gold-glow: rgba(212,168,83,0.22);
+    --rose: #c17f59;
+    --rose-pale: rgba(193,127,89,0.10);
+    --rose-glow: rgba(193,127,89,0.18);
+    --warm-black: #111110;
+    --matte-dark: #1a1a18;
+    --matte-card: #1e1e1b;
+    --warm-white: #f5f0e8;
+    --w08: rgba(245,240,232,0.08);
+    --w15: rgba(245,240,232,0.15);
+    --w20: rgba(245,240,232,0.20);
+    --w40: rgba(245,240,232,0.40);
+    --w60: rgba(245,240,232,0.60);
+    --w80: rgba(245,240,232,0.80);
+    --burgundy: #862b2b;
+    --burgundy-pale: rgba(134,43,43,0.12);
+    --success: #4ade80; --success-pale: rgba(74,222,128,0.10);
+    --warning: #f59e0b; --warning-pale: rgba(245,158,11,0.10);
+    --error: #ef4444; --error-pale: rgba(239,68,68,0.10);
+    --font-heading: 'DM Serif Display', 'Noto Serif SC', 'STSong', serif;
+    --font-body: 'Inter', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    --font-mono: 'JetBrains Mono', 'Consolas', monospace;
+    --radius-xs: 6px; --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px; --radius-xl: 24px;
+    --ease-out: cubic-bezier(0.16,1,0.3,1);
+    --ease-spring: cubic-bezier(0.34,1.56,0.64,1);
+    --ease-in-out: cubic-bezier(0.65,0,0.35,1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--warm-black);
+    color: var(--w80);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* Ambient glow layer */
+  body::before {
+    content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse 70% 50% at 25% 0%, rgba(212,168,83,0.04) 0%, transparent 55%),
+      radial-gradient(ellipse 55% 45% at 75% 90%, rgba(193,127,89,0.03) 0%, transparent 50%),
+      radial-gradient(circle at 50% 50%, rgba(26,26,24,0) 0%, var(--warm-black) 100%);
+  }
+
+  /* ════════════ Ember Particle System ════════════ */
+  .particles-container { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .ember {
+    position: absolute; border-radius: 50%;
+    background: radial-gradient(circle, var(--gold) 0%, transparent 70%);
+    animation: ember-drift linear infinite;
+    will-change: transform, opacity;
+  }
+  @keyframes ember-drift {
+    0%   { transform: translate(0, 0) scale(0); opacity: 0; }
+    5%   { opacity: 0.7; }
+    80%  { opacity: 0.15; }
+    100% { transform: translate(var(--dx), var(--dy)) scale(1.8); opacity: 0; }
+  }
+
+  /* ════════════ Hero ════════════ */
+  .hero {
+    position: relative; z-index: 1;
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center;
+    padding: 80px 32px 100px;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: ''; position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 50% 30%, rgba(212,168,83,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 35% at 50% 70%, rgba(193,127,89,0.04) 0%, transparent 50%);
+  }
+  .hero-line {
+    position: absolute; width: 1px; height: 160px;
+    background: linear-gradient(to bottom, transparent, rgba(212,168,83,0.25), transparent);
+    top: 50%; transform: translateY(-50%); opacity: 0.5;
+  }
+  .hero-line.l { left: 12%; }
+  .hero-line.r { right: 12%; }
+  .hero-chip {
+    display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: 0.25em;
+    color: var(--gold); text-transform: uppercase;
+    border: 1px solid rgba(212,168,83,0.22); border-radius: 9999px;
+    padding: 7px 22px; margin-bottom: 36px; position: relative; z-index: 1;
+    backdrop-filter: blur(12px); background: rgba(212,168,83,0.04);
+    opacity: 0; animation: fadeUp 0.7s var(--ease-out) 0.1s forwards;
+  }
+  .hero h1 {
+    font-family: var(--font-heading); font-size: clamp(44px, 8vw, 80px); font-weight: 700;
+    letter-spacing: 0.03em; color: var(--warm-white); position: relative; z-index: 1;
+    opacity: 0; animation: fadeUp 0.7s var(--ease-out) 0.25s forwards;
+  }
+  .hero h1 .gold { color: var(--gold); }
+  .hero .subtitle {
+    font-size: clamp(15px, 2vw, 19px); color: var(--w60); max-width: 500px;
+    margin-top: 22px; position: relative; z-index: 1; line-height: 1.6;
+    opacity: 0; animation: fadeUp 0.7s var(--ease-out) 0.4s forwards;
+  }
+  .hero .meta {
+    font-size: 12px; color: var(--w40); margin-top: 36px; position: relative; z-index: 1;
+    opacity: 0; animation: fadeUp 0.7s var(--ease-out) 0.55s forwards;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ════════════ Navigation ════════════ */
+  .nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(17,17,16,0.82); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--w08);
+    padding: 0 48px; display: flex; gap: 36px; overflow-x: auto;
+    justify-content: center; opacity: 0;
+    animation: fadeUp 0.6s var(--ease-out) 0.7s forwards;
+  }
+  .nav a {
+    text-decoration: none; color: var(--w40); font-size: 12.5px; font-weight: 500;
+    padding: 15px 0; border-bottom: 2px solid transparent; white-space: nowrap;
+    transition: color 0.25s var(--ease-out), border-color 0.25s var(--ease-out);
+    letter-spacing: 0.04em; position: relative;
+  }
+  .nav a::after {
+    content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%) scaleX(0);
+    width: 100%; height: 2px; background: var(--gold);
+    transition: transform 0.3s var(--ease-spring);
+  }
+  .nav a:hover { color: var(--w80); }
+  .nav a.active { color: var(--gold); font-weight: 600; }
+  .nav a.active::after { transform: translateX(-50%) scaleX(1); }
+
+  /* ════════════ Sections ════════════ */
+  .section { max-width: 1120px; margin: 0 auto; padding: 90px 48px; position: relative; z-index: 1; }
+  .section-header { margin-bottom: 52px; }
+  .section-header .eyebrow {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.18em;
+    color: var(--gold); text-transform: uppercase; margin-bottom: 10px;
+  }
+  .section-header h2 {
+    font-family: var(--font-heading); font-size: clamp(28px, 4vw, 38px); font-weight: 700;
+    color: var(--warm-white); letter-spacing: 0.02em;
+  }
+  .section-header p {
+    font-size: 14px; color: var(--w60); margin-top: 14px; max-width: 560px; line-height: 1.7;
+  }
+
+  hr.divider { max-width: 1120px; margin: 0 auto; border: none; border-top: 1px solid var(--w08); opacity: 0; }
+
+  /* Reveal on scroll */
+  .reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.8s var(--ease-out), transform 0.8s var(--ease-out); }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* ════════════ Color Swatches ════════════ */
+  .color-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .color-swatch {
+    border-radius: var(--radius-md); overflow: hidden; cursor: pointer;
+    border: 1px solid var(--w08); transition: transform 0.35s var(--ease-spring), box-shadow 0.35s var(--ease-out);
+  }
+  .color-swatch:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 12px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,168,83,0.15); }
+  .color-swatch .preview { height: 96px; display: flex; align-items: flex-end; padding: 12px; position: relative; overflow: hidden; }
+  .color-swatch .preview::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.25) 100%);
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .color-swatch:hover .preview::after { opacity: 1; }
+  .color-swatch .preview .label {
+    position: relative; z-index: 1; font-size: 12px; font-weight: 600;
+    letter-spacing: 0.04em; text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+  .color-swatch .info { background: var(--matte-card); padding: 12px 14px; }
+  .color-swatch .info .name { font-size: 13px; font-weight: 600; color: var(--warm-white); }
+  .color-swatch .info .hex  { font-size: 12px; color: var(--w40); font-family: var(--font-mono); margin-top: 3px; }
+
+  /* ════════════ Typography ════════════ */
+  .type-sample {
+    background: var(--matte-card); border-radius: var(--radius-md);
+    padding: 24px 28px; margin-bottom: 10px;
+    display: flex; align-items: baseline; gap: 28px;
+    border: 1px solid var(--w08);
+    transition: border-color 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
+  }
+  .type-sample:hover { border-color: rgba(212,168,83,0.15); box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+  .type-sample .spec { min-width: 170px; }
+  .type-sample .spec label {
+    display: block; font-size: 10px; color: var(--gold); letter-spacing: 0.12em;
+    text-transform: uppercase; margin-bottom: 4px;
+  }
+  .type-sample .spec .detail { font-size: 12px; color: var(--w40); font-family: var(--font-mono); }
+  .type-sample .preview { flex: 1; }
+
+  /* ════════════ Spacing ════════════ */
+  .space-demo { display: grid; grid-template-columns: 1fr 1fr; gap: 52px; }
+  .space-row { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+  .space-row .bar {
+    height: 18px; border-radius: 3px;
+    background: linear-gradient(90deg, var(--gold), rgba(212,168,83,0.3));
+    transition: width 0.5s var(--ease-spring), opacity 0.3s;
+  }
+  .space-row:hover .bar { opacity: 1 !important; }
+  .space-row .tok { font-size: 12px; font-family: var(--font-mono); color: var(--w60); min-width: 90px; }
+  .space-row .val { font-size: 12px; color: var(--w40); min-width: 42px; }
+
+  /* ════════════ Buttons ════════════ */
+  .btn-row { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 24px; }
+  .btn {
+    font-family: var(--font-body); font-size: 14px; font-weight: 500;
+    padding: 11px 26px; border-radius: var(--radius-sm); cursor: pointer;
+    border: none; transition: all 0.25s var(--ease-out); letter-spacing: 0.02em;
+    position: relative; overflow: hidden;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--gold), #bf9530);
+    color: #111110; font-weight: 600;
+  }
+  .btn-primary:hover {
+    background: linear-gradient(135deg, var(--gold-hover), var(--gold));
+    box-shadow: 0 0 28px var(--gold-glow), 0 4px 16px rgba(0,0,0,0.4);
+    transform: translateY(-1px);
+  }
+  .btn-secondary {
+    background: transparent; color: var(--w80); border: 1px solid var(--w15);
+  }
+  .btn-secondary:hover { border-color: var(--gold); color: var(--gold); transform: translateY(-1px); }
+  .btn-ghost { background: transparent; color: var(--gold); }
+  .btn-ghost:hover { background: var(--gold-pale); }
+  .btn-danger { background: var(--burgundy); color: #f5f0e8; }
+  .btn-danger:hover { background: #9b3232; }
+  .btn-sm { font-size: 12px; padding: 6px 16px; }
+  .btn-lg { font-size: 16px; padding: 14px 34px; }
+
+  /* Ripple */
+  .btn .ripple {
+    position: absolute; border-radius: 50%; pointer-events: none;
+    background: rgba(255,255,255,0.35);
+    animation: ripple-burst 0.7s ease-out forwards;
+  }
+  @keyframes ripple-burst {
+    from { width: 0; height: 0; opacity: 0.6; }
+    to   { width: 280px; height: 280px; margin-top: -140px; margin-left: -140px; opacity: 0; }
+  }
+
+  .btn-col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .btn-label { font-size: 11px; color: var(--w40); }
+
+  /* ════════════ Input ════════════ */
+  .input-demo { display: flex; flex-direction: column; gap: 12px; max-width: 440px; }
+  .input {
+    font-family: var(--font-body); font-size: 14px; padding: 11px 15px;
+    background: rgba(255,255,255,0.025); border: 1px solid var(--w08);
+    border-radius: var(--radius-sm); color: var(--warm-white);
+    outline: none; transition: border-color 0.25s var(--ease-out), box-shadow 0.25s var(--ease-out), background 0.25s var(--ease-out);
+  }
+  .input::placeholder { color: var(--w20); }
+  .input:hover { border-color: var(--w20); background: rgba(255,255,255,0.04); }
+  .input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-pale); background: rgba(255,255,255,0.05); }
+  .input.error { border-color: var(--error); box-shadow: 0 0 0 3px var(--error-pale); background: var(--error-pale); }
+  .input:disabled { background: rgba(255,255,255,0.01); color: var(--w20); cursor: not-allowed; }
+
+  /* ════════════ Card ════════════ */
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; }
+  .card {
+    background: var(--matte-card); border-radius: var(--radius-lg);
+    padding: 28px 30px; border: 1px solid var(--w08);
+    transition: all 0.4s var(--ease-out);
+    position: relative; overflow: hidden;
+  }
+  .card::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(circle at 50% 0%, rgba(212,168,83,0.05), transparent 70%);
+    opacity: 0; transition: opacity 0.4s var(--ease-out);
+  }
+  .card:hover { border-color: rgba(212,168,83,0.18); transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 40px var(--gold-glow); }
+  .card:hover::before { opacity: 1; }
+  .card h4 { font-family: var(--font-heading); font-size: 18px; font-weight: 600; color: var(--warm-white); margin-bottom: 8px; position: relative; z-index: 1; }
+  .card p  { font-size: 13.5px; color: var(--w60); line-height: 1.7; position: relative; z-index: 1; }
+
+  /* ════════════ Badge ════════════ */
+  .badge-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11.5px; font-weight: 500; padding: 3px 12px; border-radius: 9999px;
+    transition: transform 0.2s var(--ease-spring);
+  }
+  .badge:hover { transform: scale(1.05); }
+  .badge-gold { background: var(--gold-pale); color: var(--gold); border: 1px solid rgba(212,168,83,0.15); }
+  .badge-rose { background: var(--rose-pale); color: var(--rose); border: 1px solid rgba(193,127,89,0.15); }
+  .badge-neutral { background: var(--w08); color: var(--w60); }
+  .badge-success { background: var(--success-pale); color: var(--success); }
+  .badge-warning { background: var(--warning-pale); color: var(--warning); }
+
+  /* ════════════ Tiers ════════════ */
+  .tier-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px; }
+  .tier-card {
+    background: var(--matte-card); border-radius: var(--radius-lg);
+    padding: 32px 28px; border: 1px solid var(--w08);
+    text-align: center; position: relative; overflow: hidden;
+    transition: transform 0.4s var(--ease-spring), border-color 0.4s var(--ease-out), box-shadow 0.4s var(--ease-out);
+  }
+  .tier-card:hover { transform: translateY(-6px); }
+  .tier-card.premium { border-color: rgba(212,168,83,0.3); }
+  .tier-card.premium::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--gold), var(--rose), var(--gold));
+    background-size: 200% 100%; animation: tier-shine 3s linear infinite;
+  }
+  @keyframes tier-shine {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  .tier-card:hover { box-shadow: 0 16px 48px rgba(0,0,0,0.5); }
+  .tier-card.premium:hover { box-shadow: 0 16px 48px rgba(0,0,0,0.5), 0 0 48px var(--gold-glow); }
+  .tier-card .tier-name { font-family: var(--font-heading); font-size: 20px; color: var(--warm-white); margin-bottom: 4px; }
+  .tier-card .tier-price { font-size: 38px; font-weight: 700; color: var(--warm-white); font-family: var(--font-heading); }
+  .tier-card .tier-price span { font-size: 14px; color: var(--w40); font-weight: 400; }
+  .tier-card.premium .tier-price { color: var(--gold); }
+  .tier-feature { font-size: 13px; color: var(--w60); padding: 7px 0; }
+
+  /* ════════════ Tab Bar ════════════ */
+  .tab-bar-demo {
+    display: flex; justify-content: space-around;
+    background: rgba(17,17,16,0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--w08); padding: 10px 0 14px;
+    max-width: 420px; margin: 0 auto; border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  }
+  .tab-item {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    font-size: 10px; color: var(--w40); cursor: pointer;
+    padding: 6px 14px; border-radius: var(--radius-sm); transition: all 0.25s var(--ease-out);
+  }
+  .tab-item:hover { color: var(--w60); }
+  .tab-item.active { color: var(--gold); }
+  .tab-icon {
+    width: 24px; height: 24px; border-radius: 6px;
+    background: var(--w08); display: flex; align-items: center; justify-content: center;
+    font-size: 13px; transition: all 0.3s var(--ease-out);
+  }
+  .tab-item.active .tab-icon { background: var(--gold-pale); box-shadow: 0 0 12px var(--gold-glow); }
+
+  /* ════════════ Motion Demo ════════════ */
+  .motion-stage {
+    background: var(--matte-card); border-radius: var(--radius-lg); padding: 48px;
+    border: 1px solid var(--w08); display: flex; gap: 40px; align-items: center;
+    justify-content: center; flex-wrap: wrap; margin-bottom: 28px;
+    position: relative; overflow: hidden;
+  }
+
+  /* Golden Pulse */
+  .golden-core {
+    width: 72px; height: 72px; border-radius: 50%; position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .golden-core .center {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: radial-gradient(circle at 40% 40%, var(--gold-hover), var(--gold));
+    box-shadow: 0 0 36px var(--gold-glow);
+    z-index: 2; position: relative;
+    animation: core-breathe 3.2s ease-in-out infinite;
+  }
+  .golden-core .ring {
+    position: absolute; border-radius: 50%; border: 1px solid rgba(212,168,83,0.2);
+    animation: ring-expand 3.2s ease-out infinite;
+  }
+  .golden-core .ring:nth-child(2) { animation-delay: 0s; width: 56px; height: 56px; top: 8px; left: 8px; }
+  .golden-core .ring:nth-child(3) { animation-delay: 0.8s; width: 56px; height: 56px; top: 8px; left: 8px; }
+  .golden-core .ring:nth-child(4) { animation-delay: 1.6s; width: 56px; height: 56px; top: 8px; left: 8px; }
+  @keyframes core-breathe {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 36px var(--gold-glow); }
+    50% { transform: scale(1.1); box-shadow: 0 0 56px var(--gold-glow); }
+  }
+  @keyframes ring-expand {
+    0% { transform: scale(0.8); opacity: 0.5; }
+    100% { transform: scale(3.5); opacity: 0; }
+  }
+
+  /* Skeleton */
+  .skeleton-demo { display: flex; flex-direction: column; gap: 10px; width: 240px; }
+  .skeleton-line {
+    height: 14px; border-radius: 4px;
+    background: linear-gradient(90deg, #252522 0%, #353530 40%, #252522 70%);
+    background-size: 400px 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+  .skeleton-line:first-child { width: 50%; height: 18px; }
+  .skeleton-line:nth-child(2) { width: 100%; }
+  .skeleton-line:nth-child(3) { width: 78%; }
+  .skeleton-line:nth-child(4) { width: 42%; }
+  .skeleton-avatar {
+    width: 44px; height: 44px; border-radius: 50%; margin-bottom: 8px;
+    background: linear-gradient(90deg, #252522 0%, #353530 40%, #252522 70%);
+    background-size: 400px 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+  @keyframes shimmer {
+    0% { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+  }
+
+  /* Staggered Cards */
+  .stagger-grid { display: flex; gap: 16px; flex-wrap: wrap; }
+  .stagger-card {
+    width: 160px; height: 100px; background: var(--matte-card);
+    border-radius: var(--radius-md); border: 1px solid var(--w08);
+    opacity: 0;
+    transition: opacity 0.55s var(--ease-out), transform 0.55s var(--ease-out);
+    transform: translateY(24px);
+  }
+  .stagger-card.show {
+    opacity: 1; transform: translateY(0);
+  }
+
+  /* Toast Demo */
+  .toast-demo { display: flex; flex-direction: column; gap: 10px; max-width: 420px; }
+  .toast {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 18px; border-radius: var(--radius-sm); font-size: 13px;
+  }
+  .toast-success { background: var(--success-pale); border: 1px solid rgba(74,222,128,0.15); color: var(--success); }
+  .toast-error   { background: var(--error-pale); border: 1px solid rgba(239,68,68,0.15); color: var(--error); }
+  .toast-warning { background: var(--warning-pale); border: 1px solid rgba(245,158,11,0.15); color: var(--warning); }
+  .toast-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: currentColor; }
+
+  /* Motion Table */
+  .motion-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .motion-table th {
+    text-align: left; padding: 14px 18px; color: var(--gold);
+    font-weight: 600; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    border-bottom: 2px solid var(--w08);
+  }
+  .motion-table td { padding: 14px 18px; border-bottom: 1px solid var(--w08); color: var(--w60); }
+  .motion-table tr { transition: background 0.25s var(--ease-out); }
+  .motion-table tr:hover td { background: var(--w08); }
+
+  /* ════════════ Phone Mockups ════════════ */
+  .mockup-row { display: flex; gap: 36px; justify-content: center; flex-wrap: wrap; }
+  .mockup-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .mobile-mockup {
+    width: 375px; background: var(--warm-black); border-radius: 36px;
+    border: 2px solid #2a2a26; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 80px rgba(0,0,0,0.3);
+    position: relative; transition: transform 0.5s var(--ease-spring), box-shadow 0.5s var(--ease-out);
+  }
+  .mobile-mockup:hover { transform: translateY(-8px); box-shadow: 0 28px 72px rgba(0,0,0,0.7), 0 0 100px var(--gold-glow); }
+  .mockup-status-bar {
+    height: 32px; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px; font-size: 11px; color: var(--w60); background: #111110;
+  }
+  .mockup-body { padding: 20px 18px 18px; position: relative; }
+  .mockup-label {
+    text-align: center; font-size: 12px; color: var(--w40); letter-spacing: 0.04em; font-weight: 500;
+  }
+  .mockup-logo {
+    width: 48px; height: 48px; border-radius: 14px;
+    background: linear-gradient(135deg, var(--gold), var(--rose));
+    margin: 0 auto 18px; display: flex; align-items: center; justify-content: center;
+    font-size: 20px; box-shadow: 0 0 28px var(--gold-glow);
+    animation: core-breathe 3.2s ease-in-out infinite;
+  }
+  .mockup-input {
+    width: 100%; padding: 11px 15px; margin-bottom: 10px;
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: var(--radius-sm); color: var(--warm-white);
+    font-family: var(--font-body); font-size: 13px; outline: none;
+  }
+  .mockup-btn {
+    width: 100%; padding: 13px;
+    background: linear-gradient(135deg, var(--gold), #bf9530);
+    color: #111110; border: none; border-radius: var(--radius-sm);
+    font-weight: 600; font-size: 14px; cursor: pointer; font-family: var(--font-body);
+    transition: box-shadow 0.3s var(--ease-out);
+  }
+  .mockup-btn:hover { box-shadow: 0 0 24px var(--gold-glow); }
+  .mockup-card {
+    background: var(--matte-card); border-radius: var(--radius-md);
+    padding: 14px; border: 1px solid var(--w08); margin-bottom: 10px;
+  }
+
+  /* ════════════ Footer ════════════ */
+  .footer {
+    background: var(--matte-dark); text-align: center; padding: 48px;
+    border-top: 1px solid var(--w08); position: relative; z-index: 1;
+  }
+  .footer .label { font-size: 12px; color: var(--w40); line-height: 1.8; }
+  .footer .label strong { color: var(--gold); }
+
+  /* ════════════ Responsive ════════════ */
+  @media (max-width: 1024px) {
+    .hero { min-height: 80vh; padding: 60px 28px 80px; }
+    .section { padding: 60px 28px; }
+    .nav { padding: 0 24px; gap: 24px; justify-content: flex-start; }
+    .space-demo { grid-template-columns: 1fr; gap: 32px; }
+    .hero-line { display: none; }
+    .mockup-row { gap: 32px; }
+  }
+  @media (max-width: 768px) {
+    .hero { min-height: 70vh; padding: 48px 20px 60px; }
+    .section { padding: 48px 20px; }
+    .section-header h2 { font-size: 26px; }
+    .nav { padding: 0 16px; gap: 18px; }
+    .nav a { font-size: 11px; }
+    .mobile-mockup { max-width: 100%; }
+    .card-grid { grid-template-columns: 1fr; }
+    .color-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+    .type-sample { flex-direction: column; gap: 8px; padding: 18px; }
+    .motion-stage { padding: 32px 20px; gap: 24px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  }
+  :focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ════════════ Floating Embers ════════════ -->
+<div class="particles-container" id="particles"></div>
+
+<!-- ════════════ HERO ════════════ -->
+<section class="hero">
+  <div class="hero-line l"></div><div class="hero-line r"></div>
+  <div class="hero-chip">Modern Gentleman · Design System v2.0</div>
+  <h1>追爱 <span class="gold">AI</span></h1>
+  <p class="subtitle">现代绅士风 · 暗色情感设计语言 · 移动优先<br>为 20-50 岁有求偶需求的男性建立追爱体系</p>
+  <div class="meta">2026-05-02 · 视觉设计规范 &amp; 品牌指南</div>
+</section>
+
+<!-- ════════════ NAV ════════════ -->
+<nav class="nav" role="navigation" aria-label="设计规范目录">
+  <a href="#philosophy">设计理念</a>
+  <a href="#colors">色彩</a>
+  <a href="#typography">字体</a>
+  <a href="#spacing">间距</a>
+  <a href="#tiers">会员</a>
+  <a href="#components">组件</a>
+  <a href="#templates">页面</a>
+  <a href="#motion">动效</a>
+</nav>
+
+<!-- ════════════ PHILOSOPHY ════════════ -->
+<div class="section reveal" id="philosophy">
+  <div class="section-header">
+    <div class="eyebrow">Design Philosophy</div>
+    <h2>设计理念</h2>
+    <p>「现代绅士」品牌人格 — 自信、干净、有温度的科技。不油腻、不廉价、不冷峻。暗色琥珀金体系，跨代际无争议的高级感。</p>
+  </div>
+  <div class="card-grid">
+    <div class="card"><h4>绅士温度</h4><p>琥珀金主色而非冷青。金色潜意识里是"值得信赖的成熟男性"——20岁觉得有品味，50岁觉得稳重可靠。</p></div>
+    <div class="card"><h4>暗色克制</h4><p>暖黑底色 + 哑光卡片。不做花哨渐变、不过度装饰。让用户聚焦于"人"本身——女生资料、聊天、约会。</p></div>
+    <div class="card"><h4>移动原生</h4><p>底部Tab导航、卡片流、拇指友好热区。目标用户在手机上使用这款私密服务，桌面为辅助场景。</p></div>
+    <div class="card"><h4>建立信心</h4><p>每像素传达"这个产品靠谱"。不卖焦虑、不搞PUA。视觉语言像一位靠谱的男性朋友——真诚、有品、不吹嘘。</p></div>
+    <div class="card"><h4>情感链接</h4><p>玫瑰铜作为情感色——约会标记、心动提示。与琥珀金形成冷暖双色体系，让产品有叙事层次。</p></div>
+    <div class="card"><h4>渐进披露</h4><p>首页展示核心入口，深度功能逐层展开。不让新用户面对过多选项，降低认知负荷。</p></div>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:20px;">
+    <span class="badge badge-gold">绅士温度</span><span class="badge badge-rose">情感链接</span><span class="badge badge-neutral">暗色克制</span><span class="badge badge-gold">信任感</span><span class="badge badge-rose">移动原生</span><span class="badge badge-neutral">渐进披露</span>
+  </div>
+</div>
+
+<hr class="divider reveal">
+
+<!-- ════════════ COLORS ════════════ -->
+<div class="section reveal" id="colors">
+  <div class="section-header">
+    <div class="eyebrow">Color System</div>
+    <h2>色彩系统</h2>
+    <p>主色「琥珀金」#d4a853 — 中性高级金色，跨代际无争议。情感色「玫瑰铜」#c17f59 用于约会/心动标记。底色为暖黑 #111110 而非纯黑，消除数码冷感。</p>
+  </div>
+  <h3 style="font-size:16px;font-weight:600;color:var(--warm-white);margin-bottom:16px;">品牌色</h3>
+  <div class="color-grid" style="margin-bottom:44px;">
+    <div class="color-swatch"><div class="preview" style="background:#d4a853"><span class="label" style="color:#111">Primary</span></div><div class="info"><div class="name">琥珀金</div><div class="hex">#d4a853</div></div></div>
+    <div class="color-swatch"><div class="preview" style="background:#e3c06b"><span class="label" style="color:#111">Hover</span></div><div class="info"><div class="name">琥珀金悬停</div><div class="hex">#e3c06b</div></div></div>
+    <div class="color-swatch"><div class="preview" style="background:#bf9530"><span class="label" style="color:#111">Active</span></div><div class="info"><div class="name">琥珀金按下</div><div class="hex">#bf9530</div></div></div>
+    <div class="color-swatch"><div class="preview" style="background:#c17f59"><span class="label">Rose</span></div><div class="info"><div class="name">玫瑰铜</div><div class="hex">#c17f59</div></div></div>
+  </div>
+  <h3 style="font-size:16px;font-weight:600;color:var(--warm-white);margin-bottom:16px;">中性底色 &amp; 文字层级</h3>
+  <div class="color-grid" style="margin-bottom:44px;">
+    <div class="color-swatch"><div class="preview" style="background:#111110"><span class="label">Page BG</span></div><div class="info"><div class="name">暖黑底</div><div class="hex">#111110</div></div></div>
+    <div class="color-swatch"><div class="preview" style="background:#1a1a18"><span class="label">Card</span></div><div class="info"><div class="name">哑光深灰</div><div class="hex">#1a1a18</div></div></div>
+    <div class="color-swatch"><div class="preview" style="background:#1e1e1b"><span class="label">Hover</span></div><div class="info"><div class="name">哑光卡片</div><div class="hex">#1e1e1b</div></div></div>
+    <div class="color-swatch"><div class="preview" style="background:#f5f0e8"><span class="label" style="color:#111">Text</span></div><div class="info"><div class="name">暖白正文</div><div class="hex">#f5f0e8</div></div></div>
+    <div class="color-swatch"><div class="preview" style="background:rgba(245,240,232,0.8)"><span class="label" style="color:#111">80%</span></div><div class="info"><div class="name">主文字</div><div class="hex">rgba(245,240,232,0.8)</div></div></div>
+    <div class="color-swatch"><div class="preview" style="background:var(--matte-card)"><span class="label">40%</span></div><div class="info"><div class="name">辅助文字</div><div class="hex">rgba(245,240,232,0.4)</div></div></div>
+    <div class="color-swatch"><div class="preview" style="background:rgba(245,240,232,0.08)"><span class="label">08% Border</span></div><div class="info"><div class="name">边框</div><div class="hex">rgba(245,240,232,0.08)</div></div></div>
+  </div>
+  <h3 style="font-size:16px;font-weight:600;color:var(--warm-white);margin-bottom:16px;">功能色</h3>
+  <div class="color-grid">
+    <div class="color-swatch"><div class="preview" style="background:#4ade80"><span class="label" style="color:#111">Success</span></div><div class="info"><div class="name">成功</div><div class="hex">#4ade80</div></div></div>
+    <div class="color-swatch"><div class="preview" style="background:#f59e0b"><span class="label" style="color:#111">Warning</span></div><div class="info"><div class="name">警告</div><div class="hex">#f59e0b</div></div></div>
+    <div class="color-swatch"><div class="preview" style="background:#ef4444"><span class="label">Error</span></div><div class="info"><div class="name">错误</div><div class="hex">#ef4444</div></div></div>
+    <div class="color-swatch"><div class="preview" style="background:#862b2b"><span class="label">Danger</span></div><div class="info"><div class="name">勃艮第红</div><div class="hex">#862b2b</div></div></div>
+  </div>
+</div>
+
+<hr class="divider reveal">
+
+<!-- ════════════ TYPOGRAPHY ════════════ -->
+<div class="section reveal" id="typography">
+  <div class="section-header">
+    <div class="eyebrow">Typography</div>
+    <h2>字体排版</h2>
+    <p>标题用衬线体传递身份感和品味，正文用无衬线保证可读性。中文优先思源宋体 / Noto Sans SC，英文 DM Serif Display / Inter。6 级字号体系。</p>
+  </div>
+  <div class="type-sample"><div class="spec"><label>Display · 品牌标题</label><span class="detail">36px / 700 / 1.2</span></div><div class="preview" style="font-family:var(--font-heading);font-size:36px;font-weight:700;color:var(--warm-white);line-height:1.2;">建立你的追爱体系</div></div>
+  <div class="type-sample"><div class="spec"><label>H1 · 页面标题</label><span class="detail">28px / 700 / 1.3</span></div><div class="preview" style="font-family:var(--font-heading);font-size:28px;font-weight:700;color:var(--warm-white);line-height:1.3;">缘分池 · 50+女生</div></div>
+  <div class="type-sample"><div class="spec"><label>H2 · 区块标题</label><span class="detail">22px / 600 / 1.35</span></div><div class="preview" style="font-family:var(--font-heading);font-size:22px;font-weight:600;color:var(--warm-white);line-height:1.35;">AI教练为你定制个性化方案</div></div>
+  <div class="type-sample"><div class="spec"><label>H3 · 卡片标题</label><span class="detail">18px / 600 / 1.4</span></div><div class="preview" style="font-family:var(--font-heading);font-size:18px;font-weight:600;color:var(--warm-white);line-height:1.4;">约会确认 · 周末方案</div></div>
+  <div class="type-sample"><div class="spec"><label>Body · 正文</label><span class="detail">15px / 400 / 1.65</span></div><div class="preview" style="font-family:var(--font-body);font-size:15px;font-weight:400;color:var(--w80);line-height:1.65;">基于你的偏好和性格特征，AI将推荐最匹配的约会对象，并生成个性化沟通策略与话术建议。</div></div>
+  <div class="type-sample"><div class="spec"><label>Caption · 辅助</label><span class="detail">12px / 400 / 1.5</span></div><div class="preview" style="font-family:var(--font-body);font-size:12px;font-weight:400;color:var(--w40);line-height:1.5;">已匹配 24 位 · 最近活跃：3小时前 · 契合度 92%</div></div>
+</div>
+
+<hr class="divider reveal">
+
+<!-- ════════════ SPACING ════════════ -->
+<div class="section reveal" id="spacing">
+  <div class="section-header">
+    <div class="eyebrow">Spacing &amp; Radius &amp; Shadows</div>
+    <h2>间距 · 圆角 · 阴影</h2>
+    <p>基于 4px 格点系统。圆角偏大 (8-24px) 柔化暗色界面的硬度。阴影始终带暖金微光，避免纯黑阴影的生硬感。</p>
+  </div>
+  <div class="space-demo">
+    <div>
+      <h3 style="font-size:15px;font-weight:600;color:var(--warm-white);margin-bottom:16px;">间距令牌</h3>
+      <div class="space-row"><span class="tok">space-xs</span><span class="val">4px</span><div class="bar" style="width:4px;opacity:0.2"></div></div>
+      <div class="space-row"><span class="tok">space-sm</span><span class="val">8px</span><div class="bar" style="width:8px;opacity:0.25"></div></div>
+      <div class="space-row"><span class="tok">space-md</span><span class="val">16px</span><div class="bar" style="width:16px;opacity:0.3"></div></div>
+      <div class="space-row"><span class="tok">space-lg</span><span class="val">24px</span><div class="bar" style="width:24px;opacity:0.4"></div></div>
+      <div class="space-row"><span class="tok">space-xl</span><span class="val">32px</span><div class="bar" style="width:32px;opacity:0.5"></div></div>
+      <div class="space-row"><span class="tok">space-2xl</span><span class="val">48px</span><div class="bar" style="width:48px;opacity:0.6"></div></div>
+      <div class="space-row"><span class="tok">space-3xl</span><span class="val">72px</span><div class="bar" style="width:72px;opacity:0.7"></div></div>
+    </div>
+    <div>
+      <h3 style="font-size:15px;font-weight:600;color:var(--warm-white);margin-bottom:16px;">圆角</h3>
+      <div style="display:flex;flex-direction:column;gap:12px;font-size:13px;">
+        <div style="display:flex;align-items:center;gap:12px;"><span style="min-width:85px;color:var(--w60)">radius-xs</span><div style="width:56px;height:28px;background:var(--gold-pale);border-radius:6px"></div><span style="color:var(--w40);font-family:var(--font-mono);font-size:11px">6px</span></div>
+        <div style="display:flex;align-items:center;gap:12px;"><span style="min-width:85px;color:var(--w60)">radius-sm</span><div style="width:56px;height:28px;background:var(--gold);border-radius:8px;opacity:0.45"></div><span style="color:var(--w40);font-family:var(--font-mono);font-size:11px">8px</span></div>
+        <div style="display:flex;align-items:center;gap:12px;"><span style="min-width:85px;color:var(--w60)">radius-md</span><div style="width:56px;height:28px;background:var(--gold);border-radius:12px;opacity:0.65"></div><span style="color:var(--w40);font-family:var(--font-mono);font-size:11px">12px</span></div>
+        <div style="display:flex;align-items:center;gap:12px;"><span style="min-width:85px;color:var(--w60)">radius-lg</span><div style="width:56px;height:28px;background:var(--gold);border-radius:16px;opacity:0.85"></div><span style="color:var(--w40);font-family:var(--font-mono);font-size:11px">16px</span></div>
+        <div style="display:flex;align-items:center;gap:12px;"><span style="min-width:85px;color:var(--w60)">radius-xl</span><div style="width:56px;height:28px;background:var(--gold);border-radius:24px"></div><span style="color:var(--w40);font-family:var(--font-mono);font-size:11px">24px</span></div>
+      </div>
+      <h3 style="font-size:15px;font-weight:600;color:var(--warm-white);margin:24px 0 12px;">阴影</h3>
+      <div style="display:flex;flex-direction:column;gap:10px;font-size:13px;">
+        <div style="display:flex;align-items:center;gap:12px;"><span style="min-width:100px;color:var(--w60)">card</span><div style="width:56px;height:28px;background:var(--matte-card);border-radius:8px;box-shadow:0 4px 24px rgba(0,0,0,0.4)"></div></div>
+        <div style="display:flex;align-items:center;gap:12px;"><span style="min-width:100px;color:var(--w60)">elevated</span><div style="width:56px;height:28px;background:var(--matte-card);border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,0.5)"></div></div>
+        <div style="display:flex;align-items:center;gap:12px;"><span style="min-width:100px;color:var(--w60)">glow-amber</span><div style="width:56px;height:28px;background:var(--matte-card);border-radius:8px;box-shadow:0 0 24px var(--gold-glow);border:1px solid rgba(212,168,83,0.15)"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider reveal">
+
+<!-- ════════════ TIERS ════════════ -->
+<div class="section reveal" id="tiers">
+  <div class="section-header">
+    <div class="eyebrow">Membership Tiers</div>
+    <h2>会员体系视觉</h2>
+    <p>三档会员通过色彩层级传递价值递进。高端会员有专属金色渐变流光边框。铜→银→金的视觉递进，锚定用户向上付费。</p>
+  </div>
+  <div class="tier-grid">
+    <div class="tier-card"><div class="tier-name">普惠月付</div><div class="tier-price">999<span> 元/月</span></div><div style="margin:18px 0;"><div class="tier-feature">全功能AI教练</div><div class="tier-feature">约会方案生成</div><div class="tier-feature">学习中心</div><div class="tier-feature">缘分管理</div></div><span class="badge badge-neutral">入门之选</span></div>
+    <div class="tier-card"><div class="tier-name">普惠年付</div><div class="tier-price">8,888<span> 元/年</span></div><div style="margin:18px 0;"><div class="tier-feature">月付全部功能</div><div class="tier-feature">年付专属优惠</div><div class="tier-feature">约 741 元/月</div></div><span class="badge badge-gold">推荐</span></div>
+    <div class="tier-card premium"><div class="tier-name">高端会员</div><div class="tier-price">50,000<span> 元/年</span></div><div style="margin:18px 0;"><div class="tier-feature">全部功能</div><div class="tier-feature">优先人工顾问</div><div class="tier-feature">专属定制服务</div><div class="tier-feature">50+女生池子</div><div class="tier-feature">每月2-3次约会</div></div><span class="badge badge-gold">最高端</span></div>
+  </div>
+</div>
+
+<hr class="divider reveal">
+
+<!-- ════════════ COMPONENTS ════════════ -->
+<div class="section reveal" id="components">
+  <div class="section-header">
+    <div class="eyebrow">Components</div>
+    <h2>组件库</h2>
+    <p>React + Chakra UI 实现。按钮 5 变体、输入框 4 状态、标签 5 类型、移动端底部Tab导航、通知提示。</p>
+  </div>
+
+  <h3 style="font-size:16px;font-weight:600;color:var(--warm-white);margin-bottom:16px;">按钮变体</h3>
+  <div class="btn-row">
+    <div class="btn-col"><button class="btn btn-primary" onclick="createRipple(event)">主要操作</button><span class="btn-label">Primary</span></div>
+    <div class="btn-col"><button class="btn btn-secondary">次要操作</button><span class="btn-label">Secondary</span></div>
+    <div class="btn-col"><button class="btn btn-ghost">文字按钮</button><span class="btn-label">Ghost</span></div>
+    <div class="btn-col"><button class="btn btn-danger">危险操作</button><span class="btn-label">Danger</span></div>
+    <div class="btn-col"><button class="btn btn-primary btn-sm">小号按钮</button><span class="btn-label">Small</span></div>
+    <div class="btn-col"><button class="btn btn-primary btn-lg">大号按钮</button><span class="btn-label">Large</span></div>
+  </div>
+
+  <h3 style="font-size:16px;font-weight:600;color:var(--warm-white);margin:32px 0 16px;">状态标签</h3>
+  <div class="badge-row"><span class="badge badge-gold">高端会员</span><span class="badge badge-rose">暧昧中</span><span class="badge badge-neutral">待入职</span><span class="badge badge-success">约会确认</span><span class="badge badge-warning">待跟进</span></div>
+
+  <h3 style="font-size:16px;font-weight:600;color:var(--warm-white);margin:32px 0 16px;">输入框</h3>
+  <div class="input-demo">
+    <input class="input" type="text" placeholder="默认状态 · 请输入昵称" />
+    <input class="input" type="text" value="聚焦态 · 边框琥珀金 + 辉光" style="border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-pale)" />
+    <input class="input error" type="text" value="错误态 · 红色边框 + 淡红底" />
+    <input class="input" type="text" placeholder="禁用态 · 无法编辑" disabled />
+  </div>
+
+  <h3 style="font-size:16px;font-weight:600;color:var(--warm-white);margin:32px 0 16px;">卡片</h3>
+  <div class="card-grid">
+    <div class="card"><span class="badge badge-rose" style="margin-bottom:10px">新匹配</span><h4>小艺 · 26岁</h4><p>互联网运营 · 兴趣: 摄影、旅行、咖啡。最近动态：上周末去了莫干山民宿，拍了一组胶片。</p><div style="font-size:11px;color:var(--w40);margin-top:12px;">匹配于 2026-04-28 · 契合度 92%</div></div>
+    <div class="card"><span class="badge badge-gold" style="margin-bottom:10px">约会中</span><h4>周末约会方案</h4><p>AI推荐：周六下午 · 麓湖漂浮茶馆 · 安静私密 · 预估 600-800元 · 傍晚光线好可帮她拍照。</p><div style="font-size:11px;color:var(--w40);margin-top:12px;">方案生成于 2小时前 · 可调整</div></div>
+  </div>
+
+  <h3 style="font-size:16px;font-weight:600;color:var(--warm-white);margin:32px 0 16px;">底部Tab导航</h3>
+  <div class="tab-bar-demo">
+    <div class="tab-item"><div class="tab-icon">💬</div>Mo哥</div>
+    <div class="tab-item"><div class="tab-icon">✨</div>AI</div>
+    <div class="tab-item active"><div class="tab-icon">🐟</div>缘分</div>
+    <div class="tab-item"><div class="tab-icon">📅</div>约会</div>
+    <div class="tab-item"><div class="tab-icon">📖</div>学习</div>
+    <div class="tab-item"><div class="tab-icon">👤</div>我的</div>
+  </div>
+</div>
+
+<hr class="divider reveal">
+
+<!-- ════════════ PAGE TEMPLATES ════════════ -->
+<div class="section reveal" id="templates">
+  <div class="section-header">
+    <div class="eyebrow">Page Templates</div>
+    <h2>核心页面模板</h2>
+    <p>移动端高保真线框。暖黑底 + 琥珀金点缀 + 哑光卡片。每个页面都经过暗色对比度验证。</p>
+  </div>
+
+  <div class="mockup-row">
+    <!-- 登录 -->
+    <div class="mockup-wrap">
+      <div class="mobile-mockup" style="position:relative;overflow:hidden;">
+        <div style="position:absolute;bottom:60px;right:20px;width:90px;height:90px;border-radius:50%;background:radial-gradient(circle,rgba(212,168,83,0.08),transparent 70%);pointer-events:none;"></div>
+        <div class="mockup-status-bar"><span>9:41</span><span>📶 🔋</span></div>
+        <div class="mockup-body" style="display:flex;flex-direction:column;align-items:center;padding-top:40px;">
+          <div class="mockup-logo">💕</div>
+          <div style="font-family:var(--font-heading);font-size:26px;color:var(--warm-white);margin-bottom:2px;">zhui ai</div>
+          <div style="font-size:10px;color:var(--w40);letter-spacing:0.22em;margin-bottom:36px;">PURSUE LOVE</div>
+          <div style="width:100%;background:rgba(26,26,24,0.7);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:var(--radius-lg);padding:24px;border:1px solid var(--w08);">
+            <input class="mockup-input" type="text" placeholder="用户名" />
+            <input class="mockup-input" type="password" placeholder="密码" />
+            <button class="mockup-btn" style="margin-top:6px;">登录</button>
+            <div style="text-align:center;margin-top:12px;font-size:10px;color:var(--w20);">账号请联系管理员创建</div>
+          </div>
+        </div>
+      </div>
+      <span class="mockup-label">登录页</span>
+    </div>
+
+    <!-- 首页 -->
+    <div class="mockup-wrap">
+      <div class="mobile-mockup">
+        <div class="mockup-status-bar"><span>9:41</span><span>📶 🔋</span></div>
+        <div class="mockup-body">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px;">
+            <div>
+              <div style="font-size:10px;color:var(--gold);letter-spacing:0.12em;margin-bottom:4px;">高端会员</div>
+              <div style="font-family:var(--font-heading);font-size:22px;color:var(--warm-white);">欢迎回来</div>
+            </div>
+            <div style="width:38px;height:38px;border-radius:50%;background:var(--matte-card);border:1px solid rgba(212,168,83,0.25);display:flex;align-items:center;justify-content:center;font-size:15px;">👤</div>
+          </div>
+          <div class="mockup-card" style="margin-bottom:16px;">
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--w60);margin-bottom:8px;"><span>追爱进度</span><span style="color:var(--gold);">阶段 3/5 · 约会</span></div>
+            <div style="height:4px;background:var(--w08);border-radius:2px;overflow:hidden;"><div style="height:100%;width:60%;background:linear-gradient(90deg,var(--gold),var(--rose));border-radius:2px;transition:width 1.2s var(--ease-out);"></div></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div class="mockup-card" style="cursor:pointer;"><div style="font-size:20px;margin-bottom:6px;">💬</div><div style="font-size:13px;color:var(--warm-white);font-weight:600;">联系顾问</div><div style="font-size:11px;color:var(--w40);">人工沟通</div></div>
+            <div class="mockup-card" style="cursor:pointer;"><div style="font-size:20px;margin-bottom:6px;">✨</div><div style="font-size:13px;color:var(--warm-white);font-weight:600;">AI教练</div><div style="font-size:11px;color:var(--w40);">24h在线</div></div>
+            <div class="mockup-card" style="cursor:pointer;"><div style="font-size:20px;margin-bottom:6px;">🐟</div><div style="font-size:13px;color:var(--warm-white);font-weight:600;">我的缘分</div><div style="font-size:11px;color:var(--w40);">24位女生</div></div>
+            <div class="mockup-card" style="cursor:pointer;"><div style="font-size:20px;margin-bottom:6px;">📖</div><div style="font-size:13px;color:var(--warm-white);font-weight:600;">学习中心</div><div style="font-size:11px;color:var(--w40);">Mo哥宝典</div></div>
+          </div>
+        </div>
+        <div class="tab-bar-demo" style="border-radius:0;">
+          <div class="tab-item active"><div class="tab-icon">🏠</div>首页</div>
+          <div class="tab-item"><div class="tab-icon">💬</div>Mo哥</div>
+          <div class="tab-item"><div class="tab-icon">✨</div>AI</div>
+          <div class="tab-item"><div class="tab-icon">🐟</div>缘分</div>
+          <div class="tab-item"><div class="tab-icon">📖</div>学习</div>
+        </div>
+      </div>
+      <span class="mockup-label">首页 · 高端会员</span>
+    </div>
+
+    <!-- AI 教练 -->
+    <div class="mockup-wrap">
+      <div class="mobile-mockup">
+        <div class="mockup-status-bar"><span>9:41</span><span>📶 🔋</span></div>
+        <div class="mockup-body">
+          <div style="font-family:var(--font-heading);font-size:20px;color:var(--warm-white);margin-bottom:18px;">AI教练</div>
+          <div class="mockup-card"><div style="font-size:11px;color:var(--gold);margin-bottom:4px;">AI教练 · 刚刚</div><div style="font-size:13px;color:var(--w80);line-height:1.6;">基于你的偏好分析，建议周末约小艺去安静私密的茶室。她喜欢摄影，安排在傍晚光线好的时间，可自然帮她拍照——这是建立肢体接触的绝佳机会。</div></div>
+          <div style="background:rgba(212,168,83,0.05);border-radius:var(--radius-md);padding:14px;margin:0 0 10px 36px;border:1px solid rgba(212,168,83,0.1);"><div style="font-size:11px;color:var(--gold);margin-bottom:4px;">我 · 2分钟前</div><div style="font-size:13px;color:var(--w80);line-height:1.6;">具体怎么约她？</div></div>
+          <div class="mockup-card"><div style="font-size:11px;color:var(--gold);margin-bottom:4px;">AI教练 · 1分钟前</div><div style="font-size:13px;color:var(--w80);line-height:1.6;">"小艺，周末路过麓湖那边一家很安静的茶室，想到你喜欢有质感的空间。傍晚光线好，顺便帮你拍几张照。周六下午？" — 给理由 + 关联兴趣 + 明确时间，降低拒绝概率。</div></div>
+        </div>
+      </div>
+      <span class="mockup-label">AI教练 · 对话</span>
+    </div>
+  </div>
+</div>
+
+<hr class="divider reveal">
+
+<!-- ════════════ MOTION ════════════ -->
+<div class="section reveal" id="motion">
+  <div class="section-header">
+    <div class="eyebrow">Motion System</div>
+    <h2>动效系统</h2>
+    <p>克制、有品质。核心隐喻：余烬微光 (Ember) — 温暖、不刺眼、自然消散。所有动画时长 ≤ 400ms，使用物理缓动曲线。</p>
+  </div>
+
+  <!-- 金核呼吸 -->
+  <h3 style="font-size:16px;font-weight:600;color:var(--warm-white);margin-bottom:20px;">品牌标识 · 余烬呼吸</h3>
+  <div class="motion-stage">
+    <div class="golden-core">
+      <div class="ring"></div><div class="ring"></div><div class="ring"></div>
+      <div class="center"></div>
+    </div>
+    <div style="font-size:13px;color:var(--w60);max-width:250px;line-height:1.7;">
+      品牌核心动效——琥珀金核心缓慢呼吸式缩放，三层同心圆向外扩散消失。像余烬的微光，持续、温暖、不喧闹。用于加载、空状态、品牌展示。
+      <div style="margin-top:8px;color:var(--w40);font-size:11px;">3200ms 缓入缓出循环 · 三层涟漪各偏 800ms</div>
+    </div>
+  </div>
+
+  <!-- 骨架屏 -->
+  <h3 style="font-size:16px;font-weight:600;color:var(--warm-white);margin-bottom:20px;">加载态 · 骨架屏流光</h3>
+  <div class="motion-stage">
+    <div class="skeleton-demo"><div class="skeleton-avatar"></div><div class="skeleton-line"></div><div class="skeleton-line"></div><div class="skeleton-line"></div><div class="skeleton-line"></div></div>
+    <div style="font-size:13px;color:var(--w60);max-width:240px;line-height:1.7;">暖灰色渐变条 + shimmer 流光扫过。页面初始加载时使用，让用户感知内容即将到来。<div style="margin-top:8px;color:var(--w40);font-size:11px;">1600ms 循环 · 暖灰 #252522 → #353530</div></div>
+  </div>
+
+  <!-- 交错入场 -->
+  <h3 style="font-size:16px;font-weight:600;color:var(--warm-white);margin-bottom:20px;">页面入场 · 交错淡入上升</h3>
+  <div class="motion-stage">
+    <div class="stagger-grid" id="stagger-demo">
+      <div class="stagger-card"></div><div class="stagger-card"></div><div class="stagger-card"></div><div class="stagger-card"></div><div class="stagger-card"></div>
+    </div>
+    <button class="btn btn-secondary btn-sm" onclick="replayStagger()" style="white-space:nowrap;">重播</button>
+    <div style="font-size:13px;color:var(--w60);max-width:220px;line-height:1.7;">卡片依次入场，每个延迟 80ms。给用户"井然有序"的心理暗示。<div style="margin-top:8px;color:var(--w40);font-size:11px;">550ms ease-out · 80ms stagger</div></div>
+  </div>
+
+  <!-- Toast -->
+  <h3 style="font-size:16px;font-weight:600;color:var(--warm-white);margin-bottom:16px;">通知提示</h3>
+  <div class="toast-demo">
+    <div class="toast toast-success"><span class="toast-dot"></span>约会方案已生成，请查看</div>
+    <div class="toast toast-error"><span class="toast-dot"></span>提交失败，请检查必填信息</div>
+    <div class="toast toast-warning"><span class="toast-dot"></span>会员7天后到期，续费享优惠</div>
+  </div>
+
+  <!-- 动效表 -->
+  <table class="motion-table" style="margin-top:36px;">
+    <thead><tr><th>场景</th><th>动效</th><th>时长</th><th>缓动</th></tr></thead>
+    <tbody>
+      <tr><td>按钮悬停</td><td>scale(1.02) + 辉光 + 色值加深 + translateY(-1px)</td><td>250ms</td><td>ease-out</td></tr>
+      <tr><td>按钮按下</td><td>scale(0.97) + 触点涟漪扩散</td><td>100ms + 700ms</td><td>ease-in / ease-out</td></tr>
+      <tr><td>卡片悬停</td><td>translateY(-3px) + 暖金辉光 + 顶部暖光渐变</td><td>400ms</td><td>ease-out</td></tr>
+      <tr><td>模态框打开</td><td>scale(0.92→1) + opacity 淡入</td><td>280ms</td><td>cubic-bezier(0.34,1.56,0.64,1)</td></tr>
+      <tr><td>页面入场</td><td>卡片依次 fadeSlideUp (opacity + translateY)</td><td>550ms × N</td><td>ease-out</td></tr>
+      <tr><td>路由切换</td><td>opacity cross-fade</td><td>220ms</td><td>ease-in-out</td></tr>
+      <tr><td>加载骨架屏</td><td>warm-gray shimmer 流光扫过</td><td>1600ms 循环</td><td>—</td></tr>
+      <tr><td>品牌呼吸</td><td>金核 scale(1→1.1) + 三层涟漪扩散</td><td>3200ms 循环</td><td>ease-in-out</td></tr>
+      <tr><td>通知出现</td><td>顶部滑入 (slideDown) + 淡入</td><td>320ms</td><td>ease-out</td></tr>
+      <tr><td>通知消失</td><td>淡出 + 上移收缩</td><td>260ms</td><td>ease-in</td></tr>
+      <tr><td>列表项移除</td><td>高度收缩 + 淡出</td><td>320ms</td><td>ease-in-out</td></tr>
+      <tr><td>下拉刷新</td><td>金核呼吸 + 内容回弹</td><td>600ms</td><td>ease-spring</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<hr class="divider reveal">
+
+<!-- ════════════ LAYOUT ════════════ -->
+<div class="section reveal" style="padding-bottom:48px;">
+  <div class="section-header">
+    <div class="eyebrow">Layout &amp; Tech Stack</div>
+    <h2>布局 &amp; 技术实现</h2>
+    <p>移动端底部Tab (0-1023px) + 桌面侧边栏 (≥1024px)。Chakra UI extendTheme 实现所有设计令牌。</p>
+  </div>
+  <div class="card-grid">
+    <div class="card"><h4>UI 框架</h4><p>Chakra UI v2 —— 通过 extendTheme 覆盖品牌色、字体、圆角、阴影、组件变体。改动控制在 theme.js 单文件。</p><div style="margin-top:10px;"><span class="badge badge-gold">Chakra UI 2.x</span><span class="badge badge-neutral" style="margin-left:6px;">@emotion/react</span></div></div>
+    <div class="card"><h4>动效</h4><p>Framer Motion 6.5 —— 已在依赖中。用于页面入场 stagger、路由过渡、模态框弹性动画。</p><div style="margin-top:10px;"><span class="badge badge-rose">Framer Motion 6.x</span></div></div>
+    <div class="card"><h4>字体</h4><p>Google Fonts 引入 DM Serif Display + Inter。中文用系统层叠字体：思源宋体 / Noto Sans SC / PingFang SC。</p><div style="margin-top:10px;"><span class="badge badge-neutral">DM Serif Display</span><span class="badge badge-neutral" style="margin-left:6px;">Inter</span></div></div>
+    <div class="card"><h4>断点</h4><p>base (0) → sm (640) → md (768) → lg (1024)。底部Tab &lt; 1024px，侧边栏 ≥ 1024px。</p><div style="margin-top:10px;"><span class="badge badge-neutral">Mobile-first</span><span class="badge badge-neutral" style="margin-left:6px;">4 断点</span></div></div>
+  </div>
+  <div style="margin-top:36px;background:var(--matte-dark);border-radius:var(--radius-lg);padding:28px 32px;border:1px solid var(--w08);">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
+      <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--gold),var(--rose));box-shadow:0 0 20px var(--gold-glow);"></div>
+      <span style="font-family:var(--font-heading);font-size:18px;color:var(--warm-white);">追爱 AI · 技术栈</span>
+    </div>
+    <div style="display:grid;grid-template-columns:100px 1fr;gap:10px;font-size:13px;color:var(--w60);">
+      <span>前端</span><span style="color:var(--w80);">React 19 + Chakra UI 2 + Framer Motion 6 + Vite 8</span>
+      <span>后端</span><span style="color:var(--w80);">Express.js + Prisma ORM + SQLite</span>
+      <span>AI</span><span style="color:var(--w80);">通义千问 + 智普AI</span>
+      <span>设计系统</span><span style="color:var(--w80);">Design Tokens → CSS Variables → Chakra Theme</span>
+      <span>目标设备</span><span style="color:var(--w80);">移动优先 · 4 断点 · ≥ 320px 全覆盖</span>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ FOOTER ════════════ -->
+<footer class="footer">
+  <div class="label"><strong>追爱AI 设计规范 v2.0</strong> · 2026-05-02<br>现代绅士风 · 琥珀金 #d4a853 · DM Serif Display / Inter<br>目标用户 20-50岁 · 求偶男性 · 移动优先暗色情感设计语言</div>
+</footer>
+
+<script>
+// ════════════ Ember Particle System ════════════
+(function() {
+  var container = document.getElementById('particles');
+  var count = 18;
+  for (var i = 0; i < count; i++) {
+    var ember = document.createElement('div');
+    ember.className = 'ember';
+    var size = 2 + Math.random() * 5;
+    ember.style.width = size + 'px';
+    ember.style.height = size + 'px';
+    ember.style.left = Math.random() * 100 + '%';
+    ember.style.top = Math.random() * 100 + '%';
+    ember.style.setProperty('--dx', (Math.random() - 0.5) * 200 + 'px');
+    ember.style.setProperty('--dy', -(60 + Math.random() * 160) + 'px');
+    ember.style.animationDuration = (5 + Math.random() * 10) + 's';
+    ember.style.animationDelay = Math.random() * 10 + 's';
+    ember.style.opacity = (0.15 + Math.random() * 0.3);
+    container.appendChild(ember);
+  }
+})();
+
+// ════════════ Button Click Ripple ════════════
+function createRipple(e) {
+  var btn = e.currentTarget;
+  var old = btn.querySelectorAll('.ripple');
+  old.forEach(function(r) { r.remove(); });
+  var rect = btn.getBoundingClientRect();
+  var x = e.clientX - rect.left;
+  var y = e.clientY - rect.top;
+  var ripple = document.createElement('span');
+  ripple.className = 'ripple';
+  ripple.style.left = x + 'px';
+  ripple.style.top = y + 'px';
+  btn.appendChild(ripple);
+  ripple.addEventListener('animationend', function() { ripple.remove(); });
+}
+
+// Attach ripple to all btn-primary
+document.querySelectorAll('.btn-primary').forEach(function(btn) {
+  btn.addEventListener('click', createRipple);
+});
+
+// ════════════ Scroll Reveal ════════════
+(function() {
+  var reveals = document.querySelectorAll('.reveal');
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+  reveals.forEach(function(el) { observer.observe(el); });
+
+  // Also reveal dividers
+  var dividers = document.querySelectorAll('hr.divider.reveal');
+  dividers.forEach(function(el) { observer.observe(el); });
+})();
+
+// ════════════ Stagger Replay ════════════
+function replayStagger() {
+  var cards = document.querySelectorAll('#stagger-demo .stagger-card');
+  cards.forEach(function(c) { c.classList.remove('show'); });
+  setTimeout(function() {
+    cards.forEach(function(c, i) {
+      setTimeout(function() { c.classList.add('show'); }, i * 80);
+    });
+  }, 100);
+}
+
+// Auto-play stagger on first reveal
+(function() {
+  var demo = document.getElementById('stagger-demo');
+  if (!demo) return;
+  var played = false;
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting && !played) {
+        played = true;
+        replayStagger();
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.3 });
+  observer.observe(demo.parentElement);
+})();
+
+// ════════════ Scroll Spy ════════════
+(function() {
+  var navLinks = document.querySelectorAll('.nav a');
+  var sections = [];
+  navLinks.forEach(function(link) {
+    var id = link.getAttribute('href');
+    if (id && id.startsWith('#')) {
+      var el = document.querySelector(id);
+      if (el) sections.push({ id: id, el: el, link: link });
+    }
+  });
+  if (!sections.length) return;
+
+  navLinks.forEach(function(link) {
+    link.addEventListener('click', function(e) {
+      var id = link.getAttribute('href');
+      if (!id || !id.startsWith('#')) return;
+      var target = document.querySelector(id);
+      if (!target) return;
+      e.preventDefault();
+      var navH = document.querySelector('.nav').offsetHeight;
+      var top = target.getBoundingClientRect().top + window.pageYOffset - navH - 8;
+      window.scrollTo({ top: top, behavior: 'smooth' });
+    });
+  });
+
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (!entry.isIntersecting) return;
+      var id = '#' + entry.target.id;
+      navLinks.forEach(function(link) {
+        link.classList.remove('active');
+        link.removeAttribute('aria-current');
+        if (link.getAttribute('href') === id) { link.classList.add('active'); link.setAttribute('aria-current', 'page'); }
+      });
+    });
+  }, { rootMargin: '-80px 0px -55% 0px' });
+
+  sections.forEach(function(s) { observer.observe(s.el); });
+})();
+</script>
+</body>
+</html>

@@ -2692,13 +2692,16 @@ export default function AICoach() {
         </HStack>
       </Flex>
 
-      <Tabs variant="soft-rounded" colorScheme="gold" sx={{ display: 'flex', flexDirection: 'column', flex: 1, minH: 0, overflow: 'hidden' }}>
+      <Tabs variant="soft-rounded" colorScheme="gold" sx={{ display: 'flex', flexDirection: 'column', flex: 1, minH: 0, overflow: 'hidden' }} defaultIndex={0}>
         <TabList bg="warm.800" borderRadius="lg" p={1} flexShrink={0}>
           <Tab color="rgba(245,240,232,0.4)" _selected={{ color: 'white', bg: 'gold.600' }} fontSize="sm">
             🤖 AI教练
           </Tab>
           <Tab color="rgba(245,240,232,0.4)" _selected={{ color: 'white', bg: 'gold.600' }} fontSize="sm">
-            💬 聊天实战
+            💡 回复建议
+          </Tab>
+          <Tab color="rgba(245,240,232,0.4)" _selected={{ color: 'white', bg: 'gold.600' }} fontSize="sm">
+            ⚡ 话术优化
           </Tab>
         </TabList>
 
@@ -2709,26 +2712,13 @@ export default function AICoach() {
             </Box>
           </TabPanel>
           <TabPanel px={0} py={2} sx={{ display: 'flex', flexDirection: 'column', flex: 1, minH: 0, overflow: 'hidden' }}>
-            <Box flex="1" minH="0" display="flex" flexDirection="column" overflow="hidden">
-              <CombatChatPanel
-                history={currentCombatHistory}
-                suggestions={combatSuggestions}
-                selectedIndex={selectedSuggestionIndex}
-                onSelect={handleSelectSuggestion}
-                onRegenerate={handleRegenerateSuggestions}
-                onDismissAll={handleDismissAllSuggestions}
-                onSendDirect={handleSendDirect}
-                loading={combatLoading}
-                combatMode={combatMode}
-              />
-              <CombatInputBar
-                mode={combatMode}
-                onModeChange={handleCombatModeChange}
-                value={combatInput}
-                onChange={setCombatInput}
-                onSubmit={handleCombatSend}
-                loading={combatLoading}
-              />
+            <Box flex="1" minH="0" overflow="auto" p={2}>
+              <ReplySuggestionsPanel apiUrl={apiUrl} selectedGirlId={selectedGirlId} toast={toast} />
+            </Box>
+          </TabPanel>
+          <TabPanel px={0} py={2} sx={{ display: 'flex', flexDirection: 'column', flex: 1, minH: 0, overflow: 'hidden' }}>
+            <Box flex="1" minH="0" overflow="auto" p={2}>
+              <OptimizeReplyPanel apiUrl={apiUrl} selectedGirlId={selectedGirlId} toast={toast} />
             </Box>
           </TabPanel>
         </TabPanels>
