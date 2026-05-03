@@ -122,7 +122,7 @@ export default function ClientLearning() {
       personalizationStatus: [],
       preface,
     };
-  }, { key: '/learning' });
+  }, { key: '/learning', refreshOnActivate: false });
 
   const chapters = data?.chapters ?? [];
   // progress 用本地 state，方便 updateProgress 乐观更新
@@ -147,9 +147,10 @@ export default function ClientLearning() {
     }).catch(() => {});
   }, []);
 
-  // 监听前言个性化生成完成，自动刷新内容
+  // 监听个性化进度（更新前言 + 更新章节 Badge 状态）
   useEffect(() => {
-    const cleanup = on('personalization:progress', (data) => {
+    const cleanup1 = on('personalization:progress', (data) => {
+      // 前言生成完成
       if (data.chapterId === '00' && data.status === 'completed') {
         membershipApi.getPersonalizedChapter('00').then(preRes => {
           if (preRes?.success) {
@@ -161,8 +162,26 @@ export default function ClientLearning() {
           }
         }).catch(() => {});
       }
+      // 章节生成状态更新 → 同步更新 personalizationStatus
+      if (data.chapterId && data.status) {
+        setPersonalizationStatus(prev => {
+          const exists = prev.find(p => p.chapterId === data.chapterId);
+          if (exists) {
+            return prev.map(p => p.chapterId === data.chapterId ? { ...p, status: data.status } : p);
+          }
+          return [...prev, { chapterId: data.chapterId, status: data.status }];
+        });
+      }
     });
-    return cleanup;
+    const cleanup2 = on('personalization:complete', () => {
+      // 生成全部完成，刷新个性化状态
+      membershipApi.personalizedStatus().then(perRes => {
+        if (perRes?.success) {
+          setPersonalizationStatus(perRes.chapters || []);
+        }
+      }).catch(() => {});
+    });
+    return () => { cleanup1(); cleanup2(); };
   }, [on]);
 
   async function updateProgress(chapterId, status) {
