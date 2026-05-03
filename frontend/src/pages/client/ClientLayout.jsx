@@ -14,7 +14,7 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3005';
 const navItems = [
   { path: '/chat', label: 'Mo哥', icon: ChatIcon },
   { path: '/ai-coach', label: 'AI', icon: SparklesIcon },
-  { path: '/relationship', label: '关系', icon: FishIcon },
+  { path: '/my-pond', label: '缘分', icon: FishIcon },
   { path: '/learning', label: '学习', icon: BookIcon },
   { path: '/profile', label: '我的', icon: UserIcon },
 ];

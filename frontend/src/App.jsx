@@ -21,7 +21,6 @@ const ClientChat = lazy(() => import('./pages/client/Chat'));
 const AICoach = lazy(() => import('./pages/client/AICoach'));
 const MyPond = lazy(() => import('./pages/client/MyPond'));
 const GirlDetail = lazy(() => import('./pages/client/GirlDetail'));
-const Relationship = lazy(() => import('./pages/client/Relationship'));
 const ClientDates = lazy(() => import('./pages/client/ClientDates'));
 const Onboarding = lazy(() => import('./pages/client/Onboarding'));
 const ClientLearning = lazy(() => import('./pages/client/Learning'));
@@ -121,10 +120,9 @@ function AppRoutes() {
             <Route path="profile" element={<ClientProfile />} />
             <Route path="chat" element={<ClientChat />} />
             <Route path="ai-coach" element={<AICoach />} />
-            <Route path="my-pond" element={<Navigate to="/relationship?tab=0" />} />
+            <Route path="my-pond" element={<MyPond />} />
             <Route path="my-pond/:girlId" element={<GirlDetail />} />
-            <Route path="dates" element={<Navigate to="/relationship?tab=1" />} />
-            <Route path="relationship" element={<Relationship />} />
+            <Route path="dates" element={<ClientDates />} />
             <Route path="learning" element={<ClientLearning />} />
             <Route path="learning/:chapterId" element={<ChapterDetail />} />
           </Route>
