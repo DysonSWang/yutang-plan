@@ -116,7 +116,7 @@ export default function ClientDates() {
         return sum;
       }, 0),
     };
-  }, [allDates, pendingInterviews]);
+  }, [data]);
 
   // 获取即将到来的约会（最近一个未完成的）
   const upcomingDate = allDates
