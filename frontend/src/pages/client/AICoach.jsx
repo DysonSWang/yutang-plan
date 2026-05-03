@@ -724,12 +724,22 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
 // 聊天实战消息气泡（girl/me 两种角色）
 const CombatChatMessage = memo(({ msg, girlName }) => {
   const isGirl = msg.role === 'girl';
+  const timeStr = msg.timestamp
+    ? (typeof msg.timestamp === 'string'
+        ? new Date(msg.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+        : msg.timestamp.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }))
+    : null;
   return (
     <Flex justify={isGirl ? 'flex-start' : 'flex-end'} mb={3}>
       <Box maxW="85%">
-        <Text fontSize="11px" color="rgba(245,240,232,0.4)" mb={1} textAlign={isGirl ? 'left' : 'right'}>
-          {isGirl ? (girlName || '女生') : '我'}
-        </Text>
+        <Flex justify={isGirl ? 'flex-start' : 'flex-end'} mb={1} gap={1} align="center">
+          <Text fontSize="11px" color="rgba(245,240,232,0.4)" textAlign={isGirl ? 'left' : 'right'}>
+            {isGirl ? (girlName || '女生') : '我'}
+          </Text>
+          {timeStr && (
+            <Text fontSize="10px" color="rgba(245,240,232,0.25)">{timeStr}</Text>
+          )}
+        </Flex>
         <Box
           bg={isGirl ? 'warm.700' : 'warm.700'}
           px={3} py={2}
@@ -751,46 +761,66 @@ const STYLE_COLORS = {
   '自然型': 'cyan', '更自然': 'cyan', '推进型': 'red',
 };
 
-// 单张建议/优化卡片
-const SuggestionCard = memo(({ item, index, isSelected, isDismissed, onSelect }) => {
+// 单张建议/优化卡片（带复制/收藏/风险可视化）
+const SuggestionCard = memo(({ item, index, isSelected, isDismissed, onSelect, onCopy, onFavorite, isSaved }) => {
+  const [hovered, setHovered] = useState(false);
   const text = item.reply || item.text || '';
   const style = item.type || item.style || '';
   const subtext = item.intention || item.point || '';
-  const risk = item.riskNote || (item.riskLevel && item.riskLevel !== '低' ? item.riskLevel : '');
+  const riskLevel = item.riskLevel || '';
+  const riskNote = item.riskNote || '';
+
+  // 风险等级左边框颜色
+  const riskBorderColor = riskLevel === '高' ? 'red.500' : riskLevel === '中' ? 'orange.400' : null;
 
   return (
     <Box
       onClick={() => !isSelected && !isDismissed && onSelect(index)}
       bg={isSelected ? 'rgba(16,185,129,0.1)' : 'warm.700'}
       border="1px solid"
-      borderColor={isSelected ? 'green.500' : 'rgba(245,240,232,0.08)'}
+      borderLeft={riskBorderColor ? `3px solid var(--chakra-colors-${riskBorderColor.replace('.', '-')})` : undefined}
+      borderColor={isSelected ? 'green.500' : hovered ? 'gold.400' : 'rgba(245,240,232,0.08)'}
       borderRadius="lg"
       p={3}
       cursor={isSelected || isDismissed ? 'default' : 'pointer'}
       opacity={isDismissed ? 0.3 : 1}
       transform={isDismissed ? 'scale(0.95)' : 'none'}
-      transition="all 0.2s"
+      transition="all 0.15s"
       position="relative"
-      _hover={!isSelected && !isDismissed ? { borderColor: 'gold.400', bg: 'whiteAlpha.50' } : {}}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      _hover={!isSelected && !isDismissed ? { bg: hovered ? 'warm.600' : 'warm.700' } : {}}
     >
+      {/* 操作栏（hover 或已收藏时显示） */}
+      {(hovered || isSaved) && !isDismissed && (
+        <Flex gap={1} mb={1.5} justify="flex-end">
+          <Button size="xs" variant="ghost" color="rgba(245,240,232,0.4)" fontSize="10px"
+            p={0} minW="20px" h="20px" onClick={(e) => { e.stopPropagation(); onCopy(text); }}
+            title="复制内容">📋</Button>
+          <Button size="xs" variant="ghost" color={isSaved ? 'pink.400' : 'rgba(245,240,232,0.4)'} fontSize="10px"
+            p={0} minW="20px" h="20px" onClick={(e) => { e.stopPropagation(); onFavorite(item); }}
+            title={isSaved ? '已收藏' : '收藏'}>{isSaved ? '❤️' : '🤍'}</Button>
+        </Flex>
+      )}
+
       {isSelected && (
         <Badge colorScheme="green" fontSize="10px" position="absolute" top={2} right={2}>
           ✓ 已选用
         </Badge>
       )}
       {style && (
-        <Badge
-          colorScheme={STYLE_COLORS[style] || 'gray'}
-          fontSize="10px"
-          mb={1}
-          variant="subtle"
-        >
+        <Badge colorScheme={STYLE_COLORS[style] || 'gray'} fontSize="10px" mb={1} variant="subtle">
           {style}
         </Badge>
       )}
       <Text fontSize="13px" lineHeight="1.6">{text}</Text>
       {subtext && <Text fontSize="11px" color="rgba(245,240,232,0.4)" mt={1}>{subtext}</Text>}
-      {risk && <Text fontSize="11px" color="orange.300" mt={1}>⚠ {risk}</Text>}
+      {riskNote && <Text fontSize="11px" color="orange.300" mt={1}>⚠ {riskNote}</Text>}
+      {riskLevel && riskLevel !== '低' && !riskNote && (
+        <Text fontSize="10px" color={riskLevel === '高' ? 'red.300' : 'orange.300'} mt={1}>
+          {riskLevel === '高' ? '⚠ 高风险' : '⚡ 中风险'}
+        </Text>
+      )}
     </Box>
   );
 });
@@ -798,7 +828,8 @@ const SuggestionCard = memo(({ item, index, isSelected, isDismissed, onSelect })
 // 建议卡片组容器
 const SuggestionGroup = memo(({
   suggestions, selectedIndex, onSelect, onRegenerate,
-  onDismissAll, onSendDirect, loading, girlName, mode
+  onDismissAll, onSendDirect, loading, girlName, mode,
+  onCopy, onFavorite, isSaved
 }) => {
   if (!suggestions && !loading) return null;
 
@@ -852,6 +883,9 @@ const SuggestionGroup = memo(({
               isSelected={selectedIndex === i}
               isDismissed={selectedIndex !== null && selectedIndex !== i}
               onSelect={onSelect}
+              onCopy={onCopy}
+              onFavorite={onFavorite}
+              isSaved={isSaved?.some(s => s.reply === (item.reply || item.text))}
             />
           ))}
         </VStack>
@@ -922,7 +956,12 @@ const ImportChatModal = memo(({ isOpen, onClose, girlId, girlName, apiUrl, onImp
 
   const confirmImport = useCallback(async () => {
     setStep('importing');
-    onImportComplete(messages.map(m => ({ role: m.role, content: m.content })));
+    const ts = new Date(chatDate + 'T00:00:00');
+    onImportComplete(messages.map(m => ({
+      role: m.role,
+      content: m.content,
+      timestamp: ts.toISOString()
+    })));
     onClose();
     // 重置状态
     setTimeout(() => {
@@ -1025,7 +1064,14 @@ const ImportChatModal = memo(({ isOpen, onClose, girlId, girlName, apiUrl, onImp
 
           {step === 'confirm' && (
             <VStack spacing={3} align="stretch">
-              <Text fontSize="13px" color="gold.300">已识别 {messages.length} 条消息，请确认并编辑：</Text>
+              <Flex justify="space-between" align="center" mb={-1}>
+                <Text fontSize="13px" color="gold.300">已识别 {messages.length} 条消息，请确认：</Text>
+                <Flex gap={1} align="center">
+                  <Text fontSize="11px" color="rgba(245,240,232,0.4)">聊天日期</Text>
+                  <Input type="date" value={chatDate} onChange={e => setChatDate(e.target.value)}
+                    bg="warm.700" border="none" color="white" fontSize="11px" size="xs" w="130px" />
+                </Flex>
+              </Flex>
               <Box maxH="360px" overflowY="auto" sx={{
                 '&::-webkit-scrollbar': { width: '4px' },
                 '&::-webkit-scrollbar-thumb': { bg: 'rgba(245,240,232,0.15)', borderRadius: '2px' }
@@ -1121,22 +1167,44 @@ const CombatInputBar = memo(({ mode, onModeChange, value, onChange, onSubmit, lo
     <Box bg="warm.800" borderTop="1px solid" borderColor="rgba(245,240,232,0.08)" px={4} py={3} flexShrink={0}>
       {/* Mode toggle */}
       <Flex gap={1} mb={2} align="center">
-        <Button
-          size="xs"
-          variant={mode === 'suggest' ? 'solid' : 'ghost'}
-          colorScheme={mode === 'suggest' ? 'gold' : undefined}
-          color={mode !== 'suggest' ? 'rgba(245,240,232,0.4)' : undefined}
-          onClick={() => onModeChange('suggest')}
-          fontSize="12px"
-        >💡 回复建议</Button>
-        <Button
-          size="xs"
-          variant={mode === 'optimize' ? 'solid' : 'ghost'}
-          colorScheme={mode === 'optimize' ? 'gold' : undefined}
-          color={mode !== 'optimize' ? 'rgba(245,240,232,0.4)' : undefined}
-          onClick={() => onModeChange('optimize')}
-          fontSize="12px"
-        >⚡ 话术优化</Button>
+        <Tooltip
+          label={mode === 'suggest'
+            ? '输入女生原话，AI生成3个风格回复建议，选中直接发送'
+            : '当前模式：生成多风格回复建议'}
+          placement="top"
+          hasArrow
+          bg="warm.700"
+          color="gold.200"
+          fontSize="11px"
+        >
+          <Button
+            size="xs"
+            variant={mode === 'suggest' ? 'solid' : 'ghost'}
+            colorScheme={mode === 'suggest' ? 'gold' : undefined}
+            color={mode !== 'suggest' ? 'rgba(245,240,232,0.4)' : undefined}
+            onClick={() => onModeChange('suggest')}
+            fontSize="12px"
+          >💡 回复建议</Button>
+        </Tooltip>
+        <Tooltip
+          label={mode === 'optimize'
+            ? '输入你的回复草稿，AI帮你优化表达效果'
+            : '当前模式：优化回复草稿'}
+          placement="top"
+          hasArrow
+          bg="warm.700"
+          color="gold.200"
+          fontSize="11px"
+        >
+          <Button
+            size="xs"
+            variant={mode === 'optimize' ? 'solid' : 'ghost'}
+            colorScheme={mode === 'optimize' ? 'gold' : undefined}
+            color={mode !== 'optimize' ? 'rgba(245,240,232,0.4)' : undefined}
+            onClick={() => onModeChange('optimize')}
+            fontSize="12px"
+          >⚡ 话术优化</Button>
+        </Tooltip>
         {onImportClick && (
           <Button
             size="xs"
@@ -1156,7 +1224,11 @@ const CombatInputBar = memo(({ mode, onModeChange, value, onChange, onSubmit, lo
           value={value}
           onChange={(e) => { onChange(e.target.value); autoResize(); }}
           onKeyDown={handleKeyDown}
-          placeholder={mode === 'suggest' ? `粘贴${girlName || '女生'}说的消息...` : '粘贴你要优化的回复草稿...'}
+          placeholder={
+            mode === 'suggest'
+              ? `粘贴${girlName || '女生'}说的消息，AI生成回复建议...`
+              : `粘贴你要优化的回复草稿，AI帮你改得更好...`
+          }
           bg="warm.700"
           border="none"
           color="white"
@@ -1439,7 +1511,8 @@ const SituationCard = memo(({ stage, tensionScore, intimacyLevel, recentSignals,
 const CombatChatPanel = memo(({
   history, suggestions, selectedIndex, onSelect,
   onRegenerate, onDismissAll, onSendDirect,
-  loading, girlName, combatMode, contextData
+  loading, girlName, combatMode, contextData,
+  onCopy, onFavorite, isSaved
 }) => {
   const scrollRef = useRef(null);
   const endRef = useRef(null);
@@ -1477,6 +1550,9 @@ const CombatChatPanel = memo(({
             loading={loading}
             girlName={girlName}
             mode={combatMode}
+            onCopy={onCopy}
+            onFavorite={onFavorite}
+            isSaved={isSaved}
           />
           <div ref={endRef} style={{ height: 1 }} />
         </>
@@ -1521,6 +1597,10 @@ export default function AICoach() {
   const [combatSuggestions, setCombatSuggestions] = useState(null);
   // { type: 'suggestions'|'optimizations', items: [...] }
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(null);
+  const [savedReplies, setSavedReplies] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('zhuiai_saved_replies') || '[]'); }
+    catch { return []; }
+  });
   const [lastDraftText, setLastDraftText] = useState('');
   // Girl-selected AI教练 state
   const [girlAnalysisContent, setGirlAnalysisContent] = useState('');
@@ -2227,6 +2307,36 @@ export default function AICoach() {
     setSelectedSuggestionIndex(null);
   }, []);
 
+  // 复制建议内容
+  const handleCopySuggestion = useCallback((text) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast({ title: '已复制到剪贴板', duration: 1500, colorScheme: 'green' });
+    }).catch(() => {
+      toast({ title: '复制失败', duration: 1500, colorScheme: 'red' });
+    });
+  }, [toast]);
+
+  // 收藏/取消收藏建议
+  const handleFavoriteSuggestion = useCallback((item) => {
+    const text = item.reply || item.text || '';
+    const style = item.type || item.style || '';
+    const entry = { reply: text, style, savedAt: new Date().toISOString() };
+    setSavedReplies(prev => {
+      const exists = prev.some(s => s.reply === text);
+      if (exists) {
+        const next = prev.filter(s => s.reply !== text);
+        localStorage.setItem('zhuiai_saved_replies', JSON.stringify(next));
+        toast({ title: '已取消收藏', duration: 1500 });
+        return next;
+      } else {
+        const next = [entry, ...prev].slice(0, 100);
+        localStorage.setItem('zhuiai_saved_replies', JSON.stringify(next));
+        toast({ title: '已收藏到话术库', duration: 1500, colorScheme: 'pink' });
+        return next;
+      }
+    });
+  }, [toast]);
+
   // 聊天实战 - 重新生成
   const handleRegenerateSuggestions = useCallback(() => {
     setCombatSuggestions(null);
@@ -2737,6 +2847,9 @@ export default function AICoach() {
                       girlName={selectedGirl?.name}
                       combatMode={combatMode}
                       contextData={girlContextData}
+                      onCopy={handleCopySuggestion}
+                      onFavorite={handleFavoriteSuggestion}
+                      isSaved={savedReplies}
                     />
                     <CombatInputBar
                       mode={combatMode}
