@@ -690,3 +690,8 @@ export const membership = {
     growth: (days = 90) => api.get('/api/admin/activity/growth?days=' + days),
   },
 };
+
+// 综合报表
+export const reports = {
+  overview: (range = 'day') => api.get('/api/reports/overview?range=' + range),
+};

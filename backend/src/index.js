@@ -83,6 +83,7 @@ app.use('/api/events', eventsRoutes);
 app.use('/api/alerts', alertsRoutes(io));
 app.use('/api/clients', weeklyReviewRoutes);
 app.use('/api/girls', reversalRoutes(io));
+app.use('/api/reports', require('./routes/reports'));
 
 // 静态文件服务 - 截图图片
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
