@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box, Heading, Text, SimpleGrid, Card, CardBody, Badge, VStack, HStack, Flex, Avatar,
   Button, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter,
@@ -335,7 +335,7 @@ export default function GirlDetail() {
   const [aiScreenshotUploading, setAiScreenshotUploading] = useState(false);
 
   // 头像编辑
-  const [editingAvatar, setEditingAvatar] = useState(false);
+  const avatarFileRef = useRef(null);
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState('');
   const [savingAvatar, setSavingAvatar] = useState(false);
@@ -609,13 +609,18 @@ export default function GirlDetail() {
       if (res.success) {
         setGirl(prev => ({ ...prev, avatar: uploadRes.url }));
         toast({ title: '头像已更新', status: 'success', duration: 2000 });
-        setEditingAvatar(false);
         setAvatarFile(null);
         setAvatarPreview('');
       }
     } catch (e) {
       toast({ title: '更新失败', status: 'error' });
     } finally { setSavingAvatar(false); }
+  };
+
+  const triggerAvatarFileSelect = () => {
+    setAvatarFile(null);
+    setAvatarPreview('');
+    avatarFileRef.current?.click();
   };
 
   // 用户可见字段（用于完整度计算，与展示区对齐）
@@ -707,20 +712,18 @@ export default function GirlDetail() {
               bottom={0}
               right={0}
               borderRadius="full"
-              onClick={() => setEditingAvatar(!editingAvatar)}
+              onClick={triggerAvatarFileSelect}
             />
-            {editingAvatar && (
-              <Box position="absolute" top="100%" left={0} mt={2} p={3} bg="warm.700" borderRadius="md" border="1px solid" borderColor="warm.600" zIndex={10} w="240px">
-                <VStack spacing={2} align="stretch">
-                  <Input type="file" accept="image/*" onChange={handleAvatarFileChange} bg="warm.600" color="white" border="1px solid" borderColor="rgba(245,240,232,0.2)" p={1} size="sm"
-                    sx={{ '::file-selector-button': { bg: 'gold.600', color: 'white', border: 'none', borderRadius: 'md', px: 2, py: 0.5, mr: 2, cursor: 'pointer', _hover: { bg: 'gold.500' } } }}
-                  />
-                  {avatarPreview && <Avatar size="sm" src={avatarPreview} />}
-                  <HStack spacing={2}>
-                    <Button size="xs" colorScheme="gold" onClick={handleSaveAvatar} isLoading={savingAvatar} isDisabled={!avatarFile}>保存</Button>
-                    <Button size="xs" variant="ghost" onClick={() => { setEditingAvatar(false); setAvatarFile(null); setAvatarPreview(''); }}>取消</Button>
-                  </HStack>
-                </VStack>
+            <input type="file" accept="image/*" ref={avatarFileRef} style={{ display: 'none' }} onChange={handleAvatarFileChange} />
+            {/* 选择后预览 */}
+            {avatarFile && (
+              <Box position="absolute" top="100%" left={0} mt={2} p={2} bg="warm.700" borderRadius="md" border="1px solid" borderColor="warm.600" zIndex={10}>
+                <HStack spacing={2}>
+                  <Avatar size="sm" src={avatarPreview} />
+                  <Text color="gray.300" fontSize="xs" maxW="120px" noOfLines={1}>{avatarFile.name}</Text>
+                  <Button size="xs" colorScheme="gold" onClick={handleSaveAvatar} isLoading={savingAvatar}>保存</Button>
+                  <Button size="xs" variant="ghost" onClick={() => { setAvatarFile(null); setAvatarPreview(''); }}>取消</Button>
+                </HStack>
               </Box>
             )}
           </Box>
