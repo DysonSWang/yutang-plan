@@ -93,51 +93,6 @@ export default function ClientDates() {
     }
   }, []);
 
-  // 统计计算（客户视角：我的进度、待办、活跃度、花费）
-  const stats = useMemo(() => {
-    const now = new Date();
-    const thisMonth = now.getMonth();
-    const thisYear = now.getFullYear();
-    const weekEnd = new Date(now);
-    weekEnd.setDate(now.getDate() + 7);
-    const datesData = data?.allDates ?? [];
-    const interviewsData = data?.pendingInterviews ?? [];
-    return {
-      pending: datesData.filter(d => d.status === 'pending_client_confirm').length,
-      interviews: interviewsData.length,
-      completed: datesData.filter(d => d.status === 'completed').length,
-      thisMonth: datesData.filter(d => {
-        if (!d.dateTime) return false;
-        const dt = new Date(d.dateTime);
-        return dt.getFullYear() === thisYear && dt.getMonth() === thisMonth;
-      }).length,
-      thisWeekExpense: datesData.reduce((sum, d) => {
-        if (!d.dateTime || d.status === 'cancelled') return sum;
-        const dt = new Date(d.dateTime);
-        if (dt >= now && dt <= weekEnd) return sum + (d.totalExpense || 0);
-        return sum;
-      }, 0),
-    };
-  }, [data]);
-
-  // 获取即将到来的约会（最近一个未完成的）
-  const upcomingDate = (data?.allDates ?? [])
-    .filter(d => d.dateTime && d.status !== 'completed' && d.status !== 'cancelled')
-    .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))[0] || null;
-
-  // 过滤后的列表，按时间从近到远排序
-  const filteredDates = useMemo(() => {
-    return datesList
-      .filter(d => {
-        if (filterGirlId && d.girlId !== filterGirlId) return false;
-        return true;
-      })
-      .sort((a, b) => {
-        if (!a.dateTime) return 1;
-        if (!b.dateTime) return -1;
-        return new Date(a.dateTime) - new Date(b.dateTime);
-      });
-  }, [datesList, filterGirlId]);
 
   // 获取头像（优先用自定义头像，其次用照片，最后用名字生成默认头像）
   const getAvatar = (girl) => {
@@ -272,6 +227,50 @@ export default function ClientDates() {
   const datesList = data?.datesList ?? [];
   const allDates = data?.allDates ?? [];
   const pendingInterviews = data?.pendingInterviews ?? [];
+
+  // 统计计算（客户视角：我的进度、待办、活跃度、花费）
+  const stats = useMemo(() => {
+    const now = new Date();
+    const thisMonth = now.getMonth();
+    const thisYear = now.getFullYear();
+    const weekEnd = new Date(now);
+    weekEnd.setDate(now.getDate() + 7);
+    return {
+      pending: allDates.filter(d => d.status === 'pending_client_confirm').length,
+      interviews: pendingInterviews.length,
+      completed: allDates.filter(d => d.status === 'completed').length,
+      thisMonth: allDates.filter(d => {
+        if (!d.dateTime) return false;
+        const dt = new Date(d.dateTime);
+        return dt.getFullYear() === thisYear && dt.getMonth() === thisMonth;
+      }).length,
+      thisWeekExpense: allDates.reduce((sum, d) => {
+        if (!d.dateTime || d.status === 'cancelled') return sum;
+        const dt = new Date(d.dateTime);
+        if (dt >= now && dt <= weekEnd) return sum + (d.totalExpense || 0);
+        return sum;
+      }, 0),
+    };
+  }, [allDates, pendingInterviews]);
+
+  // 获取即将到来的约会（最近一个未完成的）
+  const upcomingDate = allDates
+    .filter(d => d.dateTime && d.status !== 'completed' && d.status !== 'cancelled')
+    .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))[0] || null;
+
+  // 过滤后的列表，按时间从近到远排序
+  const filteredDates = useMemo(() => {
+    return datesList
+      .filter(d => {
+        if (filterGirlId && d.girlId !== filterGirlId) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        if (!a.dateTime) return 1;
+        if (!b.dateTime) return -1;
+        return new Date(a.dateTime) - new Date(b.dateTime);
+      });
+  }, [datesList, filterGirlId]);
 
   // 加载客户ID、女生列表和偏好设置（一次性加载）
   useEffect(() => {
@@ -588,7 +587,7 @@ export default function ClientDates() {
       <Flex justify="space-between" align="center" mb={6}>
         <Heading color="white">约会与方案</Heading>
         <HStack spacing={2}>
-          <Button variant="outline" colorScheme="gray" size="sm" onClick={loadAll} isLoading={loading}>刷新</Button>
+          <Button variant="outline" colorScheme="gray" size="sm" onClick={refresh} isLoading={isInitialLoad}>刷新</Button>
           <Button colorScheme="gold" leftIcon={<SparklesIcon />} onClick={() => setShowAddModal(true)}>
             添加约会
           </Button>
@@ -641,7 +640,7 @@ export default function ClientDates() {
             )}
 
             {/* 统计栏 */}
-            {!loading && (allDates.length > 0 || pendingInterviews.length > 0) && (
+            {!isInitialLoad && (allDates.length > 0 || pendingInterviews.length > 0) && (
               <SimpleGrid columns={{ base: 2, md: 4 }} spacing={3} mb={6}>
                 <Card bg="warm.800" border="1px solid" borderColor="orange.600">
                   <CardBody py={4} px={4}>
@@ -695,7 +694,7 @@ export default function ClientDates() {
             )}
 
             {/* 即将到来卡片 */}
-            {!loading && upcomingDate && (
+            {!isInitialLoad && upcomingDate && (
               <Box mb={6}>
                 <Text fontSize="lg" fontWeight="bold" mb={3} color="white">
                   <Box as="span" display="inline-block" w="4px" h="20px" bg="gold.500" borderRadius="2px" mr={3} verticalAlign="middle"></Box>
@@ -869,7 +868,7 @@ export default function ClientDates() {
               <ClientCalendar
                 clientId={clientId}
                 girlList={girlList}
-                refreshKey={loading}
+                refreshKey={isInitialLoad}
               />
             ) : (
               <Flex justify="center" py={12}><Spinner /></Flex>
