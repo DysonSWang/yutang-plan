@@ -183,7 +183,6 @@ module.exports = function(io) {
       if (operators.length === 0) {
         return res.status(400).json({ error: '暂无可用客服，请稍后再试' });
       }
-      }
 
       const operatorId = operators[0].id;
 
