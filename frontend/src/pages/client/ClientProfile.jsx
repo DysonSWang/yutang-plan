@@ -259,7 +259,6 @@ export default function ClientProfile() {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [changingPwd, setChangingPwd] = useState(false);
-  const [editingAvatar, setEditingAvatar] = useState(false);
   const [editTab, setEditTab] = useState(null);
   const editModalBodyRef = useRef(null);
   const [avatarFile, setAvatarFile] = useState(null);
@@ -630,16 +629,8 @@ export default function ClientProfile() {
     }
   };
 
-  const handleCancelAvatar = () => {
-    setAvatarFile(null);
-    setAvatarPreview('');
-    setEditingAvatar(false);
-  };
-
-  const openAvatarEdit = () => {
-    setAvatarFile(null);
-    setAvatarPreview('');
-    setEditingAvatar(true);
+  const triggerAvatarFileSelect = () => {
+    fileInputRef.current?.click();
   };
 
   if (isInitialLoad) {
@@ -682,7 +673,7 @@ export default function ClientProfile() {
                   bottom={0}
                   right={0}
                   borderRadius="full"
-                  onClick={openAvatarEdit}
+                  onClick={triggerAvatarFileSelect}
                 />
               </Box>
               <Box minW="0">
@@ -739,43 +730,17 @@ export default function ClientProfile() {
             </Box>
           </HStack>
 
-          {/* 头像编辑 */}
-          {editingAvatar && (
-            <Box mb={4} p={3} bg="warm.700" borderRadius="md">
-              <VStack align="stretch" spacing={2}>
-                <Text color="gray.300" fontSize="sm">上传头像图片</Text>
-                <Input
-                  type="file"
-                  accept="image/*"
-                  ref={fileInputRef}
-                  onChange={handleAvatarFileChange}
-                  bg="warm.600"
-                  borderColor="rgba(245,240,232,0.2)"
-                  color="white"
-                  p={1}
-                  sx={{
-                    '::file-selector-button': {
-                      bg: 'teal.600',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: 'md',
-                      px: 3,
-                      py: 1,
-                      mr: 3,
-                      cursor: 'pointer',
-                      _hover: { bg: 'teal.500' }
-                    }
-                  }}
-                />
-                {avatarPreview && (
-                  <Avatar size="md" src={avatarPreview} />
-                )}
-                <HStack spacing={2}>
-                  <Button size="sm" colorScheme="gold" onClick={handleSaveAvatar} isLoading={savingAvatar} isDisabled={!avatarFile}>保存</Button>
-                  <Button size="sm" variant="ghost" onClick={handleCancelAvatar}>取消</Button>
-                </HStack>
-              </VStack>
-            </Box>
+          {/* 隐藏的文件输入 */}
+          <input type="file" accept="image/*" ref={fileInputRef} style={{ display: 'none' }} onChange={handleAvatarFileChange} />
+
+          {/* 选择后预览 + 保存 */}
+          {avatarFile && (
+            <HStack mb={4} p={3} bg="warm.700" borderRadius="md" spacing={3}>
+              <Avatar size="md" src={avatarPreview} />
+              <Text color="gray.300" fontSize="sm" flex={1}>{avatarFile.name}</Text>
+              <Button size="sm" colorScheme="gold" onClick={handleSaveAvatar} isLoading={savingAvatar}>保存</Button>
+              <Button size="sm" variant="ghost" onClick={() => { setAvatarFile(null); setAvatarPreview(''); }}>取消</Button>
+            </HStack>
           )}
 
           {/* 档案完整度 + 操作按钮 */}
