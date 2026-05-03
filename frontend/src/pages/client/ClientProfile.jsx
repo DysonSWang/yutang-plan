@@ -234,8 +234,6 @@ export default function ClientProfile() {
   const { isOpen: isRenewalOpen, onOpen: onRenewalOpen, onClose: onRenewalClose } = useDisclosure();
   const [renewalType, setRenewalType] = useState('monthly');
   const [renewing, setRenewing] = useState(false);
-  const renewalPrice = memberStatus?.prices?.[renewalType] || PRICING_DATA.find(p => p.type === renewalType)?.price || 0;
-  const renewalPointsInsufficient = (memberStatus?.points || 0) < renewalPrice;
   const [updateInfo, setUpdateInfo] = useState(null);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [oldPassword, setOldPassword] = useState('');
@@ -287,6 +285,8 @@ export default function ClientProfile() {
   const profile = data?.profile;
   const memberStatus = data?.memberStatus;
   const completeness = data?.completeness;
+  const renewalPrice = memberStatus?.prices?.[renewalType] || PRICING_DATA.find(p => p.type === renewalType)?.price || 0;
+  const renewalPointsInsufficient = (memberStatus?.points || 0) < renewalPrice;
   // editData 用本地 state，方便表单修改
   const [editData, setEditData] = useState(data?.editData ?? {});
   useEffect(() => {
