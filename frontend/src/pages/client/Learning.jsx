@@ -86,6 +86,7 @@ export default function ClientLearning() {
   const navigate = useNavigate();
   const [showPreface, setShowPreface] = useState(false);
   const [prefaceData, setPrefaceData] = useState(null);
+  const [personalizationStatus, setPersonalizationStatus] = useState([]);
 
   const { data, isInitialLoad } = useKeepAliveData(async () => {
     // 先加载核心数据（章节和进度），个性化状态可延迟
@@ -126,6 +127,15 @@ export default function ClientLearning() {
       setPrefaceData(data.preface);
     }
   }, [data]);
+
+  // 后台静默加载个性化状态（不影响首屏速度）
+  useEffect(() => {
+    membershipApi.personalizedStatus().then(perRes => {
+      if (perRes?.success) {
+        setPersonalizationStatus(perRes.chapters || []);
+      }
+    }).catch(() => {});
+  }, []);
 
   // 监听前言个性化生成完成，自动刷新内容
   useEffect(() => {
@@ -309,6 +319,7 @@ export default function ClientLearning() {
             key={chapter.chapterId}
             chapter={chapter}
             progress={progress}
+            personalizationStatus={personalizationStatus}
             onUpdate={updateProgress}
           />
         ))}

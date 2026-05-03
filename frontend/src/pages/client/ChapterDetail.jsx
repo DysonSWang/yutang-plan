@@ -4,7 +4,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { membership as membershipApi } from '../../utils/api';
 import useKeepAliveData from '../../hooks/useKeepAliveData';
 import { ArrowLeftIcon, CheckIcon, BookIcon } from '../../components/Icons';
-import PersonalizationBanner from '../../components/PersonalizationBanner';
 
 // 解析 Markdown 粗体 **text**
 function parseBold(text) {
@@ -216,9 +215,6 @@ export default function ChapterDetail() {
             mx="auto"
             pb={12}
           >
-            {/* 个性化 Banner */}
-            <PersonalizationBanner />
-
             {/* 章节引导信息 */}
             <Box mb={8} pb={6} borderBottom="1px solid" borderColor="warm.800">
               <HStack gap={3} mb={4}>

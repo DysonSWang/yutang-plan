@@ -159,17 +159,7 @@ const InputArea = memo(({ onSubmit, loading, deepMode, onDeepModeToggle, onNewCo
         >
           发送
         </Button>
-        {showNewConvBtn && (
-          <Button
-            variant="ghost"
-            colorScheme="gold"
-            size="sm"
-            onClick={onNewConversation}
-          >
-            新对话
-          </Button>
-        )}
-      </Flex>
+              </Flex>
       {onDeepModeToggle && (
         <Flex mt={2} justify="flex-end">
           <Tooltip label={deepMode ? '深度分析：调用工具链，全面分析' : '快速分析：流式输出，快'}>
