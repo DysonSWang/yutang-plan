@@ -2,6 +2,7 @@ import { Box, Text, VStack, HStack, Button, Badge, Spinner, Center, IconButton, 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { membership as membershipApi } from '../../utils/api';
+import useKeepAliveData from '../../hooks/useKeepAliveData';
 import { ArrowLeftIcon, CheckIcon, BookIcon } from '../../components/Icons';
 import PersonalizationBanner from '../../components/PersonalizationBanner';
 
@@ -32,16 +33,11 @@ export default function ChapterDetail() {
   const [chapter, setChapter] = useState(null);
   const [allChapters, setAllChapters] = useState([]);
   const [progress, setProgress] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [personalizedContent, setPersonalizedContent] = useState(null);
   const [personalizedStale, setPersonalizedStale] = useState(false);
   const [headerVisible, setHeaderVisible] = useState(true);
   const lastScrollY = useRef(0);
   const contentRef = useRef(null);
-
-  useEffect(() => {
-    load();
-  }, [chapterId]);
 
   // 禁止复制：全局键盘拦截
   useEffect(() => {
@@ -74,33 +70,28 @@ export default function ChapterDetail() {
     }
   }, [chapter, progress]);
 
-  async function load() {
-    try {
-      const [chRes, progRes, perRes] = await Promise.all([
-        membershipApi.chapters(),
-        membershipApi.learningProgress(),
-        membershipApi.getPersonalizedChapter(chapterId).catch(() => null),
-      ]);
-      if (chRes.success) {
-        const sorted = chRes.chapters;
-        setAllChapters(sorted);
-        const ch = sorted.find(c => c.chapterId === chapterId);
-        setChapter(ch);
-      }
-      if (progRes.success) {
-        const prog = progRes.progress.find(p => p.chapterId === chapterId);
-        setProgress(prog);
-      }
-      if (perRes?.success && perRes.personalized) {
-        setPersonalizedContent(perRes.personalized.content);
-        setPersonalizedStale(perRes.personalized.isStale);
-      }
-    } catch (err) {
-      toast({ title: '加载失败', description: err.message, status: 'error' });
-    } finally {
-      setLoading(false);
+  const { isInitialLoad } = useKeepAliveData(async () => {
+    const [chRes, progRes, perRes] = await Promise.all([
+      membershipApi.chapters(),
+      membershipApi.learningProgress(),
+      membershipApi.getPersonalizedChapter(chapterId).catch(() => null),
+    ]);
+    if (chRes.success) {
+      const sorted = chRes.chapters;
+      setAllChapters(sorted);
+      const ch = sorted.find(c => c.chapterId === chapterId);
+      setChapter(ch);
     }
-  }
+    if (progRes.success) {
+      const prog = progRes.progress.find(p => p.chapterId === chapterId);
+      setProgress(prog);
+    }
+    if (perRes?.success && perRes.personalized) {
+      setPersonalizedContent(perRes.personalized.content);
+      setPersonalizedStale(perRes.personalized.isStale);
+    }
+    return true;
+  }, { key: `/learning/${chapterId}`, refreshOnActivate: false });
 
   async function updateProgress(status) {
     try {
@@ -139,7 +130,7 @@ export default function ChapterDetail() {
   const prevChapter = currentIndex > 0 ? allChapters[currentIndex - 1] : null;
   const nextChapter = currentIndex < allChapters.length - 1 ? allChapters[currentIndex + 1] : null;
 
-  if (loading) return (
+  if (isInitialLoad) return (
     <Center h="100vh" bg="warm.900">
       <Spinner color="gold.400" />
     </Center>

@@ -19,12 +19,14 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
   const [batchId, setBatchId] = useState(null);
   const [batchProgress, setBatchProgress] = useState(null);
   const [generatingChapterId, setGeneratingChapterId] = useState(null);
+  const [personalizationEnabled, setPersonalizationEnabled] = useState(true);
 
   const loadStatus = useCallback(async () => {
     try {
       const res = await membershipApi.personalizedStatus();
       if (res.success) {
         setCompleteness(res.completeness);
+        setPersonalizationEnabled(res.personalizationEnabled ?? true);
 
         const hasCompleted = res.chapters.some(c => c.status === 'completed');
         const hasGenerating = res.chapters.some(c => c.status === 'generating');
@@ -131,6 +133,23 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
   }
 
   if (loading) return null;
+
+  // 管理员禁用
+  if (personalizationEnabled === false) {
+    return (
+      <Box mb={6} p={5} bg="rgba(255,255,255,0.03)" borderRadius="xl" border="1px solid rgba(255,255,255,0.06)">
+        <VStack align="stretch" spacing={3}>
+          <HStack>
+            <Badge colorScheme="gray" variant="subtle" fontSize="sm" px={2} py={0.5}>因材施教</Badge>
+            <Text color="rgba(245,240,232,0.6)" fontSize="sm">当前不可用</Text>
+          </HStack>
+          <Text color="rgba(245,240,232,0.4)" fontSize="sm" lineHeight="1.9">
+            个性化学习功能暂时不可用。如有疑问，请联系操盘手。
+          </Text>
+        </VStack>
+      </Box>
+    );
+  }
 
   const cardBg = 'rgba(0,212,170,0.06)';
   const cardBorder = '1px solid rgba(0,212,170,0.15)';

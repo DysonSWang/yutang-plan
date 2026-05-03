@@ -9,6 +9,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiEdit2, FiCamera, FiFileText, FiZap, FiUser, FiCheck, FiX } from 'react-icons/fi';
 import { HeartIcon } from '../../components/Icons';
 import { girls, upload, getMediaUrl } from '../../utils/api';
+import useKeepAliveData from '../../hooks/useKeepAliveData';
 
 // ---- 阶段颜色 ----
 const STAGE_COLORS = {
@@ -316,7 +317,6 @@ export default function GirlDetail() {
   const toast = useToast();
 
   const [girl, setGirl] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [related, setRelated] = useState(null);
 
   // 编辑 Modal
@@ -346,26 +346,17 @@ export default function GirlDetail() {
   const [quickImagePreviews, setQuickImagePreviews] = useState([]); // dataURL[]
   const [quickAnalyzing, setQuickAnalyzing] = useState(false);
   const [quickResult, setQuickResult] = useState(null);
-  // quickResult: { fields: [{key, label, value}], count, imageUrls } | null
   const [isDragOver, setIsDragOver] = useState(false);
 
-  useEffect(() => { loadGirl(); loadRelated(); }, [girlId]);
-
-  const loadGirl = async () => {
-    setLoading(true);
-    try {
-      const res = await girls.get(girlId);
-      if (res.success) setGirl(res.girl);
-    } catch (e) { toast({ title: '加载失败', status: 'error' }); }
-    finally { setLoading(false); }
-  };
-
-  const loadRelated = async () => {
-    try {
-      const res = await girls.getRelated(girlId);
-      if (res.success) setRelated(res);
-    } catch { /* ignore */ }
-  };
+  const { data, isInitialLoad } = useKeepAliveData(async () => {
+    const [girlRes, relatedRes] = await Promise.all([
+      girls.get(girlId),
+      girls.getRelated(girlId).catch(() => ({ success: false })),
+    ]);
+    if (girlRes.success) setGirl(girlRes.girl);
+    if (relatedRes.success) setRelated(relatedRes);
+    return true;
+  }, { key: `/my-pond/${girlId}` });
 
   // ---- 编辑 ----
 
@@ -665,7 +656,7 @@ export default function GirlDetail() {
   };
 
   // ---- 加载态 ----
-  if (loading) {
+  if (isInitialLoad) {
     return (
       <Flex flex={1} align="center" justify="center" minH="60vh">
         <Spinner color="gold.400" />

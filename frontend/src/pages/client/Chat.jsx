@@ -4,6 +4,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { api, chat, upload } from '../../utils/api';
 import { captureError } from '../../utils/frontendErrorCapture';
 import { useSocket } from '../../contexts/SocketContext';
+import { useRouteActivated } from '../../hooks/useRouteLifecycle';
 import FlashImageViewer from '../../components/FlashImageViewer';
 import EmojiPanel from '../../components/EmojiPanel';
 
@@ -103,9 +104,53 @@ export default function ClientChat() {
           }
           return { ...m, content: '[消息已销毁]', mediaUrl: null, burnedAt: new Date() };
         }));
+        if (burnTimersRef.current[msg.id]) {
+          clearTimeout(burnTimersRef.current[msg.id]);
+          delete burnTimersRef.current[msg.id];
+        }
+        setCountdowns(prev => {
+          const next = { ...prev };
+          delete next[msg.id];
+          return next;
+        });
+      } else {
+        // API 返回失败，兜底本地标记
+        setMessages(prev => prev.map(m => {
+          if (m.id !== msg.id) return m;
+          if (m.isFlashImage) {
+            return { ...m, flashBurnedByMe: true };
+          }
+          return { ...m, content: '[消息已销毁]', mediaUrl: null, burnedAt: new Date() };
+        }));
+        if (burnTimersRef.current[msg.id]) {
+          clearTimeout(burnTimersRef.current[msg.id]);
+          delete burnTimersRef.current[msg.id];
+        }
+        setCountdowns(prev => {
+          const next = { ...prev };
+          delete next[msg.id];
+          return next;
+        });
       }
     } catch (e) {
       captureError(e);
+      // API 调用异常，兜底本地标记
+      setMessages(prev => prev.map(m => {
+        if (m.id !== msg.id) return m;
+        if (m.isFlashImage) {
+          return { ...m, flashBurnedByMe: true };
+        }
+        return { ...m, content: '[消息已销毁]', mediaUrl: null, burnedAt: new Date() };
+      }));
+      if (burnTimersRef.current[msg.id]) {
+        clearTimeout(burnTimersRef.current[msg.id]);
+        delete burnTimersRef.current[msg.id];
+      }
+      setCountdowns(prev => {
+        const next = { ...prev };
+        delete next[msg.id];
+        return next;
+      });
     }
   }, []);
 
@@ -162,10 +207,10 @@ export default function ClientChat() {
     loadSession();
   }, []);
 
-  // 进入聊天页面时清除聊天未读数
-  useEffect(() => {
+  // 进入聊天页面时清除聊天未读数（支持 keep-alive 多次激活）
+  useRouteActivated('/chat', () => {
     window.dispatchEvent(new CustomEvent('chat-enter'));
-  }, []);
+  });
 
   useEffect(() => {
     const handler = (message) => {
@@ -551,10 +596,30 @@ export default function ClientChat() {
           }}
         >
           {messages.length === 0 ? (
-            <Center h="100%">
-              <VStack spacing={3}>
-                <Text fontSize="4xl">💬</Text>
-                <Text color="rgba(245,240,232,0.4)">开始和Mo哥聊聊吧</Text>
+            <Center h="100%" px={4}>
+              <VStack spacing={6}>
+                <Text fontSize="lg" color="rgba(245,240,232,0.6)" fontWeight="medium">
+                  你好，我是Mo哥 👋
+                </Text>
+                <Text fontSize="sm" color="rgba(245,240,232,0.35)" textAlign="center" maxW="280px">
+                  不知道聊什么？试试下面这些话题
+                </Text>
+                <VStack spacing={2} w="full" maxW="280px">
+                  {['我想开始一段新的感情 💕', '最近遇到了感情困扰', '想提升自己的恋爱情商'].map(topic => (
+                    <Button
+                      key={topic}
+                      size="sm"
+                      variant="outline"
+                      borderColor="rgba(255,200,100,0.3)"
+                      color="rgba(255,200,100,0.8)"
+                      _hover={{ bg: 'rgba(255,200,100,0.1)', borderColor: 'rgba(255,200,100,0.5)' }}
+                      onClick={() => setInput(topic)}
+                      w="full"
+                    >
+                      {topic}
+                    </Button>
+                  ))}
+                </VStack>
               </VStack>
             </Center>
           ) : (
@@ -576,7 +641,7 @@ export default function ClientChat() {
                     position="absolute"
                     top={0}
                     transform={`translateY(${virtualRow.start}px)`}
-                    pb={3}
+                    pb={2}
                   >
                     {showTime && (
                       <Text color="rgba(245,240,232,0.45)" fontSize="xs" textAlign="center" w="100%" my={2}>
@@ -586,27 +651,30 @@ export default function ClientChat() {
                     <HStack spacing={2} maxW="85%">
                       {!isClient && (
                         <Box
-                          w="28px"
-                          h="28px"
+                          w="36px"
+                          h="36px"
                           borderRadius="full"
-                          bg="rgba(245,240,232,0.2)"
+                          bg="linear-gradient(135deg, rgba(255,200,100,0.4), rgba(255,170,60,0.3))"
                           display="flex"
                           alignItems="center"
                           justifyContent="center"
                           flexShrink={0}
                           overflow="hidden"
+                          border="2px solid rgba(255,200,100,0.2)"
                         >
-                          <Image src="/logo.png" alt="Mo哥" w="20px" h="20px" objectFit="contain" />
+                          <Image src="/logo.png" alt="Mo哥" w="24px" h="24px" objectFit="contain" />
                         </Box>
                       )}
                       <Box
                         w="75%"
                         p={3}
-                        borderRadius="lg"
                         bg={msg.isBurnAfterRead && !msg.burnedAt
                           ? 'linear-gradient(135deg, rgba(255,140,0,0.25), rgba(255,80,0,0.15))'
-                          : isClient ? 'gold.500' : 'rgba(255,255,255,0.08)'}
+                          : isClient
+                            ? 'linear-gradient(135deg, rgba(255,200,100,0.85), rgba(255,170,60,0.8))'
+                            : 'rgba(255,255,255,0.06)'}
                         border={msg.isBurnAfterRead && !msg.burnedAt ? '1px solid rgba(255,140,0,0.35)' : 'none'}
+                        borderRadius={isClient ? '18px 6px 18px 18px' : '6px 18px 18px 18px'}
                         color={isClient ? 'rgba(30,20,0,0.9)' : 'rgba(255,255,255,0.92)'}
                         role="group"
                         _hover={{ '.recall-btn': { opacity: 1 } }}
@@ -640,16 +708,17 @@ export default function ClientChat() {
                       </Box>
                       {isClient && (
                         <Box
-                          w="28px"
-                          h="28px"
+                          w="36px"
+                          h="36px"
                           borderRadius="full"
-                          bg="gold.500"
+                          bg="linear-gradient(135deg, rgba(255,200,100,0.3), rgba(255,170,60,0.2))"
                           display="flex"
                           alignItems="center"
                           justifyContent="center"
                           flexShrink={0}
+                          border="2px solid rgba(255,200,100,0.15)"
                         >
-                          <Text fontSize="xs">👤</Text>
+                          <Text fontSize="sm">👤</Text>
                         </Box>
                       )}
                     </HStack>

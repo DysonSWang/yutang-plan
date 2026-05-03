@@ -4,13 +4,157 @@ import {
   Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton,
   useDisclosure, useToast, Spinner, Center,
   VStack, Text, AlertDialog, AlertDialogOverlay, AlertDialogContent,
-  AlertDialogHeader, AlertDialogBody, AlertDialogFooter, Tooltip, Icon
+  AlertDialogHeader, AlertDialogBody, AlertDialogFooter, Tooltip, Icon,
+  Switch, Divider, Collapse, Input
 } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
-import { FiEdit2, FiTrash2, FiPlus, FiEye, FiEyeOff, FiGlobe, FiMenu } from 'react-icons/fi';
+import { FiEdit2, FiTrash2, FiPlus, FiEye, FiEyeOff, FiGlobe, FiMenu, FiChevronDown, FiChevronUp, FiUsers, FiFileText, FiX } from 'react-icons/fi';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { membership as membershipApi } from '../../utils/api';
+import useKeepAliveData from '../../hooks/useKeepAliveData';
+
+// 个性化内容对比 Modal
+function PersonalizationDetailModal({ isOpen, onClose, user }) {
+  const toast = useToast();
+  const [chapters, setChapters] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [expandedChapterId, setExpandedChapterId] = useState(null);
+
+  useEffect(() => {
+    if (isOpen && user) {
+      setLoading(true);
+      setExpandedChapterId(null);
+      membershipApi.adminGetUserPersonalizedChapters(user.id)
+        .then(res => { if (res.success) setChapters(res.chapters); })
+        .catch(err => toast({ title: '加载失败', description: err.message, status: 'error' }))
+        .finally(() => setLoading(false));
+    }
+  }, [isOpen, user, toast]);
+
+  const statusColor = { completed: 'green', generating: 'blue', failed: 'red', pending: 'gray' };
+  const statusLabel = { completed: '已完成', generating: '生成中', failed: '失败', pending: '待处理' };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} size="full" scrollBehavior="inside">
+      <ModalOverlay />
+      <ModalContent bg="warm.900" color="white">
+        <ModalHeader>
+          <HStack justify="space-between">
+            <HStack>
+              <Text>{user?.nickname || user?.username} · 个性化内容对比</Text>
+              <Badge colorScheme="purple">{chapters.length} 章</Badge>
+            </HStack>
+            <Button size="sm" variant="ghost" onClick={onClose}><FiX /></Button>
+          </HStack>
+        </ModalHeader>
+        <ModalBody pb={6}>
+          {loading ? (
+            <Center py={12}><Spinner color="teal.400" /></Center>
+          ) : chapters.length === 0 ? (
+            <Center py={12}>
+              <Text color="rgba(245,240,232,0.3)">该用户暂无个性化章节</Text>
+            </Center>
+          ) : (
+            <VStack align="stretch" spacing={3}>
+              {chapters.map((ch) => (
+                <Box
+                  key={ch.chapterId}
+                  borderRadius="md"
+                  border="1px"
+                  borderColor={expandedChapterId === ch.chapterId ? 'purple.600' : 'warm.700'}
+                  overflow="hidden"
+                >
+                  {/* 章节标题行 */}
+                  <HStack
+                    p={3}
+                    justify="space-between"
+                    cursor="pointer"
+                    onClick={() => setExpandedChapterId(expandedChapterId === ch.chapterId ? null : ch.chapterId)}
+                    _hover={{ bg: 'warm.800' }}
+                    transition="background 0.15s"
+                  >
+                    <HStack gap={3}>
+                      <Badge colorScheme="gold" variant="subtle" w="36px" textAlign="center">{ch.chapterId}</Badge>
+                      <Text color="white" fontWeight="medium">{ch.title}</Text>
+                    </HStack>
+                    <HStack gap={2}>
+                      <Badge colorScheme={statusColor[ch.status] || 'gray'} variant="subtle">
+                        {statusLabel[ch.status] || ch.status}
+                      </Badge>
+                      <Text color="rgba(245,240,232,0.3)" fontSize="xs">
+                        {new Date(ch.updatedAt).toLocaleDateString()}
+                      </Text>
+                      <Icon as={expandedChapterId === ch.chapterId ? FiChevronUp : FiChevronDown} color="rgba(245,240,232,0.4)" />
+                    </HStack>
+                  </HStack>
+
+                  {/* 对比内容区 */}
+                  {expandedChapterId === ch.chapterId && ch.original && ch.personalized && (
+                    <Box
+                      display={{ base: 'block', md: 'flex' }}
+                      borderTop="1px"
+                      borderColor="warm.700"
+                    >
+                      {/* 左侧：原文 */}
+                      <Box
+                        flex={1}
+                        p={4}
+                        borderRight={{ md: '1px solid' }}
+                        borderColor={{ md: 'warm.700' }}
+                        borderBottom={{ base: '1px solid', md: 'none' }}
+                      >
+                        <Text color="blue.400" fontWeight="bold" fontSize="sm" mb={3}>原文</Text>
+                        <Box
+                          color="rgba(245,240,232,0.5)"
+                          fontSize="sm"
+                          lineHeight="1.8"
+                          whiteSpace="pre-wrap"
+                          maxH="500px"
+                          overflowY="auto"
+                          css={{
+                            '&::-webkit-scrollbar': { width: '4px' },
+                            '&::-webkit-scrollbar-thumb': { background: 'rgba(255,255,255,0.1)', borderRadius: '2px' },
+                          }}
+                        >
+                          {ch.original}
+                        </Box>
+                      </Box>
+                      {/* 右侧：个性化 */}
+                      <Box
+                        flex={1}
+                        p={4}
+                        borderBottom={{ base: '1px solid warm.700' }}
+                      >
+                        <Text color="purple.400" fontWeight="bold" fontSize="sm" mb={3}>专属版</Text>
+                        <Box
+                          color="rgba(245,240,232,0.7)"
+                          fontSize="sm"
+                          lineHeight="1.8"
+                          whiteSpace="pre-wrap"
+                          maxH="500px"
+                          overflowY="auto"
+                          css={{
+                            '&::-webkit-scrollbar': { width: '4px' },
+                            '&::-webkit-scrollbar-thumb': { background: 'rgba(255,255,255,0.1)', borderRadius: '2px' },
+                          }}
+                        >
+                          {ch.personalized}
+                        </Box>
+                      </Box>
+                    </Box>
+                  )}
+                </Box>
+              ))}
+            </VStack>
+          )}
+        </ModalBody>
+      </ModalContent>
+    </Modal>
+  );
+}
+
+// 主页面
 
 // 预览 Modal（Markdown 渲染）
 function PreviewModal({ isOpen, onClose, chapterId, chapter }) {
@@ -137,7 +281,6 @@ export default function ChapterManagement() {
   const navigate = useNavigate();
   const toast = useToast();
   const [chapters, setChapters] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(null);
   const [previewing, setPreviewing] = useState(null);
   const [toggling, setToggling] = useState({});
@@ -147,19 +290,24 @@ export default function ChapterManagement() {
   const { isOpen: isDeleteOpen, onOpen: openDelete, onClose: closeDelete } = useDisclosure();
   const { isOpen: isPreviewOpen, onOpen: openPreview, onClose: closePreview } = useDisclosure();
 
-  const loadChapters = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await membershipApi.adminListChapters();
-      if (res.success) setChapters(res.chapters);
-    } catch (err) {
-      toast({ title: '加载失败', description: err.message, status: 'error', duration: 3000 });
-    } finally {
-      setLoading(false);
-    }
-  }, [toast]);
+  // 个性化用户管理
+  const [perUsers, setPerUsers] = useState([]);
+  const [perSearch, setPerSearch] = useState('');
+  const [showPerSection, setShowPerSection] = useState(true);
+  const [perToggling, setPerToggling] = useState({});
+  const [selectedPerUser, setSelectedPerUser] = useState(null);
+  const { isOpen: isPerDetailOpen, onOpen: openPerDetail, onClose: closePerDetail } = useDisclosure();
 
-  useEffect(() => { loadChapters(); }, [loadChapters]);
+  const { data, isInitialLoad, refresh } = useKeepAliveData(async () => {
+    const [chRes, perRes] = await Promise.all([
+      membershipApi.adminListChapters(),
+      membershipApi.adminListPersonalizationUsers().catch(() => ({ success: false })),
+    ]);
+    if (chRes.success) setChapters(chRes.chapters);
+    if (perRes?.success) setPerUsers(perRes.users);
+    return true;
+  }, { key: '/admin/chapters' });
+
 
   function handleCreate() {
     navigate('/admin/chapters/new');
@@ -190,12 +338,34 @@ export default function ChapterManagement() {
           status: 'success',
           duration: 1500
         });
-        loadChapters();
+        refresh();
       }
     } catch (err) {
       toast({ title: '操作失败', description: err.message, status: 'error', duration: 3000 });
     } finally {
       setToggling(prev => ({ ...prev, [chapter.chapterId]: false }));
+    }
+  }
+
+  function handlePerUserClick(u) {
+    setSelectedPerUser(u);
+    openPerDetail();
+  }
+
+  async function handlePerToggle(userId, enabled) {
+    setPerUsers(prev => prev.map(u => u.id === userId ? { ...u, personalizationEnabled: enabled } : u));
+    setPerToggling(prev => ({ ...prev, [userId]: true }));
+    try {
+      const res = await membershipApi.adminTogglePersonalization(userId, enabled);
+      if (res.success) {
+        toast({ title: enabled ? '已开启' : '已关闭', status: 'success', duration: 2000 });
+      }
+    } catch (err) {
+      // 失败回滚
+      setPerUsers(prev => prev.map(u => u.id === userId ? { ...u, personalizationEnabled: !enabled } : u));
+      toast({ title: '操作失败', description: err.message, status: 'error', duration: 3000 });
+    } finally {
+      setPerToggling(prev => ({ ...prev, [userId]: false }));
     }
   }
 
@@ -241,7 +411,7 @@ export default function ChapterManagement() {
       const res = await membershipApi.adminReorderChapters(orderedIds);
       if (!res.success) {
         toast({ title: '排序失败', status: 'error', duration: 2000 });
-        loadChapters();
+        refresh();
       }
     } catch (err) {
       toast({ title: '排序失败', description: err.message, status: 'error', duration: 3000 });
@@ -256,7 +426,7 @@ export default function ChapterManagement() {
     setDragOverId(null);
   }
 
-  if (loading) {
+  if (isInitialLoad) {
     return (
       <Center h="200px">
         <Spinner color="teal.400" />
@@ -404,6 +574,117 @@ export default function ChapterManagement() {
         onClose={closePreview}
         chapterId={previewing?.chapterId}
         chapter={previewing}
+      />
+
+      {/* 个性化管理 */}
+      <Divider borderColor="warm.700" my={6} />
+
+      <Box
+        cursor="pointer"
+        onClick={() => setShowPerSection(!showPerSection)}
+        mb={4}
+      >
+        <HStack justify="space-between">
+          <HStack>
+            <Icon as={FiUsers} color="purple.400" />
+            <Heading size="md" color="white">个性化学习管理</Heading>
+            {perUsers.length > 0 && (
+              <Badge colorScheme="purple">{perUsers.length} 人</Badge>
+            )}
+          </HStack>
+          <Icon as={showPerSection ? FiChevronUp : FiChevronDown} color="rgba(245,240,232,0.4)" />
+        </HStack>
+      </Box>
+
+      <Collapse in={showPerSection} animateOpacity>
+        {perUsers.length > 0 && (
+          <Box mb={3}>
+            <Input
+              placeholder="搜索用户..."
+              value={perSearch}
+              onChange={(e) => setPerSearch(e.target.value)}
+              w="200px"
+              bg="warm.800"
+              border="none"
+              size="sm"
+            />
+          </Box>
+        )}
+        <Box borderRadius="md" overflow="hidden">
+          <Table variant="simple" size="sm">
+            <Thead>
+              <Tr bg="warm.800">
+                <Th color="rgba(245,240,232,0.4)" borderColor="warm.700">用户</Th>
+                <Th color="rgba(245,240,232,0.4)" borderColor="warm.700" isNumeric>已完成</Th>
+                <Th color="rgba(245,240,232,0.4)" borderColor="warm.700" isNumeric>生成中</Th>
+                <Th color="rgba(245,240,232,0.4)" borderColor="warm.700" isNumeric>已失败</Th>
+                <Th color="rgba(245,240,232,0.4)" borderColor="warm.700">状态</Th>
+                <Th color="rgba(245,240,232,0.4)" borderColor="warm.700">开关</Th>
+                <Th color="rgba(245,240,232,0.4)" borderColor="warm.700">操作</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {perUsers
+                .filter(u =>
+                  (u.nickname || '').toLowerCase().includes(perSearch.toLowerCase()) ||
+                  (u.username || '').toLowerCase().includes(perSearch.toLowerCase())
+                )
+                .map(u => (
+                <Tr key={u.id} _hover={{ bg: 'warm.800' }} borderBottom="1px" borderColor="warm.700">
+                  <Td borderColor="warm.700">
+                    <Text color="white" fontWeight="medium">{u.nickname || u.username}</Text>
+                    <Text color="rgba(245,240,232,0.3)" fontSize="xs">{u.username}</Text>
+                  </Td>
+                  <Td borderColor="warm.700" isNumeric>
+                    <Badge colorScheme="green">{u.totalCompleted}</Badge>
+                  </Td>
+                  <Td borderColor="warm.700" isNumeric>
+                    {u.totalGenerating > 0 ? <Badge colorScheme="blue">{u.totalGenerating}</Badge> : <Text color="rgba(245,240,232,0.2)">—</Text>}
+                  </Td>
+                  <Td borderColor="warm.700" isNumeric>
+                    {u.totalFailed > 0 ? <Badge colorScheme="red">{u.totalFailed}</Badge> : <Text color="rgba(245,240,232,0.2)">—</Text>}
+                  </Td>
+                  <Td borderColor="warm.700">
+                    <Badge colorScheme={u.personalizationEnabled ? 'green' : 'gray'}>
+                      {u.personalizationEnabled ? '可用' : '已禁用'}
+                    </Badge>
+                  </Td>
+                  <Td borderColor="warm.700">
+                    <Switch
+                      isChecked={u.personalizationEnabled}
+                      onChange={(e) => handlePerToggle(u.id, e.target.checked)}
+                      isDisabled={perToggling[u.id]}
+                      colorScheme="teal"
+                      size="lg"
+                    />
+                  </Td>
+                  <Td borderColor="warm.700">
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      colorScheme="purple"
+                      leftIcon={<FiFileText />}
+                      onClick={() => handlePerUserClick(u)}
+                    >
+                      对比
+                    </Button>
+                  </Td>
+                </Tr>
+              ))}
+            </Tbody>
+          </Table>
+        </Box>
+        {perUsers.length === 0 && (
+          <Center py={8}>
+            <Text color="rgba(245,240,232,0.2)">暂无用户生成个性化学习内容</Text>
+          </Center>
+        )}
+      </Collapse>
+
+      <PersonalizationDetailModal
+        isOpen={isPerDetailOpen}
+        onClose={() => { closePerDetail(); setSelectedPerUser(null); }}
+        user={selectedPerUser}
       />
     </Box>
   );

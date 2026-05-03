@@ -2,7 +2,8 @@ import {
   Box, Flex, VStack, Text, Badge, Icon, HStack,
   Button, Divider,
 } from '@chakra-ui/react';
-import { Outlet, NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
+import KeepAliveOutlet from '../../components/KeepAliveOutlet';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSocket } from '../../contexts/SocketContext';
 import { DashboardIcon, UsersIcon, FemaleIcon, ChatIcon, BrainIcon, ChartIcon, FishIcon, CalendarIcon, MembershipIcon, BookIcon } from '../../components/Icons';
@@ -198,7 +199,7 @@ export default function AdminLayout() {
         pb={{ base: '80px', lg: 6 }}
         minH="100vh"
       >
-        <Outlet />
+        <KeepAliveOutlet />
       </Box>
 
       <MobileBottomNav />

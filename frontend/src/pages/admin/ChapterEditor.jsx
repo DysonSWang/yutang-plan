@@ -9,6 +9,7 @@ import { FiEye, FiEdit3, FiArrowLeft } from 'react-icons/fi';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { membership as membershipApi } from '../../utils/api';
+import useKeepAliveData from '../../hooks/useKeepAliveData';
 
 export default function ChapterEditor() {
   const { chapterId } = useParams();
@@ -21,7 +22,7 @@ export default function ChapterEditor() {
   const [content, setContent] = useState('');
   const [status, setStatus] = useState('draft');
   const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(isEdit);
+  const [loading, setLoading] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
 
   const isMobile = useBreakpointValue({ base: true, lg: false });
@@ -42,28 +43,21 @@ export default function ChapterEditor() {
     requestAnimationFrame(() => { syncing.current = false; });
   }, []);
 
-  useEffect(() => {
-    if (isEdit) {
-      membershipApi.adminGetChapter(chapterId)
-        .then(res => {
-          if (res.success) {
-            const ch = res.chapter;
-            setTitle(ch.title || '');
-            setSubtitle(ch.subtitle || '');
-            setContent(ch.content || '');
-            setStatus(ch.status || 'draft');
-          } else {
-            toast({ title: '章节不存在', status: 'error' });
-            navigate('/admin/chapters');
-          }
-        })
-        .catch(err => {
-          toast({ title: '加载失败', description: err.message, status: 'error' });
-          navigate('/admin/chapters');
-        })
-        .finally(() => setLoading(false));
+  const { isInitialLoad } = useKeepAliveData(async () => {
+    if (!isEdit) return true;
+    const res = await membershipApi.adminGetChapter(chapterId);
+    if (res.success) {
+      const ch = res.chapter;
+      setTitle(ch.title || '');
+      setSubtitle(ch.subtitle || '');
+      setContent(ch.content || '');
+      setStatus(ch.status || 'draft');
+    } else {
+      toast({ title: '章节不存在', status: 'error' });
+      navigate('/admin/chapters');
     }
-  }, [chapterId]);
+    return true;
+  }, { key: isEdit ? `/admin/chapters/${chapterId}` : '/admin/chapters/new', refreshOnActivate: true });
 
   async function handleSave() {
     if (!title.trim()) {
@@ -87,7 +81,7 @@ export default function ChapterEditor() {
     }
   }
 
-  if (loading) {
+  if (isEdit && isInitialLoad) {
     return (
       <Center h="400px">
         <Spinner color="teal.400" />

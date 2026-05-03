@@ -1,9 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { Box, Heading, Text, SimpleGrid, Card, CardBody, Icon, HStack, Badge, Button, VStack, Divider, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, Skeleton, SkeletonCircle, Center } from '@chakra-ui/react';
 import { ChatIcon, SparklesIcon, FishIcon, BookIcon, GiftIcon, CrownIcon, CheckIcon, CalendarIcon } from '../../components/Icons';
-import { useEffect, useState } from 'react';
 import { clients, girls, membership as membershipApi } from '../../utils/api';
-import { captureError } from '../../utils/frontendErrorCapture';
+import useKeepAliveData from '../../hooks/useKeepAliveData';
 import ServiceProgressBoard from '../../components/client/ServiceProgressBoard';
 import AnimatedNumber from '../../components/AnimatedNumber';
 import EmptyState from '../../components/EmptyState';
@@ -85,45 +84,42 @@ const QUICK_ENTRIES = [
 
 export default function ClientHome() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    girlCount: 0, dateCount: 0, serviceStage: '', currentStage: 0,
-    intimacyCount: 0, longTermCount: 0
-  });
-  const [memberStatus, setMemberStatus] = useState(null);
   const { isOpen: isPricingOpen, onOpen: onPricingOpen, onClose: onPricingClose } = useDisclosure();
 
-  const loadStats = async () => {
-    setLoading(true);
-    try {
-      const [clientRes, memberRes] = await Promise.all([
-        clients.me(),
-        membershipApi.status().catch(() => ({ success: false }))
-      ]);
-      if (clientRes.success) {
-        const client = clientRes.client;
-        const girlCount = client.girlCount || 0;
-        const dateCount = client.dateCount || 0;
-        const serviceStage = client.serviceStage || '未开始';
-        const currentStage = STAGE_MAP[serviceStage] || 0;
-        let intimacyCount = 0, longTermCount = 0;
-        try {
-          const girlsRes = await girls.list();
-          if (girlsRes.success) {
-            intimacyCount = girlsRes.girls.filter(g => g.stage === '暧昧').length;
-            longTermCount = girlsRes.girls.filter(g => g.stage === '长期').length;
-          }
-        } catch (e) { /* ignore */ }
-        setStats({ girlCount, dateCount, serviceStage, currentStage, intimacyCount, longTermCount });
-      }
-      if (memberRes.success) setMemberStatus(memberRes);
-    } catch (e) { captureError(e); }
-    finally { setLoading(false); }
+  const { data, isInitialLoad } = useKeepAliveData(async () => {
+    const [clientRes, memberRes] = await Promise.all([
+      clients.me(),
+      membershipApi.status().catch(() => ({ success: false }))
+    ]);
+    let stats = {
+      girlCount: 0, dateCount: 0, serviceStage: '', currentStage: 0,
+      intimacyCount: 0, longTermCount: 0
+    };
+    if (clientRes.success) {
+      const client = clientRes.client;
+      stats.girlCount = client.girlCount || 0;
+      stats.dateCount = client.dateCount || 0;
+      stats.serviceStage = client.serviceStage || '未开始';
+      stats.currentStage = STAGE_MAP[stats.serviceStage] || 0;
+      try {
+        const girlsRes = await girls.list();
+        if (girlsRes.success) {
+          stats.intimacyCount = girlsRes.girls.filter(g => g.stage === '暧昧').length;
+          stats.longTermCount = girlsRes.girls.filter(g => g.stage === '长期').length;
+        }
+      } catch { /* ignore */ }
+    }
+    const memberStatus = memberRes.success ? memberRes : null;
+    return { stats, memberStatus };
+  }, { key: '/home' });
+
+  const stats = data?.stats ?? {
+    girlCount: 0, dateCount: 0, serviceStage: '', currentStage: 0,
+    intimacyCount: 0, longTermCount: 0
   };
+  const memberStatus = data?.memberStatus;
 
-  useEffect(() => { loadStats(); }, []);
-
-  if (loading) {
+  if (isInitialLoad) {
     return (
       <Box>
         <Skeleton height="80px" mb={8} borderRadius="xl" />

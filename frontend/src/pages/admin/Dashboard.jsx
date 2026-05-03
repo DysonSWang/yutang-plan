@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Box, Heading, SimpleGrid, Card, CardBody, Stat, StatLabel, StatNumber, StatHelpText,
   Table, Thead, Tbody, Tr, Th, Td, Text, Badge, Button, HStack, VStack, Flex, Select,
@@ -6,6 +6,7 @@ import {
 } from '@chakra-ui/react';
 import { dashboard as dashboardApi, clients as clientsApi, weeklyReview as weeklyReviewApi } from '../../utils/api';
 import { captureError } from '../../utils/frontendErrorCapture';
+import useKeepAliveData from '../../hooks/useKeepAliveData';
 import { RefreshIcon, SparklesIcon, ClipboardIcon, WarningIcon, CalendarIcon, FireIcon, SnowIcon, InfoIcon, ChartIcon } from '../../components/Icons';
 
 const STAGE_COLORS = {
@@ -20,13 +21,13 @@ const ALERT_COLORS = {
 };
 
 export default function AdminDashboard() {
-  const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     clientCount: 0, girlCount: 0,
     clientStageStats: {}, girlStageStats: {}, avgTension: '5.0'
   });
   const [clientList, setClientList] = useState([]);
   const [selectedClientId, setSelectedClientId] = useState('');
+  const selectedClientIdRef = useRef('');
   const [todayTasks, setTodayTasks] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [weekTasks, setWeekTasks] = useState([]);
@@ -36,45 +37,32 @@ export default function AdminDashboard() {
   const [weeklyReport, setWeeklyReport] = useState(null);
   const [weeklyLoading, setWeeklyLoading] = useState(false);
 
-  const loadStats = useCallback(async () => {
-    setLoading(true);
-    try {
-      const statsRes = await dashboardApi.stats(selectedClientId);
-      if (statsRes.success) {
-        setStats({
-          clientCount: statsRes.clientCount,
-          girlCount: statsRes.girlCount,
-          clientStageStats: statsRes.clientStageStats,
-          girlStageStats: statsRes.girlStageStats,
-          avgTension: statsRes.avgTension
-        });
-      }
-    } catch (e) {
-      captureError(e);
-    } finally {
-      setLoading(false);
+  const { isInitialLoad, refresh } = useKeepAliveData(async () => {
+    const cid = selectedClientIdRef.current;
+    const [statsRes, clientsRes] = await Promise.all([
+      dashboardApi.stats(cid),
+      clientsApi.list(),
+    ]);
+    if (statsRes.success) {
+      setStats({
+        clientCount: statsRes.clientCount,
+        girlCount: statsRes.girlCount,
+        clientStageStats: statsRes.clientStageStats,
+        girlStageStats: statsRes.girlStageStats,
+        avgTension: statsRes.avgTension,
+      });
     }
-  }, [selectedClientId]);
-
-  const loadInitialData = async () => {
-    try {
-      const res = await clientsApi.list();
-      if (res.success) {
-        setClientList(res.clients);
-      }
-    } catch (e) {
-      captureError(e);
+    if (clientsRes.success) {
+      setClientList(clientsRes.clients);
     }
-  };
+    return true;
+  }, { key: '/admin' });
 
+  // selectedClientId 变化时重新加载
   useEffect(() => {
-    loadInitialData();
-    loadStats();
-  }, [loadStats]);
-
-  useEffect(() => {
-    loadStats();
-  }, [selectedClientId, loadStats]);
+    selectedClientIdRef.current = selectedClientId;
+    refresh();
+  }, [selectedClientId, refresh]);
 
   // 轮询异步分析结果
   const pollAnalyzeResult = async (jobId, maxAttempts = 90) => {
@@ -206,7 +194,7 @@ export default function AdminDashboard() {
         </Box>
       )}
 
-      {loading ? (
+      {isInitialLoad ? (
         <Box textAlign="center" py={20}>
           <Spinner size="xl" color="gold.400" />
           <Text color="rgba(245,240,232,0.4)" mt={4}>加载中...</Text>

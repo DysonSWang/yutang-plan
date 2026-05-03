@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Heading, Text, SimpleGrid, Card, CardBody, Badge, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure, HStack, VStack, Icon, Flex, Input, Button, useToast, NumberInput, NumberInputField, NumberInputStepper, NumberIncrementStepper, NumberDecrementStepper, Select, FormControl, FormLabel, Skeleton } from '@chakra-ui/react';
 import { HeartIcon, FishIcon } from '../../components/Icons';
 import { girls } from '../../utils/api';
-import { captureError } from '../../utils/frontendErrorCapture';
+import useKeepAliveData from '../../hooks/useKeepAliveData';
 import EmptyState from '../../components/EmptyState';
 import AnimatedNumber from '../../components/AnimatedNumber';
 
@@ -18,23 +18,18 @@ const STAGE_COLORS = {
 
 export default function MyPond() {
   const navigate = useNavigate();
-  const [girlsList, setGirls] = useState([]);
-  const [loading, setLoading] = useState(true);
   const { isOpen: isAddOpen, onOpen: onAddOpen, onClose: onAddClose } = useDisclosure();
   const [addForm, setAddForm] = useState({ name: '', age: '', occupation: '' });
   const [adding, setAdding] = useState(false);
   const toast = useToast();
 
-  useEffect(() => { loadGirls(); }, []);
-
-  const loadGirls = async () => {
-    setLoading(true);
-    try {
+  const { data: girlsList = [], isInitialLoad, refresh } = useKeepAliveData(
+    async () => {
       const res = await girls.list();
-      if (res.success) setGirls(res.girls);
-    } catch (e) { captureError(e); }
-    finally { setLoading(false); }
-  };
+      return res.success ? res.girls : [];
+    },
+    { key: '/my-pond' }
+  );
 
   const handleAddGirl = async () => {
     if (!addForm.name.trim()) {
@@ -48,7 +43,7 @@ export default function MyPond() {
         toast({ title: res.quotaLeft !== undefined ? `添加成功，剩余 ${res.quotaLeft} 个名额` : '添加成功', status: 'success', duration: 2000 });
         setAddForm({ name: '', age: '', occupation: '' });
         onAddClose();
-        loadGirls();
+        refresh();
       } else if (res.code === 'QUOTA_EXCEEDED') {
         toast({ title: `额度已用完（${res.currentCount}/${res.quota}人），请联系操盘手升级`, status: 'warning', duration: 4000 });
       } else {
@@ -81,7 +76,7 @@ export default function MyPond() {
         </Button>
       </Flex>
 
-      {loading ? (
+      {isInitialLoad ? (
         <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4}>
           {[1,2,3].map(i => <Skeleton key={i} height="120px" borderRadius="lg" />)}
         </SimpleGrid>

@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import useKeepAliveData from '../../hooks/useKeepAliveData';
 import {
   Box, Heading, Text, VStack, HStack, Button, Badge, Tabs, TabList, TabPanels, Tab, TabPanel,
   Table, Thead, Tbody, Tr, Th, Td, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody,
@@ -478,23 +479,14 @@ function TrialConfigTab() {
 export default function MembershipManagement() {
   const toast = useToast();
   const [clients, setClients] = useState([]);
-  const [loading, setLoading] = useState(true);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [selectedClient, setSelectedClient] = useState(null);
 
-  useEffect(() => { loadClients(); }, []);
-
-  async function loadClients() {
-    setLoading(true);
-    try {
-      const res = await membershipApi.adminList();
-      if (res.success) setClients(res.clients);
-    } catch (err) {
-      toast({ title: '加载失败', description: err.message, status: 'error' });
-    } finally {
-      setLoading(false);
-    }
-  }
+  const { isInitialLoad, refresh } = useKeepAliveData(async () => {
+    const res = await membershipApi.adminList();
+    if (res.success) setClients(res.clients);
+    return true;
+  }, { key: '/admin/membership' });
 
   function handleManage(client) {
     setSelectedClient(client);
@@ -507,7 +499,7 @@ export default function MembershipManagement() {
         会员与积分管理
       </Heading>
 
-      {loading ? (
+      {isInitialLoad ? (
         <Center py={20}><Spinner size="xl" /></Center>
       ) : (
         <>

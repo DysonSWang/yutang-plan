@@ -7,6 +7,7 @@ import { captureError } from '../../utils/frontendErrorCapture';
 import RegionSelector from '../../components/RegionSelector';
 import { checkVersion, VERSION } from '../../utils/version';
 import VersionUpdateModal from '../../components/VersionUpdateModal';
+import useKeepAliveData from '../../hooks/useKeepAliveData';
 
 const TYPE_LABEL = { monthly: '普惠月付', yearly: '普惠年付', premium: '高端会员', TRIAL: '试用会员' };
 const TYPE_BADGE_COLOR = { monthly: 'green', yearly: 'blue', premium: 'purple', TRIAL: 'orange' };
@@ -40,7 +41,6 @@ const STAGE_COLORS = {
 // 客户可见的字段（可编辑）
 const CLIENT_EDITABLE_FIELDS = [
   { key: 'nickname', label: '昵称', type: 'input' },
-  { key: 'phone', label: '电话', type: 'input' },
   { key: 'age', label: '年龄', type: 'number-select', range: [18, 80], default: 28 },
   { key: 'occupation', label: '职业', type: 'select', options: ['企业主', '企业高管', '公务员', '医生', '律师', '教师', '工程师', '程序员', '销售', '金融从业者', '自由职业', '退休', '其他'] },
   { key: 'education', label: '学历', type: 'select', options: ['小学', '初中', '中专', '高中', '大专', '本科', '硕士', '博士'] },
@@ -226,12 +226,7 @@ function ProfileField({ field, value, onChange }) {
 }
 
 export default function ClientProfile() {
-  const [profile, setProfile] = useState(null);
-  const [completeness, setCompleteness] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [editData, setEditData] = useState({});
-  const [memberStatus, setMemberStatus] = useState(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { isOpen: isPricingOpen, onOpen: onPricingOpen, onClose: onPricingClose } = useDisclosure();
   const { isOpen: isVersionOpen, onOpen: onVersionOpen, onClose: onVersionClose } = useDisclosure();
@@ -254,8 +249,6 @@ export default function ClientProfile() {
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState('');
   const [savingAvatar, setSavingAvatar] = useState(false);
-  const [aiMode, setAiMode] = useState('manual'); // 'manual' | 'ai'
-  const [aiTab, setAiTab] = useState('text'); // 'text' | 'screenshot'
   const [aiText, setAiText] = useState('');
   const [aiExtracting, setAiExtracting] = useState(false);
   const [aiStreamText, setAiStreamText] = useState('');
@@ -269,43 +262,36 @@ export default function ClientProfile() {
   const aiStreamRafRef = useRef(null);
   const toast = useToast();
 
-  useEffect(() => {
-    loadProfile();
-    loadMembership();
-    loadCompleteness();
-  }, []);
-
-  const loadProfile = async () => {
-    try {
-      const res = await clients.me();
-      if (res.success) {
-        setProfile(res.client);
-        const data = {};
-        CLIENT_EDITABLE_FIELDS.forEach(f => {
-          data[f.key] = res.client[f.key] || '';
-        });
-        setEditData(data);
-      }
-    } catch (e) {
-      captureError(e);
-    } finally {
-      setLoading(false);
+  const { data, isInitialLoad, refresh } = useKeepAliveData(async () => {
+    const [clientRes, memberRes, compRes] = await Promise.all([
+      clients.me(),
+      membershipApi.status().catch(() => ({ success: false })),
+      membershipApi.profileCompleteness().catch(() => ({ success: false })),
+    ]);
+    let profile = null;
+    let editData = {};
+    if (clientRes.success) {
+      profile = clientRes.client;
+      CLIENT_EDITABLE_FIELDS.forEach(f => {
+        editData[f.key] = clientRes.client[f.key] || '';
+      });
     }
-  };
+    return {
+      profile,
+      editData,
+      memberStatus: memberRes.success ? memberRes : null,
+      completeness: compRes.success ? compRes.completeness : null,
+    };
+  }, { key: '/profile' });
 
-  const loadMembership = async () => {
-    try {
-      const res = await membershipApi.status().catch(() => ({ success: false }));
-      if (res.success) setMemberStatus(res);
-    } catch (e) { captureError(e); }
-  };
-
-  const loadCompleteness = async () => {
-    try {
-      const res = await membershipApi.profileCompleteness();
-      if (res.success) setCompleteness(res.completeness);
-    } catch (e) { captureError(e); }
-  };
+  const profile = data?.profile;
+  const memberStatus = data?.memberStatus;
+  const completeness = data?.completeness;
+  // editData 用本地 state，方便表单修改
+  const [editData, setEditData] = useState(data?.editData ?? {});
+  useEffect(() => {
+    if (data?.editData) setEditData(data.editData);
+  }, [data]);
 
   const handleFieldChange = useCallback((key, val) => {
     setEditData(prev => ({ ...prev, [key]: val }));
@@ -317,8 +303,8 @@ export default function ClientProfile() {
       const res = await clients.update(profile.id, editData);
       if (res.success) {
         toast({ title: '保存成功', status: 'success' });
-        setProfile(res.client);
         onClose();
+        refresh();
         // 档案更新后检查是否需要重新生成个性化内容
         try {
           const perRes = await membershipApi.personalizedStatus();
@@ -336,7 +322,6 @@ export default function ClientProfile() {
         toast({ title: '保存失败', status: 'error' });
       }
     } catch (e) {
-      captureError(e);
       toast({ title: '保存失败', status: 'error' });
     } finally {
       setSaving(false);
@@ -349,7 +334,6 @@ export default function ClientProfile() {
       data[f.key] = profile[f.key] || (f.default ? String(f.default) : '');
     });
     setEditData(data);
-    setAiMode('manual');
     setAiText('');
     setAiStreamText('');
     setAiExtractedFields(null);
@@ -503,7 +487,6 @@ export default function ClientProfile() {
     }
     setEditData(prev => ({ ...prev, ...updates }));
     toast({ title: `已应用 ${Object.keys(updates).length} 个字段`, description: '请检查并修改后保存', status: 'success' });
-    setAiMode('manual');
   };
 
   // 截图文件选择
@@ -570,7 +553,7 @@ export default function ClientProfile() {
       if (res.success) {
         toast({ title: '续费成功', description: '会员有效期已延长', status: 'success', duration: 3000 });
         onRenewalClose();
-        await loadMembership();
+        await refresh();
         setRenewalType('monthly');
       } else {
         toast({ title: res.error?.message || '续费失败', status: 'error' });
@@ -609,7 +592,7 @@ export default function ClientProfile() {
       }
       const res = await clients.update(profile.id, { avatar: uploadRes.url });
       if (res.success) {
-        setProfile(prev => ({ ...prev, avatar: uploadRes.url }));
+        refresh();
         toast({ title: '头像已更新', status: 'success', duration: 2000 });
         setEditingAvatar(false);
         setAvatarFile(null);
@@ -634,7 +617,7 @@ export default function ClientProfile() {
     setEditingAvatar(true);
   };
 
-  if (loading) {
+  if (isInitialLoad) {
     return (
       <Flex justify="center" align="center" minH="200px">
         <Spinner size="xl" color="teal.400" />
@@ -1008,75 +991,22 @@ export default function ClientProfile() {
       <Modal isOpen={isOpen} onClose={onClose} size="xl">
         <ModalOverlay bg="blackAlpha.700" />
         <ModalContent bg="warm.800" overflow="auto">
-          <ModalHeader color="white">
-            <HStack spacing={3}>
-              <Text>编辑我的档案</Text>
-              <HStack spacing={0} bg="warm.700" borderRadius="md" p="2px">
-                <Button
-                  size="xs"
-                  colorScheme={aiMode === 'manual' ? 'teal' : 'gray'}
-                  variant={aiMode === 'manual' ? 'solid' : 'ghost'}
-                  onClick={() => setAiMode('manual')}
-                >手动填写</Button>
-                <Button
-                  size="xs"
-                  colorScheme={aiMode === 'ai' ? 'teal' : 'gray'}
-                  variant={aiMode === 'ai' ? 'solid' : 'ghost'}
-                  onClick={() => setAiMode('ai')}
-                  leftIcon={<Icon as={FiEdit2} />}
-                >AI 智能识别</Button>
-              </HStack>
-            </HStack>
-          </ModalHeader>
+          <ModalHeader color="white">编辑我的档案</ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={6}>
-            {aiMode === 'manual' ? (
-              <>
-                <SimpleGrid columns={2} spacing={4}>
-                  {CLIENT_EDITABLE_FIELDS.map(field => (
-                    <ProfileField
-                      key={field.key}
-                      field={field}
-                      value={editData[field.key]}
-                      onChange={handleFieldChange}
-                    />
-                  ))}
-                </SimpleGrid>
-                <HStack justify="flex-end" mt={6} spacing={3}>
-                  <Button variant="ghost" color="rgba(245,240,232,0.4)" onClick={onClose}>取消</Button>
-                  <Button colorScheme="gold" onClick={handleSave} isLoading={saving}>保存</Button>
-                </HStack>
-              </>
-            ) : (
-              <VStack spacing={4} align="stretch">
-                {/* 子 tab 切换 */}
-                <HStack spacing={0} bg="warm.700" borderRadius="md" p="2px" w="fit-content">
-                  <Button
-                    size="xs"
-                    colorScheme={aiTab === 'text' ? 'blue' : 'gray'}
-                    variant={aiTab === 'text' ? 'solid' : 'ghost'}
-                    onClick={() => { setAiTab('text'); setAiExtractedFields(null); setAiConfirmSelections({}); }}
-                  >文字描述</Button>
-                  <Button
-                    size="xs"
-                    colorScheme={aiTab === 'screenshot' ? 'blue' : 'gray'}
-                    variant={aiTab === 'screenshot' ? 'solid' : 'ghost'}
-                    onClick={() => { setAiTab('screenshot'); setAiExtractedFields(null); setAiConfirmSelections({}); }}
-                  >上传截图</Button>
-                </HStack>
-
-                {/* 文字描述模式 */}
-                {aiTab === 'text' && (
+            <VStack spacing={5} align="stretch">
+              {/* AI 智能识别 */}
+              <Card bg="warm.700" border="1px solid" borderColor="warm.600">
+                <CardBody>
+                  <Heading size="xs" color="teal.400" mb={3}>AI 智能识别</Heading>
                   <VStack spacing={3} align="stretch">
-                    <Text color="rgba(245,240,232,0.4)" fontSize="sm">
-                      粘贴一段自我介绍文字，AI 将自动分析并提取档案字段。支持描述自己的年龄、职业、学历、性格、感情观等。
-                    </Text>
+                    {/* 文字输入 */}
                     <Textarea
                       value={aiText}
                       onChange={e => setAiText(e.target.value)}
-                      placeholder="例如：我今年28岁，在深圳做互联网工程师，本科学历，性格开朗幽默，喜欢运动和旅行。希望能找到认真交往的对象..."
-                      rows={5}
-                      bg="warm.700"
+                      placeholder="粘贴自我介绍文字，AI 自动提取档案字段（年龄、职业、性格、感情观等）..."
+                      rows={3}
+                      bg="warm.800"
                       color="white"
                       border="1px solid"
                       borderColor="warm.600"
@@ -1084,10 +1014,11 @@ export default function ClientProfile() {
                       _focus={{ borderColor: 'blue.500', boxShadow: '0 0 0 1px var(--chakra-colors-blue-500)' }}
                     />
                     <Button
+                      size="sm"
                       colorScheme="blue"
                       onClick={handleAiTextExtract}
                       isLoading={aiExtracting}
-                      loadingText="AI 分析中..."
+                      loadingText="分析中..."
                       isDisabled={aiText.trim().length < 20}
                     >智能分析</Button>
 
@@ -1096,21 +1027,21 @@ export default function ClientProfile() {
                       <Card bg="warm.800" border="1px solid" borderColor="blue.700">
                         <CardBody py={3}>
                           <Text color="blue.300" fontWeight="bold" fontSize="sm" mb={2}>AI 正在分析...</Text>
-                          <Text color="gray.300" fontSize="sm" whiteSpace="pre-wrap" maxH="200px" overflowY="auto">
+                          <Text color="gray.300" fontSize="sm" whiteSpace="pre-wrap" maxH="150px" overflowY="auto">
                             {aiStreamText}
                           </Text>
                         </CardBody>
                       </Card>
                     )}
-                  </VStack>
-                )}
 
-                {/* 截图模式 */}
-                {aiTab === 'screenshot' && (
-                  <VStack spacing={3} align="stretch">
-                    <Text color="rgba(245,240,232,0.4)" fontSize="sm">
-                      上传一张聊天截图（如交友资料页、聊天记录等），AI 将识别其中的个人信息并提取档案字段。
-                    </Text>
+                    {/* 或 */}
+                    <HStack>
+                      <Box flex={1} h="1px" bg="warm.600" />
+                      <Text color="rgba(245,240,232,0.3)" fontSize="xs">或</Text>
+                      <Box flex={1} h="1px" bg="warm.600" />
+                    </HStack>
+
+                    {/* 截图上传 */}
                     <Input
                       type="file"
                       accept="image/*"
@@ -1120,7 +1051,7 @@ export default function ClientProfile() {
                     />
                     {aiScreenshotPreview ? (
                       <Box position="relative" borderRadius="md" overflow="hidden" bg="gray.900">
-                        <Image src={aiScreenshotPreview} alt="预览" maxH="200px" w="full" objectFit="contain" />
+                        <Image src={aiScreenshotPreview} alt="预览" maxH="160px" w="full" objectFit="contain" />
                         <IconButton
                           icon={<Icon as={FiEdit2} />}
                           size="xs"
@@ -1137,69 +1068,84 @@ export default function ClientProfile() {
                         variant="outline"
                         colorScheme="blue"
                         onClick={() => screenshotInputRef.current?.click()}
-                        h="80px"
+                        h="60px"
                         borderStyle="dashed"
-                      >点击选择聊天截图</Button>
+                      >选择聊天截图</Button>
                     )}
-                    <Button
-                      colorScheme="blue"
-                      onClick={handleAiScreenshotExtract}
-                      isLoading={aiExtracting}
-                      loadingText="AI 分析中..."
-                      isDisabled={!aiScreenshotFile}
-                    >上传分析</Button>
-                  </VStack>
-                )}
+                    {aiScreenshotFile && (
+                      <Button
+                        size="sm"
+                        colorScheme="blue"
+                        onClick={handleAiScreenshotExtract}
+                        isLoading={aiExtracting}
+                        loadingText="分析中..."
+                      >上传分析</Button>
+                    )}
 
-                {/* AI 提取结果 */}
-                {aiExtractedFields && (
-                  <Card bg="warm.700" border="1px solid" borderColor="teal.600">
-                    <CardBody>
-                      <HStack justify="space-between" mb={3}>
-                        <Text color="teal.400" fontWeight="bold">
-                          AI 识别结果（共 {Object.entries(aiExtractedFields).filter(([, v]) => v).length} 个字段）
-                        </Text>
-                        <HStack spacing={2}>
-                          <Button size="xs" variant="ghost" color="teal.400" onClick={() => {
-                            const all = {};
-                            Object.keys(aiExtractedFields).forEach(k => { all[k] = true; });
-                            setAiConfirmSelections(all);
-                          }}>全选</Button>
-                          <Button size="xs" variant="ghost" color="rgba(245,240,232,0.4)" onClick={() => setAiConfirmSelections({})}>反选</Button>
-                        </HStack>
-                      </HStack>
-                      <VStack spacing={1} align="stretch">
-                        {Object.entries(aiExtractedFields).map(([key, value]) => {
-                          if (!value) return null;
-                          const label = ALL_FIELD_LABELS[key] || key;
-                          return (
-                            <HStack key={key} bg="warm.800" px={3} py={1.5} borderRadius="md">
-                              <Checkbox
-                                isChecked={!!aiConfirmSelections[key]}
-                                onChange={e => setAiConfirmSelections(prev => ({ ...prev, [key]: e.target.checked }))}
-                                colorScheme="gold"
-                                size="sm"
-                              />
-                              <Text color="rgba(245,240,232,0.4)" fontSize="sm" minW="80px">{label}</Text>
-                              <Text color="white" fontSize="sm" fontWeight="medium" flex={1}>{String(value)}</Text>
+                    {/* AI 提取结果 */}
+                    {aiExtractedFields && (
+                      <Card bg="warm.800" border="1px solid" borderColor="teal.600">
+                        <CardBody>
+                          <HStack justify="space-between" mb={3}>
+                            <Text color="teal.400" fontWeight="bold" fontSize="sm">
+                              AI 识别结果（共 {Object.entries(aiExtractedFields).filter(([, v]) => v).length} 个字段）
+                            </Text>
+                            <HStack spacing={2}>
+                              <Button size="xs" variant="ghost" color="teal.400" onClick={() => {
+                                const all = {};
+                                Object.keys(aiExtractedFields).forEach(k => { all[k] = true; });
+                                setAiConfirmSelections(all);
+                              }}>全选</Button>
+                              <Button size="xs" variant="ghost" color="rgba(245,240,232,0.4)" onClick={() => setAiConfirmSelections({})}>反选</Button>
                             </HStack>
-                          );
-                        })}
-                      </VStack>
-                      <HStack justify="flex-end" mt={4} spacing={3}>
-                        <Button size="sm" variant="ghost" color="rgba(245,240,232,0.4)" onClick={() => { setAiExtractedFields(null); setAiConfirmSelections({}); }}>清除</Button>
-                        <Button size="sm" colorScheme="gold" onClick={handleApplySelectedFields}>应用已选字段</Button>
-                      </HStack>
-                    </CardBody>
-                  </Card>
-                )}
+                          </HStack>
+                          <VStack spacing={1} align="stretch">
+                            {Object.entries(aiExtractedFields).map(([key, value]) => {
+                              if (!value) return null;
+                              const label = ALL_FIELD_LABELS[key] || key;
+                              return (
+                                <HStack key={key} bg="warm.700" px={3} py={1.5} borderRadius="md">
+                                  <Checkbox
+                                    isChecked={!!aiConfirmSelections[key]}
+                                    onChange={e => setAiConfirmSelections(prev => ({ ...prev, [key]: e.target.checked }))}
+                                    colorScheme="teal"
+                                    size="sm"
+                                  />
+                                  <Text color="rgba(245,240,232,0.4)" fontSize="sm" minW="80px">{label}</Text>
+                                  <Text color="white" fontSize="sm" fontWeight="medium" flex={1}>{String(value)}</Text>
+                                </HStack>
+                              );
+                            })}
+                          </VStack>
+                          <HStack justify="flex-end" mt={3} spacing={3}>
+                            <Button size="sm" variant="ghost" color="rgba(245,240,232,0.4)" onClick={() => { setAiExtractedFields(null); setAiConfirmSelections({}); }}>清除</Button>
+                            <Button size="sm" colorScheme="teal" onClick={handleApplySelectedFields}>应用已选字段</Button>
+                          </HStack>
+                        </CardBody>
+                      </Card>
+                    )}
+                  </VStack>
+                </CardBody>
+              </Card>
 
-                <HStack justify="flex-end" spacing={3}>
-                  <Button variant="ghost" color="rgba(245,240,232,0.4)" onClick={onClose}>取消</Button>
-                  <Button colorScheme="gold" onClick={() => setAiMode('manual')}>返回手动填写</Button>
-                </HStack>
-              </VStack>
-            )}
+              {/* 手动填写表单 */}
+              <SimpleGrid columns={2} spacing={4}>
+                {CLIENT_EDITABLE_FIELDS.map(field => (
+                  <ProfileField
+                    key={field.key}
+                    field={field}
+                    value={editData[field.key]}
+                    onChange={handleFieldChange}
+                  />
+                ))}
+              </SimpleGrid>
+
+              {/* 底部按钮 */}
+              <HStack justify="flex-end" spacing={3}>
+                <Button variant="ghost" color="rgba(245,240,232,0.4)" onClick={onClose}>取消</Button>
+                <Button colorScheme="gold" onClick={handleSave} isLoading={saving}>保存</Button>
+              </HStack>
+            </VStack>
           </ModalBody>
         </ModalContent>
       </Modal>

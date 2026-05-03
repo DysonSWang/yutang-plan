@@ -12,6 +12,7 @@ import { CalendarIcon, SparklesIcon, QuestionIcon, MapPinIcon, ClockIcon } from 
 import ClientCalendar from '../../components/ClientCalendar';
 import { dates, clients, getMediaUrl } from '../../utils/api';
 import { captureError } from '../../utils/frontendErrorCapture';
+import useKeepAliveData from '../../hooks/useKeepAliveData';
 
 function formatLocalDateTime(date) {
   if (!date) return '';
@@ -63,14 +64,10 @@ function filterReasoning(text) {
 }
 
 export default function ClientDates() {
-  const [datesList, setDatesList] = useState([]);
-  const [allDates, setAllDates] = useState([]);
   const [clientId, setClientId] = useState(null);
   const [girlList, setGirlList] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const [pendingInterviews, setPendingInterviews] = useState([]);
   const [interviewModal, setInterviewModal] = useState(null);
   const [interviewOpen, setInterviewOpen] = useState(false);
   const [interviewAnswers, setInterviewAnswers] = useState({});
@@ -208,7 +205,7 @@ export default function ClientDates() {
           // 等 selected 状态更新后触发 AI 生成
           setTimeout(() => handleReoptimizeDate(), 100);
         }
-        loadAll();
+        refresh();
       } else {
         toast({ title: res.error || '创建失败', status: 'error' });
       }
@@ -236,7 +233,7 @@ export default function ClientDates() {
         toast({ title: '约会添加成功', status: 'success', duration: 2000 });
         setShowAddModal(false);
         resetDateForm();
-        loadAll();
+        refresh();
       } else {
         toast({ title: res.error || '添加失败', status: 'error' });
       }
@@ -257,22 +254,24 @@ export default function ClientDates() {
     setAddStep(1);
   };
 
-  const loadAll = async () => {
-    setLoading(true);
-    try {
-      const [pendingRes, allDatesRes, interviewsRes] = await Promise.all([
-        dates.getClientPending(),
-        dates.list().catch(() => ({ success: false, dates: [] })),
-        dates.getClientInterviews().catch(() => ({ success: false }))
-      ]);
-      if (pendingRes.success) setDatesList(pendingRes.dates || []);
-      if (allDatesRes.success) setAllDates(allDatesRes.dates || []);
-      if (interviewsRes?.success) setPendingInterviews(interviewsRes.interviews || []);
-    } catch (e) { captureError(e); }
-    setLoading(false);
-  };
+  const { data, isInitialLoad, refresh } = useKeepAliveData(async () => {
+    const [pendingRes, allDatesRes, interviewsRes] = await Promise.all([
+      dates.getClientPending(),
+      dates.list().catch(() => ({ success: false, dates: [] })),
+      dates.getClientInterviews().catch(() => ({ success: false }))
+    ]);
+    return {
+      datesList: pendingRes.success ? pendingRes.dates || [] : [],
+      allDates: allDatesRes.success ? allDatesRes.dates || [] : [],
+      pendingInterviews: interviewsRes?.success ? interviewsRes.interviews || [] : [],
+    };
+  }, { key: '/dates' });
 
-  // 加载客户ID、女生列表和偏好设置
+  const datesList = data?.datesList ?? [];
+  const allDates = data?.allDates ?? [];
+  const pendingInterviews = data?.pendingInterviews ?? [];
+
+  // 加载客户ID、女生列表和偏好设置（一次性加载）
   useEffect(() => {
     const loadClientInfo = async () => {
       try {
@@ -283,7 +282,6 @@ export default function ClientDates() {
         if (res.client?.girls) {
           setGirlList(res.client.girls);
         }
-        // 预填充用户偏好
         if (res.client) {
           setDateForm(prev => ({
             ...prev,
@@ -294,9 +292,6 @@ export default function ClientDates() {
     };
     loadClientInfo();
   }, []);
-
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { loadAll(); }, []);
 
   // 关闭方案详情弹窗时清理流式状态
   useEffect(() => {
@@ -392,7 +387,7 @@ export default function ClientDates() {
         isStreamingRef.current = false;
         setStreamStatus('');
         setStreamContent('');
-        loadAll();
+        refresh();
       },
       onError: (msg) => {
         toast({ title: msg || '重新生成失败', status: 'error' });
@@ -419,7 +414,7 @@ export default function ClientDates() {
           setAllDates(prev => prev.filter(d => d.id !== dateId));
         } else {
           onClose();
-          loadAll();
+          refresh();
         }
       } else {
         toast({ title: res.error || '删除失败', status: 'error' });
@@ -458,7 +453,7 @@ export default function ClientDates() {
         toast({ title: '访谈已提交，顾问正在生成复盘分析', status: 'success', duration: 3000 });
         setInterviewOpen(false);
         setInterviewModal(null);
-        loadAll();
+        refresh();
       } else {
         toast({ title: res.error || '提交失败', status: 'error', duration: 2500 });
       }
@@ -760,7 +755,7 @@ export default function ClientDates() {
             )}
 
             {/* 约会列表 */}
-            {loading ? (
+            {isInitialLoad ? (
               <Flex justify="center" py={12}><Spinner /></Flex>
             ) : filteredDates.length === 0 && pendingInterviews.length === 0 ? (
               <Card bg="warm.800">

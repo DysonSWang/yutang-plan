@@ -1,5 +1,6 @@
 import { Box, Flex, VStack, Icon, Text, Badge, Popover, PopoverTrigger, PopoverContent, PopoverBody, PopoverHeader, Button, HStack, useToast } from '@chakra-ui/react';
-import { Outlet, NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
+import KeepAliveOutlet from '../../components/KeepAliveOutlet';
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSocket } from '../../contexts/SocketContext';
@@ -122,10 +123,7 @@ function DesktopSidebar({ chatUnread, unreadCount, notifications, showNotificati
           </NavLink>
         ))}
       </VStack>
-      <Box mt="auto" pt={4} borderTop="1px solid rgba(255,255,255,0.06)">
-        <Text fontSize="sm" color="rgba(245,240,232,0.6)" mb={1}>{user?.nickname}</Text>
-        <Text fontSize="xs" color="rgba(245,240,232,0.2)">{user?.role === 'client' ? '客户' : '其他'}</Text>
-      </Box>
+      <Box mt="auto" pt={4} borderTop="1px solid rgba(255,255,255,0.06)" />
     </Box>
   );
 }
@@ -302,7 +300,7 @@ export default function ClientLayout() {
         pb={{ base: '80px', lg: 6 }}
         minH="100vh"
       >
-        <Outlet />
+        <KeepAliveOutlet />
       </Box>
       <MobileBottomNav chatUnread={chatUnread} unreadCount={unreadCount} />
     </Box>

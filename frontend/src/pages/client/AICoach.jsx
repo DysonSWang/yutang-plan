@@ -864,8 +864,243 @@ const SuggestionGroup = memo(({
   );
 });
 
+// 聊天截图导入弹窗
+const ImportChatModal = memo(({ isOpen, onClose, girlId, girlName, apiUrl, onImportComplete, toast }) => {
+  const [step, setStep] = useState('upload'); // 'upload' | 'recognizing' | 'confirm' | 'importing'
+  const [images, setImages] = useState([]); // File[]
+  const [chatDate, setChatDate] = useState(new Date().toISOString().split('T')[0]);
+  const [messages, setMessages] = useState([]); // [{role, content, time, index}]
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [editValue, setEditValue] = useState('');
+
+  const handleFileSelect = useCallback((e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 10) {
+      toast({ title: '最多选择10张截图', status: 'warning', duration: 2000 });
+      files.splice(10);
+    }
+    setImages(prev => [...prev, ...files].slice(0, 10));
+    e.target.value = '';
+  }, [toast]);
+
+  const removeImage = useCallback((idx) => {
+    setImages(prev => prev.filter((_, i) => i !== idx));
+  }, []);
+
+  const handleRecognize = useCallback(async () => {
+    if (images.length === 0) return;
+    setStep('recognizing');
+    const formData = new FormData();
+    images.forEach(f => formData.append('images', f));
+    formData.append('girlId', girlId);
+    formData.append('chatDate', chatDate);
+
+    try {
+      const res = await fetch(`${apiUrl}/api/ai-coach/import-chat-screenshots`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('zhuiai_token')}` },
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (data.messages.length === 0) {
+          toast({ title: '未识别到对话内容，请换张截图试试', status: 'warning', duration: 3000 });
+          setStep('upload');
+        } else {
+          setMessages(data.messages.map((m, i) => ({ ...m, index: i })));
+          setStep('confirm');
+        }
+      } else {
+        toast({ title: data.error || '识别失败', status: 'error', duration: 3000 });
+        setStep('upload');
+      }
+    } catch {
+      toast({ title: '识别请求失败，请重试', status: 'error', duration: 3000 });
+      setStep('upload');
+    }
+  }, [images, chatDate, girlId, apiUrl, toast]);
+
+  const confirmImport = useCallback(async () => {
+    setStep('importing');
+    onImportComplete(messages.map(m => ({ role: m.role, content: m.content })));
+    onClose();
+    // 重置状态
+    setTimeout(() => {
+      setStep('upload');
+      setImages([]);
+      setMessages([]);
+      setEditingIndex(null);
+      setChatDate(new Date().toISOString().split('T')[0]);
+    }, 300);
+  }, [messages, onImportComplete, onClose]);
+
+  const toggleRole = useCallback((idx) => {
+    setMessages(prev => prev.map((m, i) =>
+      i === idx ? { ...m, role: m.role === 'girl' ? 'user' : 'girl' } : m
+    ));
+  }, []);
+
+  const deleteMessage = useCallback((idx) => {
+    setMessages(prev => prev.filter((_, i) => i !== idx));
+  }, []);
+
+  const startEdit = useCallback((idx) => {
+    const msg = messages.find(m => m.index === idx);
+    if (msg) { setEditingIndex(idx); setEditValue(msg.content); }
+  }, [messages]);
+
+  const saveEdit = useCallback(() => {
+    if (editingIndex !== null) {
+      setMessages(prev => prev.map(m => m.index === editingIndex ? { ...m, content: editValue.trim() || m.content } : m));
+    }
+    setEditingIndex(null);
+    setEditValue('');
+  }, [editingIndex, editValue]);
+
+  const handleClose = useCallback(() => {
+    if (step === 'recognizing' || step === 'importing') return;
+    onClose();
+    setTimeout(() => {
+      setStep('upload');
+      setImages([]);
+      setMessages([]);
+      setEditingIndex(null);
+    }, 300);
+  }, [step, onClose]);
+
+  const isBusy = step === 'recognizing' || step === 'importing';
+
+  return (
+    <Modal isOpen={isOpen} onClose={handleClose} size="xl" closeOnOverlayClick={!isBusy}>
+      <ModalOverlay />
+      <ModalContent bg="warm.800" borderColor="rgba(245,240,232,0.1)" color="white" maxW="640px">
+        <ModalHeader fontSize="md" borderBottom="1px solid" borderColor="rgba(245,240,232,0.08)">
+          📎 导入聊天截图 {girlName ? `- ${girlName}` : ''}
+        </ModalHeader>
+
+        <ModalBody py={4}>
+          {step === 'upload' && (
+            <VStack spacing={4} align="stretch">
+              <Text fontSize="13px" color="rgba(245,240,232,0.5)">
+                上传你和{girlName || '女生'}在其他平台（微信等）的聊天截图，AI 会自动识别对话内容并导入到聊天实战中。
+              </Text>
+              {/* 图片选择 */}
+              <Box>
+                <Button as="label" size="sm" variant="outline" colorScheme="gold" cursor="pointer" leftIcon={<span>+</span>}>
+                  选择截图
+                  <input type="file" multiple accept="image/*" hidden onChange={handleFileSelect} />
+                </Button>
+                <Text as="span" ml={2} fontSize="12px" color="rgba(245,240,232,0.4)">{images.length}/10 张</Text>
+              </Box>
+              {/* 预览 */}
+              {images.length > 0 && (
+                <Flex wrap="wrap" gap={2} maxH="160px" overflowY="auto">
+                  {images.map((file, idx) => (
+                    <Box key={idx} position="relative" w="80px" h="80px" flexShrink={0}>
+                      <Box as="img" src={URL.createObjectURL(file)} w="100%" h="100%" objectFit="cover"
+                        borderRadius="md" border="1px solid" borderColor="rgba(245,240,232,0.15)" />
+                      <Button size="xs" position="absolute" top="-6px" right="-6px"
+                        borderRadius="full" w="20px" h="20px" minW="20px" p={0}
+                        bg="red.500" color="white" fontSize="10px"
+                        onClick={() => removeImage(idx)}>×</Button>
+                    </Box>
+                  ))}
+                </Flex>
+              )}
+              {/* 日期 */}
+              <Box>
+                <Text fontSize="12px" color="rgba(245,240,232,0.4)" mb={1}>聊天日期</Text>
+                <Input type="date" value={chatDate} onChange={e => setChatDate(e.target.value)}
+                  bg="warm.700" border="none" color="white" fontSize="13px" size="sm" maxW="200px" />
+              </Box>
+            </VStack>
+          )}
+
+          {step === 'recognizing' && (
+            <VStack spacing={3} py={8}>
+              <Spinner color="gold.400" />
+              <Text fontSize="13px" color="rgba(245,240,232,0.5)">正在识别对话内容...</Text>
+            </VStack>
+          )}
+
+          {step === 'confirm' && (
+            <VStack spacing={3} align="stretch">
+              <Text fontSize="13px" color="gold.300">已识别 {messages.length} 条消息，请确认并编辑：</Text>
+              <Box maxH="360px" overflowY="auto" sx={{
+                '&::-webkit-scrollbar': { width: '4px' },
+                '&::-webkit-scrollbar-thumb': { bg: 'rgba(245,240,232,0.15)', borderRadius: '2px' }
+              }}>
+                <VStack spacing={2} align="stretch">
+                  {messages.map((msg) => (
+                    <Flex key={msg.index} gap={2} align="center"
+                      justify={msg.role === 'user' ? 'flex-end' : 'flex-start'}>
+                      {msg.role === 'girl' && (
+                        <Button size="xs" variant="ghost" color="rgba(245,240,232,0.3)" fontSize="10px"
+                          p={0} minW="24px" onClick={() => toggleRole(msg.index)} title="切换为女">👧</Button>
+                      )}
+                      {editingIndex === msg.index ? (
+                        <Flex gap={1} flex={1}>
+                          <Textarea value={editValue} onChange={e => setEditValue(e.target.value)}
+                            bg="warm.700" color="white" fontSize="13px" size="sm" rows={2} flex={1}
+                            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit(); } }} />
+                          <Button size="xs" colorScheme="gold" onClick={saveEdit}>保存</Button>
+                        </Flex>
+                      ) : (
+                        <Box
+                          px={3} py={2} borderRadius="lg" maxW="70%" fontSize="13px" cursor="pointer"
+                          bg={msg.role === 'user' ? 'gold.600' : 'rgba(245,240,232,0.1)'}
+                          color="white"
+                          onClick={() => startEdit(msg.index)}
+                          title="点击编辑内容"
+                        >
+                          {msg.content}
+                          {msg.time && <Text fontSize="10px" color="rgba(245,240,232,0.35)" mt={0.5}>{msg.time}</Text>}
+                        </Box>
+                      )}
+                      {msg.role === 'user' && (
+                        <Button size="xs" variant="ghost" color="rgba(245,240,232,0.3)" fontSize="10px"
+                          p={0} minW="24px" onClick={() => toggleRole(msg.index)} title="切换为我">🙋</Button>
+                      )}
+                      <Button size="xs" variant="ghost" color="red.400" fontSize="12px"
+                        p={0} minW="20px" onClick={() => deleteMessage(msg.index)} title="删除此条">×</Button>
+                    </Flex>
+                  ))}
+                </VStack>
+              </Box>
+            </VStack>
+          )}
+        </ModalBody>
+
+        <ModalFooter borderTop="1px solid" borderColor="rgba(245,240,232,0.08)" gap={2}>
+          {step === 'upload' && (
+            <>
+              <Button size="sm" variant="ghost" color="rgba(245,240,232,0.5)" onClick={handleClose}>取消</Button>
+              <Button size="sm" colorScheme="gold" onClick={handleRecognize} isDisabled={images.length === 0}>
+                开始识别
+              </Button>
+            </>
+          )}
+          {step === 'confirm' && (
+            <>
+              <Button size="sm" variant="ghost" color="rgba(245,240,232,0.5)" onClick={() => setStep('upload')} isDisabled={isBusy}>
+                重新选择
+              </Button>
+              <Button size="sm" variant="outline" colorScheme="gold" onClick={handleRecognize} isDisabled={isBusy}>
+                重新识别
+              </Button>
+              <Button size="sm" colorScheme="gold" onClick={confirmImport} isLoading={step === 'importing'}>
+                确认导入
+              </Button>
+            </>
+          )}
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
+  );
+});
+
 // 双模式输入栏
-const CombatInputBar = memo(({ mode, onModeChange, value, onChange, onSubmit, loading, girlName }) => {
+const CombatInputBar = memo(({ mode, onModeChange, value, onChange, onSubmit, loading, girlName, onImportClick }) => {
   const textareaRef = useRef(null);
 
   const handleKeyDown = useCallback((e) => {
@@ -885,7 +1120,7 @@ const CombatInputBar = memo(({ mode, onModeChange, value, onChange, onSubmit, lo
   return (
     <Box bg="warm.800" borderTop="1px solid" borderColor="rgba(245,240,232,0.08)" px={4} py={3} flexShrink={0}>
       {/* Mode toggle */}
-      <Flex gap={1} mb={2}>
+      <Flex gap={1} mb={2} align="center">
         <Button
           size="xs"
           variant={mode === 'suggest' ? 'solid' : 'ghost'}
@@ -902,6 +1137,16 @@ const CombatInputBar = memo(({ mode, onModeChange, value, onChange, onSubmit, lo
           onClick={() => onModeChange('optimize')}
           fontSize="12px"
         >⚡ 话术优化</Button>
+        {onImportClick && (
+          <Button
+            size="xs"
+            variant="ghost"
+            color="rgba(245,240,232,0.4)"
+            onClick={onImportClick}
+            fontSize="12px"
+            ml="auto"
+          >📎 导入聊天</Button>
+        )}
       </Flex>
 
       {/* Input row */}
@@ -1106,6 +1351,8 @@ export default function AICoach() {
   const [girlAnalysisLoading, setGirlAnalysisLoading] = useState(false);
   // Track active tab (0 = AI教练, 1 = 聊天实战/回复建议)
   const [activeTabIndex, setActiveTabIndex] = useState(0);
+  // 聊天导入弹窗
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   // 前端缓存：避免女生档案未变化时重复调用 AI（参考 Workbench 的 hash 比对机制）
   const coachCacheRef = useRef({}); // { [girlId]: { content, girlDataHash, timestamp } }
@@ -1837,6 +2084,50 @@ export default function AICoach() {
     setSelectedSuggestionIndex(null);
   }, []);
 
+  // 聊天导入 - 完成确认后处理
+  const handleImportComplete = useCallback(async (messages) => {
+    if (!messages || messages.length === 0) return;
+
+    const now = new Date().toISOString();
+    const key = combatHistoryKey;
+    const msgs = messages.map(m => ({
+      id: `import-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      role: m.role,
+      content: m.content,
+      timestamp: now
+    }));
+
+    // 追加到当前女生聊天历史
+    setCombatHistories(prev => ({
+      ...prev,
+      [key]: [...(prev[key] || []), ...msgs]
+    }));
+
+    // 持久化
+    persistCombatMessages(key, msgs);
+
+    // 切换到聊天实战 Tab
+    setActiveTabIndex(1);
+    // 切换到回复建议模式
+    setCombatMode('suggest');
+
+    // 自动触发回复建议（用最后一条女生消息）
+    const lastGirlMsg = [...msgs].reverse().find(m => m.role === 'girl');
+    if (lastGirlMsg) {
+      const token = localStorage.getItem('zhuiai_token');
+      setCombatLoading(true);
+      fetch(`${apiUrl}/api/ai-coach/reply-suggestions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ girlId: selectedGirlId || undefined, lastMessage: lastGirlMsg.content })
+      }).then(r => r.json()).then(data => {
+        if (data.success && data.suggestions?.options?.length) {
+          setCombatSuggestions({ type: 'suggestions', items: data.suggestions.options });
+        }
+      }).catch(() => {}).finally(() => setCombatLoading(false));
+    }
+  }, [combatHistoryKey, selectedGirlId, apiUrl, persistCombatMessages]);
+
   const handleSubmitInternal = async (questionText) => {
     if (!questionText.trim() || loading) return;
 
@@ -2250,6 +2541,7 @@ export default function AICoach() {
                       onSubmit={handleCombatSend}
                       loading={combatLoading}
                       girlName={selectedGirl?.name}
+                      onImportClick={() => setImportModalOpen(true)}
                     />
                   </Box>
                 </TabPanel>
@@ -2260,6 +2552,19 @@ export default function AICoach() {
           {/* Right side: Context panel */}
           <GirlContextSidebar girl={selectedGirl} analysisContent={girlAnalysisContent} />
         </Flex>
+
+        {/* 聊天导入弹窗 */}
+        {selectedGirl && (
+          <ImportChatModal
+            isOpen={importModalOpen}
+            onClose={() => setImportModalOpen(false)}
+            girlId={selectedGirlId}
+            girlName={selectedGirl?.name}
+            apiUrl={apiUrl}
+            onImportComplete={handleImportComplete}
+            toast={toast}
+          />
+        )}
       </Box>
     );
   }

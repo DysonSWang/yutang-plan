@@ -6,6 +6,7 @@ import { BookIcon, CheckIcon } from '../../components/Icons';
 import { FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import PersonalizationBanner from '../../components/PersonalizationBanner';
 import { useSocket } from '../../contexts/SocketContext';
+import useKeepAliveData from '../../hooks/useKeepAliveData';
 
 // Chapter card component
 function ChapterCard({ chapter, progress, personalizationStatus, onUpdate }) {
@@ -92,59 +93,68 @@ function ChapterCard({ chapter, progress, personalizationStatus, onUpdate }) {
 export default function ClientLearning() {
   const toast = useToast();
   const { on } = useSocket();
-  const [chapters, setChapters] = useState([]);
-  const [progress, setProgress] = useState([]);
-  const [personalizationStatus, setPersonalizationStatus] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
   const [showPreface, setShowPreface] = useState(false);
-  const [prefaceData, setPrefaceData] = useState(null); // { title, personalized, content }
+  const [prefaceData, setPrefaceData] = useState(null);
 
+  const { data, isInitialLoad } = useKeepAliveData(async () => {
+    const [chRes, progRes, perRes] = await Promise.all([
+      membershipApi.chapters(),
+      membershipApi.learningProgress(),
+      membershipApi.personalizedStatus().catch(() => null),
+    ]);
+    // 顺便加载前言
+    let preface = null;
+    try {
+      const preRes = await membershipApi.getPersonalizedChapter('00');
+      if (preRes?.success) {
+        preface = {
+          title: preRes.chapter?.title || '写在前面',
+          personalized: !!preRes.personalized,
+          content: preRes.personalized?.content || null,
+        };
+      }
+    } catch { /* ignore */ }
+    return {
+      chapters: chRes.success ? chRes.chapters : [],
+      progress: progRes.success ? progRes.progress : [],
+      personalizationStatus: perRes?.success ? perRes.chapters : [],
+      preface,
+    };
+  }, { key: '/learning' });
+
+  const chapters = data?.chapters ?? [];
+  const personalizationStatus = data?.personalizationStatus ?? [];
+  // progress 用本地 state，方便 updateProgress 乐观更新
+  const [progress, setProgress] = useState(data?.progress ?? []);
   useEffect(() => {
-    load();
-  }, []);
+    if (data?.progress) setProgress(data.progress);
+  }, [data]);
+
+  // 初始化 prefaceData（仅首次）
+  useEffect(() => {
+    if (data?.preface && !prefaceData) {
+      setPrefaceData(data.preface);
+    }
+  }, [data]);
 
   // 监听前言个性化生成完成，自动刷新内容
   useEffect(() => {
     const cleanup = on('personalization:progress', (data) => {
       if (data.chapterId === '00' && data.status === 'completed') {
-        loadPreface();
+        membershipApi.getPersonalizedChapter('00').then(preRes => {
+          if (preRes?.success) {
+            setPrefaceData({
+              title: preRes.chapter?.title || '写在前面',
+              personalized: !!preRes.personalized,
+              content: preRes.personalized?.content || null,
+            });
+          }
+        }).catch(() => {});
       }
     });
     return cleanup;
   }, [on]);
-
-  async function loadPreface() {
-    try {
-      const preRes = await membershipApi.getPersonalizedChapter('00');
-      if (preRes?.success) {
-        setPrefaceData({
-          title: preRes.chapter?.title || '写在前面',
-          personalized: !!preRes.personalized,
-          content: preRes.personalized?.content || null,
-        });
-      }
-    } catch {
-      // 静默处理
-    }
-  }
-
-  async function load() {
-    try {
-      const [chRes, progRes, perRes] = await Promise.all([
-        membershipApi.chapters(),
-        membershipApi.learningProgress(),
-        membershipApi.personalizedStatus().catch(() => null),
-      ]);
-      if (chRes.success) setChapters(chRes.chapters);
-      if (progRes.success) setProgress(progRes.progress);
-      if (perRes?.success) setPersonalizationStatus(perRes.chapters);
-      loadPreface();
-    } catch (err) {
-      toast({ title: '加载失败', description: err.message, status: 'error' });
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function updateProgress(chapterId, status) {
     try {
@@ -173,7 +183,7 @@ export default function ClientLearning() {
   const totalCount = chapters.length;
   const percent = totalCount > 0 ? Math.round((studiedCount / totalCount) * 100) : 0;
 
-  if (loading) return <Center h="200px"><Spinner /></Center>;
+  if (isInitialLoad) return <Center h="200px"><Spinner /></Center>;
 
   return (
     <Box>

@@ -658,6 +658,10 @@ export const membership = {
   adminDeleteChapter: (chapterId) => api.delete(`/api/membership/admin/learning/chapters/${chapterId}`),
   adminPublishChapter: (chapterId, status) => api.put(`/api/membership/admin/learning/chapters/${chapterId}/publish`, { status }),
   adminReorderChapters: (orderedIds) => api.put('/api/membership/admin/learning/chapters/reorder', { orderedIds }),
+  // 管理员 - 个性化管理
+  adminListPersonalizationUsers: () => api.get('/api/membership/admin/personalization/users'),
+  adminTogglePersonalization: (userId, enabled) => api.post('/api/membership/admin/personalization/toggle', { userId, enabled }),
+  adminGetUserPersonalizedChapters: (userId) => api.get(`/api/membership/admin/personalization/users/${userId}/chapters`),
   // AI约会方案
   generateDatingPlan: (data) => api.post('/api/membership/dating-plan/generate', data, 120000),
   datingPlans: () => api.get('/api/membership/dating-plan'),
