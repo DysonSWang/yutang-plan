@@ -388,17 +388,18 @@ module.exports = function(io) {
         }
       });
 
-      // 更新会话：operator 或 admin 发消息→清零；client 发消息→给 operator 端 +1（对方未读）
+      // 更新会话
       if (session.operatorId === req.user.id || req.user.role === 'admin') {
+        // operator 或 admin 发消息 → client 端未读 +1，operator 自己清零
         await prisma.chatSession.update({
           where: { id: sessionId },
-          data: { lastMessage: content?.substring(0, 50), lastMessageAt: new Date(), unreadCount: 0 }
+          data: { lastMessage: content?.substring(0, 50), lastMessageAt: new Date(), operatorUnreadCount: 0, clientUnreadCount: session.clientUnreadCount + 1 }
         });
       } else {
-        // client 发消息，operator 端未读 +1
+        // client 发消息 → operator 端未读 +1，client 自己清零
         await prisma.chatSession.update({
           where: { id: sessionId },
-          data: { lastMessage: content?.substring(0, 50), lastMessageAt: new Date(), unreadCount: session.unreadCount + 1 }
+          data: { lastMessage: content?.substring(0, 50), lastMessageAt: new Date(), operatorUnreadCount: session.operatorUnreadCount + 1, clientUnreadCount: 0 }
         });
       }
 
