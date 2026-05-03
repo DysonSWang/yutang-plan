@@ -172,7 +172,7 @@ export default function AdminDashboard() {
       <Flex justify="space-between" align="center" mb={6} wrap="wrap" gap={4}>
         <Heading color="white">操盘手工作台</Heading>
         <HStack>
-          <Button size="sm" onClick={loadStats} isLoading={loading} transition="all 0.15s ease" _hover={{ transform: 'translateY(-1px)' }} leftIcon={<Icon as={RefreshIcon} />}>刷新</Button>
+          <Button size="sm" onClick={refresh} isLoading={isFetching} transition="all 0.15s ease" _hover={{ transform: 'translateY(-1px)' }} leftIcon={<Icon as={RefreshIcon} />}>刷新</Button>
           <Button
             size="sm"
             colorScheme="gold"
