@@ -15,16 +15,19 @@ import { api } from './utils/api';
 import { normalizeError, getErrorMessage } from './utils/errorHandler';
 import { captureError } from './utils/frontendErrorCapture';
 
-const ClientHome = lazy(() => import('./pages/client/Home'));
-const ClientProfile = lazy(() => import('./pages/client/ClientProfile'));
-const ClientChat = lazy(() => import('./pages/client/Chat'));
-const AICoach = lazy(() => import('./pages/client/AICoach'));
-const MyPond = lazy(() => import('./pages/client/MyPond'));
-const GirlDetail = lazy(() => import('./pages/client/GirlDetail'));
-const ClientDates = lazy(() => import('./pages/client/ClientDates'));
+// 预加载常用页面（避免首次访问时懒加载的转圈）
+import ClientHome from './pages/client/Home';
+import ClientProfile from './pages/client/ClientProfile';
+import ClientChat from './pages/client/Chat';
+import AICoach from './pages/client/AICoach';
+import MyPond from './pages/client/MyPond';
+import GirlDetail from './pages/client/GirlDetail';
+import ClientDates from './pages/client/ClientDates';
+import ClientLearning from './pages/client/Learning';
+import ChapterDetail from './pages/client/ChapterDetail';
+
+// 懒加载非常用页面
 const Onboarding = lazy(() => import('./pages/client/Onboarding'));
-const ClientLearning = lazy(() => import('./pages/client/Learning'));
-const ChapterDetail = lazy(() => import('./pages/client/ChapterDetail'));
 const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
 const AdminClients = lazy(() => import('./pages/admin/Clients'));
 const AdminGirls = lazy(() => import('./pages/admin/Girls'));
@@ -126,6 +129,7 @@ function AppRoutes() {
             <Route path="learning" element={<ClientLearning />} />
             <Route path="learning/:chapterId" element={<ChapterDetail />} />
           </Route>
+          <Route path="/client" element={<Navigate to="/" replace />} />
           <Route path="/admin" element={<ProtectedRoute requireOperator><AdminLayout /></ProtectedRoute>}>
             <Route index element={<AdminDashboard />} />
             <Route path="clients" element={<AdminClients />} />

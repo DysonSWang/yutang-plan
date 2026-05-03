@@ -48,7 +48,28 @@ export default defineConfig({
         navigationPreload: true,
         skipWaiting: true,
         clientsClaim: true,
+        // 对 HTML 使用 networkFirst，确保始终获取最新版本
+        navigateFallback: null,
         runtimeCaching: [
+          // HTML 使用 networkFirst，避免缓存旧版本
+          {
+            urlPattern: /.*\.html$/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'html-cache',
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 }, // 缓存1小时
+              networkTimeoutSeconds: 3,
+            },
+          },
+          // 静态资源（JS/CSS）使用 StaleWhileRevalidate，有新版本时下次生效
+          {
+            urlPattern: /^.*\.(js|css)$/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'static-resources',
+              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 7 }, // 缓存7天
+            },
+          },
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',
@@ -107,6 +128,17 @@ export default defineConfig({
         target: 'http://localhost:3005',
         ws: true,
       },
+    },
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/__tests__/setup.js',
+    include: ['src/__tests__/**/*.test.{js,jsx}'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      exclude: ['node_modules/', 'src/__tests__/'],
     },
   },
 })
