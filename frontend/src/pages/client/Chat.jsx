@@ -359,7 +359,13 @@ export default function ClientChat() {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      // Android WebView 优先使用 mp4/opus，iOS 使用 mp4，兜底 webm
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/mp4')
+          ? 'audio/mp4'
+          : undefined;
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       mediaRecorderRef.current = recorder;
       audioChunksRef.current = [];
       recorder.ondataavailable = (e) => {
@@ -367,7 +373,8 @@ export default function ClientChat() {
       };
       recorder.onstop = async () => {
         stream.getTracks().forEach(t => t.stop());
-        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const actualType = recorder.mimeType || 'audio/webm';
+        const blob = new Blob(audioChunksRef.current, { type: actualType });
         setPreviewFile({
           file: blob,
           preview: URL.createObjectURL(blob),
@@ -856,7 +863,7 @@ export default function ClientChat() {
                 ref={inputRef}
                 value={input}
                 onChange={e => setInput(e.target.value)}
-                onKeyPress={e => e.key === 'Enter' && sendMessage()}
+                onKeyDown={e => e.key === 'Enter' && sendMessage()}
                 placeholder="输入消息..."
                 flex={1}
                 minW="0"

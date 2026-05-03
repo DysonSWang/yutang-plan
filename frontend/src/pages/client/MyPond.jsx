@@ -99,7 +99,7 @@ function GirlsTab({ girlsList, isInitialLoad, onAddGirl, onGirlClick }) {
       <Flex justify="space-between" align="start" mb={6}>
         <Box>
           <Heading color="white" fontFamily="heading" fontSize="2xl">缘分</Heading>
-          <Text color="rgba(245,240,232,0.25)" fontSize="sm" mt={1}>
+          <Text color="rgba(245,240,232,0.55)" fontSize="sm" mt={1}>
             已添加 <Text as="span" color="gold.400"><AnimatedNumber value={(girlsList ?? []).length} /></Text> 位
           </Text>
         </Box>
@@ -127,7 +127,7 @@ function GirlsTab({ girlsList, isInitialLoad, onAddGirl, onGirlClick }) {
                 </Text>
                 <HStack mt={3} spacing={2}>
                   <Icon as={HeartIcon} color="rose.400" w={3} h={3} />
-                  <Text color="rgba(245,240,232,0.25)" fontSize="xs">亲密度 <Text as="span" color="gold.400">x{girl.intimacyLevel || 1}</Text></Text>
+                  <Text color="rgba(245,240,232,0.55)" fontSize="xs">亲密度 <Text as="span" color="gold.400">x{girl.intimacyLevel || 1}</Text></Text>
                 </HStack>
               </CardBody>
             </Card>
@@ -144,7 +144,7 @@ function GirlsTab({ girlsList, isInitialLoad, onAddGirl, onGirlClick }) {
                 <FormLabel color="rgba(245,240,232,0.4)">昵称</FormLabel>
                 <Input value={addForm.name} onChange={e => setAddForm({...addForm, name: e.target.value})}
                   placeholder="输入昵称" bg="warm.700" color="white"
-                  onKeyPress={e => { if (e.key === 'Enter') handleAdd(); }} />
+                  onKeyDown={e => { if (e.key === 'Enter') handleAdd(); }} />
               </FormControl>
               <HStack spacing={4}>
                 <FormControl>

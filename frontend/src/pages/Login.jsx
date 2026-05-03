@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Box, Button, FormControl, FormLabel, Input, VStack, Text, Heading, HStack, IconButton, Popover, PopoverTrigger, PopoverContent, PopoverBody, PopoverHeader, Switch, Flex, useToast, Link, Image } from '@chakra-ui/react';
+import { Box, Button, FormControl, FormLabel, Input, InputGroup, InputRightElement, VStack, Text, Heading, HStack, IconButton, Popover, PopoverTrigger, PopoverContent, PopoverBody, PopoverHeader, Switch, Flex, useToast, Link, Image } from '@chakra-ui/react';
+import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
 import { useAuth } from '../contexts/AuthContext';
 import { auth } from '../utils/api';
 import AppLogo from '../components/AppLogo';
@@ -15,6 +16,7 @@ export default function Login() {
   const [loginError, setLoginError] = useState('');
   const [registerError, setRegisterError] = useState('');
   const [disguiseMode, setDisguiseMode] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const toast = useToast();
 
@@ -277,20 +279,33 @@ export default function Login() {
                 </FormControl>
                 <FormControl>
                   <FormLabel color="rgba(245,240,232,0.2)" fontSize="xs" letterSpacing="0.1em">密码</FormLabel>
-                  <Input
-                    type="password"
-                    value={password}
-                    onChange={e => { setPassword(e.target.value); setLoginError(''); }}
-                    placeholder="请输入密码"
-                    size="md"
-                    bg="rgba(255,255,255,0.04)"
-                    color="white"
-                    border="1px solid rgba(255,255,255,0.08)"
-                    borderRadius="12px"
-                    _hover={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)' }}
-                    _focus={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'gold.500', boxShadow: '0 0 0 3px rgba(226,176,68,0.12)' }}
-                    _placeholder={{ color: 'rgba(245,240,232,0.15)' }}
-                  />
+                  <InputGroup>
+                    <Input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={e => { setPassword(e.target.value); setLoginError(''); }}
+                      placeholder="请输入密码"
+                      size="md"
+                      bg="rgba(255,255,255,0.04)"
+                      color="white"
+                      border="1px solid rgba(255,255,255,0.08)"
+                      borderRadius="12px"
+                      _hover={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)' }}
+                      _focus={{ bg: 'rgba(255,255,255,0.06)', borderColor: 'gold.500', boxShadow: '0 0 0 3px rgba(226,176,68,0.12)' }}
+                      _placeholder={{ color: 'rgba(245,240,232,0.15)' }}
+                    />
+                    <InputRightElement width="3rem">
+                      <IconButton
+                        size="xs"
+                        variant="ghost"
+                        icon={showPassword ? <ViewOffIcon /> : <ViewIcon />}
+                        aria-label={showPassword ? '隐藏密码' : '显示密码'}
+                        color="rgba(245,240,232,0.3)"
+                        _hover={{ color: 'rgba(245,240,232,0.6)' }}
+                        onClick={() => setShowPassword(!showPassword)}
+                      />
+                    </InputRightElement>
+                  </InputGroup>
                 </FormControl>
                 {loginError && (
                   <Box

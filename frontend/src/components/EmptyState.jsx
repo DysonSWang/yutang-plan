@@ -53,7 +53,7 @@ export default function EmptyState({
         {title || preset.title}
       </Text>
       <Text
-        color="rgba(245,240,232,0.25)"
+        color="rgba(245,240,232,0.55)"
         fontSize="sm"
         textAlign="center"
         whiteSpace="pre-line"

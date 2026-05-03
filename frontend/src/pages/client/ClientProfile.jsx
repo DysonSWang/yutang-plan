@@ -22,7 +22,7 @@ function formatDate(iso) {
 // 空值占位符：引导用户填写而非显示冷冰冰的"-"
 function EmptyValue({ children, ...props }) {
   if (children) return <Text color="white" {...props}>{children}</Text>;
-  return <Text color="warm.600" fontSize="sm" {...props}>待填写</Text>;
+  return <Text color="rgba(245,240,232,0.45)" fontSize="sm" {...props}>去完善</Text>;
 }
 
 const PRICING_DATA = [
@@ -790,7 +790,7 @@ export default function ClientProfile() {
             <VStack spacing={2} align="stretch">
               <HStack justify="space-between">
                 <Text color="rgba(245,240,232,0.4)" fontSize="sm">年龄</Text>
-                {profile.age ? <Text color="white">{profile.age}岁</Text> : <Text color="warm.600" fontSize="sm">待填写</Text>}
+                {profile.age ? <Text color="white">{profile.age}岁</Text> : <Text color="warm.600" fontSize="sm">去完善</Text>}
               </HStack>
               <HStack justify="space-between">
                 <Text color="rgba(245,240,232,0.4)" fontSize="sm">职业</Text>
@@ -823,11 +823,11 @@ export default function ClientProfile() {
             <VStack spacing={2} align="stretch">
               <HStack justify="space-between">
                 <Text color="rgba(245,240,232,0.4)" fontSize="sm">身高</Text>
-                {profile.height ? <Text color="white">{profile.height}cm</Text> : <Text color="warm.600" fontSize="sm">待填写</Text>}
+                {profile.height ? <Text color="white">{profile.height}cm</Text> : <Text color="warm.600" fontSize="sm">去完善</Text>}
               </HStack>
               <HStack justify="space-between">
                 <Text color="rgba(245,240,232,0.4)" fontSize="sm">体重</Text>
-                {profile.weight ? <Text color="white">{profile.weight}斤</Text> : <Text color="warm.600" fontSize="sm">待填写</Text>}
+                {profile.weight ? <Text color="white">{profile.weight}斤</Text> : <Text color="warm.600" fontSize="sm">去完善</Text>}
               </HStack>
               <HStack justify="space-between">
                 <Text color="rgba(245,240,232,0.4)" fontSize="sm">穿着风格</Text>
@@ -869,7 +869,7 @@ export default function ClientProfile() {
             <VStack spacing={2} align="stretch">
               <HStack justify="space-between">
                 <Text color="rgba(245,240,232,0.4)" fontSize="sm">性格/MBTI</Text>
-                {profile.personality ? <Badge colorScheme="cyan">{profile.personality}</Badge> : <Text color="warm.600" fontSize="sm">待填写</Text>}
+                {profile.personality ? <Badge colorScheme="cyan">{profile.personality}</Badge> : <Text color="warm.600" fontSize="sm">去完善</Text>}
               </HStack>
               <HStack justify="space-between">
                 <Text color="rgba(245,240,232,0.4)" fontSize="sm">沟通风格</Text>
@@ -915,7 +915,7 @@ export default function ClientProfile() {
               </HStack>
               <HStack justify="space-between">
                 <Text color="rgba(245,240,232,0.4)" fontSize="sm">关系目标</Text>
-                {profile.relationshipGoal ? <Badge colorScheme="green">{profile.relationshipGoal}</Badge> : <Text color="warm.600" fontSize="sm">待填写</Text>}
+                {profile.relationshipGoal ? <Badge colorScheme="green">{profile.relationshipGoal}</Badge> : <Text color="warm.600" fontSize="sm">去完善</Text>}
               </HStack>
               <HStack justify="space-between">
                 <Text color="rgba(245,240,232,0.4)" fontSize="sm">感情诉求</Text>
@@ -936,7 +936,7 @@ export default function ClientProfile() {
             {profile.matchPreferences ? (
               <Text color="gray.300" fontSize="sm" whiteSpace="pre-wrap">{profile.matchPreferences}</Text>
             ) : (
-              <Text color="warm.600" fontSize="sm">待填写</Text>
+              <Text color="warm.600" fontSize="sm">去完善</Text>
             )}
           </CardBody>
         </Card>
@@ -948,7 +948,7 @@ export default function ClientProfile() {
             {profile.dateTaboos ? (
               <Text color="gray.300" fontSize="sm" whiteSpace="pre-wrap">{profile.dateTaboos}</Text>
             ) : (
-              <Text color="warm.600" fontSize="sm">待填写</Text>
+              <Text color="warm.600" fontSize="sm">去完善</Text>
             )}
           </CardBody>
         </Card>
@@ -961,7 +961,7 @@ export default function ClientProfile() {
           {profile.profileBio ? (
             <Text color="gray.300">{profile.profileBio}</Text>
           ) : (
-            <Text color="warm.600" fontSize="sm">待填写</Text>
+            <Text color="warm.600" fontSize="sm">去完善</Text>
           )}
         </CardBody>
       </Card>

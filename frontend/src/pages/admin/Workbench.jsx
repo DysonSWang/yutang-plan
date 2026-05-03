@@ -20,6 +20,26 @@ export default function AdminWorkbench() {
   const [sendingContent, setSendingContent] = useState('');
   const toast = useToast();
 
+  // WebView 兼容的复制工具函数
+  const copyText = async (text, desc) => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.cssText = 'position:fixed;left:-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      if (desc) toast({ description: desc, duration: 1500, isClosable: false, position: 'top' });
+    } catch (e) {
+      captureError(e);
+    }
+  };
+
   // 实战聊天状态
   const [chatHistory, setChatHistory] = useState([]);
   const [girlMessage, setGirlMessage] = useState('');
@@ -1411,7 +1431,7 @@ export default function AdminWorkbench() {
                                 color="purple.300"
                                 leftIcon={<Icon as={FiCopy} boxSize={3} />}
                                 onClick={() => {
-                                  navigator.clipboard.writeText(momentAnalysis);
+                                  copyText(momentAnalysis, '已复制');
                                   toast({ description: '已复制到剪贴板', duration: 1500, isClosable: false, position: 'top' });
                                 }}
                               >
@@ -1483,7 +1503,7 @@ export default function AdminWorkbench() {
                                 flex={1}
                                 value={clientMsg}
                                 onChange={e => setClientMsg(e.target.value)}
-                                onKeyPress={(e) => {
+                                onKeyDown={(e) => {
                                   if (e.key === 'Enter' && !e.shiftKey) {
                                     e.preventDefault();
                                     handleClientAnalyze();
@@ -1521,7 +1541,7 @@ export default function AdminWorkbench() {
                                 flex={1}
                                 value={clientMyMsg}
                                 onChange={e => setClientMyMsg(e.target.value)}
-                                onKeyPress={(e) => {
+                                onKeyDown={(e) => {
                                   if (e.key === 'Enter' && !e.shiftKey) {
                                     e.preventDefault();
                                     handleClientOptimize();
@@ -1709,8 +1729,7 @@ export default function AdminWorkbench() {
                                             _hover={{ color: 'gold.400' }}
                                             onClick={(e) => {
                                               e.stopPropagation();
-                                              navigator.clipboard.writeText(s.text || s.reply || s);
-                                              toast({ description: '已复制到剪贴板', duration: 1500, isClosable: false, position: 'top' });
+                                              copyText(s.text || s.reply || s, '已复制到剪贴板');
                                             }}
                                             title="一键复制到剪贴板"
                                           />
@@ -1754,8 +1773,7 @@ export default function AdminWorkbench() {
                                             _hover={{ color: 'gold.400' }}
                                             onClick={(e) => {
                                               e.stopPropagation();
-                                              navigator.clipboard.writeText(opt.text || opt.reply || opt);
-                                              toast({ description: '已复制到剪贴板', duration: 1500, isClosable: false, position: 'top' });
+                                              copyText(opt.text || opt.reply || opt, '已复制到剪贴板');
                                             }}
                                             title="一键复制到剪贴板"
                                           />
@@ -1802,7 +1820,7 @@ export default function AdminWorkbench() {
                               flex={1}
                               value={clientInput}
                               onChange={e => setClientInput(e.target.value)}
-                              onKeyPress={(e) => {
+                              onKeyDown={(e) => {
                                 if (e.key === 'Enter' && !e.shiftKey) {
                                   e.preventDefault();
                                   handleSendToClient();
@@ -1900,7 +1918,7 @@ export default function AdminWorkbench() {
                                     flex={1}
                                     value={girlMessage}
                                     onChange={e => setGirlMessage(e.target.value)}
-                                    onKeyPress={(e) => {
+                                    onKeyDown={(e) => {
                                       if (e.key === 'Enter' && !e.shiftKey) {
                                         e.preventDefault();
                                         handleGirlMessage();
@@ -1938,7 +1956,7 @@ export default function AdminWorkbench() {
                                     flex={1}
                                     value={myMessage}
                                     onChange={e => setMyMessage(e.target.value)}
-                                    onKeyPress={(e) => {
+                                    onKeyDown={(e) => {
                                       if (e.key === 'Enter' && !e.shiftKey) {
                                         e.preventDefault();
                                         handleOptimizeMessage();
@@ -2201,7 +2219,7 @@ export default function AdminWorkbench() {
                                             boxSize={3}
                                             cursor="pointer"
                                             _hover={{ color: 'gold.400' }}
-                                            onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(s.text || s.reply || s); toast({ description: '已复制到剪贴板', duration: 1500, isClosable: false, position: 'top' }); }}
+                                            onClick={(e) => { e.stopPropagation(); copyText(s.text || s.reply || s, '已复制到剪贴板'); }}
                                             title="一键复制"
                                           />
                                         </HStack>
@@ -2242,7 +2260,7 @@ export default function AdminWorkbench() {
                                             boxSize={3}
                                             cursor="pointer"
                                             _hover={{ color: 'gold.400' }}
-                                            onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(opt.text || opt.reply || opt); toast({ description: '已复制到剪贴板', duration: 1500, isClosable: false, position: 'top' }); }}
+                                            onClick={(e) => { e.stopPropagation(); copyText(opt.text || opt.reply || opt, '已复制到剪贴板'); }}
                                             title="一键复制"
                                           />
                                         </HStack>

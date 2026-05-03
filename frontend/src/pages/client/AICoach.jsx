@@ -83,7 +83,7 @@ function getHeatLevel(score) {
 
 
 // 独立的输入区域组件 - 使用完全独立的本地状态
-const InputArea = memo(({ onSubmit, loading, deepMode, onNewConversation, placeholder, showNewConvBtn = true }) => {
+const InputArea = memo(({ onSubmit, loading, deepMode, onDeepModeToggle, onNewConversation, placeholder, showNewConvBtn = true }) => {
   const [input, setInput] = useState('');
   const textareaRef = useRef(null);
 
@@ -170,6 +170,23 @@ const InputArea = memo(({ onSubmit, loading, deepMode, onNewConversation, placeh
           </Button>
         )}
       </Flex>
+      {onDeepModeToggle && (
+        <Flex mt={2} justify="flex-end">
+          <Tooltip label={deepMode ? '深度分析：调用工具链，全面分析' : '快速分析：流式输出，快'}>
+            <button type="button" onClick={onDeepModeToggle}
+              style={{
+                background: deepMode ? 'var(--warm-rose)' : 'var(--warm-matte)',
+                border: deepMode ? '1px solid var(--warm-rose)' : '1px solid transparent',
+                borderRadius: '6px', padding: '4px 10px', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: '6px',
+                color: deepMode ? 'var(--w80)' : 'rgba(245,240,232,0.4)', whiteSpace: 'nowrap'
+              }}>
+              <span style={{ fontSize: '12px' }}><SparklesIcon /></span>
+              <span style={{ fontSize: '11px', fontWeight: 'bold' }}>{deepMode ? '深度' : '快速'}</span>
+            </button>
+          </Tooltip>
+        </Flex>
+      )}
     </Box>
   );
 });
@@ -281,7 +298,17 @@ const ReplySuggestionsPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
 
   const copyToClipboard = useCallback(async (text) => {
     try {
-      await navigator.clipboard.writeText(text);
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.cssText = 'position:fixed;left:-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
       toast({ title: '已复制', status: 'success', duration: 1500 });
     } catch (e) {
       toast({ title: '复制失败', status: 'error', duration: 1500 });
@@ -399,7 +426,17 @@ const OptimizeReplyPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
 
   const copyToClipboard = useCallback(async (text) => {
     try {
-      await navigator.clipboard.writeText(text);
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.cssText = 'position:fixed;left:-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
       toast({ title: '已复制', status: 'success', duration: 1500 });
     } catch (e) {
       toast({ title: '复制失败', status: 'error', duration: 1500 });
@@ -737,7 +774,7 @@ const CombatChatMessage = memo(({ msg, girlName }) => {
             {isGirl ? (girlName || '女生') : '我'}
           </Text>
           {timeStr && (
-            <Text fontSize="10px" color="rgba(245,240,232,0.25)">{timeStr}</Text>
+            <Text fontSize="10px" color="rgba(245,240,232,0.55)">{timeStr}</Text>
           )}
         </Flex>
         <Box
@@ -1500,7 +1537,7 @@ const SituationCard = memo(({ stage, tensionScore, intimacyLevel, recentSignals,
       )}
 
       {/* 底部提示 */}
-      <Text fontSize="12px" color="rgba(245,240,232,0.25)" mt={2}>
+      <Text fontSize="12px" color="rgba(245,240,232,0.55)" mt={2}>
         在下方粘贴女生的消息，AI生成回复建议
       </Text>
     </Flex>
@@ -1866,7 +1903,17 @@ export default function AICoach() {
 
   const handleCopy = useCallback(async (content, messageId) => {
     try {
-      await navigator.clipboard.writeText(content);
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(content);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = content;
+        ta.style.cssText = 'position:fixed;left:-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
       setCopiedId(messageId);
       setTimeout(() => setCopiedId(null), 2000);
     } catch (e) {
@@ -2324,11 +2371,26 @@ export default function AICoach() {
 
   // 复制建议内容
   const handleCopySuggestion = useCallback((text) => {
-    navigator.clipboard.writeText(text).then(() => {
-      toast({ title: '已复制到剪贴板', duration: 1500, colorScheme: 'green' });
-    }).catch(() => {
-      toast({ title: '复制失败', duration: 1500, colorScheme: 'red' });
-    });
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        toast({ title: '已复制到剪贴板', duration: 1500, colorScheme: 'green' });
+      }).catch(() => {
+        toast({ title: '复制失败', duration: 1500, colorScheme: 'red' });
+      });
+    } else {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.cssText = 'position:fixed;left:-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        toast({ title: '已复制到剪贴板', duration: 1500, colorScheme: 'green' });
+      } catch {
+        toast({ title: '复制失败', duration: 1500, colorScheme: 'red' });
+      }
+    }
   }, [toast]);
 
   // 收藏/取消收藏建议
@@ -2639,7 +2701,17 @@ export default function AICoach() {
 
   const copyToClipboard = async (text) => {
     try {
-      await navigator.clipboard.writeText(text);
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.cssText = 'position:fixed;left:-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
       toast({ title: '已复制', status: 'success', duration: 1500 });
     } catch (e) {
       toast({ title: '复制失败', status: 'error', duration: 1500 });
@@ -2775,6 +2847,7 @@ export default function AICoach() {
           onSubmit={handleSubmitInternal}
           loading={loading}
           deepMode={deepMode}
+          onDeepModeToggle={handleDeepModeToggle}
           onNewConversation={handleNewConversation}
           placeholder={`向 AI 教练提问${selectedGirl ? '（围绕' + selectedGirl.name + '）' : ''}...`}
           showNewConvBtn={false}
@@ -2798,29 +2871,6 @@ export default function AICoach() {
                 <option key={g.id} value={g.id}>{g.name}</option>
               ))}
             </Select>
-            <Tooltip label={deepMode ? '深度分析：调用工具链，全面分析' : '快速分析：流式输出，快'}>
-              <button type="button" onClick={handleDeepModeToggle}
-                style={{
-                  background: deepMode ? 'var(--warm-rose)' : 'var(--warm-matte)',
-                  border: deepMode ? '1px solid var(--warm-rose)' : '1px solid transparent',
-                  borderRadius: '6px', padding: '6px 10px', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  color: deepMode ? 'var(--w80)' : 'rgba(245,240,232,0.4)', whiteSpace: 'nowrap'
-                }}>
-                <span style={{ fontSize: '14px' }}><SparklesIcon /></span>
-                <span style={{ fontSize: '11px', fontWeight: 'bold' }}>{deepMode ? '深度' : '快速'}</span>
-              </button>
-            </Tooltip>
-            {selectedGirl && (
-              <HStack bg="warm.700" px={2} py={1} borderRadius="md" spacing={2} flexShrink={0}>
-                <Badge colorScheme={STAGE_COLORS[selectedGirl.stage] || 'gray'} fontSize="xs">
-                  {selectedGirl.stage || '未知'}
-                </Badge>
-                <Text fontSize="xs" color={selectedGirl.tensionScore >= 5 ? 'orange.400' : 'blue.400'} fontWeight="bold">
-                  {selectedGirl.tensionScore?.toFixed(1) || '5.0'}
-                </Text>
-              </HStack>
-            )}
           </HStack>
         </Flex>
 
@@ -2979,6 +3029,7 @@ export default function AICoach() {
         onSubmit={handleSubmitInternal}
         loading={loading}
         deepMode={deepMode}
+        onDeepModeToggle={handleDeepModeToggle}
         onNewConversation={handleNewConversation}
       />
     </>
@@ -2986,43 +3037,18 @@ export default function AICoach() {
 
   return (
     <Box display="flex" flexDirection="column" h={{ base: 'calc(100vh - 96px)', lg: 'calc(100vh - 48px)' }} overflow="hidden">
-      <Flex justify="space-between" align="center" mb={3} flexShrink={0} gap={3} wrap="wrap">
-        <Heading color="white" size="md" whiteSpace="nowrap">AI教练</Heading>
-        <HStack spacing={2} flexShrink={0}>
-          <Select
-            value={selectedGirlId}
-            onChange={e => handleGirlChange(e.target.value)}
-            bg="warm.700" border="none" color="white" size="sm" maxW="180px" borderRadius="md"
-            placeholder="关联女生"
-          >
-            {(girls || []).map(g => (
-              <option key={g.id} value={g.id}>{g.name}</option>
-            ))}
-          </Select>
-          <Tooltip label={deepMode ? '深度分析：调用工具链，全面分析' : '快速分析：流式输出，快'}>
-            <button type="button" onClick={handleDeepModeToggle}
-              style={{
-                background: deepMode ? 'var(--warm-rose)' : 'var(--warm-matte)',
-                border: deepMode ? '1px solid var(--warm-rose)' : '1px solid transparent',
-                borderRadius: '6px', padding: '6px 10px', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: '6px',
-                color: deepMode ? 'var(--w80)' : 'rgba(245,240,232,0.4)', whiteSpace: 'nowrap'
-              }}>
-              <span style={{ fontSize: '14px' }}><SparklesIcon /></span>
-              <span style={{ fontSize: '11px', fontWeight: 'bold' }}>{deepMode ? '深度' : '快速'}</span>
-            </button>
-          </Tooltip>
-          {selectedGirl && (
-            <HStack bg="warm.700" px={2} py={1} borderRadius="md" spacing={2} flexShrink={0}>
-              <Badge colorScheme={STAGE_COLORS[selectedGirl.stage] || 'gray'} fontSize="xs">
-                {selectedGirl.stage || '未知'}
-              </Badge>
-              <Text fontSize="xs" color={selectedGirl.tensionScore >= 5 ? 'orange.400' : 'blue.400'} fontWeight="bold">
-                {selectedGirl.tensionScore?.toFixed(1) || '5.0'}
-              </Text>
-            </HStack>
-          )}
-        </HStack>
+      <Flex justify="space-between" align="center" mb={3} flexShrink={0} gap={3}>
+        <Heading color="white" size="md">AI教练</Heading>
+        <Select
+          value={selectedGirlId}
+          onChange={e => handleGirlChange(e.target.value)}
+          bg="warm.700" border="none" color="white" size="sm" maxW="180px" borderRadius="md"
+          placeholder="关联女生"
+        >
+          {(girls || []).map(g => (
+            <option key={g.id} value={g.id}>{g.name}</option>
+          ))}
+        </Select>
       </Flex>
 
       <Tabs variant="soft-rounded" colorScheme="gold" sx={{ display: 'flex', flexDirection: 'column', flex: 1, minH: 0, overflow: 'hidden' }} defaultIndex={0}>

@@ -155,7 +155,7 @@ export default function ClientHome() {
       {/* ---- 数据概览（有数据时展示） ---- */}
       {hasAnyData ? (
         <Box className="stagger-2" mb={10}>
-          <Text color="rgba(245,240,232,0.25)" fontSize="xs" mb={3} letterSpacing="0.1em" textTransform="uppercase">
+          <Text color="rgba(245,240,232,0.55)" fontSize="xs" mb={3} letterSpacing="0.1em" textTransform="uppercase">
             数据概览
           </Text>
           <SimpleGrid columns={{ base: 2, md: 4 }} spacing={3}>
@@ -187,7 +187,7 @@ export default function ClientHome() {
 
       {/* ---- 快捷入口 ---- */}
       <Box className="stagger-4">
-        <Text color="rgba(245,240,232,0.25)" fontSize="xs" mb={4} letterSpacing="0.1em" textTransform="uppercase">
+        <Text color="rgba(245,240,232,0.55)" fontSize="xs" mb={4} letterSpacing="0.1em" textTransform="uppercase">
           快捷入口
         </Text>
         <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4}>
@@ -211,7 +211,7 @@ export default function ClientHome() {
                   <IconBox icon={entry.icon} />
                   <Box>
                     <Text color="white" fontWeight="500" fontSize="sm" mb={0.5}>{entry.label}</Text>
-                    <Text color="rgba(245,240,232,0.25)" fontSize="xs">{entry.desc}</Text>
+                    <Text color="rgba(245,240,232,0.55)" fontSize="xs">{entry.desc}</Text>
                   </Box>
                 </HStack>
               </CardBody>

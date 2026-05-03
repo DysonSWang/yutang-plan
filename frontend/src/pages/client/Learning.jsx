@@ -295,8 +295,8 @@ export default function ClientLearning() {
           <Text color="gold.400" fontWeight="bold">学习进度</Text>
           <Text color="gold.400" fontSize="sm">{studiedCount}/{totalCount} 章节</Text>
         </HStack>
-        <Progress value={percent} size="sm" colorScheme="gold" borderRadius="full" bg="warm.800" />
-        <Text color="rgba(245,240,232,0.4)" fontSize="xs" mt={1}>
+        <Progress value={percent} size="sm" colorScheme="gold" borderRadius="full" bg="warm.800" sx={{ '& > div': { boxShadow: '0 0 12px rgba(226,176,68,0.4)' } }} />
+        <Text color="rgba(245,240,232,0.55)" fontSize="xs" mt={1}>
           已学习 {percent}% · 坚持学习，提升情商
         </Text>
       </Box>
