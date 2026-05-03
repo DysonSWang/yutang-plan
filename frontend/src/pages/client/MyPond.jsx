@@ -18,7 +18,7 @@ import { captureError } from '../../utils/frontendErrorCapture';
 import useKeepAliveData from '../../hooks/useKeepAliveData';
 import EmptyState from '../../components/EmptyState';
 import AnimatedNumber from '../../components/AnimatedNumber';
-import PullToRefresh from '../../components/PullToRefresh';
+
 
 registerLocale('zh-CN', zhCN);
 
@@ -173,6 +173,7 @@ function GirlsTab({ girlsList, isInitialLoad, onAddGirl, onGirlClick }) {
         </ModalContent>
       </Modal>
     </Box>
+    
   );
 }
 
@@ -498,7 +499,7 @@ export default function MyPond() {
   };
 
   return (
-    <PullToRefresh onRefresh={handleRefresh} isRefreshing={isInitialLoad}>
+    <Box>
     <Box>
       <Flex justify="space-between" align="center" mb={6}>
         <Heading color="white">缘分与约会</Heading>

@@ -9,6 +9,7 @@ import RegionSelector from '../../components/RegionSelector';
 import { checkVersion, VERSION } from '../../utils/version';
 import VersionUpdateModal from '../../components/VersionUpdateModal';
 import useKeepAliveData from '../../hooks/useKeepAliveData';
+import PullToRefresh from '../../components/PullToRefresh';
 
 const TYPE_LABEL = { monthly: '普惠月付', yearly: '普惠年付', premium: '高端会员', TRIAL: '试用会员' };
 const TYPE_BADGE_COLOR = { monthly: 'green', yearly: 'blue', premium: 'purple', TRIAL: 'orange' };
@@ -650,6 +651,7 @@ export default function ClientProfile() {
   const completenessMissing = completeness?.missingFields ?? [];
 
   return (
+    <PullToRefresh onRefresh={refresh} isRefreshing={isInitialLoad}>
     <Box>
       <Flex justify="space-between" align="center" mb={6}>
         <Heading color="white">我的档案</Heading>
@@ -1429,5 +1431,6 @@ export default function ClientProfile() {
         </ModalContent>
       </Modal>
     </Box>
+    </PullToRefresh>
   );
 }

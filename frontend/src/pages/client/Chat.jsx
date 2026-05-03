@@ -7,6 +7,7 @@ import { useSocket } from '../../contexts/SocketContext';
 import { useRouteActivated } from '../../hooks/useRouteLifecycle';
 import FlashImageViewer from '../../components/FlashImageViewer';
 import EmojiPanel from '../../components/EmojiPanel';
+import PullToRefresh from '../../components/PullToRefresh';
 
 export default function ClientChat() {
   const { on } = useSocket();
@@ -204,6 +205,10 @@ export default function ClientChat() {
       captureError(e);
     }
   };
+
+  const handleRefresh = useCallback(async () => {
+    await loadSession();
+  }, []);
 
   useEffect(() => {
     loadSession();
@@ -608,6 +613,7 @@ export default function ClientChat() {
   }
 
   return (
+    <PullToRefresh onRefresh={handleRefresh} isRefreshing={loading}>
     <Flex h="calc(100vh - 120px)" direction="column" gap={4}>
       {/* 聊天区域 */}
       <Box flex={1} bg="rgba(255,255,255,0.02)" border="1px solid rgba(255,255,255,0.06)" borderRadius="xl" display="flex" flexDirection="column" overflow="hidden">
@@ -974,5 +980,6 @@ export default function ClientChat() {
         mediaType={flashViewer.mediaType || 'image'}
       />
     </Flex>
+    </PullToRefresh>
   );
 }

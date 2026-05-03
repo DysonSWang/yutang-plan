@@ -13,6 +13,7 @@ import ClientCalendar from '../../components/ClientCalendar';
 import { dates, clients, getMediaUrl } from '../../utils/api';
 import { captureError } from '../../utils/frontendErrorCapture';
 import useKeepAliveData from '../../hooks/useKeepAliveData';
+import PullToRefresh from '../../components/PullToRefresh';
 
 function formatLocalDateTime(date) {
   if (!date) return '';
@@ -582,7 +583,12 @@ export default function ClientDates() {
     );
   };
 
+  const handleRefresh = useCallback(async () => {
+    await refresh();
+  }, [refresh]);
+
   return (
+    <PullToRefresh onRefresh={handleRefresh} isRefreshing={isInitialLoad}>
     <Box>
       <Flex justify="space-between" align="center" mb={6}>
         <Heading color="white">约会与方案</Heading>
@@ -1399,5 +1405,6 @@ export default function ClientDates() {
         </ModalContent>
       </Modal>
     </Box>
+    </PullToRefresh>
   );
 }

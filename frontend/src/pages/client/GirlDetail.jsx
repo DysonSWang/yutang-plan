@@ -10,6 +10,8 @@ import { FiArrowLeft, FiEdit2, FiCamera, FiFileText, FiZap, FiUser, FiCheck, FiX
 import { HeartIcon } from '../../components/Icons';
 import { girls, upload, getMediaUrl } from '../../utils/api';
 import useKeepAliveData from '../../hooks/useKeepAliveData';
+import PullToRefresh from '../../components/PullToRefresh';
+
 
 // ---- 阶段颜色 ----
 const STAGE_COLORS = {
@@ -690,6 +692,7 @@ export default function GirlDetail() {
     : null;
 
   return (
+    <PullToRefresh onRefresh={refresh} isRefreshing={isInitialLoad}>
     <Box pb={8}>
       {/* ---- 返回按钮 ---- */}
       <HStack mb={4}>
@@ -1373,6 +1376,7 @@ export default function GirlDetail() {
         </ModalContent>
       </Modal>
     </Box>
+    
   );
 }
 
