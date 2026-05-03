@@ -26,8 +26,33 @@ const { extractLearningsFromConversation } = require('../services/learning');
 const { buildDynamicPersona, buildPersonaSection, buildFullPersona } = require('../services/coachPersona');
 const { addStageContext, appendStageWarning, STAGE_LABELS } = require('../services/stageGuard');
 
+const multer = require('multer');
 const { JWT_SECRET, getAIConfig, getVLModelConfig } = require('../config');
 const prisma = require('../prisma');
+
+// 截图上传配置
+const chatImportUploadDir = path.join(__dirname, '../../uploads/chat-imports');
+if (!fs.existsSync(chatImportUploadDir)) {
+  fs.mkdirSync(chatImportUploadDir, { recursive: true });
+}
+const chatImportStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, chatImportUploadDir),
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+const chatImportUpload = multer({
+  storage: chatImportStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = /jpeg|jpg|png|gif|webp/;
+    const ext = allowed.test(path.extname(file.originalname).toLowerCase());
+    const mime = allowed.test(file.mimetype);
+    if (ext && mime) cb(null, true);
+    else cb(new Error('只支持图片格式'));
+  }
+});
 const membershipService = require('../services/membershipService');
 const activityService = require('../services/activityService');
 const { getCache, setCache, getOverviewCache, setOverviewCache } = require('../services/girlSummaryCache');
@@ -898,6 +923,99 @@ ${stageContext}
 });
 
 /**
+ * 侧边栏上下文数据（结构化 JSON，供前端女生上下文面板使用）
+ * GET /api/ai-coach/girl-context/:girlId
+ */
+router.get('/girl-context/:girlId', authMiddleware, async (req, res) => {
+  try {
+    if (!['admin', 'client'].includes(req.user.role)) {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const { girlId } = req.params;
+    const { cachedGirlHash } = req.query;
+
+    // 安全验证
+    const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+    if (!girl) return res.status(404).json({ error: '女生不存在' });
+
+    if (req.user.role === 'admin') {
+      const session = await prisma.chatSession.findFirst({
+        where: { operatorId: req.user.id, clientId: girl.clientId }
+      });
+      if (!session) return res.status(403).json({ error: '无权限访问此女生数据' });
+    } else if (req.user.role === 'client' && girl.clientId !== req.user.id) {
+      return res.status(403).json({ error: '无权限访问此女生数据' });
+    }
+
+    const clientId = girl.clientId;
+
+    // 检查缓存（以 girlDataHash 为维度）
+    const currentGirlHash = computeGirlDataHash(girl);
+    if (cachedGirlHash && cachedGirlHash === currentGirlHash) {
+      try {
+        const cacheKey = `context:${clientId}:${girlId}`;
+        const cached = await prisma.girlSummaryCache.findUnique({ where: { cacheKey } });
+        if (cached?.contextData) {
+          const cachedContext = JSON.parse(cached.contextData);
+          return res.json({ ...cachedContext, cached: true });
+        }
+      } catch {}
+    }
+
+    // 构建上下文
+    const fullContext = await buildAICoachContext(clientId, girlId);
+    const p = fullContext.girlInfo ? (fullContext.girlInfo.personality || {}) : {};
+    const client = fullContext.client || {};
+
+    const relStage = fullContext.girlInfo?.relationshipStage;
+    const relStageLabel = relStage ? STAGE_LABELS[relStage] || relStage : null;
+
+    const result = {
+      cached: false,
+      girlDataHash: currentGirlHash,
+      girlInfo: {
+        id: girl.id,
+        name: girl.name,
+        age: girl.age,
+        occupation: girl.occupation,
+        stage: girl.stage || '陌生',
+        relationshipStage: relStage,
+        relationshipStageLabel: relStageLabel,
+        tensionScore: girl.tensionScore || 5,
+        intimacyLevel: girl.intimacyLevel || 1,
+        mbti: p.mbti || null,
+        personality: {
+          mbti: p.mbti || null,
+          communicationStyle: p.communicationStyle || null,
+          emotionalTriggers: p.emotionalTriggers || [],
+          thingsToAvoid: p.thingsToAvoid || [],
+          talkingTopics: p.talkingTopics || [],
+        },
+      },
+      recentSignals: (fullContext.recentSignals || []).slice(0, 10),
+      pendingActions: (fullContext.pendingActions || []).slice(0, 10),
+      clientProfile: {
+        clientType: client.clientType || '未设置',
+        learningAbility: client.learningAbility || '未知',
+        emotionalStable: client.emotionalStable || '未知',
+        antiFrustrationLevel: client.antiFrustrationLevel || 3,
+        coachCooperationLevel: client.coachCooperationLevel || 3,
+        attachmentStyle: client.attachmentStyle || null,
+        loveStyle: client.loveStyle || null,
+        loveLanguage: [client.loveLanguage1, client.loveLanguage2, client.loveLanguage3].filter(Boolean).join('/') || null,
+      },
+      observations: (fullContext.observations || []).slice(0, 5),
+    };
+
+    res.json(result);
+  } catch (error) {
+    logger.error(`[girl-context] failed: ${error.message}`, { error: error.message });
+    res.status(500).json({ error: '获取失败' });
+  }
+});
+
+/**
  * 回复建议 - 基于女生人格生成回复选项
  * POST /api/ai-coach/reply-suggestions
  */
@@ -1320,6 +1438,133 @@ router.post('/combat-history/:girlId', authMiddleware, async (req, res) => {
   } catch (error) {
     logger.error(`[AICoach] 保存聊天实战历史失败: ${error.message}`);
     res.status(500).json({ error: '保存失败' });
+  }
+});
+
+// ========== 聊天截图导入 ==========
+
+/**
+ * POST /api/ai-coach/import-chat-screenshots
+ * 上传聊天截图，AI 识别对话内容，返回结构化消息供前端确认
+ */
+router.post('/import-chat-screenshots', authMiddleware, chatImportUpload.array('images', 10), async (req, res) => {
+  try {
+    const { girlId, chatDate } = req.body;
+
+    if (!girlId) {
+      return res.status(400).json({ error: '缺少 girlId' });
+    }
+
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: '请上传至少一张截图' });
+    }
+
+    // 检查 VL 模型配置
+    const vlConfig = getVLModelConfig();
+    if (!vlConfig) {
+      return res.status(400).json({ error: '视觉模型未配置，无法识别截图' });
+    }
+
+    // 验证女生归属
+    const girl = await prisma.girl.findUnique({
+      where: { id: girlId },
+      select: { id: true, name: true, clientId: true }
+    });
+    if (!girl) return res.status(404).json({ error: '女生不存在' });
+
+    const allMessages = [];
+
+    // 逐张识别截图
+    for (const file of req.files) {
+      const filePath = path.join(chatImportUploadDir, file.filename);
+      try {
+        const buffer = fs.readFileSync(filePath);
+        const ext = path.extname(file.filename).toLowerCase().replace('.', '') || 'jpg';
+        const mime = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+        const base64Image = `data:${mime};base64,${buffer.toString('base64')}`;
+
+        const prompt = `你是聊天记录识别专家。请仔细识别这张聊天截图中的对话内容。
+要求：
+1. 区分左右两侧：左侧发言者标记为"girl"，右侧标记为"user"
+2. 只提取纯文字消息，忽略表情包/图片/语音消息/红包/系统提示
+3. 输出严格的 JSON 数组格式：[{"role":"girl"|"user","content":"消息文本"}]
+4. 如果有时间戳也一并记录：[{"role":"girl","content":"...","time":"14:30"}]
+5. 如果截图无法识别或无对话内容，输出空数组 []
+只输出 JSON，不要其他说明文字。`;
+
+        const response = await fetch(vlConfig.url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${vlConfig.key}`
+          },
+          body: JSON.stringify({
+            model: vlConfig.model,
+            temperature: 0.3,
+            max_tokens: 2000,
+            messages: [{
+              role: 'user',
+              content: [
+                { type: 'text', text: prompt },
+                { type: 'image_url', image_url: { url: base64Image } }
+              ]
+            }]
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+          logger.warn(`[ImportChat] VL模型调用失败: ${JSON.stringify(data.error)}`);
+          continue;
+        }
+
+        const content = data.choices?.[0]?.message?.content?.trim();
+        if (!content) continue;
+
+        // 尝试解析 JSON（兼容 markdown code block 包裹）
+        let parsed;
+        try {
+          const jsonStr = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+          parsed = JSON.parse(jsonStr);
+        } catch (parseErr) {
+          logger.warn(`[ImportChat] JSON 解析失败: ${content.substring(0, 200)}`);
+          continue;
+        }
+
+        if (Array.isArray(parsed)) {
+          for (const msg of parsed) {
+            if (msg.role && msg.content && ['girl', 'user'].includes(msg.role)) {
+              allMessages.push({ role: msg.role, content: msg.content, time: msg.time || null });
+            }
+          }
+        }
+      } finally {
+        // 清理上传的临时文件
+        try { fs.unlinkSync(filePath); } catch (_) {}
+      }
+    }
+
+    logger.info(`[ImportChat] 识别完成: ${req.files.length} 张截图, ${allMessages.length} 条消息`, {
+      girlId,
+      userId: req.user.id,
+      messageCount: allMessages.length
+    });
+
+    res.json({
+      success: true,
+      messages: allMessages,
+      chatDate: chatDate || new Date().toISOString().split('T')[0]
+    });
+  } catch (error) {
+    logger.error(`[ImportChat] 截图导入失败: ${error.message}`);
+    // 清理上传的文件
+    if (req.files) {
+      for (const file of req.files) {
+        try { fs.unlinkSync(path.join(chatImportUploadDir, file.filename)); } catch (_) {}
+      }
+    }
+    res.status(500).json({ error: '识别失败，请重试' });
   }
 });
 

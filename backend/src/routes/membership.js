@@ -405,7 +405,7 @@ router.get('/learning/personalized-status', authMiddleware, async (req, res) => 
     // 完善度
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
-      select: personalizationEngine.USER_PROFILE_SELECT,
+      select: { ...personalizationEngine.USER_PROFILE_SELECT, personalizationEnabled: true },
     });
     const completeness = personalizationEngine.calculateCompleteness(user);
 
@@ -414,6 +414,7 @@ router.get('/learning/personalized-status', authMiddleware, async (req, res) => 
       batchStatus: batch,
       completeness,
       chapters: chapterStatuses,
+      personalizationEnabled: user.personalizationEnabled,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -425,8 +426,12 @@ router.post('/learning/generate-all', authMiddleware, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
-      select: personalizationEngine.USER_PROFILE_SELECT,
+      select: { ...personalizationEngine.USER_PROFILE_SELECT, personalizationEnabled: true },
     });
+
+    if (!user.personalizationEnabled) {
+      return res.status(403).json({ error: '个性化学习功能已禁用' });
+    }
 
     const chapters = await prisma.learningChapter.findMany({
       where: { status: 'published' },
@@ -473,8 +478,12 @@ router.post('/learning/regenerate', authMiddleware, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
-      select: personalizationEngine.USER_PROFILE_SELECT,
+      select: { ...personalizationEngine.USER_PROFILE_SELECT, personalizationEnabled: true },
     });
+
+    if (!user.personalizationEnabled) {
+      return res.status(403).json({ error: '个性化学习功能已禁用' });
+    }
 
     const chapters = await prisma.learningChapter.findMany({
       where: { status: 'published' },
@@ -505,8 +514,12 @@ router.post('/learning/regenerate/:chapterId', authMiddleware, async (req, res) 
 
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
-      select: personalizationEngine.USER_PROFILE_SELECT,
+      select: { ...personalizationEngine.USER_PROFILE_SELECT, personalizationEnabled: true },
     });
+
+    if (!user.personalizationEnabled) {
+      return res.status(403).json({ error: '个性化学习功能已禁用' });
+    }
 
     const chapter = await prisma.learningChapter.findUnique({
       where: { chapterId, status: 'published' },
@@ -795,6 +808,124 @@ router.delete('/admin/learning/chapters/:chapterId', authMiddleware, operatorOnl
     ]);
 
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==========================================
+// 管理员 - 个性化学习管理
+// ==========================================
+
+// 查询有个性化活动的用户列表
+router.get('/admin/personalization/users', authMiddleware, operatorOnly, async (req, res) => {
+  try {
+    const chapterUsers = await prisma.personalizedChapter.findMany({
+      distinct: ['userId'],
+      select: { userId: true },
+    });
+    const userIds = chapterUsers.map(c => c.userId);
+
+    if (userIds.length === 0) {
+      return res.json({ success: true, users: [] });
+    }
+
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, nickname: true, username: true, phone: true, personalizationEnabled: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const chapters = await prisma.personalizedChapter.findMany({
+      where: { userId: { in: userIds } },
+      select: { userId: true, chapterId: true, status: true, updatedAt: true },
+    });
+
+    const result = users.map(u => {
+      const userChapters = chapters.filter(c => c.userId === u.id);
+      const completed = userChapters.filter(c => c.status === 'completed').length;
+      const generating = userChapters.filter(c => c.status === 'generating').length;
+      const failed = userChapters.filter(c => c.status === 'failed').length;
+
+      return {
+        id: u.id,
+        nickname: u.nickname,
+        username: u.username,
+        phone: u.phone,
+        personalizationEnabled: u.personalizationEnabled,
+        createdAt: u.createdAt,
+        totalCompleted: completed,
+        totalGenerating: generating,
+        totalFailed: failed,
+      };
+    });
+
+    res.json({ success: true, users: result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 开关用户个性化学习
+router.post('/admin/personalization/toggle', authMiddleware, operatorOnly, async (req, res) => {
+  try {
+    const { userId, enabled } = req.body;
+    if (!userId || typeof enabled !== 'boolean') {
+      return res.status(400).json({ error: '参数错误' });
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { personalizationEnabled: enabled },
+    });
+
+    await prisma.personalizationEvent.create({
+      data: {
+        userId,
+        event: 'admin_toggle',
+        metadata: JSON.stringify({ enabled, operatorId: req.user.id }),
+      },
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 获取指定用户的个性化章节详情（含对比原文）
+router.get('/admin/personalization/users/:userId/chapters', authMiddleware, operatorOnly, async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const [personalizedChapters, originalChapters] = await Promise.all([
+      prisma.personalizedChapter.findMany({
+        where: { userId },
+        select: { chapterId: true, content: true, status: true, updatedAt: true },
+        orderBy: { chapterId: 'asc' },
+      }),
+      prisma.learningChapter.findMany({
+        where: { status: 'published' },
+        select: { chapterId: true, title: true, content: true },
+        orderBy: { orderIndex: 'asc' },
+      }),
+    ]);
+
+    const originalMap = {};
+    for (const ch of originalChapters) {
+      originalMap[ch.chapterId] = ch;
+    }
+
+    const result = personalizedChapters.map(pc => ({
+      chapterId: pc.chapterId,
+      status: pc.status,
+      updatedAt: pc.updatedAt,
+      personalized: pc.content,
+      original: originalMap[pc.chapterId]?.content || null,
+      title: originalMap[pc.chapterId]?.title || pc.chapterId,
+    }));
+
+    res.json({ success: true, chapters: result });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

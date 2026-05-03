@@ -15,7 +15,7 @@ if (!JWT_SECRET) {
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions';
 
-// 通义千问（仅用于 VL 图片分析）
+// 通义千问（文本 + 图片统一用 qwen3.6-plus 多模态）
 const DASHSCOPE_API_KEY = process.env.DASH_SCOPE_API_KEY;
 const DASHSCOPE_API_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
 
@@ -42,15 +42,28 @@ function getAIConfig(mode = 'pro') {
 }
 
 function getVLModelConfig() {
-  // DashScope VL 模型用于图片分析
+  // DashScope 多模态模型（图片分析）
   if (DASHSCOPE_API_KEY) {
     return {
       url: DASHSCOPE_API_URL,
       key: DASHSCOPE_API_KEY,
-      model: 'qwen3-vl-plus'
+      model: 'qwen3.6-plus'
     };
   }
   return null;
+}
+
+function getTextModelConfig() {
+  // DashScope 多模态模型（文字提取，复用同一模型）
+  if (DASHSCOPE_API_KEY) {
+    return {
+      url: DASHSCOPE_API_URL,
+      key: DASHSCOPE_API_KEY,
+      model: 'qwen3.6-plus'
+    };
+  }
+  // 降级到 DeepSeek
+  return getAIConfig('flash');
 }
 
 module.exports = {
@@ -62,5 +75,6 @@ module.exports = {
   PORT,
   BASE_URL,
   getAIConfig,
+  getTextModelConfig,
   getVLModelConfig
 };

@@ -134,9 +134,9 @@ async function checkTrialLimit(userId, feature) {
     orderBy: { createdAt: 'desc' }  // 取最新的
   });
 
-  // 无会员跳过（有其他地方检查试用次数）
+  // 无会员记录，拒绝访问
   if (!membership) {
-    return true;
+    throw new Error('无会员权限，请先开通试用');
   }
 
   // 已过期的会员直接拒绝

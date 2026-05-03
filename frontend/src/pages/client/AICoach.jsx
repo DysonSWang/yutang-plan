@@ -1187,7 +1187,7 @@ const CombatInputBar = memo(({ mode, onModeChange, value, onChange, onSubmit, lo
 });
 
 // 右侧女生上下文面板
-const GirlContextSidebar = memo(({ girl, analysisContent }) => {
+const GirlContextSidebar = memo(({ girl, contextData }) => {
   if (!girl) return null;
 
   const stageColor = STAGE_COLORS[girl.stage] || 'gray';
@@ -1197,11 +1197,15 @@ const GirlContextSidebar = memo(({ girl, analysisContent }) => {
   const stageTips = {
     '陌生': [['🐢', '刚认识，先建立舒适感，不要急于推进'], ['💬', '重点：展示你的生活方式和价值观']],
     '朋友': [['🐢', '热度偏低，先建立舒适感，不要急于推进'], ['🔑', '目标：让她习惯你的存在，成为她的情绪出口']],
-    '暧昧': [['🔥', '她已经有窗口信号，72小时内主动约见'], ['⚠️', '不要过度道歉或解释，她测试的是你的态度'], ['🔑', '目标：制造一个她有感觉的「在一起」时刻']],
+    '暧昧': [['🔥', '她已经有窗口信号，72小时内主动约见'], ['⚠', '不要过度道歉或解释，她测试的是你的态度'], ['🔑', '目标：制造一个她有感觉的「在一起」时刻']],
     '约会': [['🔥', '热度高，可以更激进地推进关系'], ['🔑', '目标：升级肢体接触，明确关系预期']],
     '长期': [['💚', '长期关系，重点是维护和深化亲密度'], ['🔑', '保持新鲜感，定期制造小惊喜']],
   };
   const tips = stageTips[girl.stage] || stageTips['陌生'];
+
+  const signals = contextData?.recentSignals || [];
+  const pendingActions = contextData?.pendingActions || [];
+  const clientProfile = contextData?.clientProfile || null;
 
   return (
     <Box w="320px" flexShrink={0} display={{ base: 'none', lg: 'flex' }} flexDirection="column" overflowY="auto" minH="0" px={3} py={2}>
@@ -1226,12 +1230,104 @@ const GirlContextSidebar = memo(({ girl, analysisContent }) => {
               <Text color={heatColor} fontWeight="bold">{(girl.tensionScore || 5).toFixed(1)} / 10</Text>
             </Flex>
             <Flex justify="space-between"><Text color="rgba(245,240,232,0.4)">亲密度</Text><Text>{girl.intimacyLevel || 1} / 5</Text></Flex>
-            {(girl.mbti || (girl.personality && typeof girl.personality === 'object' && girl.personality.mbti)) && (
-              <Flex justify="space-between"><Text color="rgba(245,240,232,0.4)">MBTI</Text><Text>{girl.mbti || (girl.personality && girl.personality.mbti)}</Text></Flex>
+            {contextData?.girlInfo?.mbti && (
+              <Flex justify="space-between"><Text color="rgba(245,240,232,0.4)">MBTI</Text><Text>{contextData.girlInfo.mbti}</Text></Flex>
             )}
           </VStack>
         </CardBody>
       </Card>
+
+      {/* 近期关键信号 */}
+      {signals.length > 0 && (
+        <Card bg="warm.800" border="1px solid" borderColor="rgba(245,240,232,0.08)" mb={3}>
+          <CardHeader pb={0}>
+            <Flex align="center" gap={2}>
+              <Box w="6px" h="6px" borderRadius="full" bg="pink.400" />
+              <Text fontSize="12px" fontWeight="bold" color="rgba(245,240,232,0.6)" letterSpacing=".5px">
+                近期信号
+              </Text>
+            </Flex>
+          </CardHeader>
+          <CardBody>
+            <VStack spacing={1.5} align="stretch">
+              {signals.slice(0, 5).map((s, i) => (
+                <Flex key={i} align="flex-start" gap={2} fontSize="11px">
+                  <Badge colorScheme={s.type === 'positive' ? 'green' : s.type === 'negative' ? 'red' : 'gray'} fontSize="9px" mt="2px">
+                    {s.type === 'positive' ? '利好' : s.type === 'negative' ? '注意' : '中性'}
+                  </Badge>
+                  <Text color="rgba(245,240,232,0.5)" flex={1} lineHeight="1.4">{s.event}</Text>
+                </Flex>
+              ))}
+            </VStack>
+          </CardBody>
+        </Card>
+      )}
+
+      {/* 待推进事项 */}
+      {pendingActions.length > 0 && (
+        <Card bg="warm.800" border="1px solid" borderColor="rgba(245,240,232,0.08)" mb={3}>
+          <CardHeader pb={0}>
+            <Flex align="center" gap={2}>
+              <Box w="6px" h="6px" borderRadius="full" bg="purple.400" />
+              <Text fontSize="12px" fontWeight="bold" color="rgba(245,240,232,0.6)" letterSpacing=".5px">
+                待推进事项
+              </Text>
+            </Flex>
+          </CardHeader>
+          <CardBody>
+            <VStack spacing={1.5} align="stretch">
+              {pendingActions.slice(0, 5).map((action, i) => (
+                <Flex key={i} align="flex-start" gap={2} fontSize="11px">
+                  <Text color="gold.400" mt="1px">▸</Text>
+                  <Text color="rgba(245,240,232,0.5)" lineHeight="1.4">{action}</Text>
+                </Flex>
+              ))}
+            </VStack>
+          </CardBody>
+        </Card>
+      )}
+
+      {/* 客户画像 */}
+      {clientProfile && (
+        <Card bg="warm.800" border="1px solid" borderColor="rgba(245,240,232,0.08)" mb={3}>
+          <CardHeader pb={0}>
+            <Flex align="center" gap={2}>
+              <Box w="6px" h="6px" borderRadius="full" bg="cyan.400" />
+              <Text fontSize="12px" fontWeight="bold" color="rgba(245,240,232,0.6)" letterSpacing=".5px">
+                我的画像
+              </Text>
+            </Flex>
+          </CardHeader>
+          <CardBody>
+            <VStack spacing={1} align="stretch" fontSize="11px">
+              {clientProfile.clientType && clientProfile.clientType !== '未设置' && (
+                <Flex justify="space-between">
+                  <Text color="rgba(245,240,232,0.4)">客户类型</Text>
+                  <Text>{clientProfile.clientType}</Text>
+                </Flex>
+              )}
+              {clientProfile.learningAbility && clientProfile.learningAbility !== '未知' && (
+                <Flex justify="space-between">
+                  <Text color="rgba(245,240,232,0.4)">学习能力</Text>
+                  <Text>{clientProfile.learningAbility}</Text>
+                </Flex>
+              )}
+              {clientProfile.emotionalStable && clientProfile.emotionalStable !== '未知' && (
+                <Flex justify="space-between">
+                  <Text color="rgba(245,240,232,0.4)">情绪稳定</Text>
+                  <Text>{clientProfile.emotionalStable}</Text>
+                </Flex>
+              )}
+              {clientProfile.loveLanguage && (
+                <Flex justify="space-between">
+                  <Text color="rgba(245,240,232,0.4)">爱语</Text>
+                  <Text fontSize="10px">{clientProfile.loveLanguage}</Text>
+                </Flex>
+              )}
+            </VStack>
+          </CardBody>
+        </Card>
+      )}
 
       {/* 阶段策略 */}
       <Card bg="warm.800" border="1px solid" borderColor="rgba(245,240,232,0.08)">
@@ -1259,11 +1355,91 @@ const GirlContextSidebar = memo(({ girl, analysisContent }) => {
   );
 });
 
+
+
+// 态势总览卡（在聊天实战为空时显示）
+const SituationCard = memo(({ stage, tensionScore, intimacyLevel, recentSignals, pendingActions, lastMessageTime }) => {
+  const stageColor = STAGE_COLORS[stage] || 'gray';
+  const heatColor = (tensionScore || 5) >= 7 ? 'orange.400' : (tensionScore || 5) >= 5 ? 'yellow.400' : 'blue.400';
+
+  const stageTips = {
+    '陌生': '先建立舒适感，不要急于推进',
+    '朋友': '让她习惯你的存在，成为情绪出口',
+    '暧昧': '72小时内主动约见，制造「在一起」时刻',
+    '约会': '升级肢体接触，明确关系预期',
+    '长期': '维护亲密度，保持新鲜感',
+  };
+  const tip = stageTips[stage] || stageTips['陌生'];
+
+  const signals = recentSignals || [];
+  const actions = pendingActions || [];
+
+  return (
+    <Flex direction="column" align="center" justify="center" py={8} px={4} color="rgba(245,240,232,0.7)">
+      {/* 顶部状态 */}
+      <Flex gap={3} mb={5} align="center">
+        <Badge colorScheme={stageColor} fontSize="13px" px={3} py={1}>{stage || '未设置阶段'}</Badge>
+        <Flex align="center" gap={1}>
+          <Text fontSize="12px" color="rgba(245,240,232,0.4)">热度</Text>
+          <Text color={heatColor} fontWeight="bold" fontSize="14px">{(tensionScore || 5).toFixed(1)}</Text>
+        </Flex>
+        <Flex align="center" gap={1}>
+          <Text fontSize="12px" color="rgba(245,240,232,0.4)">亲密度</Text>
+          <Text fontWeight="bold" fontSize="14px">{intimacyLevel || 1}/5</Text>
+        </Flex>
+      </Flex>
+
+      {/* 阶段策略 */}
+      <Box bg="warm.700" borderRadius="xl" px={5} py={4} mb={5} w="100%" maxW="400px" textAlign="center">
+        <Text fontSize="12px" color="rgba(245,240,232,0.4)" mb={1}>当前阶段策略</Text>
+        <Text fontSize="14px" color="gold.300">{tip}</Text>
+      </Box>
+
+      {/* 近期信号 */}
+      {signals.length > 0 && (
+        <Box w="100%" maxW="400px" mb={4}>
+          <Text fontSize="11px" color="rgba(245,240,232,0.3)" mb={2} letterSpacing=".5px">近期信号</Text>
+          <VStack spacing={1} align="stretch">
+            {signals.slice(0, 3).map((s, i) => (
+              <Flex key={i} align="center" gap={2} fontSize="12px">
+                <Badge colorScheme={s.type === 'positive' ? 'green' : s.type === 'negative' ? 'red' : 'gray'} fontSize="9px">
+                  {s.type === 'positive' ? '利好' : s.type === 'negative' ? '注意' : '中性'}
+                </Badge>
+                <Text color="rgba(245,240,232,0.5)" noOfLines={1}>{s.event}</Text>
+              </Flex>
+            ))}
+          </VStack>
+        </Box>
+      )}
+
+      {/* 待办 */}
+      {actions.length > 0 && (
+        <Box w="100%" maxW="400px" mb={4}>
+          <Text fontSize="11px" color="rgba(245,240,232,0.3)" mb={2} letterSpacing=".5px">待推进事项</Text>
+          <VStack spacing={1} align="stretch">
+            {actions.slice(0, 3).map((a, i) => (
+              <Flex key={i} align="center" gap={2} fontSize="12px">
+                <Text color="gold.400">▸</Text>
+                <Text color="rgba(245,240,232,0.5)" noOfLines={1}>{a}</Text>
+              </Flex>
+            ))}
+          </VStack>
+        </Box>
+      )}
+
+      {/* 底部提示 */}
+      <Text fontSize="12px" color="rgba(245,240,232,0.25)" mt={2}>
+        在下方粘贴女生的消息，AI生成回复建议
+      </Text>
+    </Flex>
+  );
+});
+
 // 聊天实战聊天区
 const CombatChatPanel = memo(({
   history, suggestions, selectedIndex, onSelect,
   onRegenerate, onDismissAll, onSendDirect,
-  loading, girlName, combatMode
+  loading, girlName, combatMode, contextData
 }) => {
   const scrollRef = useRef(null);
   const endRef = useRef(null);
@@ -1279,11 +1455,13 @@ const CombatChatPanel = memo(({
   return (
     <Box flex="1" minH="0" overflowY="auto" p={4} ref={scrollRef}>
       {isEmpty ? (
-        <Flex direction="column" align="center" justify="center" py={16} color="rgba(245,240,232,0.4)">
-          <Text fontSize="36px" mb={3}>💬</Text>
-          <Text fontSize="14px">在下方粘贴女生的消息，点击发送</Text>
-          <Text fontSize="12px" mt={1}>AI 会生成回复建议，选中后自动成为你的回复</Text>
-        </Flex>
+        <SituationCard
+          stage={contextData?.girlInfo?.stage}
+          tensionScore={contextData?.girlInfo?.tensionScore}
+          intimacyLevel={contextData?.girlInfo?.intimacyLevel}
+          recentSignals={contextData?.recentSignals}
+          pendingActions={contextData?.pendingActions}
+        />
       ) : (
         <>
           {history.map(msg => (
@@ -1353,6 +1531,8 @@ export default function AICoach() {
   const [activeTabIndex, setActiveTabIndex] = useState(0);
   // 聊天导入弹窗
   const [importModalOpen, setImportModalOpen] = useState(false);
+  // 侧边栏上下文数据（信号/待办/客户画像）
+  const [girlContextData, setGirlContextData] = useState(null);
 
   // 前端缓存：避免女生档案未变化时重复调用 AI（参考 Workbench 的 hash 比对机制）
   const coachCacheRef = useRef({}); // { [girlId]: { content, girlDataHash, timestamp } }
@@ -1568,6 +1748,7 @@ export default function AICoach() {
       setActiveTabIndex(0);
       setGirlAnalysisContent('');
       loadGirlAnalysis(girlId);
+      loadGirlContext(girlId);
       loadHistory(girlId);
       loadCombatHistory(girlId);
     } else {
@@ -1930,6 +2111,29 @@ export default function AICoach() {
       setGirlAnalysisLoading(false);
     }
   }, [apiUrl, girls, computeGirlDataHash]);
+
+  // 加载侧边栏上下文数据（信号/待办/客户画像）
+  const loadGirlContext = useCallback(async (girlId) => {
+    if (!girlId) return;
+    const token = localStorage.getItem('zhuiai_token');
+    try {
+      const cached = coachCacheRef.current[girlId];
+      const url = cached?.girlDataHash
+        ? `${apiUrl}/api/ai-coach/girl-context/${girlId}?cachedGirlHash=${encodeURIComponent(cached.girlDataHash)}`
+        : `${apiUrl}/api/ai-coach/girl-context/${girlId}`;
+      const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data.cached) {
+        if (data.girlDataHash && coachCacheRef.current[girlId]) {
+          coachCacheRef.current[girlId].girlDataHash = data.girlDataHash;
+        }
+      }
+      setGirlContextData(data);
+    } catch (e) {
+      console.warn('[AICoach] loadGirlContext failed:', e.message);
+    }
+  }, [apiUrl]);
 
   // 聊天实战 - 发送
   const handleCombatSend = useCallback(async () => {
@@ -2532,6 +2736,7 @@ export default function AICoach() {
                       loading={combatLoading}
                       girlName={selectedGirl?.name}
                       combatMode={combatMode}
+                      contextData={girlContextData}
                     />
                     <CombatInputBar
                       mode={combatMode}
@@ -2550,7 +2755,7 @@ export default function AICoach() {
           </Box>
 
           {/* Right side: Context panel */}
-          <GirlContextSidebar girl={selectedGirl} analysisContent={girlAnalysisContent} />
+          <GirlContextSidebar girl={selectedGirl} contextData={girlContextData} />
         </Flex>
 
         {/* 聊天导入弹窗 */}

@@ -10,7 +10,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-const { JWT_SECRET, getAIConfig, BASE_URL } = require('../config');
+const { JWT_SECRET, getAIConfig, getTextModelConfig, BASE_URL } = require('../config');
 const prisma = require('../prisma');
 const { callVisionModel } = require('../services/profileEngine');
 
@@ -547,8 +547,8 @@ router.post('/extract-profile', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: '文本内容太少，请提供更完整的自我介绍（至少20字）' });
     }
 
-    // 调用 AI 提取档案信息
-    const aiConfig = getAIConfig('flash');
+    // 调用 AI 提取档案信息（统一用 DashScope 多模态模型）
+    const aiConfig = getTextModelConfig();
     const extractPrompt = `从以下客户自我介绍中提取档案信息，直接输出JSON（不要markdown代码块，不要其他文字）。
 
 【规则】

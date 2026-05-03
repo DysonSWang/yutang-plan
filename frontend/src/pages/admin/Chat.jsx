@@ -164,9 +164,44 @@ export default function AdminChat() {
           delete next[msg.id];
           return next;
         });
+      } else {
+        // API 返回失败，兜底本地标记
+        setMessages(prev => prev.map(m => {
+          if (m.id !== msg.id) return m;
+          if (m.isFlashImage) {
+            return { ...m, flashBurnedByMe: true };
+          }
+          return { ...m, content: '[消息已销毁]', mediaUrl: null, burnedAt: new Date() };
+        }));
+        if (burnTimersRef.current[msg.id]) {
+          clearTimeout(burnTimersRef.current[msg.id]);
+          delete burnTimersRef.current[msg.id];
+        }
+        setCountdowns(prev => {
+          const next = { ...prev };
+          delete next[msg.id];
+          return next;
+        });
       }
     } catch (e) {
       captureError(e);
+      // API 调用异常，兜底本地标记
+      setMessages(prev => prev.map(m => {
+        if (m.id !== msg.id) return m;
+        if (m.isFlashImage) {
+          return { ...m, flashBurnedByMe: true };
+        }
+        return { ...m, content: '[消息已销毁]', mediaUrl: null, burnedAt: new Date() };
+      }));
+      if (burnTimersRef.current[msg.id]) {
+        clearTimeout(burnTimersRef.current[msg.id]);
+        delete burnTimersRef.current[msg.id];
+      }
+      setCountdowns(prev => {
+        const next = { ...prev };
+        delete next[msg.id];
+        return next;
+      });
     }
   }, []);
 
@@ -804,7 +839,7 @@ export default function AdminChat() {
                         position="absolute"
                         top={0}
                         transform={`translateY(${virtualRow.start}px)`}
-                        pb={3}
+                        pb={2}
                       >
                         {showTime && (
                           <Text color="rgba(245,240,232,0.2)" fontSize="xs" textAlign="center" w="100%" my={2}>
@@ -814,26 +849,27 @@ export default function AdminChat() {
                         <HStack spacing={2} maxW="85%">
                           {!isOperator && (
                             <Box
-                              w="28px"
-                              h="28px"
+                              w="36px"
+                              h="36px"
                               borderRadius="full"
-                              bg="warm.600"
+                              bg="linear-gradient(135deg, rgba(128,224,208,0.3), rgba(64,180,160,0.2))"
                               display="flex"
                               alignItems="center"
                               justifyContent="center"
                               flexShrink={0}
+                              border="2px solid rgba(128,224,208,0.15)"
                             >
-                              <Text fontSize="xs">👤</Text>
+                              <Text fontSize="sm">👤</Text>
                             </Box>
                           )}
                           <Box
                             w="75%"
                             p={3}
-                            borderRadius="lg"
                             bg={msg.isBurnAfterRead && !msg.burnedAt
                               ? 'linear-gradient(135deg, rgba(255,140,0,0.3), rgba(255,80,0,0.15))'
-                              : isOperator ? 'warm.600' : 'warm.700'}
+                              : isOperator ? 'warm.600' : 'rgba(255,255,255,0.06)'}
                             border={msg.isBurnAfterRead && !msg.burnedAt ? '1px solid rgba(255,140,0,0.4)' : 'none'}
+                            borderRadius={isOperator ? '18px 6px 18px 18px' : '6px 18px 18px 18px'}
                             color="white"
                             position="relative"
                             role="group"
@@ -869,16 +905,17 @@ export default function AdminChat() {
                           </Box>
                           {isOperator && (
                             <Box
-                              w="28px"
-                              h="28px"
+                              w="36px"
+                              h="36px"
                               borderRadius="full"
-                              bg="warm.600"
+                              bg="linear-gradient(135deg, rgba(255,200,100,0.3), rgba(255,170,60,0.2))"
                               display="flex"
                               alignItems="center"
                               justifyContent="center"
                               flexShrink={0}
+                              border="2px solid rgba(255,200,100,0.15)"
                             >
-                              <Text fontSize="xs">🤖</Text>
+                              <Text fontSize="sm">🤖</Text>
                             </Box>
                           )}
                         </HStack>
