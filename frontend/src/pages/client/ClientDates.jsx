@@ -100,16 +100,18 @@ export default function ClientDates() {
     const thisYear = now.getFullYear();
     const weekEnd = new Date(now);
     weekEnd.setDate(now.getDate() + 7);
+    const datesData = data?.allDates ?? [];
+    const interviewsData = data?.pendingInterviews ?? [];
     return {
-      pending: allDates.filter(d => d.status === 'pending_client_confirm').length,
-      interviews: pendingInterviews.length,
-      completed: allDates.filter(d => d.status === 'completed').length,
-      thisMonth: allDates.filter(d => {
+      pending: datesData.filter(d => d.status === 'pending_client_confirm').length,
+      interviews: interviewsData.length,
+      completed: datesData.filter(d => d.status === 'completed').length,
+      thisMonth: datesData.filter(d => {
         if (!d.dateTime) return false;
         const dt = new Date(d.dateTime);
         return dt.getFullYear() === thisYear && dt.getMonth() === thisMonth;
       }).length,
-      thisWeekExpense: allDates.reduce((sum, d) => {
+      thisWeekExpense: datesData.reduce((sum, d) => {
         if (!d.dateTime || d.status === 'cancelled') return sum;
         const dt = new Date(d.dateTime);
         if (dt >= now && dt <= weekEnd) return sum + (d.totalExpense || 0);
@@ -119,7 +121,7 @@ export default function ClientDates() {
   }, [data]);
 
   // 获取即将到来的约会（最近一个未完成的）
-  const upcomingDate = allDates
+  const upcomingDate = (data?.allDates ?? [])
     .filter(d => d.dateTime && d.status !== 'completed' && d.status !== 'cancelled')
     .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))[0] || null;
 

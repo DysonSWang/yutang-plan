@@ -68,7 +68,7 @@ export default function MyPond() {
             我的缘分
           </Heading>
           <Text color="rgba(245,240,232,0.25)" fontSize="sm" mt={1}>
-            已添加 <Text as="span" color="gold.400"><AnimatedNumber value={girlsList.length} duration={800} /></Text> 位缘分
+            已添加 <Text as="span" color="gold.400"><AnimatedNumber value={(girlsList ?? []).length} duration={800} /></Text> 位缘分
           </Text>
         </Box>
         <Button colorScheme="gold" size="sm" onClick={onAddOpen} leftIcon={<Icon as={HeartIcon} w={3} h={3} />}>
@@ -80,7 +80,7 @@ export default function MyPond() {
         <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4}>
           {[1,2,3].map(i => <Skeleton key={i} height="120px" borderRadius="lg" />)}
         </SimpleGrid>
-      ) : girlsList.length === 0 ? (
+      ) : (girlsList ?? []).length === 0 ? (
         <EmptyState
           type="pond"
           onAction={onAddOpen}
