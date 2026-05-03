@@ -1143,14 +1143,34 @@ export default function ClientProfile() {
                   </div>
                 ))}
               </SimpleGrid>
-
-              {/* 底部按钮 */}
-              <HStack justify="flex-end" spacing={3}>
-                <Button variant="ghost" color="rgba(245,240,232,0.4)" onClick={onClose}>取消</Button>
-                <Button colorScheme="gold" onClick={handleSave} isLoading={saving}>保存</Button>
-              </HStack>
             </VStack>
           </ModalBody>
+          {/* 移动端固底操作栏 */}
+          <Box
+            position="fixed"
+            bottom={0}
+            left={0}
+            right={0}
+            bg="warm.800"
+            borderTop="1px solid"
+            borderColor="warm.600"
+            p={3}
+            zIndex={2000}
+            display={{ base: 'flex', md: 'none' }}
+            justifyContent="center"
+          >
+            <HStack spacing={3} w="full" maxW="400px">
+              <Button flex={1} variant="ghost" color="rgba(245,240,232,0.4)" onClick={onClose} size="md">取消</Button>
+              <Button flex={1} colorScheme="gold" onClick={handleSave} isLoading={saving} size="md">保存</Button>
+            </HStack>
+          </Box>
+          {/* 桌面端内联按钮 */}
+          <Box display={{ base: 'none', md: 'block' }} px={6} pb={4}>
+            <HStack justify="flex-end" spacing={3}>
+              <Button variant="ghost" color="rgba(245,240,232,0.4)" onClick={onClose}>取消</Button>
+              <Button colorScheme="gold" onClick={handleSave} isLoading={saving}>保存</Button>
+            </HStack>
+          </Box>
         </ModalContent>
       </Modal>
 
