@@ -360,7 +360,7 @@ export const chat = {
 export const upload = {
   image: async (file, isBurnAfterRead = false, isFlashImage = false) => {
     const options = {
-      maxSizeMB: 1,
+      maxSizeMB: 0.5,
       maxWidthOrHeight: 1920,
       useWebWorker: true,
       fileType: 'image/jpeg'
@@ -375,7 +375,8 @@ export const upload = {
     const res = await fetch(`${api.baseUrl}/api/upload/image`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` },
-      body: formData
+      body: formData,
+      signal: AbortSignal.timeout(30000) // 30秒超时
     });
     if (!res.ok) throw new Error(`上传图片失败 (${res.status})`);
     const json = await res.json();
