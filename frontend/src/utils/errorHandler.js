@@ -62,7 +62,7 @@ export function parseErrorResponse(response, data) {
 }
 
 export function normalizeError(error) {
-  if (error.name === 'TypeError' && error.message.includes('fetch')) {
+  if (error.name === 'TypeError' && error.message?.includes('fetch')) {
     return {
       type: ErrorType.NETWORK,
       code: 'NETWORK_ERROR',
@@ -78,7 +78,7 @@ export function normalizeError(error) {
     };
   }
 
-  if (error.name === 'TimeoutError' || error.message.includes('timeout')) {
+  if (error.name === 'TimeoutError' || (error.message && error.message.includes('timeout'))) {
     return {
       type: ErrorType.TIMEOUT,
       code: 'TIMEOUT',
