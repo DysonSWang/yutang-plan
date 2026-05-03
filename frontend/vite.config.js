@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 const isProduction = process.env.NODE_ENV === 'production'
+// Capacitor 构建不需要 PWA（文件从 asset:// 加载，SW 无法工作）
+const isCapacitor = process.env.CAPACITOR_BUILD === 'true'
 
 export default defineConfig({
   // 开发环境用 /（npm run dev 时直接访问 localhost:5181/）
@@ -11,7 +13,7 @@ export default defineConfig({
   plugins: [
     react(),
     // 开发模式下禁用 PWA service worker，避免缓存导致代码更新不可见
-    ...(isProduction ? [VitePWA({
+    ...(isProduction && !isCapacitor ? [VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons/*.png', 'logo.png'],
       manifest: {
@@ -22,8 +24,8 @@ export default defineConfig({
         background_color: '#0a0f1a',
         display: 'standalone',
         orientation: 'portrait',
-        scope: '/app/',
-        start_url: '/app/',
+        scope: '/',
+        start_url: '/',
         icons: [
           {
             src: '/pwa-192x192.png',
