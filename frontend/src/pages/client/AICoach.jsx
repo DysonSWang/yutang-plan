@@ -1615,7 +1615,10 @@ export default function AICoach() {
   const [girlContextData, setGirlContextData] = useState(null);
 
   // 前端缓存：避免女生档案未变化时重复调用 AI（参考 Workbench 的 hash 比对机制）
-  const coachCacheRef = useRef({}); // { [girlId]: { content, girlDataHash, timestamp } }
+  const coachCacheRef = useRef({}); // { [girlId]: { content, reasoning, girlDataHash, timestamp } }
+
+  // P2-6: AI教练分析结果（女生核心需求/当前状态），实时注入到聊天实战上下文
+  const combatContextRef = useRef(null); // { recentSignals, pendingActions, clientProfile, keyInsights }
 
   // 计算女生侧 dataHash（与后端 computeGirlDataHash 对应，仅取关键变动字段）
   const computeGirlDataHash = useCallback((girl) => {
@@ -2210,6 +2213,16 @@ export default function AICoach() {
         }
       }
       setGirlContextData(data);
+      // P2-6: 同步更新 combatContextRef，聊天实战发送时作为隐藏上下文
+      if (data.recentSignals || data.pendingActions || data.clientProfile || data.observations) {
+        combatContextRef.current = {
+          recentSignals: data.recentSignals || [],
+          pendingActions: data.pendingActions || [],
+          clientProfile: data.clientProfile || {},
+          observations: data.observations || [],
+          updatedAt: Date.now()
+        };
+      }
     } catch (e) {
       console.warn('[AICoach] loadGirlContext failed:', e.message);
     }
@@ -2237,10 +2250,12 @@ export default function AICoach() {
       setCombatLoading(true);
       try {
         const token = localStorage.getItem('zhuiai_token');
+        // P2-6: 注入隐藏上下文（AI教练分析结果）
+        const hiddenContext = combatContextRef.current || null;
         const res = await fetch(`${apiUrl}/api/ai-coach/reply-suggestions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ girlId: selectedGirlId || undefined, lastMessage: text })
+          body: JSON.stringify({ girlId: selectedGirlId || undefined, lastMessage: text, hiddenContext })
         });
         if (!res.ok) throw new Error(`回复建议请求失败 (${res.status})`);
         const data = await res.json();

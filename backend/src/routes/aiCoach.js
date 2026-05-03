@@ -1025,7 +1025,7 @@ router.post('/reply-suggestions', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: '无权限' });
     }
 
-    const { girlId, lastMessage, context, style } = req.body;
+    const { girlId, lastMessage, context, style, hiddenContext } = req.body;
 
     if (!lastMessage) {
       return res.status(400).json({ error: '对方消息是必需的' });
@@ -1107,6 +1107,7 @@ ${fullContext.recentSignals.length > 0
 ${fullContext.pendingActions.length > 0
   ? fullContext.pendingActions.map(a => `- ${a}`).join('\n')
   : '暂无待推进事项'}
+${hiddenContext?.keyInsights ? `\n【AI教练实时洞察】\n${hiddenContext.keyInsights}` : ''}
 `;
     }
 
