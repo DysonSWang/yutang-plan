@@ -11,7 +11,6 @@ import { captureError } from '../../utils/frontendErrorCapture';
 import { FireIcon, SnowIcon, SparklesIcon, BrainIcon } from '../../components/Icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import PullToRefresh from '../../components/PullToRefresh';
 
 /**
  * 修正 AI 产出的不规范 Markdown 格式
@@ -3037,12 +3036,7 @@ export default function AICoach() {
     </>
   );
 
-  const handleRefresh = useCallback(async () => {
-    await Promise.all([loadGirls(), loadHistory(selectedGirlId)]);
-  }, [selectedGirlId]);
-
   return (
-    <PullToRefresh onRefresh={handleRefresh}>
     <Box display="flex" flexDirection="column" h={{ base: 'calc(100vh - 96px)', lg: 'calc(100vh - 48px)' }} overflow="hidden">
       <Flex justify="space-between" align="center" mb={3} flexShrink={0} gap={3}>
         <Heading color="white" size="md">AI教练</Heading>
@@ -3090,6 +3084,5 @@ export default function AICoach() {
         </TabPanels>
       </Tabs>
     </Box>
-    </PullToRefresh>
   );
 }

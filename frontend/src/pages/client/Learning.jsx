@@ -5,9 +5,9 @@ import { membership as membershipApi } from '../../utils/api';
 import { BookIcon, CheckIcon } from '../../components/Icons';
 import { FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import PersonalizationBanner from '../../components/PersonalizationBanner';
+import PullToRefresh from '../../components/PullToRefresh';
 import { useSocket } from '../../contexts/SocketContext';
 import useKeepAliveData from '../../hooks/useKeepAliveData';
-import PullToRefresh from '../../components/PullToRefresh';
 
 // Chapter card component
 function ChapterCard({ chapter, progress, personalizationStatus, onUpdate }) {
@@ -228,7 +228,6 @@ export default function ClientLearning() {
   );
 
   return (
-    <PullToRefresh onRefresh={refresh} isRefreshing={isInitialLoad}>
     <Box>
       <HStack mb={6} gap={4}>
         <Box>
@@ -365,6 +364,5 @@ export default function ClientLearning() {
         </Center>
       )}
     </Box>
-    </PullToRefresh>
   );
 }

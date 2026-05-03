@@ -500,7 +500,6 @@ export default function MyPond() {
 
   return (
     <Box>
-    <Box>
       <Flex justify="space-between" align="center" mb={6}>
         <Heading color="white">缘分与约会</Heading>
         <HStack spacing={2}>

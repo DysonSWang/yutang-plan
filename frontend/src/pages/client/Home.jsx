@@ -6,7 +6,6 @@ import useKeepAliveData from '../../hooks/useKeepAliveData';
 import ServiceProgressBoard from '../../components/client/ServiceProgressBoard';
 import AnimatedNumber from '../../components/AnimatedNumber';
 import EmptyState from '../../components/EmptyState';
-import PullToRefresh from '../../components/PullToRefresh';
 
 const TYPE_LABEL = { monthly: '普惠月付', yearly: '普惠年付', premium: '高端会员' };
 const TYPE_BADGE_COLOR = { monthly: 'green', yearly: 'blue', premium: 'purple' };
@@ -137,7 +136,6 @@ export default function ClientHome() {
   const hasAnyData = stats.girlCount > 0 || stats.dateCount > 0;
 
   return (
-    <PullToRefresh onRefresh={() => window.location.reload()} isRefreshing={isInitialLoad}>
     <Box>
       {/* ---- Hero 问候 ---- */}
       <Box className="stagger-1">
@@ -289,6 +287,5 @@ export default function ClientHome() {
         </ModalContent>
       </Modal>
     </Box>
-    </PullToRefresh>
   );
 }

@@ -692,7 +692,6 @@ export default function GirlDetail() {
     : null;
 
   return (
-    <PullToRefresh onRefresh={refresh} isRefreshing={isInitialLoad}>
     <Box pb={8}>
       {/* ---- 返回按钮 ---- */}
       <HStack mb={4}>

@@ -4,7 +4,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { membership as membershipApi } from '../../utils/api';
 import useKeepAliveData from '../../hooks/useKeepAliveData';
 import { ArrowLeftIcon, CheckIcon, BookIcon } from '../../components/Icons';
-import PullToRefresh from '../../components/PullToRefresh';
 
 // 解析 Markdown 粗体 **text**
 function parseBold(text) {
