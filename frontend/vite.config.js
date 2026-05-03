@@ -6,8 +6,8 @@ const isProduction = process.env.NODE_ENV === 'production'
 
 export default defineConfig({
   // 开发环境用 /（npm run dev 时直接访问 localhost:5181/）
-  // 生产环境用 /app/（部署在 nginx 子目录）
-  base: isProduction ? '/app/' : '/',
+  // 生产环境用 /（部署在根路径，由 nginx 处理）
+  base: '/',
   plugins: [
     react(),
     // 开发模式下禁用 PWA service worker，避免缓存导致代码更新不可见
