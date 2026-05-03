@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>下载追AI Android 安装包</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080810;
+    --surface: #12121f;
+    --card: #1c1c2e;
+    --accent: #d4b05a;
+    --accent-dim: #9a7f3a;
+    --accent-glow: rgba(212,176,90,0.15);
+    --text: #f5f0e8;
+    --text-dim: #9890a0;
+    --text-mid: #c8c0b8;
+    --red: #e05040;
+    --border: rgba(212,176,90,0.25);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* 背景光效 */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -20vh;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80vw;
+    height: 60vh;
+    background: radial-gradient(ellipse at center, rgba(212,176,90,0.06) 0%, transparent 65%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* 顶部导航 */
+  .top-bar {
+    position: relative;
+    z-index: 10;
+    padding: 24px 24px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .back-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 14px;
+    transition: color 0.2s;
+  }
+
+  .back-link:hover { color: var(--accent); }
+
+  .top-brand {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: 1px;
+  }
+
+  /* 主内容 */
+  .main-content {
+    position: relative;
+    z-index: 1;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 40px 24px 60px;
+    text-align: center;
+  }
+
+  .hero-icon {
+    width: 96px;
+    height: 96px;
+    background: linear-gradient(145deg, var(--card), var(--surface));
+    border: 2px solid var(--border);
+    border-radius: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 28px;
+    font-size: 48px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 60px var(--accent-glow);
+  }
+
+  .hero-title {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--text);
+    margin-bottom: 10px;
+    letter-spacing: 2px;
+  }
+
+  .hero-sub {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin-bottom: 40px;
+    line-height: 1.6;
+  }
+
+  /* 下载卡片 */
+  .dl-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px 24px;
+    margin-bottom: 16px;
+  }
+
+  .dl-size {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 20px;
+    letter-spacing: 0.5px;
+  }
+
+  .dl-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+    color: #080810;
+    font-size: 17px;
+    font-weight: 700;
+    padding: 16px 24px;
+    border-radius: 14px;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 20px rgba(212,176,90,0.25);
+    cursor: pointer;
+    border: none;
+  }
+
+  .dl-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(212,176,90,0.35);
+  }
+
+  .dl-btn:active {
+    transform: translateY(0);
+  }
+
+  .dl-btn .icon { font-size: 20px; }
+
+  .copy-row {
+    margin-top: 14px;
+  }
+
+  .copy-btn {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-dim);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 10px 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .copy-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* 复制成功提示 */
+  .toast {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.88);
+    color: #fff;
+    padding: 16px 36px;
+    border-radius: 12px;
+    font-size: 15px;
+    z-index: 200;
+    border: 1px solid var(--border);
+    backdrop-filter: blur(8px);
+  }
+
+  .toast.show { display: block; }
+
+  /* ─── 微信引导浮层 ─── */
+  .guide-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: rgba(8,8,16,0.88);
+    backdrop-filter: blur(6px);
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .guide-overlay.active { display: flex; }
+
+  .guide-modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 28px;
+    padding: 44px 36px;
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.6), 0 0 80px var(--accent-glow);
+    position: relative;
+    animation: popIn 0.3s ease;
+  }
+
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .guide-icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(145deg, rgba(212,176,90,0.12), rgba(212,176,90,0.05));
+    border: 2px solid rgba(212,176,90,0.35);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 28px;
+    font-size: 40px;
+  }
+
+  .guide-title {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 26px;
+    font-weight: 900;
+    color: var(--text);
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+  }
+
+  .guide-desc {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin-bottom: 32px;
+    line-height: 1.6;
+  }
+
+  .guide-steps {
+    background: var(--card);
+    border-radius: 18px;
+    padding: 24px 20px;
+    margin-bottom: 32px;
+    text-align: left;
+  }
+
+  .guide-step {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .guide-step:last-child { border-bottom: none; padding-bottom: 0; }
+  .guide-step:first-child { padding-top: 0; }
+
+  .step-num {
+    width: 30px;
+    height: 30px;
+    background: rgba(212,176,90,0.12);
+    border: 1px solid rgba(212,176,90,0.35);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .step-body {
+    font-size: 15px;
+    color: var(--text-mid);
+    line-height: 1.5;
+  }
+
+  .step-body strong {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .guide-copy-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    background: rgba(212,176,90,0.1);
+    border: 1px solid rgba(212,176,90,0.4);
+    color: var(--accent);
+    font-size: 15px;
+    font-weight: 600;
+    padding: 15px 24px;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .guide-copy-btn:hover {
+    background: rgba(212,176,90,0.2);
+    border-color: rgba(212,176,90,0.65);
+  }
+
+  .guide-copy-btn.copied {
+    background: rgba(76,175,80,0.15);
+    border-color: rgba(76,175,80,0.5);
+    color: #81c784;
+  }
+
+  /* iOS 提示 */
+  .ios-tip {
+    display: none;
+    background: rgba(212,176,90,0.06);
+    border: 1px solid rgba(212,176,90,0.15);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-top: 14px;
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    text-align: left;
+  }
+
+  .ios-tip.show { display: block; }
+
+  @media (max-width: 480px) {
+    .main-content { padding: 32px 20px 48px; }
+    .hero-title { font-size: 24px; }
+    .guide-modal { padding: 36px 24px; }
+    .guide-title { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 顶部导航 -->
+<div class="top-bar">
+  <a href="/" class="back-link">← 返回首页</a>
+  <span class="top-brand">追 AI</span>
+</div>
+
+<!-- 主内容 -->
+<div class="main-content">
+  <div class="hero-icon">⬇️</div>
+  <h1 class="hero-title">下载追AI</h1>
+  <p class="hero-sub">AI 智能恋爱助手 · 免登录 · 直链下载</p>
+
+  <div class="dl-card">
+    <div class="dl-size">v1.1.0 · 约 4.2 MB · Android 5.0+</div>
+
+    <a class="dl-btn" href="/apk/app-release.apk" id="dl-btn">
+      <span class="icon">⬇️</span>
+      立即下载安装包
+    </a>
+
+    <div class="copy-row">
+      <button class="copy-btn" id="copy-btn">复制下载链接</button>
+    </div>
+
+    <div class="ios-tip" id="ios-tip">
+      💡 iOS Safari 用户：长按上方按钮，选择「存储到文件」下载
+    </div>
+  </div>
+</div>
+
+<!-- 复制成功 -->
+<div class="toast" id="toast">✅ 链接已复制到剪贴板</div>
+
+<!-- 微信引导浮层 -->
+<div class="guide-overlay" id="guide-overlay">
+  <div class="guide-modal">
+    <div class="guide-icon">🔔</div>
+    <h2 class="guide-title">请在浏览器打开</h2>
+    <p class="guide-desc">微信内置浏览器无法直接下载 APK<br>请按以下步骤操作</p>
+
+    <div class="guide-steps">
+      <div class="guide-step">
+        <div class="step-num">1</div>
+        <div class="step-body">点击右上角 <strong>···</strong> 或 <strong>分享</strong> 按钮</div>
+      </div>
+      <div class="guide-step">
+        <div class="step-num">2</div>
+        <div class="step-body">向下滑动，找到 <strong>「在浏览器打开」</strong></div>
+      </div>
+      <div class="guide-step">
+        <div class="step-num">3</div>
+        <div class="step-body">在浏览器中点击 <strong>「立即下载」</strong> 即可</div>
+      </div>
+    </div>
+
+    <button class="guide-copy-btn" id="guide-copy-btn">
+      📋 复制下载链接
+    </button>
+  </div>
+</div>
+
+<script>
+(function() {
+  var ua = navigator.userAgent.toLowerCase();
+  var isWechat = /micromessenger/.test(ua);
+  var isSafari = /safari/.test(ua) && !/chrome/.test(ua) && !/ CriOS/.test(ua);
+  var isIOS = /iphone|ipad|ipod/.test(ua);
+
+  var $ = function(id) { return document.getElementById(id); };
+
+  // ─── 微信：显示引导浮层 ───
+  if (isWechat) {
+    $('guide-overlay').classList.add('active');
+
+    $('guide-copy-btn').addEventListener('click', function() {
+      var url = 'https://zhuiai.club/apk/app-release.apk';
+      var btn = this;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(function() {
+          btn.textContent = '✅ 已复制！打开浏览器粘贴访问';
+          btn.classList.add('copied');
+        }).catch(function() {
+          btn.textContent = '请长按复制上方链接';
+        });
+      } else {
+        btn.textContent = '请长按选中链接复制';
+      }
+    });
+    return;
+  }
+
+  // ─── 非微信：自动下载 ───
+  var iframe = document.createElement('iframe');
+  iframe.style.display = 'none';
+  iframe.src = '/apk/app-release.apk';
+  document.body.appendChild(iframe);
+
+  if (isIOS && isSafari) {
+    $('ios-tip').classList.add('show');
+  }
+
+  // ─── 复制链接 ───
+  var toast = $('toast');
+  function showToast() {
+    toast.classList.add('show');
+    setTimeout(function() { toast.classList.remove('show'); }, 2200);
+  }
+
+  function copyUrl(url) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(showToast).catch(function() { fallbackCopy(url); });
+    } else {
+      fallbackCopy(url);
+    }
+  }
+
+  function fallbackCopy(url) {
+    var i = document.createElement('input');
+    i.value = url;
+    i.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(i);
+    i.select();
+    document.execCommand('copy');
+    document.body.removeChild(i);
+    showToast();
+  }
+
+  $('copy-btn').addEventListener('click', function() {
+    copyUrl('https://zhuiai.club/apk/app-release.apk');
+  });
+
+  // 下载按钮点击反馈
+  $('dl-btn').addEventListener('click', function() {
+    var that = this;
+    setTimeout(function() {
+      that.innerHTML = '<span class="icon">⏳</span> 正在下载...';
+    }, 80);
+  });
+})();
+</script>
+</body>
+</html>

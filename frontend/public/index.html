@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>追AI · AI智能恋爱助手</title>
+<meta property="og:title" content="追AI · AI智能恋爱助手">
+<meta property="og:description" content="帮你从患得患失到笃定从容。AI 情感分析、恋爱教练、AI 对练，让每一位追爱的男人都能幸福。">
+<meta property="og:image" content="https://zhuiai.club/og-share.jpg">
+<meta name="description" content="帮你从患得患失到笃定从容。AI 情感分析、恋爱教练、AI 对练。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080810;
+    --surface: #12121f;
+    --card: #1c1c2e;
+    --accent: #d4b05a;
+    --accent-dim: #9a7f3a;
+    --accent-glow: rgba(212,176,90,0.15);
+    --text: #f5f0e8;
+    --text-dim: #9890a0;
+    --text-mid: #c8c0b8;
+    --red: #e05040;
+    --border: rgba(212,176,90,0.25);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans SC', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 999;
+    opacity: 0.6;
+  }
+
+  .glow-top {
+    position: fixed;
+    top: -20vh;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80vw;
+    height: 50vh;
+    background: radial-gradient(ellipse at center, rgba(201,168,76,0.06) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .glow-bottom {
+    position: fixed;
+    bottom: -10vh;
+    right: -10vw;
+    width: 60vw;
+    height: 40vh;
+    background: radial-gradient(ellipse at center, rgba(217,79,58,0.04) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 0 28px 80px;
+  }
+
+  /* ─── Hero ─── */
+  .hero {
+    padding-top: 72px;
+    text-align: center;
+  }
+
+  .hero-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid var(--accent-dim);
+    padding: 5px 14px;
+    border-radius: 2px;
+    margin-bottom: 48px;
+  }
+
+  .hero-headline {
+    font-family: 'Noto Serif SC', serif;
+    font-size: clamp(28px, 8vw, 42px);
+    font-weight: 900;
+    line-height: 1.25;
+    letter-spacing: -0.5px;
+    margin-bottom: 16px;
+  }
+
+  .hero-headline .gold { color: var(--accent); }
+
+  .hero-sub {
+    font-size: 14px;
+    color: var(--text-dim);
+    font-weight: 300;
+    line-height: 1.9;
+    letter-spacing: 1px;
+    margin-bottom: 56px;
+  }
+
+  .hero-sub strong {
+    color: var(--text-mid);
+    font-weight: 500;
+  }
+
+  .hero-stats {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    margin-bottom: 0;
+  }
+
+  .hero-stat {
+    text-align: center;
+  }
+
+  .hero-stat-num {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .hero-stat-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-weight: 300;
+    margin-top: 4px;
+    letter-spacing: 1px;
+  }
+
+  /* ─── Divider ─── */
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 56px 0;
+  }
+
+  /* ─── 追爱前 ─── */
+  .story-section {
+    margin-bottom: 56px;
+  }
+
+  .section-label {
+    font-size: 10px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    font-weight: 500;
+    margin-bottom: 28px;
+  }
+
+  .story-block {
+    background: var(--surface);
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 4px;
+    padding: 28px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .story-block.before {
+    border-left: 2px solid var(--red);
+  }
+
+  .story-block.after {
+    border-left: 2px solid var(--accent);
+  }
+
+  .story-block::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+  }
+
+  .story-block.before::before {
+    background: linear-gradient(90deg, var(--red), transparent);
+  }
+
+  .story-block.after::before {
+    background: linear-gradient(90deg, var(--accent), transparent);
+  }
+
+  .story-title {
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-weight: 500;
+    margin-bottom: 18px;
+  }
+
+  .story-block.before .story-title { color: var(--red); }
+  .story-block.after .story-title { color: var(--accent); }
+
+  .story-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .story-lines p {
+    font-size: 14px;
+    line-height: 1.85;
+    color: var(--text-mid);
+    font-weight: 300;
+  }
+
+  .story-lines .醒 {
+    font-weight: 500;
+    color: var(--text);
+    margin-top: 8px;
+  }
+
+  .story-block.after .story-lines .醒 {
+    color: var(--accent);
+  }
+
+  .story-lines .cost {
+    font-size: 12px;
+    color: var(--red);
+    font-weight: 500;
+    margin-top: 4px;
+  }
+
+  /* ─── 追爱是什么 ─── */
+  .what-section {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  .what-headline {
+    font-family: 'Noto Serif SC', serif;
+    font-size: clamp(22px, 6vw, 30px);
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 32px;
+  }
+
+  .what-headline .gold { color: var(--accent); }
+
+  .core-pillars {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 40px;
+  }
+
+  .core-pillar {
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 6px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    text-align: left;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .core-pillar::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--accent);
+  }
+
+  .core-pillar-num {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--accent);
+    line-height: 1;
+    min-width: 48px;
+    text-align: center;
+  }
+
+  .core-pillar-info h4 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 3px;
+    letter-spacing: 0.5px;
+  }
+
+  .core-pillar-info p {
+    font-size: 12px;
+    color: var(--text-dim);
+    font-weight: 300;
+    line-height: 1.5;
+  }
+
+  .what-arrows {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    text-align: left;
+  }
+
+  .what-arrow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .what-arrow .no {
+    color: var(--text-dim);
+    font-weight: 300;
+  }
+
+  .what-arrow .arrow {
+    color: var(--accent);
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .what-arrow .yes {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  /* ─── 两个版本 ─── */
+  .versions-section {
+    margin-bottom: 32px;
+  }
+
+  .versions-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .version-card {
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 4px;
+    padding: 28px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .version-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+
+  .version-card.study::before {
+    background: linear-gradient(90deg, transparent, var(--accent-dim), transparent);
+  }
+
+  .version-card.private::before {
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  }
+
+  .version-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .version-name {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .version-price {
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 500;
+    letter-spacing: 1px;
+  }
+
+  .version-for {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-weight: 300;
+    margin-bottom: 14px;
+    letter-spacing: 0.5px;
+  }
+
+  .version-desc {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .version-desc p {
+    font-size: 13px;
+    color: var(--text-mid);
+    font-weight: 300;
+    line-height: 1.6;
+  }
+
+  .version-tagline {
+    font-size: 12px;
+    color: var(--text-dim);
+    font-weight: 300;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .version-tagline em {
+    color: var(--accent);
+    font-style: normal;
+    font-weight: 500;
+  }
+
+  /* ─── 入会后 ─── */
+  .after-purchase-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+    text-align: left;
+  }
+
+  .after-purchase-title {
+    font-size: 12px;
+    color: var(--text-dim);
+    font-weight: 500;
+    margin-bottom: 12px;
+    letter-spacing: 1px;
+  }
+
+  .after-purchase-item {
+    font-size: 13px;
+    color: var(--text-mid);
+    font-weight: 300;
+    line-height: 1.8;
+    padding-left: 12px;
+    position: relative;
+  }
+
+  .after-purchase-item::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  /* ─── 隐私承诺 ─── */
+  .privacy-section {
+    margin-bottom: 56px;
+  }
+
+  .privacy-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .privacy-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 4px;
+    padding: 14px 18px;
+  }
+
+  .privacy-icon {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .privacy-icon svg {
+    width: 18px;
+    height: 18px;
+    stroke: var(--accent);
+    stroke-width: 1.5;
+    fill: none;
+  }
+
+  .privacy-text {
+    font-size: 12px;
+    color: var(--text-mid);
+    font-weight: 300;
+    line-height: 1.5;
+  }
+
+  .privacy-text strong {
+    color: var(--text);
+    font-weight: 500;
+    display: block;
+    margin-bottom: 2px;
+    font-size: 13px;
+  }
+
+  /* ─── CTA ─── */
+  .cta-section {
+    text-align: center;
+    margin-bottom: 56px;
+  }
+
+  .cta-title {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+  }
+
+  .cta-title .gold { color: var(--accent); }
+
+  .cta-sub {
+    font-size: 13px;
+    color: var(--text-dim);
+    font-weight: 300;
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+
+  .cta-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 0;
+  }
+
+  .cta-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px 20px;
+  }
+
+  .cta-card-label {
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    font-weight: 500;
+    margin-bottom: 14px;
+  }
+
+  /* Mo哥二维码 */
+  .wechat-qr {
+    width: 160px;
+    height: 160px;
+    margin: 0 auto 12px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid var(--border);
+  }
+
+  .wechat-qr img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .wechat-qr-note {
+    font-size: 12px;
+    color: var(--text-dim);
+    font-weight: 300;
+  }
+
+  /* 下载 App */
+  .app-download-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: var(--accent);
+    color: #111110;
+    text-decoration: none;
+    padding: 16px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 16px rgba(212,176,90,0.2);
+  }
+
+  .app-download-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 24px rgba(212,176,90,0.3);
+    background: #d4b04f;
+  }
+
+  .app-download-btn .icon {
+    font-size: 20px;
+  }
+
+  .app-download-note {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-weight: 300;
+    margin-top: 8px;
+    letter-spacing: 0.5px;
+  }
+
+  /* ─── Footer ─── */
+  .footer {
+    text-align: center;
+    padding: 40px 0;
+  }
+
+  .footer-brand {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+  }
+
+  .footer-brand .ai-highlight {
+    color: var(--accent);
+    font-weight: 900;
+    text-shadow: 0 0 8px rgba(212,176,90,0.6);
+    letter-spacing: 1px;
+  }
+
+  .footer-slogan {
+    font-size: 12px;
+    color: var(--text-dim);
+    font-weight: 300;
+    letter-spacing: 2px;
+    line-height: 1.7;
+  }
+</style>
+</head>
+<body>
+
+<div class="glow-top"></div>
+<div class="glow-bottom"></div>
+
+<div class="container">
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-badge">追爱 · 实战派方法论</div>
+    <h1 class="hero-headline">
+      我<br>
+      <span class="gold">帮你从"患得患失"</span><br>
+      到"稳稳追爱"
+    </h1>
+    <p class="hero-sub">
+      不是让你学会话术<br>
+      是让你在女生面前<br>
+      <strong>从患得患失，到笃定从容</strong>
+    </p>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="hero-stat-num">5年</div>
+        <div class="hero-stat-label">持续研究</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">1000+</div>
+        <div class="hero-stat-label">约会经历</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">200+</div>
+        <div class="hero-stat-label">女生实战</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- 追爱前 vs 追爱后 -->
+  <section class="story-section">
+    <div class="section-label">你是否也经历过</div>
+
+    <div class="story-block before">
+      <div class="story-title">追爱前</div>
+      <div class="story-lines">
+        <p>你发消息，她不回。</p>
+        <p>你再发，她回了。</p>
+        <p>你不知道说什么，你就问她"在干嘛"。</p>
+        <p>她不回了。</p>
+        <br>
+        <p>你开始想：</p>
+        <p>是不是我条件不够？</p>
+        <p>是不是她有别人？</p>
+        <p>是不是我应该再坚持一下？</p>
+        <br>
+        <p>每次发消息之前都要想很久。</p>
+        <p>每次她回了你都松一口气。</p>
+        <p>每次她不回你都想放弃又不甘心。</p>
+        <br>
+        <p class="醒">你很累。</p>
+        <br>
+        <p class="cost">三年后，你还在问同样的问题。</p>
+        <p class="cost">她，已经结婚了。</p>
+      </div>
+    </div>
+
+    <div style="height: 16px;"></div>
+
+    <div class="story-block after">
+      <div class="story-title">追爱后</div>
+      <div class="story-lines">
+        <p>她不回消息。</p>
+        <p>你知道她可能在忙，或者话题需要调整。</p>
+        <p>你不焦虑，因为你知道下一步该做什么。</p>
+        <br>
+        <p>她主动找你聊天了。</p>
+        <p>你知道她是真的对你有兴趣，不是礼貌。</p>
+        <p>你不需要猜她的心思。</p>
+        <br>
+        <p class="醒">她说：你和别的男人不一样。</p>
+        <p class="醒">那一刻，你知道了什么叫"稳"。</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- 追爱是什么 -->
+  <section class="what-section">
+    <div class="section-label" style="text-align:center; margin-bottom:24px;">追爱是什么</div>
+    <h2 class="what-headline">
+      <span class="gold">不是话术，是系统</span>
+    </h2>
+
+    <div class="core-pillars">
+      <div class="core-pillar">
+        <div class="core-pillar-num">01</div>
+        <div class="core-pillar-info">
+          <h4>20章宝典学习</h4>
+          <p>系统化的情感方法论，5年实战验证，随时可查</p>
+        </div>
+      </div>
+      <div class="core-pillar">
+        <div class="core-pillar-num">02</div>
+        <div class="core-pillar-info">
+          <h4>AI智能体即时解答</h4>
+          <p>凌晨三点、她突然冷淡——任何时候，随时问，即时答</p>
+        </div>
+      </div>
+      <div class="core-pillar">
+        <div class="core-pillar-num">03</div>
+        <div class="core-pillar-info">
+          <h4>Mo哥人工秘聊咨询</h4>
+          <p>AI解决80%，复杂情况Mo哥亲自介入，有问随时答</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="what-arrows">
+      <div class="what-arrow">
+        <span class="no">不是话术</span>
+        <span class="arrow">→</span>
+        <span class="yes">是系统</span>
+      </div>
+      <div class="what-arrow">
+        <span class="no">不是靠运气</span>
+        <span class="arrow">→</span>
+        <span class="yes">是靠方法</span>
+      </div>
+      <div class="what-arrow">
+        <span class="no">不是追一个</span>
+        <span class="arrow">→</span>
+        <span class="yes">是持续有鱼</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- 两个版本 -->
+  <section class="versions-section">
+    <div class="section-label">两个会员方案，总有一个适合你</div>
+
+    <div class="versions-grid">
+      <div class="version-card study">
+        <div class="version-header">
+          <div class="version-name">学霸版</div>
+          <div class="version-price">999/月 · 8888/年</div>
+        </div>
+        <div class="version-for">适合：愿意花时间自己学，有执行力的人</div>
+        <div class="version-desc">
+          <p>你学方法</p>
+          <p>AI教练带着你走</p>
+          <p>有问题随时问</p>
+          <p>你自己执行</p>
+        </div>
+        <div class="version-tagline">
+          <em>→</em> 花时间换能力，是最划算的投资
+        </div>
+      </div>
+
+      <div class="version-card private">
+        <div class="version-header">
+          <div class="version-name">私教版</div>
+          <div class="version-price">5万/年</div>
+        </div>
+        <div class="version-for">适合：没时间只要结果，不想自己操心的人</div>
+        <div class="version-desc">
+          <p>我帮你建账号</p>
+          <p>我帮你聊</p>
+          <p>我帮你约</p>
+          <p>你只管出现</p>
+        </div>
+        <div class="version-tagline">
+          <em>→</em> 时间比钱贵，最省心<br>
+          <em>→</em> 你只管翻牌子，其他交给我
+        </div>
+      </div>
+    </div>
+
+    <div class="after-purchase-block">
+      <p class="after-purchase-title">入会后：</p>
+      <p class="after-purchase-item">随时可学的20章宝典</p>
+      <p class="after-purchase-item">随时可问的AI智能体</p>
+      <p class="after-purchase-item">随时可聊的Mo哥本人</p>
+      <p class="after-purchase-item">私密安全的追爱工具</p>
+    </div>
+  </section>
+
+  <!-- 隐私承诺 -->
+  <section class="privacy-section">
+    <div class="section-label">隐私承诺</div>
+    <div class="privacy-grid">
+      <div class="privacy-item">
+        <div class="privacy-icon">
+          <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        </div>
+        <div class="privacy-text">
+          <strong>伪装壳</strong>
+          计算器图标，看不出是约会APP
+        </div>
+      </div>
+      <div class="privacy-item">
+        <div class="privacy-icon">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        </div>
+        <div class="privacy-text">
+          <strong>阅后即焚</strong>
+          聊天记录自动销毁
+        </div>
+      </div>
+      <div class="privacy-item">
+        <div class="privacy-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div class="privacy-text">
+          <strong>端到端加密</strong>
+          只有你能看
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA：Mo哥 + 下载 App -->
+  <section class="cta-section">
+    <div class="cta-title">开始 <span class="gold">追AI</span> 之行</div>
+    <p class="cta-sub">扫码联系 Mo哥 · 或直接下载 App 体验</p>
+
+    <div class="cta-cards">
+
+      <!-- 扫码联系 Mo哥 -->
+      <div class="cta-card">
+        <div class="cta-card-label">微信联系 Mo哥</div>
+        <div class="wechat-qr">
+          <img src="mo-wechat-qr.jpg" alt="Mo哥微信二维码">
+        </div>
+        <p class="wechat-qr-note">发"情况"，Mo哥亲自看</p>
+      </div>
+
+      <!-- 下载 App -->
+      <div class="cta-card">
+        <div class="cta-card-label">立即体验</div>
+        <a class="app-download-btn" href="/apk-guide.html">
+          <span class="icon">⬇️</span>
+          下载追AI Android 安装包
+        </a>
+        <p class="app-download-note">Android 安装包 · 免登录 · 直链下载</p>
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- Footer -->
+  <div class="divider"></div>
+  <footer class="footer">
+    <div class="footer-brand">追爱 zhui <span class="ai-highlight">AI</span> .club</div>
+    <div class="footer-slogan">让每一位追爱的男人<br>都能笃定从容地幸福</div>
+  </footer>
+
+</div>
+
+</body>
+</html>
