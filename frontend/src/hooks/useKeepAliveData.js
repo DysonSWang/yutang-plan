@@ -69,6 +69,8 @@ export default function useKeepAliveData(fetcher, { key, refreshOnActivate = tru
     const handleActivate = () => {
       // 标记为非首次加载（确保 isInitialLoad 不再为 true）
       firstLoadRef.current = false;
+      // 重新激活时恢复 mounted 状态
+      mountedRef.current = true;
 
       if (configRef.current.refreshOnActivate) {
         fetchData(false);
@@ -76,7 +78,11 @@ export default function useKeepAliveData(fetcher, { key, refreshOnActivate = tru
     };
 
     const handleDeactivate = () => {
-      mountedRef.current = false;
+      // 只在非首次加载时才设置 mountedRef 为 false
+      // 首次加载期间不应该被 deactivate 影响
+      if (!firstLoadRef.current) {
+        mountedRef.current = false;
+      }
     };
 
     const emitter = window.__keepAliveEventEmitter;
