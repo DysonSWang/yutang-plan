@@ -358,30 +358,38 @@ export const chat = {
 
 // 上传
 export const upload = {
-  image: async (file, isBurnAfterRead = false, isFlashImage = false) => {
+  image: async (file, isBurnAfterRead = false, isFlashImage = false, onProgress = null) => {
     const options = {
-      maxSizeMB: 0.5,
+      maxSizeMB: 0.3,
       maxWidthOrHeight: 1920,
       useWebWorker: true,
-      fileType: 'image/jpeg'
+      fileType: 'image/jpeg',
+      onProgress: onProgress ? (p) => onProgress({ stage: 'compressing', percent: Math.round(p * 100) }) : undefined
     };
     const compressed = await imageCompression(file, options);
+
+    if (onProgress) onProgress({ stage: 'compressing', percent: 100 });
 
     const token = api.getToken();
     const formData = new FormData();
     formData.append('file', compressed);
     if (isBurnAfterRead) formData.append('isBurnAfterRead', 'true');
     if (isFlashImage) formData.append('isFlashImage', 'true');
+
+    if (onProgress) onProgress({ stage: 'uploading', percent: 0 });
+
     const res = await fetch(`${api.baseUrl}/api/upload/image`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` },
       body: formData,
-      signal: AbortSignal.timeout(30000) // 30秒超时
+      signal: AbortSignal.timeout(60000)
     });
+
     if (!res.ok) throw new Error(`上传图片失败 (${res.status})`);
     const json = await res.json();
     json.originalSize = file.size;
     json.compressedSize = compressed.size;
+    if (onProgress) onProgress({ stage: 'done', percent: 100 });
     return json;
   },
   video: async (file, isBurnAfterRead = false, isFlashImage = false) => {

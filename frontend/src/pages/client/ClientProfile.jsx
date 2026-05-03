@@ -71,6 +71,20 @@ const CLIENT_EDITABLE_FIELDS = [
 ];
 
 // 不显示给客户的字段（操盘手内部使用）
+
+// 字段所属版块（用于编辑弹窗滚动定位）
+const FIELD_SECTIONS = {
+  nickname: 'basic', age: 'basic', occupation: 'basic', education: 'basic', income: 'basic',
+  height: 'appearance', weight: 'appearance', dressingStyle: 'appearance', appearance: 'appearance',
+  familyBackground: 'family', familyStructure: 'family', familyAtmosphere: 'family',
+  personality: 'personality', communicationStyle: 'personality', socialStyle: 'personality', humorStyle: 'personality',
+  relationshipAttitude: 'emotion', relationshipGoal: 'emotion', emotionalGoal: 'emotion', marriageHistory: 'emotion',
+  strengths: 'value', weaknesses: 'value',
+  matchPreferences: 'preference', dateTaboos: 'preference',
+  residence: 'basic', hometown: 'basic', profileBio: 'bio',
+};
+const getSectionForField = (key) => FIELD_SECTIONS[key] || 'basic';
+
 const HIDDEN_FIELDS = [
   'trustLevel', 'interactionHeat', 'girlCount', 'dateCount',
   'coachCooperation', 'learningAbility', 'feedbackQuality',
@@ -246,6 +260,8 @@ export default function ClientProfile() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [changingPwd, setChangingPwd] = useState(false);
   const [editingAvatar, setEditingAvatar] = useState(false);
+  const [editTab, setEditTab] = useState(null);
+  const editModalBodyRef = useRef(null);
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState('');
   const [savingAvatar, setSavingAvatar] = useState(false);
@@ -330,7 +346,7 @@ export default function ClientProfile() {
     }
   };
 
-  const openEdit = () => {
+  const openEdit = (section = null) => {
     const data = {};
     CLIENT_EDITABLE_FIELDS.forEach(f => {
       data[f.key] = profile[f.key] || (f.default ? String(f.default) : '');
@@ -342,7 +358,14 @@ export default function ClientProfile() {
     setAiScreenshotFile(null);
     setAiScreenshotPreview('');
     setAiConfirmSelections({});
+    setEditTab(section);
     onOpen();
+    setTimeout(() => {
+      if (section) {
+        const target = document.querySelector('[data-section="' + section + '"]');
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 150);
   };
 
   // AI 文本提取
@@ -784,7 +807,7 @@ export default function ClientProfile() {
 
       <SimpleGrid columns={2} spacing={4}>
         {/* 基础信息 */}
-        <Card bg="warm.800">
+        <Card bg="warm.800" cursor="pointer" _hover={{bg: "warm.750"}} transition="all 0.15s" onClick={() => openEdit("basic")}>
           <CardBody>
             <Heading as="h3" size="sm" color="teal.400" mb={3}>基础信息</Heading>
             <VStack spacing={2} align="stretch">
@@ -817,7 +840,7 @@ export default function ClientProfile() {
         </Card>
 
         {/* 外貌资源 */}
-        <Card bg="warm.800">
+        <Card bg="warm.800" cursor="pointer" _hover={{bg: "warm.750"}} transition="all 0.15s" onClick={() => openEdit("appearance")}>
           <CardBody>
             <Heading as="h3" size="sm" color="teal.400" mb={3}>外貌特征</Heading>
             <VStack spacing={2} align="stretch">
@@ -842,7 +865,7 @@ export default function ClientProfile() {
         </Card>
 
         {/* 家庭背景 */}
-        <Card bg="warm.800">
+        <Card bg="warm.800" cursor="pointer" _hover={{bg: "warm.750"}} transition="all 0.15s" onClick={() => openEdit("family")}>
           <CardBody>
             <Heading as="h3" size="sm" color="purple.400" mb={3}>家庭背景</Heading>
             <VStack spacing={2} align="stretch">
@@ -863,7 +886,7 @@ export default function ClientProfile() {
         </Card>
 
         {/* 性格画像 */}
-        <Card bg="warm.800">
+        <Card bg="warm.800" cursor="pointer" _hover={{bg: "warm.750"}} transition="all 0.15s" onClick={() => openEdit("personality")}>
           <CardBody>
             <Heading as="h3" size="sm" color="purple.400" mb={3}>性格画像</Heading>
             <VStack spacing={2} align="stretch">
@@ -888,7 +911,7 @@ export default function ClientProfile() {
         </Card>
 
         {/* 个人优势与不足 */}
-        <Card bg="warm.800">
+        <Card bg="warm.800" cursor="pointer" _hover={{bg: "warm.750"}} transition="all 0.15s" onClick={() => openEdit("value")}>
           <CardBody>
             <Heading as="h3" size="sm" color="purple.400" mb={3}>优势与不足</Heading>
             <VStack spacing={2} align="stretch">
@@ -905,7 +928,7 @@ export default function ClientProfile() {
         </Card>
 
         {/* 情感状态 */}
-        <Card bg="warm.800">
+        <Card bg="warm.800" cursor="pointer" _hover={{bg: "warm.750"}} transition="all 0.15s" onClick={() => openEdit("emotion")}>
           <CardBody>
             <Heading as="h3" size="sm" color="orange.400" mb={3}>情感状态</Heading>
             <VStack spacing={2} align="stretch">
@@ -930,7 +953,7 @@ export default function ClientProfile() {
         </Card>
 
         {/* 对目标的期望 */}
-        <Card bg="warm.800">
+        <Card bg="warm.800" cursor="pointer" _hover={{bg: "warm.750"}} transition="all 0.15s" onClick={() => openEdit("preference")}>
           <CardBody>
             <Heading as="h3" size="sm" color="orange.400" mb={3}>对目标的期望</Heading>
             {profile.matchPreferences ? (
@@ -942,7 +965,7 @@ export default function ClientProfile() {
         </Card>
 
         {/* 禁忌 */}
-        <Card bg="warm.800">
+        <Card bg="warm.800" cursor="pointer" _hover={{bg: "warm.750"}} transition="all 0.15s" onClick={() => openEdit("preference")}>
           <CardBody>
             <Heading as="h3" size="sm" color="orange.400" mb={3}>禁忌</Heading>
             {profile.dateTaboos ? (
@@ -1006,7 +1029,7 @@ export default function ClientProfile() {
         <ModalContent bg="warm.800" overflow="auto">
           <ModalHeader color="white">编辑我的档案</ModalHeader>
           <ModalCloseButton />
-          <ModalBody pb={6}>
+          <ModalBody pb={6} ref={editModalBodyRef} style={{ overflowY: 'auto', maxHeight: '70vh' }}>
             <VStack spacing={5} align="stretch">
               {/* AI 智能识别 */}
               <Card bg="warm.700" border="1px solid" borderColor="warm.600">
@@ -1142,14 +1165,16 @@ export default function ClientProfile() {
               </Card>
 
               {/* 手动填写表单 */}
-              <SimpleGrid columns={2} spacing={4}>
+              <SimpleGrid columns={2} spacing={4} data-section-form>
                 {CLIENT_EDITABLE_FIELDS.map(field => (
+                  <div data-section={getSectionForField(field.key)} key={field.key}>
                   <ProfileField
                     key={field.key}
                     field={field}
                     value={editData[field.key]}
                     onChange={handleFieldChange}
                   />
+                  </div>
                 ))}
               </SimpleGrid>
 
@@ -1173,7 +1198,7 @@ export default function ClientProfile() {
             <Text color="rgba(245,240,232,0.4)" fontSize="sm" fontWeight="normal" mt={1}>联系客服，获取您的专属定制方案</Text>
           </ModalHeader>
           <ModalCloseButton />
-          <ModalBody pb={6}>
+          <ModalBody pb={6} ref={editModalBodyRef} style={{ overflowY: 'auto', maxHeight: '70vh' }}>
             <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
               {PRICING_DATA.map(plan => (
                 <Card
@@ -1246,7 +1271,7 @@ export default function ClientProfile() {
         <ModalContent bg="warm.800" color="white">
           <ModalHeader>{memberStatus?.membership ? '积分续费' : '开通会员'}</ModalHeader>
           <ModalCloseButton />
-          <ModalBody pb={6}>
+          <ModalBody pb={6} ref={editModalBodyRef} style={{ overflowY: 'auto', maxHeight: '70vh' }}>
             {memberStatus?.membership && (
               <Box mb={4} p={3} bg="warm.700" borderRadius="md">
                 <Text color="gray.300" fontSize="sm">
