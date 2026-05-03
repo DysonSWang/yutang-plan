@@ -979,7 +979,7 @@ export default function ClientProfile() {
       </SimpleGrid>
 
       {/* 个人签名 */}
-      <Card bg="warm.800" border="1px solid" borderColor="rgba(226,176,68,0.12)" mt={6}>
+      <Card bg="warm.800" border="1px solid" borderColor="rgba(226,176,68,0.12)" mt={6} cursor="pointer" _hover={{ bg: "warm.750", borderColor: "rgba(226,176,68,0.3)" }} transition="all 0.2s" onClick={() => openEdit("bio")}>
         <CardBody>
           <Text color="rgba(245,240,232,0.4)" fontSize="sm" mb={2}>个人签名</Text>
           {profile.profileBio ? (
