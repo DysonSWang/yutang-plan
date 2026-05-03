@@ -165,14 +165,14 @@ module.exports = function(io) {
         return res.status(403).json({ error: '无权限' });
       }
 
-      // 查找一个可用的操作员，如果没有就用 admin
+      // 查找一个可用的操作员
       let operators = await prisma.user.findMany({
-        where: { role: 'admin' },
+        where: { role: 'operator' },
         take: 1,
         orderBy: { createdAt: 'asc' }
       });
 
-      // 没有 operator 时使用 admin
+      // 没有 operator 时降级使用 admin
       if (operators.length === 0) {
         operators = await prisma.user.findMany({
           where: { role: 'admin' },
@@ -182,6 +182,7 @@ module.exports = function(io) {
 
       if (operators.length === 0) {
         return res.status(400).json({ error: '暂无可用客服，请稍后再试' });
+      }
       }
 
       const operatorId = operators[0].id;
