@@ -56,6 +56,7 @@ export default function AdminGirls() {
   const [girlsList, setGirlsList] = useState([]);
   const [clientList, setClientList] = useState([]);
   const [selectedGirl, setSelectedGirl] = useState(null);
+  const [editTab, setEditTab] = useState(0);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { isOpen: isDetailOpen, onOpen: onDetailOpen, onClose: onDetailClose } = useDisclosure();
   const { isOpen: isScreenshotOpen, onOpen: onScreenshotOpen, onClose: onScreenshotClose } = useDisclosure();
@@ -223,8 +224,10 @@ export default function AdminGirls() {
     onDetailOpen();
   };
 
-  const openEditModal = (girl) => {
+  const openEditModal = (girl, section = 0) => {
     setSelectedGirl(girl);
+    setEditTab(section);
+    onOpen();
     setFormData({
       clientId: girl.clientId || '',
       name: girl.name || '',
@@ -849,7 +852,7 @@ export default function AdminGirls() {
                     <Td>
                       <HStack spacing={2}>
                         <Button size="xs" colorScheme="gold" variant="ghost" onClick={() => openDetailModal(girl)}>详情</Button>
-                        <Button size="xs" colorScheme="blue" variant="ghost" onClick={(e) => { e.stopPropagation(); openEditModal(girl); }}>编辑</Button>
+                        <Button size="xs" colorScheme="blue" variant="ghost" onClick={(e) => { e.stopPropagation(); openEditModal(girl, 0); }}>编辑</Button>
                         <Button size="xs" colorScheme="orange" variant="ghost" onClick={(e) => { e.stopPropagation(); openScreenshotModal(girl); }}>截图</Button>
                         <Button size="xs" colorScheme="red" variant="ghost" onClick={(e) => { e.stopPropagation(); deleteGirl(girl.id); }}>删除</Button>
                       </HStack>
@@ -906,7 +909,7 @@ export default function AdminGirls() {
                           {girl.isKinkOriented && <Badge colorScheme="purple">K</Badge>}
                         </HStack>
                         <HStack spacing={1}>
-                          <Button size="xs" colorScheme="blue" variant="ghost" onClick={(e) => { e.stopPropagation(); openEditModal(girl); }}>编辑</Button>
+                          <Button size="xs" colorScheme="blue" variant="ghost" onClick={(e) => { e.stopPropagation(); openEditModal(girl, 0); }}>编辑</Button>
                           <Button size="xs" colorScheme="red" variant="ghost" onClick={(e) => { e.stopPropagation(); deleteGirl(girl.id); }}>删除</Button>
                         </HStack>
                       </Flex>
@@ -938,7 +941,7 @@ export default function AdminGirls() {
           <ModalHeader color="white">{selectedGirl ? '编辑女生' : '添加女生'}</ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={6}>
-            <Tabs colorScheme="gold" size="sm">
+            <Tabs colorScheme="gold" size="sm" index={editTab} onChange={i => setEditTab(i)}>
               <TabList mb={4} overflowX="auto" flexWrap="nowrap">
                 <Tab>基础信息</Tab>
                 <Tab>外貌家庭</Tab>
@@ -950,7 +953,7 @@ export default function AdminGirls() {
               </TabList>
               <TabPanels>
                 {/* 基础信息 */}
-                <TabPanel px={0}>
+                <TabPanel px={0} id="tab-basic">
                   <VStack spacing={4} align="stretch">
                     <FormControl isRequired>
                       <FormLabel color="rgba(245,240,232,0.4)">所属客户</FormLabel>
@@ -1034,7 +1037,7 @@ export default function AdminGirls() {
                 </TabPanel>
 
                 {/* 外貌特征 + 家庭背景 */}
-                <TabPanel px={0}>
+                <TabPanel px={0} id="tab-appearance">
                   <VStack spacing={4} align="stretch">
                     <Text color="white" fontWeight="bold">外貌特征</Text>
                     <FormControl>
@@ -1370,7 +1373,7 @@ export default function AdminGirls() {
                 </TabPanel>
 
                 {/* 关系状态 + 上下文记忆 */}
-                <TabPanel px={0}>
+                <TabPanel px={0} id="tab-relationship">
                   <VStack spacing={4} align="stretch">
                     <Text color="white" fontWeight="bold">关系状态</Text>
 
