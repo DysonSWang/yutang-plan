@@ -122,7 +122,7 @@ function EmptyValue({ value, children, ...props }) {
   if (value !== null && value !== undefined && value !== '') {
     return <Box as="div" color="white" fontSize="sm" {...props}>{children || String(value)}</Box>;
   }
-  return <Box as="div" color="warm.600" fontSize="sm" {...props}>待填写</Box>;
+  return <Box as="div" color="gold.400" fontSize="sm" {...props}>待填写</Box>;
 }
 
 // ---- 子组件 ----
@@ -164,7 +164,7 @@ function EQBar({ label, value }) {
 }
 function SectionCard({ title, children, color }) {
   return (
-    <Box bg="warm.700" p={4} borderRadius="md" mb={4}>
+    <Box bg="warm.700" border="1px solid" borderColor="rgba(226,176,68,0.1)" borderRadius="md" p={4} mb={4} _hover={{ borderColor: "rgba(226,176,68,0.25)" }} transition="all 0.2s">
       <Text color={color || 'teal.400'} fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">{title}</Text>
       {children}
     </Box>
@@ -741,8 +741,8 @@ export default function GirlDetail() {
             )}
             {/* 内联完整度条 */}
             <HStack spacing={2} w="full" mt={1}>
-              <Progress value={completeness} size="xs" flex={1} borderRadius="full"
-                colorScheme={completeness >= 80 ? 'green' : completeness >= 50 ? 'yellow' : 'orange'} />
+              <Progress value={completeness} size="sm" flex={1} borderRadius="full"
+                colorScheme={completeness >= 80 ? 'green' : completeness >= 50 ? 'yellow' : 'gold'} />
               <Text color={completeness >= 80 ? 'green.400' : completeness >= 50 ? 'yellow.400' : 'orange.400'} fontSize="xs" fontWeight="bold" flexShrink={0}>{completeness}%</Text>
             </HStack>
           </VStack>
@@ -951,7 +951,7 @@ export default function GirlDetail() {
 
       <SimpleGrid columns={{ base: 1, md: 2 }} spacing={0} gap={4} mb={4}>
         {Object.entries(FIELD_GROUPS).map(([groupKey, group]) => (
-          <Box key={groupKey} bg="warm.700" p={4} borderRadius="md">
+          <Box key={groupKey} bg="warm.700" border="1px solid" borderColor="rgba(226,176,68,0.1)" borderRadius="md" p={4} _hover={{ borderColor: "rgba(226,176,68,0.25)" }} transition="all 0.2s">
             <Text color={group.color} fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">{group.title}</Text>
             <SimpleGrid columns={2} spacing={3}>
               {group.fields.map(fk => {
@@ -974,7 +974,7 @@ export default function GirlDetail() {
       <Box mt={0}>
         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
           {/* 主页与来源 */}
-          <Box bg="warm.700" p={4} borderRadius="md">
+          <Box bg="warm.700" border="1px solid" borderColor="rgba(226,176,68,0.1)" borderRadius="md" p={4} _hover={{ borderColor: "rgba(226,176,68,0.25)" }} transition="all 0.2s">
             <Text color="gold.400" fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">主页与来源</Text>
             <VStack spacing={3} align="stretch">
               <EmptyValue value={girl.homepageUrl}>
@@ -993,7 +993,7 @@ export default function GirlDetail() {
           </Box>
 
           {/* 照片 */}
-          <Box bg="warm.700" p={4} borderRadius="md">
+          <Box bg="warm.700" border="1px solid" borderColor="rgba(226,176,68,0.1)" borderRadius="md" p={4} _hover={{ borderColor: "rgba(226,176,68,0.25)" }} transition="all 0.2s">
             <Text color="gold.400" fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">
               照片{photos?.length ? ` (${photos.length})` : ''}
             </Text>
@@ -1009,7 +1009,7 @@ export default function GirlDetail() {
           </Box>
 
           {/* 朋友圈截图 */}
-          <Box bg="warm.700" p={4} borderRadius="md">
+          <Box bg="warm.700" border="1px solid" borderColor="rgba(226,176,68,0.1)" borderRadius="md" p={4} _hover={{ borderColor: "rgba(226,176,68,0.25)" }} transition="all 0.2s">
             <Text color="purple.400" fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">
               朋友圈截图{momentPhotos?.length ? ` (${momentPhotos.length})` : ''}
             </Text>
@@ -1025,7 +1025,7 @@ export default function GirlDetail() {
           </Box>
 
           {/* 视频 */}
-          <Box bg="warm.700" p={4} borderRadius="md">
+          <Box bg="warm.700" border="1px solid" borderColor="rgba(226,176,68,0.1)" borderRadius="md" p={4} _hover={{ borderColor: "rgba(226,176,68,0.25)" }} transition="all 0.2s">
             <Text color="gold.400" fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">
               视频{videos?.length ? ` (${videos.length})` : ''}
             </Text>

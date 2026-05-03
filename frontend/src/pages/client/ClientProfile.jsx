@@ -786,11 +786,12 @@ export default function ClientProfile() {
             </HStack>
             <Progress
               value={completenessPercent}
-              size="xs"
-              colorScheme={completenessPercent >= 80 ? 'green' : completenessPercent >= 50 ? 'yellow' : 'orange'}
+              size="sm"
+              colorScheme={completenessPercent >= 80 ? 'green' : completenessPercent >= 50 ? 'yellow' : 'gold'}
               borderRadius="full"
               bg="warm.700"
               mb={2}
+              sx={{ '& > div': { transition: 'width 0.6s ease' } }}
             />
             {completenessPercent < 80 ? (
               <Text color="warm.600" fontSize="xs" mb={2}>完善档案后，AI 教练能为你提供更精准的建议</Text>
@@ -805,15 +806,15 @@ export default function ClientProfile() {
         <Button size="sm" colorScheme="gold" leftIcon={<Icon as={FiEdit2} />} onClick={openEdit}>编辑档案</Button>
       </Flex>
 
-      <SimpleGrid columns={2} spacing={4}>
+      <SimpleGrid columns={2} spacing={6}>
         {/* 基础信息 */}
-        <Card bg="warm.800" cursor="pointer" _hover={{bg: "warm.750"}} transition="all 0.15s" onClick={() => openEdit("basic")}>
+        <Card bg="warm.800" border="1px solid" borderColor="rgba(226,176,68,0.12)" cursor="pointer" _hover={{ bg: "warm.750", borderColor: "rgba(226,176,68,0.3)", transform: "translateY(-1px)", boxShadow: "0 4px 12px rgba(0,0,0,0.2)" }} transition="all 0.2s" onClick={() => openEdit("basic")}>
           <CardBody>
             <Heading as="h3" size="sm" color="teal.400" mb={3}>基础信息</Heading>
             <VStack spacing={2} align="stretch">
               <HStack justify="space-between">
                 <Text color="rgba(245,240,232,0.4)" fontSize="sm">年龄</Text>
-                {profile.age ? <Text color="white">{profile.age}岁</Text> : <Text color="warm.600" fontSize="sm">去完善</Text>}
+                {profile.age ? <Text color="white">{profile.age}岁</Text> : <Text color="gold.400" fontSize="sm">去完善</Text>}
               </HStack>
               <HStack justify="space-between">
                 <Text color="rgba(245,240,232,0.4)" fontSize="sm">职业</Text>
@@ -840,17 +841,17 @@ export default function ClientProfile() {
         </Card>
 
         {/* 外貌资源 */}
-        <Card bg="warm.800" cursor="pointer" _hover={{bg: "warm.750"}} transition="all 0.15s" onClick={() => openEdit("appearance")}>
+        <Card bg="warm.800" border="1px solid" borderColor="rgba(226,176,68,0.12)" cursor="pointer" _hover={{ bg: "warm.750", borderColor: "rgba(226,176,68,0.3)", transform: "translateY(-1px)", boxShadow: "0 4px 12px rgba(0,0,0,0.2)" }} transition="all 0.2s" onClick={() => openEdit("appearance")}>
           <CardBody>
             <Heading as="h3" size="sm" color="teal.400" mb={3}>外貌特征</Heading>
             <VStack spacing={2} align="stretch">
               <HStack justify="space-between">
                 <Text color="rgba(245,240,232,0.4)" fontSize="sm">身高</Text>
-                {profile.height ? <Text color="white">{profile.height}cm</Text> : <Text color="warm.600" fontSize="sm">去完善</Text>}
+                {profile.height ? <Text color="white">{profile.height}cm</Text> : <Text color="gold.400" fontSize="sm">去完善</Text>}
               </HStack>
               <HStack justify="space-between">
                 <Text color="rgba(245,240,232,0.4)" fontSize="sm">体重</Text>
-                {profile.weight ? <Text color="white">{profile.weight}斤</Text> : <Text color="warm.600" fontSize="sm">去完善</Text>}
+                {profile.weight ? <Text color="white">{profile.weight}斤</Text> : <Text color="gold.400" fontSize="sm">去完善</Text>}
               </HStack>
               <HStack justify="space-between">
                 <Text color="rgba(245,240,232,0.4)" fontSize="sm">穿着风格</Text>
@@ -865,7 +866,7 @@ export default function ClientProfile() {
         </Card>
 
         {/* 家庭背景 */}
-        <Card bg="warm.800" cursor="pointer" _hover={{bg: "warm.750"}} transition="all 0.15s" onClick={() => openEdit("family")}>
+        <Card bg="warm.800" border="1px solid" borderColor="rgba(226,176,68,0.12)" cursor="pointer" _hover={{ bg: "warm.750", borderColor: "rgba(226,176,68,0.3)", transform: "translateY(-1px)", boxShadow: "0 4px 12px rgba(0,0,0,0.2)" }} transition="all 0.2s" onClick={() => openEdit("family")}>
           <CardBody>
             <Heading as="h3" size="sm" color="purple.400" mb={3}>家庭背景</Heading>
             <VStack spacing={2} align="stretch">
@@ -886,13 +887,13 @@ export default function ClientProfile() {
         </Card>
 
         {/* 性格画像 */}
-        <Card bg="warm.800" cursor="pointer" _hover={{bg: "warm.750"}} transition="all 0.15s" onClick={() => openEdit("personality")}>
+        <Card bg="warm.800" border="1px solid" borderColor="rgba(226,176,68,0.12)" cursor="pointer" _hover={{ bg: "warm.750", borderColor: "rgba(226,176,68,0.3)", transform: "translateY(-1px)", boxShadow: "0 4px 12px rgba(0,0,0,0.2)" }} transition="all 0.2s" onClick={() => openEdit("personality")}>
           <CardBody>
             <Heading as="h3" size="sm" color="purple.400" mb={3}>性格画像</Heading>
             <VStack spacing={2} align="stretch">
               <HStack justify="space-between">
                 <Text color="rgba(245,240,232,0.4)" fontSize="sm">性格/MBTI</Text>
-                {profile.personality ? <Badge colorScheme="cyan">{profile.personality}</Badge> : <Text color="warm.600" fontSize="sm">去完善</Text>}
+                {profile.personality ? <Badge colorScheme="cyan">{profile.personality}</Badge> : <Text color="gold.400" fontSize="sm">去完善</Text>}
               </HStack>
               <HStack justify="space-between">
                 <Text color="rgba(245,240,232,0.4)" fontSize="sm">沟通风格</Text>
@@ -911,7 +912,7 @@ export default function ClientProfile() {
         </Card>
 
         {/* 个人优势与不足 */}
-        <Card bg="warm.800" cursor="pointer" _hover={{bg: "warm.750"}} transition="all 0.15s" onClick={() => openEdit("value")}>
+        <Card bg="warm.800" border="1px solid" borderColor="rgba(226,176,68,0.12)" cursor="pointer" _hover={{ bg: "warm.750", borderColor: "rgba(226,176,68,0.3)", transform: "translateY(-1px)", boxShadow: "0 4px 12px rgba(0,0,0,0.2)" }} transition="all 0.2s" onClick={() => openEdit("value")}>
           <CardBody>
             <Heading as="h3" size="sm" color="purple.400" mb={3}>优势与不足</Heading>
             <VStack spacing={2} align="stretch">
@@ -928,7 +929,7 @@ export default function ClientProfile() {
         </Card>
 
         {/* 情感状态 */}
-        <Card bg="warm.800" cursor="pointer" _hover={{bg: "warm.750"}} transition="all 0.15s" onClick={() => openEdit("emotion")}>
+        <Card bg="warm.800" border="1px solid" borderColor="rgba(226,176,68,0.12)" cursor="pointer" _hover={{ bg: "warm.750", borderColor: "rgba(226,176,68,0.3)", transform: "translateY(-1px)", boxShadow: "0 4px 12px rgba(0,0,0,0.2)" }} transition="all 0.2s" onClick={() => openEdit("emotion")}>
           <CardBody>
             <Heading as="h3" size="sm" color="orange.400" mb={3}>情感状态</Heading>
             <VStack spacing={2} align="stretch">
@@ -938,7 +939,7 @@ export default function ClientProfile() {
               </HStack>
               <HStack justify="space-between">
                 <Text color="rgba(245,240,232,0.4)" fontSize="sm">关系目标</Text>
-                {profile.relationshipGoal ? <Badge colorScheme="green">{profile.relationshipGoal}</Badge> : <Text color="warm.600" fontSize="sm">去完善</Text>}
+                {profile.relationshipGoal ? <Badge colorScheme="green">{profile.relationshipGoal}</Badge> : <Text color="gold.400" fontSize="sm">去完善</Text>}
               </HStack>
               <HStack justify="space-between">
                 <Text color="rgba(245,240,232,0.4)" fontSize="sm">感情诉求</Text>
@@ -953,38 +954,38 @@ export default function ClientProfile() {
         </Card>
 
         {/* 对目标的期望 */}
-        <Card bg="warm.800" cursor="pointer" _hover={{bg: "warm.750"}} transition="all 0.15s" onClick={() => openEdit("preference")}>
+        <Card bg="warm.800" border="1px solid" borderColor="rgba(226,176,68,0.12)" cursor="pointer" _hover={{ bg: "warm.750", borderColor: "rgba(226,176,68,0.3)", transform: "translateY(-1px)", boxShadow: "0 4px 12px rgba(0,0,0,0.2)" }} transition="all 0.2s" onClick={() => openEdit("preference")}>
           <CardBody>
             <Heading as="h3" size="sm" color="orange.400" mb={3}>对目标的期望</Heading>
             {profile.matchPreferences ? (
               <Text color="gray.300" fontSize="sm" whiteSpace="pre-wrap">{profile.matchPreferences}</Text>
             ) : (
-              <Text color="warm.600" fontSize="sm">去完善</Text>
+              <Text color="gold.400" fontSize="sm">去完善</Text>
             )}
           </CardBody>
         </Card>
 
         {/* 禁忌 */}
-        <Card bg="warm.800" cursor="pointer" _hover={{bg: "warm.750"}} transition="all 0.15s" onClick={() => openEdit("preference")}>
+        <Card bg="warm.800" border="1px solid" borderColor="rgba(226,176,68,0.12)" cursor="pointer" _hover={{ bg: "warm.750", borderColor: "rgba(226,176,68,0.3)", transform: "translateY(-1px)", boxShadow: "0 4px 12px rgba(0,0,0,0.2)" }} transition="all 0.2s" onClick={() => openEdit("preference")}>
           <CardBody>
             <Heading as="h3" size="sm" color="orange.400" mb={3}>禁忌</Heading>
             {profile.dateTaboos ? (
               <Text color="gray.300" fontSize="sm" whiteSpace="pre-wrap">{profile.dateTaboos}</Text>
             ) : (
-              <Text color="warm.600" fontSize="sm">去完善</Text>
+              <Text color="gold.400" fontSize="sm">去完善</Text>
             )}
           </CardBody>
         </Card>
       </SimpleGrid>
 
       {/* 个人签名 */}
-      <Card bg="warm.800" mt={4}>
+      <Card bg="warm.800" border="1px solid" borderColor="rgba(226,176,68,0.12)" mt={6}>
         <CardBody>
           <Text color="rgba(245,240,232,0.4)" fontSize="sm" mb={2}>个人签名</Text>
           {profile.profileBio ? (
             <Text color="gray.300">{profile.profileBio}</Text>
           ) : (
-            <Text color="warm.600" fontSize="sm">去完善</Text>
+            <Text color="gold.400" fontSize="sm">去完善</Text>
           )}
         </CardBody>
       </Card>
