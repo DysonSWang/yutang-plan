@@ -388,15 +388,18 @@ module.exports = function(io) {
         }
       });
 
-      // 更新会话
-      await prisma.chatSession.update({
-        where: { id: sessionId },
-        data: {
-          lastMessage: content?.substring(0, 50),
-          lastMessageAt: new Date(),
-          unreadCount: session.operatorId === req.user.id ? 0 : session.unreadCount + 1
-        }
-      });
+      // 更新会话：operator发消息→清零unreadCount；client发消息→不改变
+      if (session.operatorId === req.user.id) {
+        await prisma.chatSession.update({
+          where: { id: sessionId },
+          data: { lastMessage: content?.substring(0, 50), lastMessageAt: new Date(), unreadCount: 0 }
+        });
+      } else {
+        await prisma.chatSession.update({
+          where: { id: sessionId },
+          data: { lastMessage: content?.substring(0, 50), lastMessageAt: new Date() }
+        });
+      }
 
       // 通过 Socket.io 推送消息给另一方
       emitNewMessage(session, message, req.user.id, senderRole);

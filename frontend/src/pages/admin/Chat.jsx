@@ -652,10 +652,12 @@ export default function AdminChat() {
     if (msg.type === 'audio') {
       return (
         <HStack bg={msg.isBurnAfterRead && !msg.burnedAt ? 'rgba(255,140,0,0.2)' : 'blackAlpha.300'} px={3} py={2} borderRadius="md" spacing={2} cursor={msg.isBurnAfterRead && msg.senderRole !== 'operator' && msg.senderRole !== 'admin' ? 'pointer' : 'default'} onClick={() => msg.isBurnAfterRead && msg.senderRole !== 'operator' && msg.senderRole !== 'admin' && handleBurnMessage(msg)}>
-          <Text fontSize="lg">🔊</Text>
-          <audio src={`${API_BASE}${msg.mediaUrl}`} style={{ height: '28px' }} controls={!msg.isBurnAfterRead || msg.burnedAt} />
+          <Text fontSize="lg" flexShrink={0}>🔊</Text>
+          <Box flex={1} minW={0} maxW="200px">
+            <audio src={`${API_BASE}${msg.mediaUrl}`} style={{ width: '100%', height: '24px' }} controls={!msg.isBurnAfterRead || msg.burnedAt} />
+          </Box>
           {msg.duration && (
-            <Text fontSize="xs" color="rgba(245,240,232,0.5)">{msg.duration}"</Text>
+            <Text fontSize="xs" color="rgba(245,240,232,0.5)" flexShrink={0}>{msg.duration}"</Text>
           )}
         </HStack>
       );
