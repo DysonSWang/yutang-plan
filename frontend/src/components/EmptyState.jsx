@@ -2,14 +2,26 @@
  * 空状态通用组件
  * 统一替代所有 "暂无XX" 纯文字提示
  */
-import { Box, VStack, Text, Button, Icon } from '@chakra-ui/react';
+import { Box, VStack, Text, Button, Image } from '@chakra-ui/react';
+import emptyPond from '../assets/empty-states/empty-pond.jpg';
+import emptyChat from '../assets/empty-states/empty-chat.jpg';
+import emptyCalendar from '../assets/empty-states/empty-calendar.jpg';
+import emptyLearning from '../assets/empty-states/empty-learning.jpg';
+import emptyCoach from '../assets/empty-states/empty-coach.jpg';
+
+const ILLUSTRATIONS = {
+  pond: emptyPond,
+  chat: emptyChat,
+  calendar: emptyCalendar,
+  learning: emptyLearning,
+  coach: emptyCoach,
+};
 
 const PRESETS = {
   pond: {
-    icon: '🌱',
     title: '缘分还未开始',
-    desc: 'AI 教练会根据你的情况推荐合适的缘分对象\n完成基础档案后即可获得推荐',
-    actionLabel: '完善我的档案',
+    desc: '添加缘分对象，获得个性化追爱服务',
+    actionLabel: '添加女生',
   },
   notification: {
     icon: '🔔',
@@ -41,14 +53,29 @@ export default function EmptyState({
   actionLabel,
   onAction,
   size = 'md',
+  showIllustration = true,
 }) {
   const preset = PRESETS[type] || PRESETS.default;
-  const iconSize = size === 'sm' ? '3xl' : '4xl';
+  const illustration = ILLUSTRATIONS[type];
+  const imgSize = size === 'sm' ? '120px' : '180px';
   const padding = size === 'sm' ? 8 : 12;
 
   return (
     <VStack py={padding} spacing={4}>
-      <Text fontSize={iconSize} opacity={0.5}>{icon || preset.icon}</Text>
+      {illustration && showIllustration && (
+        <Image
+          src={illustration}
+          alt={preset.title}
+          w={imgSize}
+          h={imgSize}
+          objectFit="cover"
+          borderRadius="xl"
+          opacity={0.7}
+        />
+      )}
+      {icon && !illustration && (
+        <Text fontSize={size === 'sm' ? '3xl' : '4xl'} opacity={0.5}>{icon}</Text>
+      )}
       <Text fontWeight="600" color="white" fontSize="md" textAlign="center">
         {title || preset.title}
       </Text>
