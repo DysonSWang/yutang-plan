@@ -3,7 +3,8 @@ import {
   Box, VStack, HStack, Input, Button, Text, Card, CardBody, CardHeader,
   Heading, Select, Textarea, Spinner, Flex, Badge, Icon, Tooltip, useToast,
   Avatar, Wrap, WrapItem, useDisclosure, Modal, ModalOverlay, ModalContent,
-  ModalHeader, ModalBody, ModalFooter, Tabs, TabList, TabPanels, Tab, TabPanel
+  ModalHeader, ModalBody, ModalFooter, Tabs, TabList, TabPanels, Tab, TabPanel,
+  Image
 } from '@chakra-ui/react';
 import { useAuth } from '../../contexts/AuthContext';
 import { girls as girlsApi } from '../../utils/api';
@@ -83,9 +84,31 @@ function getHeatLevel(score) {
 
 
 // 独立的输入区域组件 - 使用完全独立的本地状态
-const InputArea = memo(({ onSubmit, loading, deepMode, onDeepModeToggle, onNewConversation, placeholder, showNewConvBtn = true }) => {
+const InputArea = memo(({ onSubmit, onImageSubmit, loading, deepMode, onDeepModeToggle, onNewConversation, placeholder, showNewConvBtn = true }) => {
   const [input, setInput] = useState('');
+  const [attachedImage, setAttachedImage] = useState(null); // { file, preview }
   const textareaRef = useRef(null);
+  const imageInputRef = useRef(null);
+  const toast = useToast();
+
+  const handleImageSelect = useCallback((e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      toast?.({ title: '图片大小不能超过10MB', status: 'warning' });
+      return;
+    }
+    const preview = URL.createObjectURL(file);
+    setAttachedImage({ file, preview });
+    e.target.value = '';
+  }, [toast]);
+
+  const removeAttachedImage = useCallback(() => {
+    if (attachedImage?.preview) {
+      URL.revokeObjectURL(attachedImage.preview);
+    }
+    setAttachedImage(null);
+  }, [attachedImage]);
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -107,18 +130,53 @@ const InputArea = memo(({ onSubmit, loading, deepMode, onDeepModeToggle, onNewCo
   }, []);
 
   const handleSubmitClick = useCallback(() => {
+    if (attachedImage) {
+      // 有图片时调用 onImageSubmit
+      if (input.trim()) {
+        // 同时提交文字和图片
+        onImageSubmit(attachedImage.file, input.trim());
+      } else {
+        onImageSubmit(attachedImage.file, '');
+      }
+      if (attachedImage.preview) {
+        URL.revokeObjectURL(attachedImage.preview);
+      }
+      setAttachedImage(null);
+      return;
+    }
     if (input.trim()) {
       const textToSubmit = input;
       setInput('');
       onSubmit(textToSubmit);
     }
-  }, [input, onSubmit]);
+  }, [input, onSubmit, onImageSubmit, attachedImage]);
 
   const defaultPlaceholder = deepMode ? '描述情况，深度分析...' : '描述你的情况...';
 
   return (
     <Box bg="warm.800" borderRadius="md" p={3} flexShrink={0}>
       <Flex gap={2} align="center">
+        {/* 图片上传按钮 */}
+        <Tooltip label="添加图片">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => imageInputRef.current?.click()}
+            disabled={loading}
+            p={1}
+            minW="36px"
+          >
+            <span style={{ fontSize: '18px' }}>📎</span>
+          </Button>
+        </Tooltip>
+        <input
+          type="file"
+          ref={imageInputRef}
+          accept="image/*"
+          onChange={handleImageSelect}
+          style={{ display: 'none' }}
+        />
         <textarea
           ref={textareaRef}
           value={input}
@@ -153,13 +211,52 @@ const InputArea = memo(({ onSubmit, loading, deepMode, onDeepModeToggle, onNewCo
           type="button"
           colorScheme="gold"
           isLoading={loading}
-          disabled={!input.trim()}
+          disabled={!input.trim() && !attachedImage}
           onClick={handleSubmitClick}
           px={4}
         >
           发送
         </Button>
               </Flex>
+      {/* 图片预览 */}
+      {attachedImage && (
+        <Flex mt={2} gap={2} align="center">
+          <Box position="relative" display="inline-block">
+            <img
+              src={attachedImage.preview}
+              alt="attached"
+              style={{
+                maxWidth: '120px',
+                maxHeight: '80px',
+                borderRadius: '6px',
+                objectFit: 'cover'
+              }}
+            />
+            <button
+              type="button"
+              onClick={removeAttachedImage}
+              style={{
+                position: 'absolute',
+                top: '-6px',
+                right: '-6px',
+                width: '20px',
+                height: '20px',
+                borderRadius: '50%',
+                background: 'rgba(0,0,0,0.7)',
+                border: 'none',
+                color: 'white',
+                fontSize: '12px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              ×
+            </button>
+          </Box>
+        </Flex>
+      )}
       {onDeepModeToggle && (
         <Flex mt={2} justify="flex-end">
           <Tooltip label={deepMode ? '深度分析：调用工具链，全面分析' : '快速分析：流式输出，快'}>
@@ -645,7 +742,20 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
         {!hasReasoning && (
           <>
             {isUser ? (
-              <Text whiteSpace="pre-wrap">{message.content}</Text>
+              <>
+                {message.imageUrl && (
+                  <Image
+                    src={message.imageUrl}
+                    alt="attached"
+                    maxWidth="200px"
+                    maxHeight="150px"
+                    borderRadius="md"
+                    mb={2}
+                    objectFit="cover"
+                  />
+                )}
+                <Text whiteSpace="pre-wrap">{message.content}</Text>
+              </>
             ) : (
               <Box className="ai-coach-markdown" fontSize="14px" lineHeight="1.8" color="warm.50">
                 <ReactMarkdown
@@ -2509,6 +2619,174 @@ export default function AICoach() {
     }
   }, [combatHistoryKey, selectedGirlId, apiUrl, persistCombatMessages]);
 
+  // 处理图片提交
+  const handleImageSubmit = useCallback(async (imageFile, textInput) => {
+    if (loading) return;
+
+    const token = localStorage.getItem('zhuiai_token');
+
+    // 添加用户消息（带图片）
+    const tempId = `temp-${Date.now()}`;
+    setMessages(prev => [
+      ...prev,
+      {
+        id: tempId,
+        role: 'user',
+        content: textInput || '[图片]',
+        imageUrl: imageFile ? URL.createObjectURL(imageFile) : null,
+        createdAt: new Date().toISOString()
+      }
+    ]);
+
+    scrollToBottom();
+    setLoading(true);
+    setError('');
+    setThinkingLabel(null);
+    setReasoningContent('');
+    reasoningContentRef.current = '';
+    streamingContentRef.current = '';
+    isStreamingRef.current = true;
+
+    // 添加一条空的助手消息
+    const assistantId = `asst-${Date.now()}`;
+    setMessages(prev => [
+      ...prev,
+      {
+        id: assistantId,
+        role: 'assistant',
+        content: '',
+        createdAt: new Date().toISOString()
+      }
+    ]);
+
+    scrollToBottom();
+
+    try {
+      const formData = new FormData();
+      formData.append('image', imageFile);
+      if (textInput) {
+        formData.append('situation', textInput);
+      }
+      if (selectedGirlId) {
+        formData.append('girlId', selectedGirlId);
+      }
+
+      const res = await fetch(`${apiUrl}/api/ai-coach/situation`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: '请求失败' }));
+        throw new Error(errData.error || `HTTP ${res.status}`);
+      }
+
+      // 始终使用流式模式
+      if (false) {
+        const data = await res.json();
+        setMessages(prev =>
+          prev.map(m => m.id === assistantId ? { ...m, content: data.content || data.analysis || '' } : m)
+        );
+      } else {
+        // 流式模式
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let lastUpdate = 0;
+        let rafId = null;
+
+        // 按段落/句子缓冲：遇到句号、问号、感叹号或换行时才更新UI
+        const SENTENCE_ENDINGS = /[。！？\n]/;
+
+        const flushUpdate = (content) => {
+          const now = Date.now();
+          const shouldFlush = now - lastUpdate >= 150 ||  // 150ms间隔（减少闪烁）
+            SENTENCE_ENDINGS.test(content.slice(-1));  // 遇到句子结束符
+
+          if (shouldFlush) {
+            lastUpdate = now;
+            // 取消之前的 requestAnimationFrame
+            if (rafId) cancelAnimationFrame(rafId);
+            // 使用 requestAnimationFrame 批量更新，减少重渲染
+            rafId = requestAnimationFrame(() => {
+              rafId = null;
+              setMessages(prev =>
+                prev.map(m => m.id === assistantId ? { ...m, content } : m)
+              );
+              if (isStreamingRef.current) scrollToBottom();
+            });
+          } else {
+            streamingContentRef.current = content;
+          }
+        };
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed === 'data: [DONE]') continue;
+
+            if (trimmed.startsWith('data: ')) {
+              const jsonStr = trimmed.substring(6);
+              if (!jsonStr.startsWith('{')) continue;
+              try {
+                const parsed = JSON.parse(jsonStr);
+                if (parsed.meta?.routedType) {
+                  setThinkingLabel(`正在从「${parsed.meta.routedType}」视角分析...`);
+                }
+                if (parsed.reasoning) {
+                  reasoningContentRef.current += parsed.reasoning;
+                  setReasoningContent(reasoningContentRef.current);
+                }
+                if (parsed.content) {
+                  setThinkingLabel(null);
+                  streamingContentRef.current += parsed.content;
+                  flushUpdate(streamingContentRef.current);
+                }
+              } catch { /* ignore parse errors */ }
+            }
+          }
+        }
+
+        // 处理尾部残留
+        if (buffer.trim()) {
+          try {
+            const parsed = JSON.parse(buffer.trim());
+            if (parsed.content) {
+              streamingContentRef.current += parsed.content;
+            }
+          } catch { /* ignore */ }
+        }
+
+        isStreamingRef.current = false;
+        setMessages(prev =>
+          prev.map(m => m.id === assistantId ? { ...m, content: streamingContentRef.current } : m)
+        );
+        // 流式结束后滚动到底部
+        scrollToBottom();
+      }
+    } catch (e) {
+      captureError(e);
+      setError(e.message || '网络错误，请重试');
+      // 移除失败的消息
+      setMessages(prev => prev.filter(m => m.id !== tempId && m.id !== assistantId));
+    } finally {
+      setLoading(false);
+      isStreamingRef.current = false;
+      // 确保最终滚动到底部
+      scrollToBottom();
+    }
+  }, [loading, selectedGirlId, apiUrl, scrollToBottom]);
+
   const handleSubmitInternal = async (questionText) => {
     if (!questionText.trim() || loading) return;
 
@@ -2843,6 +3121,7 @@ export default function AICoach() {
         </Box>
         <InputArea
           onSubmit={handleSubmitInternal}
+          onImageSubmit={handleImageSubmit}
           loading={loading}
           deepMode={deepMode}
           onDeepModeToggle={handleDeepModeToggle}
@@ -3028,6 +3307,7 @@ export default function AICoach() {
       {/* 固定底部输入区域 - 使用独立组件避免重渲染导致失焦 */}
       <InputArea
         onSubmit={handleSubmitInternal}
+        onImageSubmit={handleImageSubmit}
         loading={loading}
         deepMode={deepMode}
         onDeepModeToggle={handleDeepModeToggle}
