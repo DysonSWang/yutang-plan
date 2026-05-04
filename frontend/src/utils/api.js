@@ -570,6 +570,14 @@ moment: (data) => api.post('/api/ai-coach/moment', data),
       }
 
       return res.json();
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        throw new Error('图片分析超时，请重试');
+      }
+      if (err.stack) {
+        err.message = `图片分析失败: ${err.message}`;
+      }
+      throw err;
     } finally {
       clearTimeout(timeoutId);
     }
