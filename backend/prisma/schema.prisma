@@ -405,6 +405,7 @@ model Message {
   senderId   String
 
   content   String?
+  imageUrl  String?  // 图片URL，可null
   type      String  @default("text")
   mediaUrl  String?
   duration  Int?
