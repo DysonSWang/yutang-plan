@@ -544,7 +544,36 @@ export const aiCoach = {
   optimizeReply: (data) => api.post('/api/ai-coach/optimize-reply', data),
 moment: (data) => api.post('/api/ai-coach/moment', data),
   overview: () => api.get('/api/ai-coach/overview'),
-  girlSummary: (girlId) => api.get(`/api/ai-coach/girl-summary/${girlId}`)
+  girlSummary: (girlId) => api.get(`/api/ai-coach/girl-summary/${girlId}`),
+  // 图片分析（聊天记录/朋友圈截图）
+  analyzeImage: async (file, message = '', sessionId = null) => {
+    const token = api.getToken();
+    const formData = new FormData();
+    formData.append('image', file);
+    if (message) formData.append('message', message);
+    if (sessionId) formData.append('sessionId', sessionId);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
+
+    try {
+      const res = await fetch(`${api.baseUrl}/api/ai-coach/analyze-image`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData,
+        signal: controller.signal
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: '图片分析失败' }));
+        throw new Error(err.error || '图片分析失败');
+      }
+
+      return res.json();
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
 };
 
 // 实战聊天（操盘手帮客户和女生聊）
