@@ -25,6 +25,7 @@ const { recordFeedback, getClientCoachPreferences, getProfileSummary } = require
 const { extractLearningsFromConversation } = require('../services/learning');
 const { buildDynamicPersona, buildPersonaSection, buildFullPersona } = require('../services/coachPersona');
 const { addStageContext, appendStageWarning, STAGE_LABELS } = require('../services/stageGuard');
+const { analyzeImage } = require('../services/imageAnalyzer');
 
 const multer = require('multer');
 const { JWT_SECRET, getAIConfig, getVLModelConfig } = require('../config');
@@ -1566,6 +1567,66 @@ router.post('/import-chat-screenshots', authMiddleware, chatImportUpload.array('
       }
     }
     res.status(500).json({ error: '识别失败，请重试' });
+  }
+});
+
+// ========== 图片分析 ==========
+
+/**
+ * POST /api/ai-coach/analyze-image
+ * 分析图片（聊天记录/朋友圈截图）并给出建议
+ */
+router.post('/analyze-image', authMiddleware, chatImportUpload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: '请上传图片' });
+    }
+
+    // 转换为 base64
+    const mime = req.file.mimetype;
+    const base64Image = `data:${mime};base64,${req.file.buffer.toString('base64')}`;
+
+    const userMessage = req.body.message || '';
+    const sessionId = req.body.sessionId || null;
+
+    // 调用图片分析服务
+    const { type, content } = await analyzeImage(base64Image, userMessage);
+
+    // 保存到数据库（如果有sessionId）
+    if (sessionId) {
+      await prisma.message.create({
+        data: {
+          sessionId,
+          role: 'user',
+          content: userMessage || `[上传了图片]`,
+          imageUrl: `/uploads/${req.file.filename}`
+        }
+      });
+
+      const coachSession = await prisma.session.findFirst({
+        where: { id: sessionId, userId: req.user.id }
+      });
+
+      if (coachSession) {
+        await prisma.message.create({
+          data: {
+            sessionId,
+            role: 'assistant',
+            content: content
+          }
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      type,
+      content,
+      imageUrl: `/uploads/${req.file.filename}`
+    });
+  } catch (err) {
+    console.error('[AI Coach] analyze-image error:', err);
+    res.status(500).json({ error: '图片分析失败' });
   }
 });
 
