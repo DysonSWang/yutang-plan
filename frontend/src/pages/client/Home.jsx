@@ -97,7 +97,7 @@ export default function ClientHome() {
     };
     if (clientRes.success) {
       const client = clientRes.client;
-      stats.girlCount = client.girlCount || 0;
+      stats.girlCount = client.girls?.length ?? client.girlCount ?? 0;
       stats.dateCount = client.dateCount || 0;
       stats.serviceStage = client.serviceStage || '未开始';
       stats.currentStage = STAGE_MAP[stats.serviceStage] || 0;
