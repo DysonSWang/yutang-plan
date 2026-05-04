@@ -32,7 +32,7 @@ export default class ErrorBoundary extends Component {
         <Box minH="100vh" display="flex" alignItems="center" justifyContent="center" bg="gray.50">
           <VStack spacing={4} textAlign="center" p={8}>
             <Heading size="lg" color="red.500">页面出错了</Heading>
-            <Text color="rgba(245,240,232,0.2)">
+            <Text color="rgba(245,240,232,0.6)">
               抱歉，页面发生了意外错误。请尝试刷新或返回首页。
             </Text>
             <Button colorScheme="blue" onClick={this.handleReset}>

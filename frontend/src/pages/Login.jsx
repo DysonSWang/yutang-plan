@@ -45,7 +45,7 @@ export default function Login() {
       }
     } catch (err) {
       setLoginError(err.message || '用户名或密码错误');
-      toast({ title: '登录失败', description: err.message || '用户名或密码错误', status: 'error', duration: 3000 });
+      toast({ title: '登录失败', description: err.message || '用户名或密码错误', status: 'error', duration: 4000, duration: 3000 });
     } finally {
       setLoading(false);
     }
@@ -70,7 +70,7 @@ export default function Login() {
       }
     } catch (err) {
       setRegisterError(err.message || '注册失败');
-      toast({ title: '注册失败', description: err.message, status: 'error', duration: 3000 });
+      toast({ title: '注册失败', description: err.message, status: 'error', duration: 4000, duration: 3000 });
     } finally {
       setLoading(false);
     }
@@ -160,7 +160,7 @@ export default function Login() {
           </Heading>
           <Text
             fontSize="xs"
-            color="rgba(245,240,232,0.2)"
+            color="rgba(245,240,232,0.6)"
             letterSpacing="0.3em"
           >
             PURSUE LOVE WITH AI
@@ -225,7 +225,7 @@ export default function Login() {
                 <IconButton
                   size="sm"
                   variant="ghost"
-                  color="rgba(245,240,232,0.2)"
+                  color="rgba(245,240,232,0.4)"
                   aria-label="设置"
                   _hover={{ color: 'rgba(245,240,232,0.6)', bg: 'rgba(255,255,255,0.06)' }}
                   icon={<Text fontSize="sm">⚙</Text>}
@@ -244,7 +244,7 @@ export default function Login() {
                   <Flex align="center" justify="space-between">
                     <Box>
                       <Text color="white" fontSize="sm">伪装模式</Text>
-                      <Text color="rgba(245,240,232,0.2)" fontSize="xs">开启后显示为记事本</Text>
+                      <Text color="rgba(245,240,232,0.6)" fontSize="xs">开启后显示为记事本</Text>
                     </Box>
                     <Switch
                       isChecked={disguiseMode}
@@ -262,7 +262,7 @@ export default function Login() {
             <form onSubmit={handleLogin} className="stagger-2" style={{ opacity: 0 }}>
               <VStack spacing={4}>
                 <FormControl>
-                  <FormLabel color="rgba(245,240,232,0.2)" fontSize="xs" letterSpacing="0.1em">用户名</FormLabel>
+                  <FormLabel color="rgba(245,240,232,0.6)" fontSize="xs" letterSpacing="0.1em">用户名</FormLabel>
                   <Input
                     value={username}
                     onChange={e => { setUsername(e.target.value); setLoginError(''); }}
@@ -278,7 +278,7 @@ export default function Login() {
                   />
                 </FormControl>
                 <FormControl>
-                  <FormLabel color="rgba(245,240,232,0.2)" fontSize="xs" letterSpacing="0.1em">密码</FormLabel>
+                  <FormLabel color="rgba(245,240,232,0.6)" fontSize="xs" letterSpacing="0.1em">密码</FormLabel>
                   <InputGroup>
                     <Input
                       type={showPassword ? 'text' : 'password'}
@@ -300,7 +300,7 @@ export default function Login() {
                         variant="ghost"
                         icon={showPassword ? <ViewOffIcon /> : <ViewIcon />}
                         aria-label={showPassword ? '隐藏密码' : '显示密码'}
-                        color="rgba(245,240,232,0.3)"
+                        color="rgba(245,240,232,0.4)"
                         _hover={{ color: 'rgba(245,240,232,0.6)' }}
                         onClick={() => setShowPassword(!showPassword)}
                       />
@@ -337,7 +337,7 @@ export default function Login() {
                   <Button
                     size="sm"
                     variant="ghost"
-                    color="rgba(245,240,232,0.2)"
+                    color="rgba(245,240,232,0.6)"
                     onClick={() => setShowLogin(false)}
                   >
                     记事本
@@ -353,14 +353,14 @@ export default function Login() {
           {/* 伪装模式 - 记事本 */}
           {!effectiveShowLogin && (
             <VStack spacing={4} className="stagger-2" opacity={0}>
-              <Text color="rgba(245,240,232,0.2)" fontSize="sm">记事本功能开发中...</Text>
+              <Text color="rgba(245,240,232,0.6)" fontSize="sm">记事本功能开发中...</Text>
               {disguiseMode && (
                 <Button
                   size="sm"
                   variant="ghost"
-                  color="rgba(245,240,232,0.2)"
+                  color="rgba(245,240,232,0.6)"
                   onClick={() => setShowLogin(true)}
-                  _hover={{ color: 'rgba(245,240,232,0.6)' }}
+                  _hover={{ color: 'rgba(245,240,232,0.8)' }}
                 >
                   登录
                 </Button>

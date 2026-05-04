@@ -108,7 +108,7 @@ export default function ProfileSuggestModal({ clientId, clientName, isOpen, onCl
             <VStack py={12} spacing={4}>
               <Spinner size="xl" color="gold.400" />
               <Text color="rgba(245,240,232,0.4)">正在分析聊天记录...</Text>
-              <Text color="rgba(245,240,232,0.2)" fontSize="sm">提取客户信息字段中</Text>
+              <Text color="rgba(245,240,232,0.6)" fontSize="sm">提取客户信息字段中</Text>
             </VStack>
           ) : submitted ? (
             <VStack py={12} spacing={4}>
@@ -155,7 +155,7 @@ export default function ProfileSuggestModal({ clientId, clientName, isOpen, onCl
               {/* 聊天摘要 */}
               {chatSummary && (
                 <Box px={4} py={3} bg="warm.900" borderBottom="1px" borderColor="rgba(255,255,255,0.06)">
-                  <Text fontSize="xs" color="rgba(245,240,232,0.2)" mb={1}>📝 聊天摘要</Text>
+                  <Text fontSize="xs" color="rgba(245,240,232,0.6)" mb={1}>📝 聊天摘要</Text>
                   <Text fontSize="sm" color="rgba(245,240,232,0.6)">{chatSummary}</Text>
                 </Box>
               )}
@@ -189,12 +189,12 @@ export default function ProfileSuggestModal({ clientId, clientName, isOpen, onCl
                           {s.confidence === 'high' ? '●●' : s.confidence === 'medium' ? '●○' : '○○'} {confidenceLabel(s.confidence)}
                         </Badge>
                       </HStack>
-                      <HStack fontSize="xs" color="rgba(245,240,232,0.3)" spacing={2} flexWrap="wrap">
+                      <HStack fontSize="xs" color="rgba(245,240,232,0.6)" spacing={2} flexWrap="wrap">
                         <Text>当前: <Text as="span" color="rgba(245,240,232,0.5)"><strong>{s.currentValue}</strong></Text></Text>
                         <Text color="gold.400">→</Text>
                         <Text>更新为: <Text as="span" color="gold.300"><strong>{s.suggestedValue}</strong></Text></Text>
                       </HStack>
-                      <Text fontSize="xs" color="rgba(245,240,232,0.2)" mt={1}>依据: {s.evidence}</Text>
+                      <Text fontSize="xs" color="rgba(245,240,232,0.6)" mt={1}>依据: {s.evidence}</Text>
                     </Box>
                   ))}
                 </VStack>

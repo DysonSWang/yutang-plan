@@ -12,7 +12,7 @@ import {
 import DatePicker, { registerLocale } from 'react-datepicker';
 import { zhCN } from 'date-fns/locale/zh-CN';
 import 'react-datepicker/dist/react-datepicker.css';
-import { CalendarIcon, SparklesIcon, QuestionIcon, MapPinIcon, ClockIcon, HeartIcon, FishIcon, CreditCardIcon, CheckCircleIcon, CheckIcon, ClipboardIcon } from '../../components/Icons';
+import { CalendarIcon, SparklesIcon, QuestionIcon, MapPinIcon, ClockIcon, HeartIcon, FishIcon, CreditCardIcon, CheckCircleIcon, CheckIcon, ClipboardIcon, FemaleIcon, GiftIcon } from '../../components/Icons';
 import ClientCalendar from '../../components/ClientCalendar';
 import { dates, clients, girls as girlsApi, getMediaUrl } from '../../utils/api';
 import { captureError } from '../../utils/frontendErrorCapture';
@@ -34,7 +34,7 @@ function GirlsTab({ girlsList, isInitialLoad, onAddGirl, onGirlClick }) {
   const toast = useToast();
 
   const handleAdd = async () => {
-    if (!addForm.name.trim()) { toast({ title: '请输入昵称', status: 'warning' }); return; }
+    if (!addForm.name.trim()) { toast({ title: '请输入昵称', status: 'warning', duration: 3000 }); return; }
     setAdding(true);
     try {
       const res = await girlsApi.clientAdd({ name: addForm.name.trim(), age: addForm.age || undefined, occupation: addForm.occupation || undefined });
@@ -44,12 +44,12 @@ function GirlsTab({ girlsList, isInitialLoad, onAddGirl, onGirlClick }) {
         onClose();
         onAddGirl();
       } else if (res.code === 'QUOTA_EXCEEDED') {
-        toast({ title: `额度已用完，请联系操盘手升级`, status: 'warning', duration: 4000 });
+        toast({ title: `额度已用完，请联系操盘手升级`, status: 'warning', duration: 3000, duration: 4000 });
       } else {
-        toast({ title: res.error || '添加失败', status: 'error' });
+        toast({ title: res.error || '添加失败', status: 'error', duration: 4000 });
       }
     } catch (e) {
-      toast({ title: '添加失败', status: 'error' });
+      toast({ title: '添加失败', status: 'error', duration: 4000 });
     } finally { setAdding(false); }
   };
 
@@ -400,13 +400,13 @@ export default function MyPond() {
   };
 
   const handleSaveDate = async () => {
-    if (!selectedGirlForDate) { toast({ title: '请选择约会对象', status: 'warning' }); return; }
+    if (!selectedGirlForDate) { toast({ title: '请选择约会对象', status: 'warning', duration: 3000 }); return; }
     setSaving(true);
     try {
       const res = await dates.create({ girlId: selectedGirlForDate.id, dateTime: dateForm.dateTime || undefined, location: dateForm.location, title: dateForm.title || '新约会', notes: dateForm.notes });
       if (res.success) { toast({ title: '约会添加成功', status: 'success', duration: 2000 }); setShowAddModal(false); resetDateForm(); refresh(); }
-      else { toast({ title: res.error || '添加失败', status: 'error' }); }
-    } catch (e) { toast({ title: '添加失败', status: 'error' }); }
+      else { toast({ title: res.error || '添加失败', status: 'error', duration: 4000 }); }
+    } catch (e) { toast({ title: '添加失败', status: 'error', duration: 4000 }); }
     setSaving(false);
   };
 
@@ -536,7 +536,7 @@ export default function MyPond() {
                     onChange={(date) => setDateForm({...dateForm, dateTime: formatLocalDateTime(date)})}
                     showTimeSelect timeIntervals={15} dateFormat="yyyy/MM/dd ah:mm" locale="zh-CN"
                     placeholderText="选择日期和时间"
-                    customInput={<Input bg="warm.700" borderColor="warm.600" _placeholder={{ color: 'rgba(245,240,232,0.2)' }} />} />
+                    customInput={<Input bg="warm.700" borderColor="warm.600" _placeholder={{ color: 'rgba(245,240,232,0.4)' }} />} />
                 </FormControl>
                 <FormControl>
                   <FormLabel color="rgba(245,240,232,0.4)">约会地点</FormLabel>

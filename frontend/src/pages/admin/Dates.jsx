@@ -182,7 +182,7 @@ export default function AdminDates() {
 
   const handleCreate = async () => {
     if (!form.clientId || !form.girlId || !form.dateTime) {
-      toast({ title: '请填写客户、女生和约会时间', status: 'warning', duration: 2000 }); return;
+      toast({ title: '请填写客户、女生和约会时间', status: 'warning', duration: 3000, duration: 2000 }); return;
     }
     try {
       const conditions = {
@@ -197,12 +197,12 @@ export default function AdminDates() {
         notes: form.notes, conditions
       });
       if (res.success) {
-        toast({ title: '约会创建成功', status: 'success', duration: 2000 });
+        toast({ title: '约会创建成功', status: 'success', duration: 2000, duration: 2000 });
         closeCreate();
         loadDates();
         setRefreshKey(n => n + 1);
       }
-    } catch (e) { captureError(e); toast({ title: '创建失败', status: 'error', duration: 2000 }); }
+    } catch (e) { captureError(e); toast({ title: '创建失败', status: 'error', duration: 4000, duration: 2000 }); }
   };
 
   const openDetail = async (date) => {
@@ -296,13 +296,13 @@ export default function AdminDates() {
           setDiscussion([]);
           setShowDiscussion(false);
         }
-        toast({ title: 'AI约会方案生成成功', status: 'success', duration: 3000 });
+        toast({ title: 'AI约会方案生成成功', status: 'success', duration: 2000, duration: 3000 });
         setGenerating(false);
         setStreamStatus('');
         setStreamContent('');
       },
       onError: (msg) => {
-        toast({ title: msg || '生成失败', status: 'error', duration: 3000 });
+        toast({ title: msg || '生成失败', status: 'error', duration: 4000, duration: 3000 });
         setGenerating(false);
         setStreamStatus('');
       }
@@ -330,12 +330,12 @@ export default function AdminDates() {
         setShowDiscussion(true);
         setTimeout(() => discussEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
       } else {
-        toast({ title: res.error || '讨论失败', status: 'error', duration: 2500 });
+        toast({ title: res.error || '讨论失败', status: 'error', duration: 4000, duration: 2500 });
         setDiscussMsg(msg);
       }
     } catch (e) {
       captureError(e);
-      toast({ title: '讨论失败', status: 'error', duration: 2500 });
+      toast({ title: '讨论失败', status: 'error', duration: 4000, duration: 2500 });
       setDiscussMsg(msg);
     }
     setDiscussing(false);
@@ -348,15 +348,15 @@ export default function AdminDates() {
       if (res.success) {
         const updated = await dates.get(selectedDate.id);
         if (updated.success) setSelectedDate(updated.date);
-        toast({ title: '方案已推送，等待客户确认', status: 'success', duration: 3000 });
+        toast({ title: '方案已推送，等待客户确认', status: 'success', duration: 2000, duration: 3000 });
         loadDates();
         setRefreshKey(n => n + 1);
       } else {
-        toast({ title: res.error || '推送失败', status: 'error', duration: 2500 });
+        toast({ title: res.error || '推送失败', status: 'error', duration: 4000, duration: 2500 });
       }
     } catch (e) {
       captureError(e);
-      toast({ title: '推送失败', status: 'error', duration: 2500 });
+      toast({ title: '推送失败', status: 'error', duration: 4000, duration: 2500 });
     }
   };
 
@@ -367,15 +367,15 @@ export default function AdminDates() {
       if (res.success) {
         const updated = await dates.get(selectedDate.id);
         if (updated.success) setSelectedDate(updated.date);
-        toast({ title: '方案已删除', status: 'success', duration: 2000 });
+        toast({ title: '方案已删除', status: 'success', duration: 2000, duration: 2000 });
         loadDates();
         setRefreshKey(n => n + 1);
       } else {
-        toast({ title: res.error || '删除失败', status: 'error', duration: 2500 });
+        toast({ title: res.error || '删除失败', status: 'error', duration: 4000, duration: 2500 });
       }
     } catch (e) {
       captureError(e);
-      toast({ title: '删除失败', status: 'error', duration: 2500 });
+      toast({ title: '删除失败', status: 'error', duration: 4000, duration: 2500 });
     }
   };
 
@@ -389,11 +389,11 @@ export default function AdminDates() {
         setInterviewOverview(res.interviewOverview || '');
         const updated = await dates.get(selectedDate.id);
         if (updated.success) setSelectedDate(updated.date);
-        toast({ title: res.alreadyGenerated ? '已加载访谈问题' : '个性化访谈问题已生成', status: 'success', duration: 3000 });
+        toast({ title: res.alreadyGenerated ? '已加载访谈问题' : '个性化访谈问题已生成', status: 'success', duration: 2000, duration: 3000 });
       } else {
-        toast({ title: res.error || '生成失败', status: 'error', duration: 3000 });
+        toast({ title: res.error || '生成失败', status: 'error', duration: 4000, duration: 3000 });
       }
-    } catch (e) { captureError(e); toast({ title: '生成失败', status: 'error', duration: 3000 }); }
+    } catch (e) { captureError(e); toast({ title: '生成失败', status: 'error', duration: 4000, duration: 3000 }); }
     setGeneratingInterview(false);
   };
 
@@ -405,12 +405,12 @@ export default function AdminDates() {
       if (res.success) {
         const updated = await dates.get(selectedDate.id);
         if (updated.success) setSelectedDate(updated.date);
-        toast({ title: '访谈已推送给客户', status: 'success', duration: 3000 });
+        toast({ title: '访谈已推送给客户', status: 'success', duration: 2000, duration: 3000 });
         loadDates();
       } else {
-        toast({ title: res.error || '推送失败', status: 'error', duration: 2500 });
+        toast({ title: res.error || '推送失败', status: 'error', duration: 4000, duration: 2500 });
       }
-    } catch (e) { captureError(e); toast({ title: '推送失败', status: 'error', duration: 2500 }); }
+    } catch (e) { captureError(e); toast({ title: '推送失败', status: 'error', duration: 4000, duration: 2500 }); }
     setPushingInterview(false);
   };
 
@@ -423,11 +423,11 @@ export default function AdminDates() {
         setReportResult(res.report);
         const updated = await dates.get(selectedDate.id);
         if (updated.success) setSelectedDate(updated.date);
-        toast({ title: '复盘报告已生成', status: 'success', duration: 3000 });
+        toast({ title: '复盘报告已生成', status: 'success', duration: 2000, duration: 3000 });
       } else {
-        toast({ title: res.error || '生成失败', status: 'error', duration: 3000 });
+        toast({ title: res.error || '生成失败', status: 'error', duration: 4000, duration: 3000 });
       }
-    } catch (e) { captureError(e); toast({ title: '生成失败', status: 'error', duration: 3000 }); }
+    } catch (e) { captureError(e); toast({ title: '生成失败', status: 'error', duration: 4000, duration: 3000 }); }
     setGeneratingReport(false);
   };
 
@@ -456,12 +456,12 @@ export default function AdminDates() {
       });
       if (res.success) {
                 setSelectedDate(res.date);
-        toast({ title: '评价已保存', status: 'success', duration: 3000 });
+        toast({ title: '评价已保存', status: 'success', duration: 2000, duration: 3000 });
         closeEvaluate();
         loadDates();
         setRefreshKey(n => n + 1);
       }
-    } catch (e) { captureError(e); toast({ title: '保存失败', status: 'error', duration: 2000 }); }
+    } catch (e) { captureError(e); toast({ title: '保存失败', status: 'error', duration: 4000, duration: 2000 }); }
     setEvaluating(false);
   };
 
@@ -471,7 +471,7 @@ export default function AdminDates() {
       const res = await dates.update(selectedDate.id, updates);
       if (res.success) {
         setSelectedDate(res.date);
-        toast({ title: '已更新', status: 'success', duration: 1500 });
+        toast({ title: '已更新', status: 'success', duration: 2000, duration: 1500 });
         if (updates.status === 'cancelled') {
           loadDates();
           setRefreshKey(n => n + 1);
@@ -499,10 +499,10 @@ export default function AdminDates() {
     setChecklistSaving(true);
     try {
       await dates.updateChecklist(selectedDate.id, checklist);
-      toast({ title: '检查清单已保存', status: 'success', duration: 1500 });
+      toast({ title: '检查清单已保存', status: 'success', duration: 2000, duration: 1500 });
     } catch (e) {
       captureError(e);
-      toast({ title: '保存失败', status: 'error', duration: 1500 });
+      toast({ title: '保存失败', status: 'error', duration: 4000, duration: 1500 });
     }
     setChecklistSaving(false);
   };
@@ -542,7 +542,7 @@ export default function AdminDates() {
                       <Text color="white" fontSize="sm">{s.activity}</Text>
                       {s.note && <Text color="rgba(245,240,232,0.4)" fontSize="xs">{s.note}</Text>}
                     </Box>
-                    <Text color="rgba(245,240,232,0.2)" fontSize="xs">{s.duration}</Text>
+                    <Text color="rgba(245,240,232,0.6)" fontSize="xs">{s.duration}</Text>
                   </Flex>
                 ))}
               </VStack>
@@ -676,28 +676,28 @@ export default function AdminDates() {
           <CardBody p={3}>
             <Text color="rgba(245,240,232,0.4)" fontSize="xs">已完成</Text>
             <Text color="green.400" fontSize="xl" fontWeight="bold">{stats.completed}</Text>
-            <Text color="rgba(245,240,232,0.2)" fontSize="xs">{stats.total > 0 ? Math.round(stats.completed / stats.total * 100) : 0}% 完成率</Text>
+            <Text color="rgba(245,240,232,0.6)" fontSize="xs">{stats.total > 0 ? Math.round(stats.completed / stats.total * 100) : 0}% 完成率</Text>
           </CardBody>
         </Card>
         <Card bg="warm.800" variant="filled">
           <CardBody p={3}>
             <Text color="rgba(245,240,232,0.4)" fontSize="xs">平均评分</Text>
             <Text color="yellow.400" fontSize="xl" fontWeight="bold">{stats.avgRating}</Text>
-            <Text color="rgba(245,240,232,0.2)" fontSize="xs">{stats.rated} 条评价</Text>
+            <Text color="rgba(245,240,232,0.6)" fontSize="xs">{stats.rated} 条评价</Text>
           </CardBody>
         </Card>
         <Card bg="warm.800" variant="filled">
           <CardBody p={3}>
             <Text color="rgba(245,240,232,0.4)" fontSize="xs">总花费</Text>
             <Text color="pink.400" fontSize="xl" fontWeight="bold">¥{stats.totalExpense.toLocaleString()}</Text>
-            <Text color="rgba(245,240,232,0.2)" fontSize="xs">均¥{stats.avgExpense.toLocaleString()}/完成</Text>
+            <Text color="rgba(245,240,232,0.6)" fontSize="xs">均¥{stats.avgExpense.toLocaleString()}/完成</Text>
           </CardBody>
         </Card>
         <Card bg="warm.800" variant="filled">
           <CardBody p={3}>
             <Text color="rgba(245,240,232,0.4)" fontSize="xs">已取消</Text>
             <Text color="red.400" fontSize="xl" fontWeight="bold">{stats.cancelled}</Text>
-            <Text color="rgba(245,240,232,0.2)" fontSize="xs">{stats.total > 0 ? Math.round(stats.cancelled / stats.total * 100) : 0}% 取消率</Text>
+            <Text color="rgba(245,240,232,0.6)" fontSize="xs">{stats.total > 0 ? Math.round(stats.cancelled / stats.total * 100) : 0}% 取消率</Text>
           </CardBody>
         </Card>
       </SimpleGrid>
@@ -719,7 +719,7 @@ export default function AdminDates() {
               {loading ? (
                 <Flex justify="center" py={8}><Spinner /></Flex>
               ) : datesList.length === 0 ? (
-                <Text color="rgba(245,240,232,0.2)" textAlign="center" py={8}>暂无约会记录</Text>
+                <Text color="rgba(245,240,232,0.6)" textAlign="center" py={8}>暂无约会记录</Text>
               ) : (
                 <>
                   {/* 桌面端表格 */}
@@ -748,7 +748,7 @@ export default function AdminDates() {
                                 <Text color="white" fontWeight="bold" fontSize="sm">{d.title || '约会'}</Text>
                                 {d.planStatus === 'generating' && <Spinner size="xs" color="teal.400" />}
                                 {d.planStatus === 'generated' && parsedPlan?.venue && (
-                                  <Text color="rgba(245,240,232,0.2)" fontSize="xs">{parsedPlan.venue.name}</Text>
+                                  <Text color="rgba(245,240,232,0.6)" fontSize="xs">{parsedPlan.venue.name}</Text>
                                 )}
                               </Td>
                               <Td>
@@ -842,9 +842,9 @@ export default function AdminDates() {
                 />
               ) : (
                 <Flex direction="column" align="center" py={12} gap={3}>
-                  <Icon as={CalendarIcon} color="rgba(245,240,232,0.2)" boxSize={10} />
+                  <Icon as={CalendarIcon} color="rgba(245,240,232,0.6)" boxSize={10} />
                   <Text color="rgba(245,240,232,0.4)">请先在上方选择客户</Text>
-                  <Text color="rgba(245,240,232,0.2)" fontSize="sm">切换到「表格」标签可在全部客户视图中筛选</Text>
+                  <Text color="rgba(245,240,232,0.6)" fontSize="sm">切换到「表格」标签可在全部客户视图中筛选</Text>
                 </Flex>
               )}
             </CardBody>
@@ -1008,7 +1008,7 @@ export default function AdminDates() {
                                 >
                                   <Icon
                                     as={CheckCircleIcon}
-                                    color={item.checked ? 'green.400' : 'rgba(245,240,232,0.2)'}
+                                    color={item.checked ? 'green.400' : 'rgba(245,240,232,0.4)'}
                                     boxSize={4}
                                   />
                                   <Text
@@ -1138,7 +1138,7 @@ export default function AdminDates() {
                                     <Text color={msg.role === 'operator' ? 'purple.200' : 'rgba(245,240,232,0.6)'} fontSize="sm" whiteSpace="pre-wrap">
                                       {msg.content}
                                     </Text>
-                                    <Text color="rgba(245,240,232,0.2)" fontSize="xs" mt={1}>
+                                    <Text color="rgba(245,240,232,0.6)" fontSize="xs" mt={1}>
                                       {msg.role === 'operator' ? '操盘手' : '月老AI'} · {new Date(msg.timestamp).toLocaleTimeString('zh-CN')}
                                     </Text>
                                   </Box>
@@ -1177,7 +1177,7 @@ export default function AdminDates() {
                   <Card bg="warm.800" mb={4}>
                     <CardBody>
                       <Flex direction="column" align="center" py={6} gap={3}>
-                        <Icon as={CalendarIcon} color="rgba(245,240,232,0.2)" boxSize={10} />
+                        <Icon as={CalendarIcon} color="rgba(245,240,232,0.6)" boxSize={10} />
                         <Text color="rgba(245,240,232,0.4)">暂无约会方案</Text>
                         <Button colorScheme="gold" leftIcon={<Icon as={SparklesIcon} />} onClick={handleGeneratePlan} isLoading={generating} isDisabled={generating}>
                           一键生成约会方案
@@ -1202,9 +1202,9 @@ export default function AdminDates() {
                     </Flex>
                     {dateEvents.length === 0 ? (
                       <Flex direction="column" align="center" py={6} gap={2}>
-                        <Icon as={SparklesIcon} color="rgba(245,240,232,0.2)" boxSize={8} />
+                        <Icon as={SparklesIcon} color="rgba(245,240,232,0.6)" boxSize={8} />
                         <Text color="rgba(245,240,232,0.4)" fontSize="sm">暂无事件和提醒</Text>
-                        <Text color="rgba(245,240,232,0.2)" fontSize="xs">AI将在约会策划后自动生成行动项</Text>
+                        <Text color="rgba(245,240,232,0.6)" fontSize="xs">AI将在约会策划后自动生成行动项</Text>
                       </Flex>
                     ) : (
                       <VStack spacing={2} align="stretch">
@@ -1220,7 +1220,7 @@ export default function AdminDates() {
                             />
                             <Box flex={1}>
                               <Text
-                                color={ev.status === 'completed' ? 'rgba(245,240,232,0.2)' : 'white'}
+                                color={ev.status === 'completed' ? 'rgba(245,240,232,0.6)' : 'white'}
                                 fontSize="sm"
                                 textDecoration={ev.status === 'completed' ? 'line-through' : 'none'}
                               >
@@ -1236,12 +1236,12 @@ export default function AdminDates() {
                                 >
                                   {ev.type === 'date' ? '约会' : ev.type === 'action' ? '行动项' : '提醒'}
                                 </Badge>
-                                <Text color="rgba(245,240,232,0.2)" fontSize="xs">
+                                <Text color="rgba(245,240,232,0.6)" fontSize="xs">
                                   {ev.eventTime ? new Date(ev.eventTime).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}
                                 </Text>
                               </HStack>
                             </Box>
-                            <Button size="xs" variant="ghost" color="rgba(245,240,232,0.2)"
+                            <Button size="xs" variant="ghost" color="rgba(245,240,232,0.6)"
                               onClick={() => deleteEvent(ev.id)}>删除</Button>
                           </Flex>
                         ))}
@@ -1406,9 +1406,9 @@ export default function AdminDates() {
                                 <Text color="rgba(245,240,232,0.4)" fontSize="xs">情绪曲线</Text>
                                 <HStack spacing={2} mt={1}>
                                   <Badge colorScheme={iv.moodStart >= 4 ? 'green' : iv.moodStart >= 3 ? 'yellow' : 'red'}>开始 {iv.moodStart}</Badge>
-                                  <Text color="rgba(245,240,232,0.2)">→</Text>
+                                  <Text color="rgba(245,240,232,0.6)">→</Text>
                                   <Badge colorScheme={iv.moodMid >= 4 ? 'green' : iv.moodMid >= 3 ? 'yellow' : 'red'}>中期 {iv.moodMid}</Badge>
-                                  <Text color="rgba(245,240,232,0.2)">→</Text>
+                                  <Text color="rgba(245,240,232,0.6)">→</Text>
                                   <Badge colorScheme={iv.moodEnd >= 4 ? 'green' : iv.moodEnd >= 3 ? 'yellow' : 'red'}>结束 {iv.moodEnd}</Badge>
                                 </HStack>
                               </Box>
@@ -1418,9 +1418,9 @@ export default function AdminDates() {
                                 <Text color="rgba(245,240,232,0.4)" fontSize="xs">女生投入度曲线</Text>
                                 <HStack spacing={2} mt={1}>
                                   <Badge colorScheme={iv.girlEngagementStart >= 4 ? 'green' : iv.girlEngagementStart >= 3 ? 'yellow' : 'red'}>开始 {iv.girlEngagementStart}</Badge>
-                                  <Text color="rgba(245,240,232,0.2)">→</Text>
+                                  <Text color="rgba(245,240,232,0.6)">→</Text>
                                   <Badge colorScheme={iv.girlEngagementMid >= 4 ? 'green' : iv.girlEngagementMid >= 3 ? 'yellow' : 'red'}>中期 {iv.girlEngagementMid}</Badge>
-                                  <Text color="rgba(245,240,232,0.2)">→</Text>
+                                  <Text color="rgba(245,240,232,0.6)">→</Text>
                                   <Badge colorScheme={iv.girlEngagementEnd >= 4 ? 'green' : iv.girlEngagementEnd >= 3 ? 'yellow' : 'red'}>结束 {iv.girlEngagementEnd}</Badge>
                                 </HStack>
                               </Box>
@@ -1492,7 +1492,7 @@ export default function AdminDates() {
                           <Card bg="warm.800" mb={4}>
                             <CardBody>
                               <Flex direction="column" align="center" py={4} gap={2}>
-                                <Icon as={QuestionIcon} color="rgba(245,240,232,0.2)" boxSize={8} />
+                                <Icon as={QuestionIcon} color="rgba(245,240,232,0.6)" boxSize={8} />
                                 <Text color="rgba(245,240,232,0.4)" fontSize="sm">点击「生成访谈问题」为这次约会创建个性化问卷</Text>
                               </Flex>
                             </CardBody>
@@ -1515,7 +1515,7 @@ export default function AdminDates() {
                                   <Badge colorScheme="cyan" minW="24px" textAlign="center">{i + 1}</Badge>
                                   <Box flex={1}>
                                     <Text color="white" fontSize="sm" mb={1}>{q.question}</Text>
-                                    {q.purpose && <Text color="rgba(245,240,232,0.2)" fontSize="xs">目的：{q.purpose}</Text>}
+                                    {q.purpose && <Text color="rgba(245,240,232,0.6)" fontSize="xs">目的：{q.purpose}</Text>}
                                     {q.options?.length > 0 && (
                                       <Wrap mt={2} spacing={1}>
                                         {q.options.map((opt, oi) => <WrapItem key={oi}><Tag size="sm" colorScheme="gray">{opt}</Tag></WrapItem>)}
@@ -1893,7 +1893,7 @@ export default function AdminDates() {
                       ))}
                     </HStack>
                   </VStack>
-                  <Text color="rgba(245,240,232,0.2)">→</Text>
+                  <Text color="rgba(245,240,232,0.6)">→</Text>
                   <VStack spacing={1}>
                     <Text color="rgba(245,240,232,0.4)" fontSize="xs">中期</Text>
                     <HStack spacing={1}>
@@ -1903,7 +1903,7 @@ export default function AdminDates() {
                       ))}
                     </HStack>
                   </VStack>
-                  <Text color="rgba(245,240,232,0.2)">→</Text>
+                  <Text color="rgba(245,240,232,0.6)">→</Text>
                   <VStack spacing={1}>
                     <Text color="rgba(245,240,232,0.4)" fontSize="xs">结束</Text>
                     <HStack spacing={1}>
@@ -1921,7 +1921,7 @@ export default function AdminDates() {
                 <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">
                   女生投入度：开始 {evalForm.girlEngagementStart} → 中期 {evalForm.girlEngagementMid} → 结束 {evalForm.girlEngagementEnd}
                 </FormLabel>
-                <Text color="rgba(245,240,232,0.2)" fontSize="xs" mb={2}>女生在约会不同阶段的投入程度，比情绪评分更有预测力</Text>
+                <Text color="rgba(245,240,232,0.6)" fontSize="xs" mb={2}>女生在约会不同阶段的投入程度，比情绪评分更有预测力</Text>
                 <HStack spacing={4} justify="center">
                   <VStack spacing={1}>
                     <Text color="rgba(245,240,232,0.4)" fontSize="xs">开始</Text>
@@ -1932,7 +1932,7 @@ export default function AdminDates() {
                       ))}
                     </HStack>
                   </VStack>
-                  <Text color="rgba(245,240,232,0.2)">→</Text>
+                  <Text color="rgba(245,240,232,0.6)">→</Text>
                   <VStack spacing={1}>
                     <Text color="rgba(245,240,232,0.4)" fontSize="xs">中期</Text>
                     <HStack spacing={1}>
@@ -1942,7 +1942,7 @@ export default function AdminDates() {
                       ))}
                     </HStack>
                   </VStack>
-                  <Text color="rgba(245,240,232,0.2)">→</Text>
+                  <Text color="rgba(245,240,232,0.6)">→</Text>
                   <VStack spacing={1}>
                     <Text color="rgba(245,240,232,0.4)" fontSize="xs">结束</Text>
                     <HStack spacing={1}>

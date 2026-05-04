@@ -551,7 +551,7 @@ export default function AdminWorkbench() {
                     analysisRef.current.textContent = stripMarkdown(analysis);
                   }
                 }
-                if (parsed.error) toast({ title: '分析失败', status: 'error' });
+                if (parsed.error) toast({ title: '分析失败', status: 'error', duration: 4000 });
               } catch { /* ignore non-JSON chunk */ void 0; }
             }
           }
@@ -575,7 +575,7 @@ export default function AdminWorkbench() {
         }
       }
     } catch {
-      toast({ title: '分析失败', status: 'error' });
+      toast({ title: '分析失败', status: 'error', duration: 4000 });
     } finally {
       setLoading(false);
     }
@@ -627,7 +627,7 @@ export default function AdminWorkbench() {
   }, []);
 
   const handleAddRecommendation = async (rec, clientId) => {
-    if (!clientId) { toast({ title: '请先选择客户', status: 'warning', duration: 2000 }); return; }
+    if (!clientId) { toast({ title: '请先选择客户', status: 'warning', duration: 3000, duration: 2000 }); return; }
     setAddingRecommendation(rec.id);
     try {
       const now = new Date(); now.setHours(now.getHours() + 2, 0, 0, 0);
@@ -641,9 +641,9 @@ export default function AdminWorkbench() {
         setCoachRecommendations(prev => prev.map(r => r.id === rec.id ? { ...r, added: true } : r));
         toast({ title: '已添加到日历', status: 'success', duration: 2000 });
       } else {
-        toast({ title: res.error || '添加失败', status: 'error', duration: 2000 });
+        toast({ title: res.error || '添加失败', status: 'error', duration: 4000, duration: 2000 });
       }
-    } catch (e) { captureError(e); toast({ title: '添加失败', status: 'error', duration: 2000 }); }
+    } catch (e) { captureError(e); toast({ title: '添加失败', status: 'error', duration: 4000, duration: 2000 }); }
     finally { setAddingRecommendation(null); }
   };
 
@@ -655,7 +655,7 @@ export default function AdminWorkbench() {
   const handleGirlMessage = async () => {
     if (!girlMessage.trim()) return;
     if (!selectedGirl) {
-      toast({ title: '请先选择女生', status: 'warning' });
+      toast({ title: '请先选择女生', status: 'warning', duration: 3000 });
       return;
     }
 
@@ -691,7 +691,7 @@ export default function AdminWorkbench() {
         setBattleMode('manual');
       }
     } catch {
-      toast({ title: 'AI分析失败', status: 'error' });
+      toast({ title: 'AI分析失败', status: 'error', duration: 4000 });
     } finally {
       setIsAnalyzing(false);
     }
@@ -701,7 +701,7 @@ export default function AdminWorkbench() {
   const handleOptimizeMessage = async () => {
     if (!myMessage.trim()) return;
     if (!selectedGirl) {
-      toast({ title: '请先选择女生', status: 'warning' });
+      toast({ title: '请先选择女生', status: 'warning', duration: 3000 });
       return;
     }
 
@@ -720,7 +720,7 @@ export default function AdminWorkbench() {
         setOptimizations(res.optimizations || []);
       }
     } catch {
-      toast({ title: '话术优化失败', status: 'error' });
+      toast({ title: '话术优化失败', status: 'error', duration: 4000 });
     } finally {
       setIsOptimizing(false);
     }
@@ -806,7 +806,7 @@ export default function AdminWorkbench() {
       }
       toast({ title: '已采纳更新', status: 'success', duration: 1500 });
     } catch {
-      toast({ title: '采纳失败', status: 'error' });
+      toast({ title: '采纳失败', status: 'error', duration: 4000 });
     }
   };
 
@@ -815,9 +815,9 @@ export default function AdminWorkbench() {
     try {
       await chatPartner.approveUpdates([updateId], false);
       setPendingUpdates(prev => prev.filter(u => u.id !== updateId));
-      toast({ title: '已忽略', status: 'info', duration: 1500 });
+      toast({ title: '已忽略', status: 'info', duration: 2000, duration: 1500 });
     } catch {
-      toast({ title: '操作失败', status: 'error' });
+      toast({ title: '操作失败', status: 'error', duration: 4000 });
     }
   };
 
@@ -836,7 +836,7 @@ export default function AdminWorkbench() {
       }
       toast({ title: `已采纳 ${ids.length} 条更新`, status: 'success', duration: 2000 });
     } catch {
-      toast({ title: '批量采纳失败', status: 'error' });
+      toast({ title: '批量采纳失败', status: 'error', duration: 4000 });
     }
   };
 
@@ -849,7 +849,7 @@ export default function AdminWorkbench() {
       setShowUpdatePanel(false);
       toast({ title: `已忽略 ${ids.length} 条更新`, status: 'info', duration: 1500 });
     } catch {
-      toast({ title: '批量忽略失败', status: 'error' });
+      toast({ title: '批量忽略失败', status: 'error', duration: 4000 });
     }
   };
 
@@ -865,11 +865,11 @@ export default function AdminWorkbench() {
   // 朋友圈模式 - 分析（使用AI教练流式输出）
   const handleAnalyzeMoment = async () => {
     if (!selectedGirl) {
-      toast({ title: '请先选择女生', status: 'warning' });
+      toast({ title: '请先选择女生', status: 'warning', duration: 3000 });
       return;
     }
     if (!momentText.trim() && !momentImage) {
-      toast({ title: '请输入朋友圈文字或上传图片', status: 'warning' });
+      toast({ title: '请输入朋友圈文字或上传图片', status: 'warning', duration: 3000 });
       return;
     }
 
@@ -942,7 +942,7 @@ export default function AdminWorkbench() {
                   momentRef.current.textContent = stripMarkdown(analysis);
                 }
               }
-              if (parsed.error) toast({ title: '分析失败', status: 'error' });
+              if (parsed.error) toast({ title: '分析失败', status: 'error', duration: 4000 });
             } catch { /* ignore non-JSON chunk */ void 0; }
           }
         }
@@ -950,7 +950,7 @@ export default function AdminWorkbench() {
 
       setMomentAnalysis(analysis);
     } catch (err) {
-      toast({ title: err.message || '分析失败', status: 'error' });
+      toast({ title: err.message || '分析失败', status: 'error', duration: 4000 });
     } finally {
       setMomentLoading(false);
     }
@@ -974,7 +974,7 @@ export default function AdminWorkbench() {
       });
       toast({ title: `已记录${replyType === 'comment' ? '评论' : '私聊'}建议`, status: 'success', duration: 2000 });
     } catch {
-      toast({ title: '记录失败', status: 'error' });
+      toast({ title: '记录失败', status: 'error', duration: 4000 });
     }
   };
 
@@ -1001,7 +1001,7 @@ export default function AdminWorkbench() {
         setClientInput('');
       }
     } catch {
-      toast({ title: '发送失败', status: 'error' });
+      toast({ title: '发送失败', status: 'error', duration: 4000 });
     } finally {
       setSendingClientMsg(false);
     }
@@ -1010,7 +1010,7 @@ export default function AdminWorkbench() {
   // 客户聊天 - 分析客户消息 → 回复建议
   const handleClientAnalyze = async () => {
     if (!clientMsg.trim() || !selectedClient) {
-      toast({ title: '请先粘贴客户消息', status: 'warning' });
+      toast({ title: '请先粘贴客户消息', status: 'warning', duration: 3000 });
       return;
     }
     setClientAnalyzing(true);
@@ -1039,7 +1039,7 @@ export default function AdminWorkbench() {
         }
       }
     } catch {
-      toast({ title: 'AI分析失败', status: 'error' });
+      toast({ title: 'AI分析失败', status: 'error', duration: 4000 });
     } finally {
       setClientAnalyzing(false);
     }
@@ -1048,7 +1048,7 @@ export default function AdminWorkbench() {
   // 客户聊天 - 话术优化
   const handleClientOptimize = async () => {
     if (!clientMyMsg.trim() || !selectedClient) {
-      toast({ title: '请先输入想发的话', status: 'warning' });
+      toast({ title: '请先输入想发的话', status: 'warning', duration: 3000 });
       return;
     }
     setClientOptimizing(true);
@@ -1062,7 +1062,7 @@ export default function AdminWorkbench() {
         setClientOptimizations(res.optimizations || []);
       }
     } catch {
-      toast({ title: '话术优化失败', status: 'error' });
+      toast({ title: '话术优化失败', status: 'error', duration: 4000 });
     } finally {
       setClientOptimizing(false);
     }
@@ -1204,7 +1204,7 @@ export default function AdminWorkbench() {
                   </Box>
                 ))}
                 {girlsList.length === 0 && (
-                  <Text color="rgba(245,240,232,0.2)" fontSize="sm">暂无女生</Text>
+                  <Text color="rgba(245,240,232,0.6)" fontSize="sm">暂无女生</Text>
                 )}
               </VStack>
             </CardBody>
@@ -1244,7 +1244,7 @@ export default function AdminWorkbench() {
                           <Text color={deepMode ? 'purple.300' : 'gray.300'} fontSize="xs" fontWeight="bold">
                             {deepMode ? '深度分析' : '快速分析'}
                           </Text>
-                          <Text color="rgba(245,240,232,0.2)" fontSize="xs">
+                          <Text color="rgba(245,240,232,0.6)" fontSize="xs">
                             {deepMode ? '含工具调用，可记录信号' : '流式输出，快'}
                           </Text>
                         </Box>
@@ -1350,7 +1350,7 @@ export default function AdminWorkbench() {
                     {/* 朋友圈互动模式 */}
                     {workbenchChatMode === 'moment' && !selectedGirl && (
                       <Flex flex={1} align="center" justify="center">
-                        <Text color="rgba(245,240,232,0.2)">先在左侧选择一个女生开始分析朋友圈</Text>
+                        <Text color="rgba(245,240,232,0.6)">先在左侧选择一个女生开始分析朋友圈</Text>
                       </Flex>
                     )}
 
@@ -1459,7 +1459,7 @@ export default function AdminWorkbench() {
                     {/* 和客户聊天模式 */}
                     {workbenchChatMode === 'client' && !selectedClient && (
                       <Flex flex={1} align="center" justify="center">
-                        <Text color="rgba(245,240,232,0.2)">先在左侧选择一个客户</Text>
+                        <Text color="rgba(245,240,232,0.6)">先在左侧选择一个客户</Text>
                       </Flex>
                     )}
 
@@ -1570,7 +1570,7 @@ export default function AdminWorkbench() {
                           <VStack spacing={3} align="stretch">
                             {/* 多轮对话历史（和女生的类似风格） */}
                             {clientChatHistory.length === 0 && !clientAiAnalysis && (
-                              <Text color="rgba(245,240,232,0.2)" textAlign="center" fontSize="sm" py={4}>
+                              <Text color="rgba(245,240,232,0.6)" textAlign="center" fontSize="sm" py={4}>
                                 暂无对话记录，粘贴客户消息开始分析
                               </Text>
                             )}
@@ -1723,7 +1723,7 @@ export default function AdminWorkbench() {
                                           <Text color="rgba(245,240,232,0.4)" fontSize="xs">{s.intention || ''}</Text>
                                           <Icon
                                             as={FiCopy}
-                                            color="rgba(245,240,232,0.2)"
+                                            color="rgba(245,240,232,0.6)"
                                             boxSize={3}
                                             cursor="pointer"
                                             _hover={{ color: 'gold.400' }}
@@ -1767,7 +1767,7 @@ export default function AdminWorkbench() {
                                           <Text color="rgba(245,240,232,0.4)" fontSize="xs">{opt.point || ''}</Text>
                                           <Icon
                                             as={FiCopy}
-                                            color="rgba(245,240,232,0.2)"
+                                            color="rgba(245,240,232,0.6)"
                                             boxSize={3}
                                             cursor="pointer"
                                             _hover={{ color: 'gold.400' }}
@@ -1811,7 +1811,7 @@ export default function AdminWorkbench() {
                         {/* 底部：发送/编辑区 */}
                         <Box>
                           <HStack mb={1}>
-                            <Text color="rgba(245,240,232,0.2)" fontSize="xs">
+                            <Text color="rgba(245,240,232,0.6)" fontSize="xs">
                               {clientChatMode === 'suggest' ? '采纳建议后可直接发送，或复制到其他平台' : '采纳优化后可直接发送，或复制到其他平台'}
                             </Text>
                           </HStack>
@@ -1858,7 +1858,7 @@ export default function AdminWorkbench() {
                     {/* 和女生聊天模式 */}
                     {workbenchChatMode === 'girl' && !selectedGirl && (
                       <Flex flex={1} align="center" justify="center">
-                        <Text color="rgba(245,240,232,0.2)">先在左侧选择一个女生开始实战聊天</Text>
+                        <Text color="rgba(245,240,232,0.6)">先在左侧选择一个女生开始实战聊天</Text>
                       </Flex>
                     )}
 
@@ -2066,7 +2066,7 @@ export default function AdminWorkbench() {
                                             <Text color="gray.300" fontSize="xs">
                                               {current.tensionScore || 5} {getTensionEmoji(current.tensionScore || 5)}
                                             </Text>
-                                            <Text color="rgba(245,240,232,0.2)" fontSize="xs">→</Text>
+                                            <Text color="rgba(245,240,232,0.6)" fontSize="xs">→</Text>
                                             <Text color="green.300" fontSize="xs" fontWeight="bold">
                                               {newTension} {getTensionEmoji(newTension)}
                                             </Text>
@@ -2102,7 +2102,7 @@ export default function AdminWorkbench() {
                         <Box flex={1} overflowY="auto">
                           <VStack spacing={3} align="stretch">
                             {chatHistory.length === 0 && (
-                              <Text color="rgba(245,240,232,0.2)" textAlign="center" fontSize="sm" py={4}>
+                              <Text color="rgba(245,240,232,0.6)" textAlign="center" fontSize="sm" py={4}>
                                 暂无对话记录
                               </Text>
                             )}
@@ -2215,7 +2215,7 @@ export default function AdminWorkbench() {
                                           <Text color="rgba(245,240,232,0.4)" fontSize="xs">{s.intention || ''}</Text>
                                           <Icon
                                             as={FiCopy}
-                                            color="rgba(245,240,232,0.2)"
+                                            color="rgba(245,240,232,0.6)"
                                             boxSize={3}
                                             cursor="pointer"
                                             _hover={{ color: 'gold.400' }}
@@ -2256,7 +2256,7 @@ export default function AdminWorkbench() {
                                           <Text color="rgba(245,240,232,0.4)" fontSize="xs">{opt.point || ''}</Text>
                                           <Icon
                                             as={FiCopy}
-                                            color="rgba(245,240,232,0.2)"
+                                            color="rgba(245,240,232,0.6)"
                                             boxSize={3}
                                             cursor="pointer"
                                             _hover={{ color: 'gold.400' }}
@@ -2432,7 +2432,7 @@ export default function AdminWorkbench() {
                     </Box>
                   </>
                 ) : (
-                  <Text color="rgba(245,240,232,0.2)" fontSize="xs">选中女生或保持空白，AI教练自动给出建议</Text>
+                  <Text color="rgba(245,240,232,0.6)" fontSize="xs">选中女生或保持空白，AI教练自动给出建议</Text>
                 )}
               </Box>
             </CardBody>
@@ -2491,7 +2491,7 @@ export default function AdminWorkbench() {
                   )}
                 </VStack>
               ) : workbenchChatMode === 'client' ? (
-                <Text color="rgba(245,240,232,0.2)" fontSize="sm">选择客户查看详情</Text>
+                <Text color="rgba(245,240,232,0.6)" fontSize="sm">选择客户查看详情</Text>
               ) : null}
 
               {/* 女生模式 */}
@@ -2537,7 +2537,7 @@ export default function AdminWorkbench() {
                   )}
                 </VStack>
               ) : workbenchChatMode === 'girl' && !selectedGirl ? (
-                <Text color="rgba(245,240,232,0.2)" fontSize="sm">选择女生查看详情</Text>
+                <Text color="rgba(245,240,232,0.6)" fontSize="sm">选择女生查看详情</Text>
               ) : null}
             </CardBody>
           </Card>

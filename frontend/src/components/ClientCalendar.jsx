@@ -230,15 +230,15 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
   const handleSave = async () => {
     // 验证必填字段
     if (!clientId) {
-      toast({ title: '无法创建，请刷新页面重试', status: 'error', duration: 3000 });
+      toast({ title: '无法创建，请刷新页面重试', status: 'error', duration: 4000, duration: 3000 });
       return;
     }
     if (!form.title && form.type !== 'date') {
-      toast({ title: '请填写标题', status: 'warning', duration: 2000 });
+      toast({ title: '请填写标题', status: 'warning', duration: 3000, duration: 2000 });
       return;
     }
     if (!form.dateTime) {
-      toast({ title: '请选择时间', status: 'warning', duration: 2000 });
+      toast({ title: '请选择时间', status: 'warning', duration: 3000, duration: 2000 });
       return;
     }
     setSaving(true);
@@ -258,7 +258,7 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
             onClose();
             loadEvents();
           } else {
-            toast({ title: res.error || '创建失败', status: 'error', duration: 3000 });
+            toast({ title: res.error || '创建失败', status: 'error', duration: 4000, duration: 3000 });
           }
         } else {
           // 创建事件
@@ -276,7 +276,7 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
             onClose();
             loadEvents();
           } else {
-            toast({ title: res.error || '创建失败', status: 'error', duration: 3000 });
+            toast({ title: res.error || '创建失败', status: 'error', duration: 4000, duration: 3000 });
           }
         }
       } else {
@@ -294,7 +294,7 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
             onClose();
             loadEvents();
           } else {
-            toast({ title: res.error || '更新失败', status: 'error', duration: 2000 });
+            toast({ title: res.error || '更新失败', status: 'error', duration: 4000, duration: 2000 });
           }
         } else {
           // 更新事件
@@ -311,13 +311,13 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
             onClose();
             loadEvents();
           } else {
-            toast({ title: res.error || '更新失败', status: 'error', duration: 2000 });
+            toast({ title: res.error || '更新失败', status: 'error', duration: 4000, duration: 2000 });
           }
         }
       }
     } catch (e) {
       captureError(e);
-      toast({ title: '操作失败', status: 'error', duration: 2000 });
+      toast({ title: '操作失败', status: 'error', duration: 4000, duration: 2000 });
     } finally {
       setSaving(false);
     }
@@ -346,11 +346,11 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
         onClose();
         loadEvents();
       } else {
-        toast({ title: res.error || '操作失败', status: 'error', duration: 2000 });
+        toast({ title: res.error || '操作失败', status: 'error', duration: 4000, duration: 2000 });
       }
     } catch (e) {
       captureError(e);
-      toast({ title: '操作失败', status: 'error', duration: 2000 });
+      toast({ title: '操作失败', status: 'error', duration: 4000, duration: 2000 });
     } finally {
       setDeleting(false);
     }
@@ -368,7 +368,7 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
         loadEvents();
       }
     } catch (e) {
-      toast({ title: '操作失败', status: 'error', duration: 2000 });
+      toast({ title: '操作失败', status: 'error', duration: 4000, duration: 2000 });
     }
   };
 
@@ -398,7 +398,7 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
             </HStack>
             <HStack spacing={1}>
               <Box w={2} h={2} borderRadius="sm" bg="blue.500" />
-              <Text fontSize="xs" color="rgba(245,240,232,0.2)">手动</Text>
+              <Text fontSize="xs" color="rgba(245,240,232,0.6)">手动</Text>
             </HStack>
           </HStack>
         </HStack>

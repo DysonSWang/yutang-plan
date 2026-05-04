@@ -91,18 +91,18 @@
 
 ### 3.2 字号层级
 
-| 名称 | 大小 | 用途 |
-|------|------|------|
-| `xs` | 12px | 标签、角标 |
-| `sm` | 14px（默认）/ 13px | 次级说明 |
-| `md` | 16px | 正文（桌面） |
-| `base` | 14px（默认）/ 15px（平板） | 正文（移动） |
-| `lg` | 18px | 卡片标题 |
-| `xl` | 20px | Section 标题 |
-| `2xl` | 24px | 页面标题 |
-| `3xl` | 30px | 大标题 |
+| 名称 | 大小 | 行高 | 用途 |
+|------|------|------|------|
+| `xs` | 12px | 1.4 | 标签、角标 |
+| `sm` | 14px（默认）/ 13px | 1.5 | 次级说明 |
+| `md` | 16px | 1.6 | 正文（桌面） |
+| `base` | 14px（默认）/ 15px（平板） | 1.6 | 正文（移动） |
+| `lg` | 18px | 1.4 | 卡片标题 |
+| `xl` | 20px | 1.3 | Section 标题 |
+| `2xl` | 24px | 1.3 | 页面标题 |
+| `3xl` | 30px | 1.2 | 大标题 |
 
-> 移动端 base 字号 14px，桌面 15px，平板 16px。
+> 行高说明：Heading 使用 1.2–1.3（紧凑，突显气韵）；Body 使用 1.6（阅读舒适）；Mono 使用 1.5（代码等宽对齐）。
 
 ---
 
@@ -110,6 +110,7 @@
 
 **来源**: `src/components/Icons.jsx` — 项目自定义 Feather 风格 SVG 图标集
 **原则**: 全产品线统一使用此目录下的图标，**严禁使用 Emoji 作为 UI 图标**
+**描边统一**: 所有图标 `stroke-width: 1.5`，`stroke-linecap: round`，`stroke-linejoin: round`
 
 ### 4.1 图标命名规范
 
@@ -168,6 +169,20 @@
 | `glow-gold-lg` | `0 0 40px rgba(226,176,68,0.32)` | 重要 CTA Hover |
 | `glow-rose` | `0 0 20px rgba(193,127,89,0.15)` | 女性相关元素 |
 
+### 5.3 z-index 层级（Modal/Dropdown 冲突防控）
+
+| 层级 | 值 | 用途 |
+|------|-----|------|
+| Base | 0 | 默认 |
+| Dropdown | 90 | 下拉菜单 |
+| Sticky | 100 | 吸顶元素 |
+| Fixed | 200 | 固定导航 |
+| Modal | 300 | 模态弹窗 |
+| Toast | 400 | 消息通知 |
+| Tooltip | 500 | 提示文字 |
+
+> 遵循"够用就好"原则，禁止滥用 1000+ z-index。
+
 ---
 
 ## 6. 卡片设计规范
@@ -191,7 +206,7 @@
 }
 ```
 
-### 6.2 卡片悬停态（400ms ease-out）
+### 6.2 卡片悬停态（400ms `--ease-out-expo`）
 
 ```js
 {
@@ -200,6 +215,27 @@
   borderColor: 'rgba(226,176,68,0.15)',
 }
 ```
+
+### 6.3 卡片按压态 Active（150ms `--spring`）
+
+```js
+{
+  transform: 'translateY(-1px) scale(0.98)',
+  boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+  borderColor: 'rgba(226,176,68,0.2)',
+}
+```
+
+### 6.4 卡片禁用态 Disabled
+
+```js
+{
+  opacity: 0.38,
+  pointerEvents: 'none',
+  _before: { opacity: 0.5 },
+}
+```
+> `opacity: 0.38` 是 Material Design 禁用态标准值，保证在 warm.900 背景下仍有视觉层级。
 
 ---
 
@@ -212,26 +248,36 @@
 bgGradient: 'linear-gradient(135deg, gold.500, gold.600)'
 color: 'warm.950'
 
-// Hover 态（250ms ease-out）
+// Hover 态（200ms --ease-out-expo）
 bgGradient: 'linear-gradient(135deg, gold.300, gold.400)'
 boxShadow: '0 0 28px rgba(226,176,68,0.30)'
 transform: 'scale(1.02)'
 
-// Active 态（100ms ease-in）
-bg: 'gold.700'
+// Active 态（150ms --spring，回弹感）
 transform: 'scale(0.97)'
+// 配合 Haptic Feedback：iOS impact / Androidripple
+
+// Disabled 态
+opacity: 0.38
+pointerEvents: 'none'
 ```
 
 ### 7.2 Ghost Button（次级操作）
 
 ```js
+// 默认态
 color: 'rgba(245,240,232,0.6)'
 _hover: { bg: 'rgba(255,255,255,0.06)', color: 'warm.50' }
+
+// Disabled
+opacity: 0.38
+pointerEvents: 'none'
 ```
 
 ### 7.3 Outline Button（边框强调）
 
 ```js
+// 默认态
 borderColor: 'gold.500'
 color: 'gold.500'
 _hover: {
@@ -239,6 +285,12 @@ _hover: {
   borderColor: 'gold.400',
   boxShadow: '0 0 16px rgba(226,176,68,0.12)'
 }
+
+// Disabled
+opacity: 0.38
+borderColor: 'rgba(226,176,68,0.3)'
+color: 'rgba(226,176,68,0.3)'
+pointerEvents: 'none'
 ```
 
 ---
@@ -294,7 +346,20 @@ _hover: { bg: 'warm.700' }
 
 > **严格禁止**: 正文/标签文字使用低于 `rgba(245,240,232,0.55)` 的透明度。
 
-### 9.2 全局禁止模式
+### 9.2 分背景对比度速查表
+
+在不同背景色上，同一透明度产生的对比度不同。以下数值确保 ≥ 4.5:1（WCAG AA）：
+
+| 背景 | Primary ≥ 0.55 | Secondary ≥ 0.6 | Placeholder = 0.4 |
+|------|----------------|-----------------|-------------------|
+| `warm.950` (#111110) | `rgba(245,240,232,0.55)` → 5.5:1 | `rgba(245,240,232,0.6)` → 6.3:1 | `rgba(245,240,232,0.4)` → 3.5:1 |
+| `warm.900` (#1a1a18) | `rgba(245,240,232,0.60)` → 5.8:1 | `rgba(245,240,232,0.65)` → 6.6:1 | `rgba(245,240,232,0.45)` → 3.8:1 |
+| `warm.800` (#2d2d28) | `rgba(245,240,232,0.65)` → 6.0:1 | `rgba(245,240,232,0.70)` → 6.8:1 | `rgba(245,240,232,0.50)` → 4.2:1 |
+| `warm.700` (#4a3d1c) | `rgba(245,240,232,0.75)` → 6.5:1 | `rgba(245,240,232,0.80)` → 7.2:1 | `rgba(245,240,232,0.60)` → 5.0:1 |
+
+> 背景越亮，需要的文字透明度越高（或说文字色越浓）。`warm.950` 是基准，其他背景按比例上调。
+
+### 9.3 全局禁止模式
 
 ```jsx
 // ❌ 错误：正文文字对比度不足
@@ -334,12 +399,28 @@ Input placeholder color="rgba(245,240,232,0.4)"
 | warning | 3000ms |
 | error | 4000ms |
 
-### 10.3 动画原则
+### 10.3 缓动曲线 token（国民级手感基础）
 
-- 使用 `ease-out` 进入，`ease-in` 退出
-- 退出动画时长约为进入的 60–70%
-- 移动端优先，避免过度动画
-- 支持 `prefers-reduced-motion`
+| token | 曲线 | 用途 |
+|-------|------|------|
+| `--ease-out-expo` | `cubic-bezier(0.16, 1, 0.3, 1)` | 按钮/卡片进入 |
+| `--ease-in-out` | `cubic-bezier(0.65, 0, 0.35, 1)` | 状态切换 |
+| `--spring` | `cubic-bezier(0.34, 1.56, 0.64, 1)` | 弹跳反馈（Active 态）|
+
+> Web 项目使用 CSS `/ cubic-bezier()`；App 项目对应使用 iOS `timingFunction` 或 Android `DecelerateInterpolator`。
+
+### 10.4 动画原则
+
+- 进入动画用 `--ease-out-expo`，退出动画用 `ease-in` 或 Chakra 默认
+- 退出时长约为进入的 60–70%
+- 移动端优先，避免过度动画；支持 `prefers-reduced-motion`
+
+### 10.5 Active 态规范（按压反馈）
+
+Active 态是国民级 App 质感的关键——用户指尖离开屏幕瞬间的反馈：
+- 视觉：scale 快速回弹 `1.0` → `0.97` → `1.0`（150ms spring）
+- 触觉：配合 iOS Haptic Feedback（impact / selection）
+- 注意：不要用 `ease-in` 直接实现，那样显得"死"
 
 ---
 

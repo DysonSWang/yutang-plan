@@ -16,7 +16,7 @@ const SERVICE_STAGES = [
 
 // 阶段颜色配置：默认灰、激活时发光
 const STAGE_COLORS = {
-  default: { bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.1)', text: 'rgba(245,240,232,0.2)' },
+  default: { bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.1)', text: 'rgba(245,240,232,0.6)' },
   active: { bg: 'rgba(0, 212, 170, 0.15)', border: 'rgba(0, 212, 170, 0.4)', text: 'gold.400' },
   done: { bg: 'gold.500', border: 'gold.400', text: 'white' },
 };
@@ -47,7 +47,7 @@ function StageNode({ stage, isCurrent, isPast }) {
       </Box>
       <Text
         fontSize="xs"
-        color={isDone || isActive ? 'gold.400' : 'rgba(245,240,232,0.2)'}
+        color={isDone || isActive ? 'gold.400' : 'rgba(245,240,232,0.6)'}
         fontWeight={isActive ? 'bold' : 'normal'}
         transition="color 0.3s ease"
       >
@@ -209,7 +209,7 @@ function StatCard({ label, value, unit, icon, color }) {
             </Box>
           </Flex>
           <StatNumber color={colorMap[color]} fontSize="2xl" fontWeight="700">{value}</StatNumber>
-          <Text color="rgba(245,240,232,0.2)" fontSize="xs" mt={1}>{unit}</Text>
+          <Text color="rgba(245,240,232,0.6)" fontSize="xs" mt={1}>{unit}</Text>
         </Stat>
       </CardBody>
     </Card>

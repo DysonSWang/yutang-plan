@@ -53,7 +53,7 @@ export default function ChapterEditor() {
       setContent(ch.content || '');
       setStatus(ch.status || 'draft');
     } else {
-      toast({ title: '章节不存在', status: 'error' });
+      toast({ title: '章节不存在', status: 'error', duration: 4000 });
       navigate('/admin/chapters');
     }
     return true;
@@ -61,7 +61,7 @@ export default function ChapterEditor() {
 
   async function handleSave() {
     if (!title.trim()) {
-      toast({ title: '标题不能为空', status: 'warning', duration: 2000 });
+      toast({ title: '标题不能为空', status: 'warning', duration: 3000, duration: 2000 });
       return;
     }
     setSaving(true);
@@ -75,7 +75,7 @@ export default function ChapterEditor() {
         navigate('/admin/chapters');
       }
     } catch (err) {
-      toast({ title: '保存失败', description: err.message, status: 'error', duration: 3000 });
+      toast({ title: '保存失败', description: err.message, status: 'error', duration: 4000, duration: 3000 });
     } finally {
       setSaving(false);
     }
@@ -105,7 +105,7 @@ export default function ChapterEditor() {
             {isEdit ? '编辑章节' : '新建章节'}
           </Text>
           {isEdit && (
-            <Text color="rgba(245,240,232,0.2)" fontSize="sm">第 {chapterId} 章</Text>
+            <Text color="rgba(245,240,232,0.6)" fontSize="sm">第 {chapterId} 章</Text>
           )}
         </HStack>
         <HStack spacing={3}>
@@ -148,7 +148,7 @@ export default function ChapterEditor() {
                 border="none"
                 color="white"
                 fontSize="lg"
-                _placeholder={{ color: 'rgba(245,240,232,0.2)' }}
+                _placeholder={{ color: 'rgba(245,240,232,0.4)' }}
               />
             </FormControl>
 
@@ -161,7 +161,7 @@ export default function ChapterEditor() {
                 bg="warm.700"
                 border="none"
                 color="white"
-                _placeholder={{ color: 'rgba(245,240,232,0.2)' }}
+                _placeholder={{ color: 'rgba(245,240,232,0.4)' }}
               />
             </FormControl>
 
@@ -208,7 +208,7 @@ export default function ChapterEditor() {
                 flex={1}
                 minH="400px"
                 resize="none"
-                _placeholder={{ color: 'rgba(245,240,232,0.2)' }}
+                _placeholder={{ color: 'rgba(245,240,232,0.4)' }}
                 sx={{
                   '&::-webkit-scrollbar': { width: '4px' },
                   '&::-webkit-scrollbar-thumb': { background: 'rgba(255,255,255,0.1)', borderRadius: '2px' },
@@ -235,7 +235,7 @@ export default function ChapterEditor() {
           borderLeft={{ lg: '1px solid' }}
           borderColor="warm.700"
         >
-          <Text color="rgba(245,240,232,0.2)" fontSize="xs" mb={4} letterSpacing="wider">
+          <Text color="rgba(245,240,232,0.6)" fontSize="xs" mb={4} letterSpacing="wider">
             实时预览
           </Text>
 

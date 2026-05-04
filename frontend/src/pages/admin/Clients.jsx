@@ -190,7 +190,7 @@ const FieldLabel = ({ fieldKey, isEditing }) => {
     <HStack spacing={1}>
       <FormLabel color="gray.300" fontSize="sm" mb={0}>{field.label}</FormLabel>
       <Tooltip label={`${field.help}${field.example ? ' 示例：' + field.example : ''}`} fontSize="xs" placement="top" hasArrow>
-        <IconButton icon={<HelpIcon />} size="xs" variant="ghost" color="rgba(245,240,232,0.2)" aria-label="help" />
+        <IconButton icon={<HelpIcon />} size="xs" variant="ghost" color="rgba(245,240,232,0.6)" aria-label="help" />
       </Tooltip>
     </HStack>
   );
@@ -362,13 +362,13 @@ export default function AdminClients() {
         } else if (data.extractedFields) {
           setScreenshotResult(data.extractedFields);
         }
-        toast({ title: '提取完成', status: 'success', duration: 2000 });
+        toast({ title: '提取完成', status: 'success', duration: 2000, duration: 2000 });
       } else {
-        toast({ title: data.error || '提取失败', status: 'error', duration: 2000 });
+        toast({ title: data.error || '提取失败', status: 'error', duration: 4000, duration: 2000 });
       }
     } catch (e) {
       captureError(e);
-      toast({ title: '提取失败', status: 'error', duration: 2000 });
+      toast({ title: '提取失败', status: 'error', duration: 4000, duration: 2000 });
     } finally {
       setScreenshotUploading(false);
       setScreenshotExtracting(false);
@@ -383,7 +383,7 @@ export default function AdminClients() {
       }
     });
     if (Object.keys(updates).length === 0) {
-      toast({ title: '请至少选择一个字段', status: 'warning' });
+      toast({ title: '请至少选择一个字段', status: 'warning', duration: 3000 });
       return;
     }
     // 填充到表单
@@ -412,7 +412,7 @@ export default function AdminClients() {
     setScreenshotPreview('');
     setScreenshotPendingFields({});
     setScreenshotConfirmSelections({});
-    toast({ title: '已填入档案，请确认后保存', status: 'success', duration: 3000 });
+    toast({ title: '已填入档案，请确认后保存', status: 'success', duration: 2000, duration: 3000 });
   };
 
   const handleCancelScreenshotExtract = () => {
@@ -426,7 +426,7 @@ export default function AdminClients() {
 
   const handleExtractProfile = async () => {
     if (!extractText.trim()) {
-      toast({ title: '请输入自我介绍文本', status: 'warning' });
+      toast({ title: '请输入自我介绍文本', status: 'warning', duration: 3000 });
       return;
     }
     setExtracting(true);
@@ -461,11 +461,11 @@ export default function AdminClients() {
         setConfirmSelections(defaults);
         onPreviewOpen();
       } else {
-        toast({ title: '提取失败，请重试', status: 'error' });
+        toast({ title: '提取失败，请重试', status: 'error', duration: 4000 });
       }
     } catch (e) {
       captureError(e);
-      toast({ title: '提取失败，请重试', status: 'error' });
+      toast({ title: '提取失败，请重试', status: 'error', duration: 4000 });
     } finally {
       setExtracting(false);
     }
@@ -524,11 +524,11 @@ export default function AdminClients() {
         Object.keys(allUpdates).forEach(k => { selections[k] = true; });
         setChatConfirmSelections(selections);
       } else {
-        toast({ title: res.error || '提取失败', status: 'error' });
+        toast({ title: res.error || '提取失败', status: 'error', duration: 4000 });
       }
     } catch (e) {
       captureError(e);
-      toast({ title: '提取失败，请重试', status: 'error' });
+      toast({ title: '提取失败，请重试', status: 'error', duration: 4000 });
     } finally {
       setChatExtracting(false);
     }
@@ -544,7 +544,7 @@ export default function AdminClients() {
       }
     });
     if (Object.keys(updates).length === 0) {
-      toast({ title: '请至少选择一个字段', status: 'warning' });
+      toast({ title: '请至少选择一个字段', status: 'warning', duration: 3000 });
       return;
     }
     // 填充到表单
@@ -729,7 +729,7 @@ export default function AdminClients() {
         if (updated.success) setSelectedClient(updated.client);
       }
     } catch {
-      toast({ title: '保存失败', status: 'error' });
+      toast({ title: '保存失败', status: 'error', duration: 4000 });
     } finally {
       setSaving(false);
     }
@@ -751,7 +751,7 @@ export default function AdminClients() {
         refresh();
       }
     } catch {
-      toast({ title: '创建失败', status: 'error' });
+      toast({ title: '创建失败', status: 'error', duration: 4000 });
     } finally {
       setCreating(false);
     }
@@ -789,7 +789,7 @@ export default function AdminClients() {
           <Icon as={UsersIcon} color="teal.400" boxSize={{ base: 6, md: 8 }} />
           <Box>
             <Heading color="white" size={{ base: 'md', md: 'lg' }}>客户管理</Heading>
-            <Text color="rgba(245,240,232,0.2)" fontSize="sm">共 {filteredClients.length} / {clientList.length} 位客户</Text>
+            <Text color="rgba(245,240,232,0.6)" fontSize="sm">共 {filteredClients.length} / {clientList.length} 位客户</Text>
           </Box>
         </HStack>
         <Button colorScheme="gold" size="sm" onClick={() => { setFormData(getInitialFormData()); onCreateOpen(); }} transition="all 0.15s ease" _hover={{ transform: 'translateY(-1px)' }}>
@@ -859,7 +859,7 @@ export default function AdminClients() {
                       <Avatar size="sm" name={client.nickname || client.username} bg="teal.500" color="white" />
                       <Box>
                         <Text color="white">{client.nickname || client.username}</Text>
-                        <Text color="rgba(245,240,232,0.2)" fontSize="xs">{client.username}</Text>
+                        <Text color="rgba(245,240,232,0.6)" fontSize="xs">{client.username}</Text>
                       </Box>
                     </HStack>
                   </Td>
@@ -900,7 +900,7 @@ export default function AdminClients() {
                 </Tr>
               ))}
               {filteredClients.length === 0 && (
-                <Tr><Td colSpan={8} textAlign="center" color="rgba(245,240,232,0.2)" py={8}>
+                <Tr><Td colSpan={8} textAlign="center" color="rgba(245,240,232,0.6)" py={8}>
                   {clientList.length === 0 ? '暂无客户，点击上方按钮新建' : '未找到匹配的客户'}
                 </Td></Tr>
               )}
@@ -911,7 +911,7 @@ export default function AdminClients() {
         {/* 移动端卡片列表 */}
         <Box display={{ base: 'block', lg: 'none' }}>
           {filteredClients.length === 0 ? (
-            <Text color="rgba(245,240,232,0.2)" textAlign="center" py={8}>
+            <Text color="rgba(245,240,232,0.6)" textAlign="center" py={8}>
               {clientList.length === 0 ? '暂无客户，点击上方按钮新建' : '未找到匹配的客户'}
             </Text>
           ) : (
@@ -924,7 +924,7 @@ export default function AdminClients() {
                         <Avatar size="sm" name={client.nickname || client.username} bg="teal.500" color="white" />
                         <Box>
                           <Text color="white" fontSize="sm" fontWeight="bold">{client.nickname || client.username}</Text>
-                          <Text color="rgba(245,240,232,0.2)" fontSize="xs">{client.username}</Text>
+                          <Text color="rgba(245,240,232,0.6)" fontSize="xs">{client.username}</Text>
                         </Box>
                       </HStack>
                       <Button size="sm" colorScheme="gold" variant="ghost">查看</Button>
@@ -2228,7 +2228,7 @@ export default function AdminClients() {
                   <Text color="gray.300" fontSize="sm" mb={3}>
                     上传客户的微信聊天截图，AI 自动识别并提取档案信息。
                   </Text>
-                  <Text color="rgba(245,240,232,0.2)" fontSize="xs" mb={3}>
+                  <Text color="rgba(245,240,232,0.6)" fontSize="xs" mb={3}>
                     支持识别：年龄、职业、学历、性格、情感状态等
                   </Text>
                   <Input
@@ -2375,7 +2375,7 @@ export default function AdminClients() {
                         '更新战略分析维度',
                       ].map((item, i) => (
                         <HStack key={i} spacing={2}>
-                          <Box w={2} h={2} borderRadius="full" bg="rgba(245,240,232,0.2)" flexShrink={0} />
+                          <Box w={2} h={2} borderRadius="full" bg="rgba(245,240,232,0.4)" flexShrink={0} />
                           <Text color="rgba(245,240,232,0.4)" fontSize="sm">{item}</Text>
                         </HStack>
                       ))}
@@ -2439,7 +2439,7 @@ export default function AdminClients() {
                 <Box p={4} overflow="auto" maxH="400px">
                   {Object.keys(chatPendingUpdates).length === 0 ? (
                     <Box textAlign="center" py={8}>
-                      <Text color="rgba(245,240,232,0.2)">本次分析未发现需要更新的档案字段</Text>
+                      <Text color="rgba(245,240,232,0.6)">本次分析未发现需要更新的档案字段</Text>
                     </Box>
                   ) : (
                     <VStack spacing={3} align="stretch">

@@ -148,7 +148,7 @@ export default function AdminProgress() {
                         w="150px"
                         borderRadius="full"
                       />
-                      <Text fontSize="xs" color="rgba(245,240,232,0.2)" mt={1}>
+                      <Text fontSize="xs" color="rgba(245,240,232,0.6)" mt={1}>
                         {currentStage}/5 阶段
                       </Text>
                     </Td>
@@ -169,7 +169,7 @@ export default function AdminProgress() {
               })}
               {clientList.length === 0 && (
                 <Tr>
-                  <Td colSpan={5} textAlign="center" color="rgba(245,240,232,0.2)">暂无客户</Td>
+                  <Td colSpan={5} textAlign="center" color="rgba(245,240,232,0.6)">暂无客户</Td>
                 </Tr>
               )}
             </Tbody>
@@ -252,7 +252,7 @@ export default function AdminProgress() {
                           <Text color="green.400" fontSize="sm">¥{p.amountPaid}</Text>
                         )}
                         {p.completedAt && (
-                          <Text color="rgba(245,240,232,0.2)" fontSize="xs">
+                          <Text color="rgba(245,240,232,0.6)" fontSize="xs">
                             {new Date(p.completedAt).toLocaleDateString()}
                           </Text>
                         )}

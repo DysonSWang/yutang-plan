@@ -145,7 +145,7 @@ export default function ClientHome() {
         >
           欢迎回来
         </Heading>
-        <Text color="rgba(245,240,232,0.3)" fontSize="sm" mb={8}>
+        <Text color="rgba(245,240,232,0.6)" fontSize="sm" mb={8}>
           {stats.serviceStage !== '未开始'
             ? `服务阶段 · ${stats.serviceStage}`
             : hasAnyData

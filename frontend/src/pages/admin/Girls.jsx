@@ -355,14 +355,14 @@ export default function AdminGirls() {
       }
       loadGirls();
       onClose();
-      toast({ title: '保存成功', status: 'success', duration: 2000 });
+      toast({ title: '保存成功', status: 'success', duration: 2000, duration: 2000 });
     } catch (e) {
       captureError(e);
       const msg = e?.response?.data?.error || '';
       if (msg.includes('额度') || msg.includes('配额')) {
-        toast({ title: msg, status: 'warning', duration: 4000 });
+        toast({ title: msg, status: 'warning', duration: 3000, duration: 4000 });
       } else {
-        toast({ title: '保存失败', status: 'error', duration: 2000 });
+        toast({ title: '保存失败', status: 'error', duration: 4000, duration: 2000 });
       }
     }
   };
@@ -386,13 +386,13 @@ export default function AdminGirls() {
       const res = await girls.evaluateStage(girl.id);
       if (res.success) {
         setStageEvalResult(res.evaluation);
-        toast({ title: '评估完成', status: 'info', duration: 2000 });
+        toast({ title: '评估完成', status: 'info', duration: 2000, duration: 2000 });
       } else {
-        toast({ title: res.error || '评估失败', status: 'error', duration: 3000 });
+        toast({ title: res.error || '评估失败', status: 'error', duration: 4000, duration: 3000 });
       }
     } catch (e) {
       captureError(e);
-      toast({ title: '评估失败', status: 'error', duration: 3000 });
+      toast({ title: '评估失败', status: 'error', duration: 4000, duration: 3000 });
     }
     setStageEvaluating(false);
   };
@@ -412,13 +412,13 @@ export default function AdminGirls() {
         setGirlsList(prev => prev.map(g => g.id === girl.id ? updated : g));
         setStageEvalResult(null);
         setStageReason('');
-        toast({ title: '阶段已更新', status: 'success', duration: 2000 });
+        toast({ title: '阶段已更新', status: 'success', duration: 2000, duration: 2000 });
       } else {
-        toast({ title: res.error || '设置失败', status: 'error', duration: 3000 });
+        toast({ title: res.error || '设置失败', status: 'error', duration: 4000, duration: 3000 });
       }
     } catch (e) {
       captureError(e);
-      toast({ title: '设置失败', status: 'error', duration: 3000 });
+      toast({ title: '设置失败', status: 'error', duration: 4000, duration: 3000 });
     }
   };
 
@@ -431,13 +431,13 @@ export default function AdminGirls() {
       const res = await girls.analyzeReversal(selectedGirl.id);
       if (res.success) {
         setReversalAnalysis(res.analysis);
-        toast({ title: '反撇分析完成', status: 'info', duration: 2000 });
+        toast({ title: '反撇分析完成', status: 'info', duration: 2000, duration: 2000 });
       } else {
-        toast({ title: res.error || '分析失败', status: 'error', duration: 3000 });
+        toast({ title: res.error || '分析失败', status: 'error', duration: 4000, duration: 3000 });
       }
     } catch (e) {
       captureError(e);
-      toast({ title: '分析失败', status: 'error', duration: 3000 });
+      toast({ title: '分析失败', status: 'error', duration: 4000, duration: 3000 });
     }
     setReversalAnalyzing(false);
   };
@@ -459,7 +459,7 @@ export default function AdminGirls() {
       fd.append('notes', screenshotNotes);
       const res = await chatScreenshots.upload(fd);
       if (res.success) {
-        toast({ title: '上传成功', status: 'success', duration: 2000 });
+        toast({ title: '上传成功', status: 'success', duration: 2000, duration: 2000 });
         await loadScreenshots(selectedGirl.id);
         setSelectedFile(null);
         setScreenshotNotes('');
@@ -474,11 +474,11 @@ export default function AdminGirls() {
           onConfirmOpen();
         }
       } else {
-        toast({ title: res.error || '上传失败', status: 'error', duration: 2000 });
+        toast({ title: res.error || '上传失败', status: 'error', duration: 4000, duration: 2000 });
       }
     } catch (e) {
       captureError(e);
-      toast({ title: '上传失败', status: 'error', duration: 2000 });
+      toast({ title: '上传失败', status: 'error', duration: 4000, duration: 2000 });
     } finally {
       setUploading(false);
     }
@@ -493,21 +493,21 @@ export default function AdminGirls() {
       }
     }
     if (Object.keys(selected).length === 0) {
-      toast({ title: '未选择任何字段', status: 'warning', duration: 2000 });
+      toast({ title: '未选择任何字段', status: 'warning', duration: 3000, duration: 2000 });
       onConfirmClose();
       return;
     }
     try {
       const res = await chatScreenshots.confirmFields(selectedGirl.id, selected);
       if (res.success) {
-        toast({ title: '信息已更新', status: 'success', duration: 2000 });
+        toast({ title: '信息已更新', status: 'success', duration: 2000, duration: 2000 });
         loadGirls();
       } else {
-        toast({ title: res.error || '确认失败', status: 'error', duration: 2000 });
+        toast({ title: res.error || '确认失败', status: 'error', duration: 4000, duration: 2000 });
       }
     } catch (e) {
       captureError(e);
-      toast({ title: '确认失败', status: 'error', duration: 2000 });
+      toast({ title: '确认失败', status: 'error', duration: 4000, duration: 2000 });
     } finally {
       onConfirmClose();
       setPendingFields({});
@@ -520,12 +520,12 @@ export default function AdminGirls() {
     try {
       const res = await chatScreenshots.aiNotes(screenshotId);
       if (res.success) {
-        toast({ title: 'AI备注生成成功', status: 'success', duration: 2000 });
+        toast({ title: 'AI备注生成成功', status: 'success', duration: 2000, duration: 2000 });
         await loadScreenshots(selectedGirl.id);
       }
     } catch (e) {
       captureError(e);
-      toast({ title: 'AI生成失败', status: 'error', duration: 2000 });
+      toast({ title: 'AI生成失败', status: 'error', duration: 4000, duration: 2000 });
     } finally {
       setAiGenerating(false);
     }
@@ -535,7 +535,7 @@ export default function AdminGirls() {
     try {
       await chatScreenshots.updateNotes(screenshotId, newNotes);
       await loadScreenshots(selectedGirl.id);
-      toast({ title: '备注已更新', status: 'success', duration: 1500 });
+      toast({ title: '备注已更新', status: 'success', duration: 2000, duration: 1500 });
     } catch (e) {
       captureError(e);
     }
@@ -546,7 +546,7 @@ export default function AdminGirls() {
     try {
       await chatScreenshots.delete(screenshotId);
       await loadScreenshots(selectedGirl.id);
-      toast({ title: '已删除', status: 'success', duration: 1500 });
+      toast({ title: '已删除', status: 'success', duration: 2000, duration: 1500 });
     } catch (e) {
       captureError(e);
     }
@@ -575,7 +575,7 @@ export default function AdminGirls() {
       const data = await res.json();
 
       if (data.success) {
-        toast({ title: '上传成功', status: 'success', duration: 2000 });
+        toast({ title: '上传成功', status: 'success', duration: 2000, duration: 2000 });
         // 保存到 girl.momentPhotos
         const existing = selectedGirl.momentPhotos ? JSON.parse(selectedGirl.momentPhotos) : [];
         const newItem = { id: data.screenshot.id, imageUrl: data.screenshot.imageUrl, notes: momentNotes, createdAt: new Date().toISOString() };
@@ -618,11 +618,11 @@ export default function AdminGirls() {
           onConfirmOpen();
         }
       } else {
-        toast({ title: data.error || '上传失败', status: 'error', duration: 2000 });
+        toast({ title: data.error || '上传失败', status: 'error', duration: 4000, duration: 2000 });
       }
     } catch (e) {
       captureError(e);
-      toast({ title: '上传失败', status: 'error', duration: 2000 });
+      toast({ title: '上传失败', status: 'error', duration: 4000, duration: 2000 });
     } finally {
       setUploadingMoment(false);
     }
@@ -642,7 +642,7 @@ export default function AdminGirls() {
       const updated = (existing || []).filter(m => m.id !== momId);
       await girls.update(selectedGirl.id, { momentPhotos: JSON.stringify(updated) });
       setMomentScreenshots(updated);
-      toast({ title: '已删除', status: 'success', duration: 1500 });
+      toast({ title: '已删除', status: 'success', duration: 2000, duration: 1500 });
     } catch { /* ignore delete error */ }
   };
 
@@ -654,7 +654,7 @@ export default function AdminGirls() {
         displayValue = Array.isArray(arr) ? arr.join('、') : value;
       } catch { displayValue = value; }
     }
-    if (!displayValue) return <Text color="rgba(245,240,232,0.2)">-</Text>;
+    if (!displayValue) return <Text color="rgba(245,240,232,0.6)">-</Text>;
     return <Text color="white">{displayValue}</Text>;
   };
 
@@ -860,7 +860,7 @@ export default function AdminGirls() {
                   </Tr>
                 ))}
                 {filteredGirls.length === 0 && (
-                  <Tr><Td colSpan={8} textAlign="center" color="rgba(245,240,232,0.2)">
+                  <Tr><Td colSpan={8} textAlign="center" color="rgba(245,240,232,0.6)">
                     {girlsList.length === 0 ? '暂无女生资源' : '未找到匹配的女生'}
                   </Td></Tr>
                 )}
@@ -871,7 +871,7 @@ export default function AdminGirls() {
           {/* 移动端卡片列表 */}
           <Box display={{ base: 'block', lg: 'none' }}>
             {filteredGirls.length === 0 ? (
-              <Text color="rgba(245,240,232,0.2)" textAlign="center" py={8}>
+              <Text color="rgba(245,240,232,0.6)" textAlign="center" py={8}>
                 {girlsList.length === 0 ? '暂无女生资源' : '未找到匹配的女生'}
               </Text>
             ) : (
@@ -1151,7 +1151,7 @@ export default function AdminGirls() {
                           placeholder="清淡,火锅,日料"
                           bg="warm.700" rows={2}
                         />
-                        <Text color="rgba(245,240,232,0.2)" fontSize="xs" mt={1}>可选：{DIET_PREFERENCES.join('、')}</Text>
+                        <Text color="rgba(245,240,232,0.6)" fontSize="xs" mt={1}>可选：{DIET_PREFERENCES.join('、')}</Text>
                       </FormControl>
                       <FormControl>
                         <FormLabel color="rgba(245,240,232,0.4)">饮食禁忌/过敏（多选，用逗号分隔）</FormLabel>
@@ -1161,7 +1161,7 @@ export default function AdminGirls() {
                           placeholder="不吃辣,海鲜过敏"
                           bg="warm.700" rows={2}
                         />
-                        <Text color="rgba(245,240,232,0.2)" fontSize="xs" mt={1}>可选：{DIET_RESTRICTIONS.join('、')}</Text>
+                        <Text color="rgba(245,240,232,0.6)" fontSize="xs" mt={1}>可选：{DIET_RESTRICTIONS.join('、')}</Text>
                       </FormControl>
                       <FormControl>
                         <FormLabel color="rgba(245,240,232,0.4)">兴趣详情</FormLabel>
@@ -1461,7 +1461,7 @@ export default function AdminGirls() {
                         ))}
                       </SimpleGrid>
                       {formData.relationshipStage && (
-                        <Text color="rgba(245,240,232,0.2)" fontSize="xs">
+                        <Text color="rgba(245,240,232,0.6)" fontSize="xs">
                           当前：{RELATIONSHIP_STAGES.find(s => s.value === formData.relationshipStage)?.label || formData.relationshipStage}
                         </Text>
                       )}
@@ -1607,13 +1607,13 @@ export default function AdminGirls() {
                       <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">工作地点</Text>{renderField('workplace', selectedGirl.workplace)}</Box>
                       <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">平台</Text>{renderField('sourcePlatform', selectedGirl.sourcePlatform)}</Box>
                       <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">匹配分</Text>{renderField('matchScore', selectedGirl.matchScore)}</Box>
-                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">匹配分依据</Text><Text color={selectedGirl.matchScoreBasis ? 'white' : 'rgba(245,240,232,0.2)'}>{selectedGirl.matchScoreBasis || '-'}</Text></Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">匹配分依据</Text><Text color={selectedGirl.matchScoreBasis ? 'white' : 'rgba(245,240,232,0.6)'}>{selectedGirl.matchScoreBasis || '-'}</Text></Box>
                     </SimpleGrid>
                     <Box mt={4}>
                       <Text color="rgba(245,240,232,0.4)" fontSize="sm">主页链接</Text>
                       {selectedGirl.homepageUrl ? (
                         <Text as="a" href={selectedGirl.homepageUrl} color="gold.400" fontSize="sm" wordBreak="break-all" target="_blank">{selectedGirl.homepageUrl}</Text>
-                      ) : <Text color="rgba(245,240,232,0.2)">-</Text>}
+                      ) : <Text color="rgba(245,240,232,0.6)">-</Text>}
                     </Box>
                     <Divider my={4} borderColor="warm.600" />
                     <Box>
@@ -1665,7 +1665,7 @@ export default function AdminGirls() {
                       <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">社交活跃度</Text>{renderField('socialActivity', selectedGirl.socialActivity)}</Box>
                       <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">消费习惯</Text>{renderField('financialHabits', selectedGirl.financialHabits)}</Box>
                       <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">饮食偏好</Text>{renderField('dietPreferences', selectedGirl.dietPreferences)}</Box>
-                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">饮食禁忌</Text>{renderField('dietRestrictions', selectedGirl.dietRestrictions) || <Text color="rgba(245,240,232,0.2)" fontSize="sm">无</Text>}</Box>
+                      <Box><Text color="rgba(245,240,232,0.4)" fontSize="sm">饮食禁忌</Text>{renderField('dietRestrictions', selectedGirl.dietRestrictions) || <Text color="rgba(245,240,232,0.6)" fontSize="sm">无</Text>}</Box>
                     </SimpleGrid>
                     <Text color="white" fontWeight="bold" mb={2}>情史</Text>
                     <SimpleGrid columns={1} spacing={2}>
@@ -1712,7 +1712,7 @@ export default function AdminGirls() {
                       ].map(item => (
                         <Box key={item.key}>
                           <Text color="rgba(245,240,232,0.4)" fontSize="sm">{item.label}</Text>
-                          <Text color={selectedGirl[item.key] ? 'gold.400' : 'rgba(245,240,232,0.2)'}>
+                          <Text color={selectedGirl[item.key] ? 'gold.400' : 'rgba(245,240,232,0.6)'}>
                             {selectedGirl[item.key] ? selectedGirl[item.key] + '/10' : '-'}
                           </Text>
                         </Box>
@@ -1764,12 +1764,12 @@ export default function AdminGirls() {
                                 {s.type === 'positive' ? '[+]' : s.type === 'negative' ? '[-]' : '[*]'}
                               </Badge>
                               <Text color="white" fontSize="sm">{typeof s.event === 'string' ? s.event : ''}</Text>
-                              <Text color="rgba(245,240,232,0.2)" fontSize="xs" ml={2}>{s.date}</Text>
+                              <Text color="rgba(245,240,232,0.6)" fontSize="xs" ml={2}>{s.date}</Text>
                             </Flex>
                           ));
                         })()}
                       </Box>
-                    ) : <Text color="rgba(245,240,232,0.2)" mb={4}>暂无信号记录</Text>}
+                    ) : <Text color="rgba(245,240,232,0.6)" mb={4}>暂无信号记录</Text>}
                     <Text color="white" fontWeight="bold" mb={2}>待推进事项</Text>
                     {selectedGirl.pendingActions ? (
                       <Box bg="warm.700" p={3} borderRadius="md" mb={4}>
@@ -1780,7 +1780,7 @@ export default function AdminGirls() {
                           ));
                         })()}
                       </Box>
-                    ) : <Text color="rgba(245,240,232,0.2)" mb={4}>暂无待办</Text>}
+                    ) : <Text color="rgba(245,240,232,0.6)" mb={4}>暂无待办</Text>}
                     <Text color="white" fontWeight="bold" mb={2}>观察记录</Text>
                     {selectedGirl.observations ? (
                       <Box bg="warm.700" p={3} borderRadius="md" mb={4}>
@@ -1791,7 +1791,7 @@ export default function AdminGirls() {
                           ));
                         })()}
                       </Box>
-                    ) : <Text color="rgba(245,240,232,0.2)" mb={4}>暂无观察记录</Text>}
+                    ) : <Text color="rgba(245,240,232,0.6)" mb={4}>暂无观察记录</Text>}
                     <Text color="white" fontWeight="bold" mb={2}>对话摘要</Text>
                     <Box bg="warm.700" p={3} borderRadius="md">
                       <Text color="white" whiteSpace="pre-wrap" fontSize="sm">{selectedGirl.conversationSummary || '暂无摘要'}</Text>
@@ -1837,7 +1837,7 @@ export default function AdminGirls() {
                         <Text color="rgba(245,240,232,0.4)" fontSize="sm" mb={3}>已保存 ({momentScreenshots.length})</Text>
                         {momentScreenshots.length === 0 ? (
                           <Flex h="150px" align="center" justify="center" bg="warm.700" borderRadius="md">
-                            <Text color="rgba(245,240,232,0.2)">暂无朋友圈截图</Text>
+                            <Text color="rgba(245,240,232,0.6)">暂无朋友圈截图</Text>
                           </Flex>
                         ) : (
                           <SimpleGrid columns={{ base: 1, sm: 2, md: 4 }} spacing={4}>
@@ -1884,7 +1884,7 @@ export default function AdminGirls() {
                             {getRelationshipStageLabel(selectedGirl.relationshipStage)}
                           </Badge>
                           {selectedGirl.relationshipStageUpdatedAt && (
-                            <Text color="rgba(245,240,232,0.2)" fontSize="xs">
+                            <Text color="rgba(245,240,232,0.6)" fontSize="xs">
                               更新于 {new Date(selectedGirl.relationshipStageUpdatedAt).toLocaleString()}
                             </Text>
                           )}
@@ -1946,7 +1946,7 @@ export default function AdminGirls() {
                     <Text color="white" fontWeight="bold" mb={3}>变更历史</Text>
                     {stageHistory.length === 0 ? (
                       <Flex h="100px" align="center" justify="center" bg="warm.700" borderRadius="md">
-                        <Text color="rgba(245,240,232,0.2)" fontSize="sm">暂无历史记录</Text>
+                        <Text color="rgba(245,240,232,0.6)" fontSize="sm">暂无历史记录</Text>
                       </Flex>
                     ) : (
                       <VStack spacing={2} align="stretch">
@@ -1955,12 +1955,12 @@ export default function AdminGirls() {
                             <Flex align="center" justify="space-between" mb={1}>
                               <HStack>
                                 <Badge colorScheme="gray" fontSize="xs">{h.fromStage ? getRelationshipStageLabel(h.fromStage) : '新建'}</Badge>
-                                <Icon as={FiArrowRight} color="rgba(245,240,232,0.2)" boxSize={3} />
+                                <Icon as={FiArrowRight} color="rgba(245,240,232,0.6)" boxSize={3} />
                                 <Badge colorScheme={getRelationshipStageColor(h.toStage)} fontSize="xs">
                                   {getRelationshipStageLabel(h.toStage)}
                                 </Badge>
                               </HStack>
-                              <Text color="rgba(245,240,232,0.2)" fontSize="xs">
+                              <Text color="rgba(245,240,232,0.6)" fontSize="xs">
                                 {new Date(h.createdAt).toLocaleString()}
                               </Text>
                             </Flex>
@@ -2070,7 +2070,7 @@ export default function AdminGirls() {
                       {!reversalRisk && !reversalAnalyzing && !reversalAnalysis && (
                         <Flex align="center" justify="center" py={8} direction="column" gap={3}>
                           <Icon as={FiAlertTriangle} color="warm.600" boxSize={8} />
-                          <Text color="rgba(245,240,232,0.2)" fontSize="sm">点击下方按钮启动 AI 反撇分析</Text>
+                          <Text color="rgba(245,240,232,0.6)" fontSize="sm">点击下方按钮启动 AI 反撇分析</Text>
                           <Button
                             size="sm"
                             colorScheme="purple"
@@ -2122,7 +2122,7 @@ export default function AdminGirls() {
                 </Flex>
                 {screenshots.length === 0 ? (
                   <Flex h="200px" align="center" justify="center" bg="warm.700" borderRadius="md">
-                    <Text color="rgba(245,240,232,0.2)">暂无截图记录</Text>
+                    <Text color="rgba(245,240,232,0.6)">暂无截图记录</Text>
                   </Flex>
                 ) : (
                   <SimpleGrid columns={{ base: 2, sm: 3, md: 4 }} spacing={4}>
@@ -2179,7 +2179,7 @@ export default function AdminGirls() {
                         <Box flex={1}>
                           <Flex gap={2} mb={1}>
                             {ss.platform && <Badge colorScheme="blue" fontSize="xs">{ss.platform}</Badge>}
-                            <Text color="rgba(245,240,232,0.2)" fontSize="xs">
+                            <Text color="rgba(245,240,232,0.6)" fontSize="xs">
                               {new Date(ss.createdAt).toLocaleString()}
                             </Text>
                           </Flex>

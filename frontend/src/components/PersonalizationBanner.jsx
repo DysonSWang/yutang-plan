@@ -114,7 +114,7 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
         setBatchProgress({ completed: 0, failed: 0, total: 21 });
       }
     } catch (err) {
-      toast({ title: '生成失败', description: err.message, status: 'error' });
+      toast({ title: '生成失败', description: err.message, status: 'error', duration: 4000 });
     }
   }
 
@@ -125,10 +125,10 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
         setBatchId(res.batchId);
         setStatus('generating');
         setBatchProgress({ completed: 0, failed: 0, total: 21 });
-        toast({ title: '正在重新生成...', status: 'info', duration: 2000 });
+        toast({ title: '正在重新生成...', status: 'info', duration: 2000, duration: 2000 });
       }
     } catch (err) {
-      toast({ title: '重新生成失败', description: err.message, status: 'error' });
+      toast({ title: '重新生成失败', description: err.message, status: 'error', duration: 4000 });
     }
   }
 
@@ -220,7 +220,7 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
             </Text>
           </Box>
 
-          <Text color="rgba(245,240,232,0.3)" fontSize="xs">
+          <Text color="rgba(245,240,232,0.6)" fontSize="xs">
             Mo哥可在管理后台 &gt; 学习版块管理 &gt; 个性化学习管理 中为你生成。
           </Text>
         </VStack>
@@ -264,7 +264,7 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
               </Text>
             </>
           )}
-          <Text color="rgba(245,240,232,0.2)" fontSize="xs">
+          <Text color="rgba(245,240,232,0.6)" fontSize="xs">
             可以先读标准版。完成后通知你。
           </Text>
         </VStack>
@@ -299,7 +299,7 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
               </HStack>
             )}
           </HStack>
-          <Text color="rgba(245,240,232,0.2)" fontSize="xs">
+          <Text color="rgba(245,240,232,0.6)" fontSize="xs">
             你的专属版本已是最新。
           </Text>
         </VStack>

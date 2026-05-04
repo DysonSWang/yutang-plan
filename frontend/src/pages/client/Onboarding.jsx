@@ -65,9 +65,9 @@ export default function Onboarding() {
 
       setStep(3);
       setDone(true);
-      toast({ title: '入职完成！开始你的提升之旅', status: 'success', duration: 3000 });
+      toast({ title: '入职完成！开始你的提升之旅', status: 'success', duration: 2000, duration: 3000 });
     } catch (e) {
-      toast({ title: '保存失败: ' + (e.message || '未知错误'), status: 'error', duration: 4000 });
+      toast({ title: '保存失败: ' + (e.message || '未知错误'), status: 'error', duration: 4000, duration: 4000 });
     } finally {
       setSubmitting(false);
     }

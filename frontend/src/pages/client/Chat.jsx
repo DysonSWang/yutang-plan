@@ -465,11 +465,11 @@ export default function ClientChat() {
           setSession(createRes.session);
           await sendMessageAfterSession(createRes.session.id, input);
         } else {
-          toast({ title: '创建会话失败，请稍后重试', status: 'error', duration: 3000 });
+          toast({ title: '创建会话失败，请稍后重试', status: 'error', duration: 4000, duration: 3000 });
         }
       } catch (e) {
         captureError(e);
-        toast({ title: '发送失败', status: 'error', duration: 2000 });
+        toast({ title: '发送失败', status: 'error', duration: 4000, duration: 2000 });
       }
       return;
     }
@@ -491,7 +491,7 @@ export default function ClientChat() {
       }
     } catch (e) {
       captureError(e);
-      toast({ title: '发送失败', status: 'error', duration: 2000 });
+      toast({ title: '发送失败', status: 'error', duration: 4000, duration: 2000 });
     } finally {
       setSending(false);
     }

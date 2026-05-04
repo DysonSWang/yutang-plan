@@ -336,10 +336,10 @@ export default function ClientProfile() {
           }
         } catch {}
       } else {
-        toast({ title: '保存失败', status: 'error' });
+        toast({ title: '保存失败', status: 'error', duration: 4000 });
       }
     } catch (e) {
-      toast({ title: '保存失败', status: 'error' });
+      toast({ title: '保存失败', status: 'error', duration: 4000 });
     } finally {
       setSaving(false);
     }
@@ -370,7 +370,7 @@ export default function ClientProfile() {
   // AI 文本提取
   const handleAiTextExtract = async () => {
     if (!aiText.trim() || aiText.trim().length < 20) {
-      toast({ title: '请至少输入20字的自我介绍', status: 'warning' });
+      toast({ title: '请至少输入20字的自我介绍', status: 'warning', duration: 3000 });
       return;
     }
     setAiExtracting(true);
@@ -453,9 +453,9 @@ export default function ClientProfile() {
     } catch (e) {
       captureError(e);
       if (e.name === 'AbortError') {
-        toast({ title: 'AI 分析超时', description: '请稍后重试', status: 'error' });
+        toast({ title: 'AI 分析超时', description: '请稍后重试', status: 'error', duration: 4000 });
       } else {
-        toast({ title: 'AI 分析失败', description: e.message || '请重试', status: 'error' });
+        toast({ title: 'AI 分析失败', description: e.message || '请重试', status: 'error', duration: 4000 });
       }
     } finally {
       clearTimeout(timeoutId);
@@ -470,7 +470,7 @@ export default function ClientProfile() {
   // AI 截图提取
   const handleAiScreenshotExtract = async () => {
     if (!aiScreenshotFile) {
-      toast({ title: '请先选择截图文件', status: 'warning' });
+      toast({ title: '请先选择截图文件', status: 'warning', duration: 3000 });
       return;
     }
     setAiExtracting(true);
@@ -486,11 +486,11 @@ export default function ClientProfile() {
         const count = Object.keys(res.pendingFields).filter(k => res.pendingFields[k]).length;
         toast({ title: 'AI 分析完成', description: `识别到 ${count} 个字段`, status: 'success' });
       } else {
-        toast({ title: res.message || '未识别到信息', status: 'warning' });
+        toast({ title: res.message || '未识别到信息', status: 'warning', duration: 3000 });
       }
     } catch (e) {
       captureError(e);
-      toast({ title: '截图分析失败', description: e.message || '请重试', status: 'error' });
+      toast({ title: '截图分析失败', description: e.message || '请重试', status: 'error', duration: 4000 });
     } finally {
       setAiExtracting(false);
     }
@@ -506,7 +506,7 @@ export default function ClientProfile() {
       }
     });
     if (Object.keys(updates).length === 0) {
-      toast({ title: '请至少选择一个字段', status: 'warning' });
+      toast({ title: '请至少选择一个字段', status: 'warning', duration: 3000 });
       return;
     }
     setEditData(prev => ({ ...prev, ...updates }));
@@ -532,7 +532,7 @@ export default function ClientProfile() {
         toast({ title: '已是最新版本', description: `V${VERSION}`, status: 'success', duration: 3000 });
       }
     } catch (e) {
-      toast({ title: '检查更新失败', status: 'error', duration: 3000 });
+      toast({ title: '检查更新失败', status: 'error', duration: 4000, duration: 3000 });
     } finally {
       setCheckingUpdate(false);
     }
@@ -540,15 +540,15 @@ export default function ClientProfile() {
 
   const handleChangePassword = async () => {
     if (!oldPassword || !newPassword || !confirmPassword) {
-      toast({ title: '请填写所有密码字段', status: 'warning' });
+      toast({ title: '请填写所有密码字段', status: 'warning', duration: 3000 });
       return;
     }
     if (newPassword !== confirmPassword) {
-      toast({ title: '两次输入的新密码不一致', status: 'warning' });
+      toast({ title: '两次输入的新密码不一致', status: 'warning', duration: 3000 });
       return;
     }
     if (newPassword.length < 8) {
-      toast({ title: '新密码至少8位', status: 'warning' });
+      toast({ title: '新密码至少8位', status: 'warning', duration: 3000 });
       return;
     }
     setChangingPwd(true);
@@ -561,10 +561,10 @@ export default function ClientProfile() {
         setConfirmPassword('');
         onPwdClose();
       } else {
-        toast({ title: res.error || '修改失败', status: 'error' });
+        toast({ title: res.error || '修改失败', status: 'error', duration: 4000 });
       }
     } catch (e) {
-      toast({ title: e.message || '修改失败', status: 'error' });
+      toast({ title: e.message || '修改失败', status: 'error', duration: 4000 });
     } finally {
       setChangingPwd(false);
     }
@@ -580,10 +580,10 @@ export default function ClientProfile() {
         await refresh();
         setRenewalType('monthly');
       } else {
-        toast({ title: res.error?.message || '续费失败', status: 'error' });
+        toast({ title: res.error?.message || '续费失败', status: 'error', duration: 4000 });
       }
     } catch (e) {
-      toast({ title: e.message || '续费失败', status: 'error' });
+      toast({ title: e.message || '续费失败', status: 'error', duration: 4000 });
     } finally {
       setRenewing(false);
     }
@@ -593,7 +593,7 @@ export default function ClientProfile() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      toast({ title: '请选择图片文件', status: 'warning' });
+      toast({ title: '请选择图片文件', status: 'warning', duration: 3000 });
       return;
     }
     setAvatarFile(file);
@@ -604,14 +604,14 @@ export default function ClientProfile() {
 
   const handleSaveAvatar = async () => {
     if (!avatarFile) {
-      toast({ title: '请先选择图片', status: 'warning' });
+      toast({ title: '请先选择图片', status: 'warning', duration: 3000 });
       return;
     }
     setSavingAvatar(true);
     try {
       const uploadRes = await upload.image(avatarFile);
       if (!uploadRes.url) {
-        toast({ title: '上传失败', status: 'error', duration: 2000 });
+        toast({ title: '上传失败', status: 'error', duration: 4000, duration: 2000 });
         return;
       }
       const res = await clients.update(profile.id, { avatar: uploadRes.url });
@@ -623,7 +623,7 @@ export default function ClientProfile() {
         setAvatarPreview('');
       }
     } catch (e) {
-      toast({ title: '更新失败', status: 'error', duration: 2000 });
+      toast({ title: '更新失败', status: 'error', duration: 4000, duration: 2000 });
     } finally {
       setSavingAvatar(false);
     }
@@ -978,7 +978,7 @@ export default function ClientProfile() {
               variant="ghost"
               w="full"
               mt={2}
-              color="rgba(245,240,232,0.3)"
+              color="rgba(245,240,232,0.6)"
               _hover={{ color: 'white', bg: 'rgba(255,255,255,0.06)' }}
               onClick={logout}
             >
@@ -1039,7 +1039,7 @@ export default function ClientProfile() {
                     {/* 或 */}
                     <HStack>
                       <Box flex={1} h="1px" bg="warm.600" />
-                      <Text color="rgba(245,240,232,0.3)" fontSize="xs">或</Text>
+                      <Text color="rgba(245,240,232,0.6)" fontSize="xs">或</Text>
                       <Box flex={1} h="1px" bg="warm.600" />
                     </HStack>
 

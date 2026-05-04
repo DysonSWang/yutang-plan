@@ -767,7 +767,7 @@ export default function AdminChat() {
               </Box>
             ))}
             {sessions.length === 0 && (
-              <Text color="rgba(245,240,232,0.2)" fontSize="sm">暂无会话</Text>
+              <Text color="rgba(245,240,232,0.6)" fontSize="sm">暂无会话</Text>
             )}
           </VStack>
         </Box>
@@ -790,7 +790,7 @@ export default function AdminChat() {
                     <Text color="white" fontWeight="bold" fontSize="sm">
                       {currentSession.client?.nickname || '客户'}
                     </Text>
-                    <Text color="rgba(245,240,232,0.2)" fontSize="xs">
+                    <Text color="rgba(245,240,232,0.6)" fontSize="xs">
                       服务阶段: {currentSession.client?.serviceStage || '-'}
                     </Text>
                   </Box>
@@ -850,7 +850,7 @@ export default function AdminChat() {
                         pb={2}
                       >
                         {showTime && (
-                          <Text color="rgba(245,240,232,0.2)" fontSize="xs" textAlign="center" w="100%" my={2}>
+                          <Text color="rgba(245,240,232,0.6)" fontSize="xs" textAlign="center" w="100%" my={2}>
                             {new Date(msg.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })}
                           </Text>
                         )}
@@ -1005,7 +1005,7 @@ export default function AdminChat() {
                         icon={<Text>🔥{burnMode ? `${burnSeconds}s` : ''}</Text>}
                         variant="ghost"
                         size="sm"
-                        color={burnMode ? 'orange.400' : 'rgba(245,240,232,0.2)'}
+                        color={burnMode ? 'orange.400' : 'rgba(245,240,232,0.4)'}
                         aria-label="阅后即焚模式"
                         isDisabled={sending || !!previewFile || flashMode}
                         title={burnMode ? `阅后即焚：${burnSeconds}s后自动销毁` : '阅后即焚：关'}
@@ -1028,7 +1028,7 @@ export default function AdminChat() {
                     <IconButton
                       icon={<Text>⚡{flashMode ? '闪图' : ''}</Text>}
                       variant="ghost"
-                      color={flashMode ? 'yellow.400' : 'rgba(245,240,232,0.2)'}
+                      color={flashMode ? 'yellow.400' : 'rgba(245,240,232,0.4)'}
                       aria-label="闪图模式"
                       isDisabled={sending || !!previewFile || burnMode}
                       title={flashMode ? '闪图：查阅后5秒自动销毁' : '闪图模式'}
@@ -1064,7 +1064,7 @@ export default function AdminChat() {
             </>
           ) : (
             <Flex flex={1} align="center" justify="center">
-              <Text color="rgba(245,240,232,0.2)">选择客户开始聊天</Text>
+              <Text color="rgba(245,240,232,0.6)">选择客户开始聊天</Text>
             </Flex>
           )}
         </Box>
@@ -1123,7 +1123,7 @@ export default function AdminChat() {
                   const phone = (c.phone || '').toLowerCase();
                   return name.includes(keyword) || phone.includes(keyword);
                 }).length === 0 && (
-                  <Text color="rgba(245,240,232,0.2)" textAlign="center" py={4}>
+                  <Text color="rgba(245,240,232,0.6)" textAlign="center" py={4}>
                     未找到匹配的客户
                   </Text>
                 )}

@@ -413,7 +413,7 @@ export default function GirlDetail() {
         onEditClose();
       }
     } catch (e) {
-      toast({ title: e.response?.data?.error || '保存失败', status: 'error' });
+      toast({ title: e.response?.data?.error || '保存失败', status: 'error', duration: 4000 });
     } finally { setSaving(false); }
   };
 
@@ -421,7 +421,7 @@ export default function GirlDetail() {
   const handleQuickImageSelect = (e) => {
     const files = Array.from(e.target.files || []);
     if (quickImages.length + files.length > 5) {
-      toast({ title: '最多上传5张图片', status: 'warning' }); return;
+      toast({ title: '最多上传5张图片', status: 'warning', duration: 3000 }); return;
     }
     setQuickImages(prev => [...prev, ...files]);
     setQuickImagePreviews(prev => [...prev, ...files.map(f => URL.createObjectURL(f))]);
@@ -434,13 +434,13 @@ export default function GirlDetail() {
     for (const item of items) {
       if (!item.type.startsWith('image/')) continue;
       if (quickImages.length >= 5) {
-        toast({ title: '最多上传5张图片', status: 'warning' }); return;
+        toast({ title: '最多上传5张图片', status: 'warning', duration: 3000 }); return;
       }
       const file = item.getAsFile();
       if (file) {
         setQuickImages(prev => [...prev, file]);
         setQuickImagePreviews(prev => [...prev, URL.createObjectURL(file)]);
-        toast({ title: '已粘贴图片', status: 'info', duration: 2000 });
+        toast({ title: '已粘贴图片', status: 'info', duration: 2000, duration: 2000 });
       }
     }
   };
@@ -453,7 +453,7 @@ export default function GirlDetail() {
     const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
     if (!files.length) return;
     if (quickImages.length + files.length > 5) {
-      toast({ title: '最多上传5张图片', status: 'warning' }); return;
+      toast({ title: '最多上传5张图片', status: 'warning', duration: 3000 }); return;
     }
     setQuickImages(prev => [...prev, ...files]);
     setQuickImagePreviews(prev => [...prev, ...files.map(f => URL.createObjectURL(f))]);
@@ -471,7 +471,7 @@ export default function GirlDetail() {
     const hasImages = quickImages.length > 0;
 
     if (!hasText && !hasImages) {
-      toast({ title: '请至少输入10个字的描述或上传图片', status: 'warning' }); return;
+      toast({ title: '请至少输入10个字的描述或上传图片', status: 'warning', duration: 3000 }); return;
     }
 
     setQuickAnalyzing(true);
@@ -483,7 +483,7 @@ export default function GirlDetail() {
       });
 
       if (!res.success) {
-        toast({ title: res.error || '分析失败', status: 'error' }); return;
+        toast({ title: res.error || '分析失败', status: 'error', duration: 4000 }); return;
       }
 
       let aiFields = [];
@@ -514,7 +514,7 @@ export default function GirlDetail() {
           toast({ title: `AI 学到了 ${aiFields.length} 个新信息`, status: 'success', duration: 2000 });
         } else {
           setQuickResult({ fields: [], count: 0, imageUrls: res.imageUrls || [] });
-          toast({ title: '未发现新信息，但已记录', status: 'info', duration: 2000 });
+          toast({ title: '未发现新信息，但已记录', status: 'info', duration: 2000, duration: 2000 });
         }
         setQuickText('');
         quickImagePreviews.forEach(url => URL.revokeObjectURL(url));
@@ -523,14 +523,14 @@ export default function GirlDetail() {
         setGirl(updateRes.girl);
       }
     } catch (e) {
-      toast({ title: e.response?.data?.error || e.message || '分析保存失败', status: 'error' });
+      toast({ title: e.response?.data?.error || e.message || '分析保存失败', status: 'error', duration: 4000 });
     } finally { setQuickAnalyzing(false); }
   };
 
   // ---- AI 文字提取 ----
   const handleAiTextExtract = async () => {
     if (!aiText.trim() || aiText.trim().length < 10) {
-      toast({ title: '请至少输入10个字', status: 'warning' }); return;
+      toast({ title: '请至少输入10个字', status: 'warning', duration: 3000 }); return;
     }
     setAiExtracting(true);
     setAiResult(null);
@@ -541,12 +541,12 @@ export default function GirlDetail() {
             setAiResult(data.pendingFields);
             toast({ title: `识别出 ${Object.keys(data.pendingFields).length} 个字段`, status: 'success', duration: 2000 });
           } else {
-            toast({ title: '未识别出新信息，档案可能已较完善', status: 'info' });
+            toast({ title: '未识别出新信息，档案可能已较完善', status: 'info', duration: 2000 });
           }
         },
-        onError: (err) => toast({ title: err, status: 'error' }),
+        onError: (err) => toast({ title: err, status: 'error', duration: 4000 }),
       });
-    } catch (e) { toast({ title: e.message, status: 'error' }); }
+    } catch (e) { toast({ title: e.message, status: 'error', duration: 4000 }); }
     finally { setAiExtracting(false); }
   };
 
@@ -559,7 +559,7 @@ export default function GirlDetail() {
   };
 
   const handleScreenshotExtract = async () => {
-    if (!aiScreenshot) { toast({ title: '请先选择图片', status: 'warning' }); return; }
+    if (!aiScreenshot) { toast({ title: '请先选择图片', status: 'warning', duration: 3000 }); return; }
     setAiScreenshotUploading(true);
     setAiResult(null);
     try {
@@ -568,9 +568,9 @@ export default function GirlDetail() {
         setAiResult(res.pendingFields);
         toast({ title: `识别出 ${Object.keys(res.pendingFields).length} 个字段`, status: 'success', duration: 2000 });
       } else {
-        toast({ title: res.message || '未识别出新信息', status: 'info' });
+        toast({ title: res.message || '未识别出新信息', status: 'info', duration: 2000 });
       }
-    } catch (e) { toast({ title: e.message || '分析失败', status: 'error' }); }
+    } catch (e) { toast({ title: e.message || '分析失败', status: 'error', duration: 4000 }); }
     finally { setAiScreenshotUploading(false); }
   };
 
@@ -584,7 +584,7 @@ export default function GirlDetail() {
     setEditData(merged);
     setAiMode(false);
     setAiResult(null);
-    toast({ title: '已应用到表单，请确认后保存', status: 'info', duration: 2000 });
+    toast({ title: '已应用到表单，请确认后保存', status: 'info', duration: 2000, duration: 2000 });
   };
 
   // ---- 头像上传 ----
@@ -592,7 +592,7 @@ export default function GirlDetail() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      toast({ title: '请选择图片文件', status: 'warning' });
+      toast({ title: '请选择图片文件', status: 'warning', duration: 3000 });
       return;
     }
     setAvatarFile(file);
@@ -602,11 +602,11 @@ export default function GirlDetail() {
   };
 
   const handleSaveAvatar = async () => {
-    if (!avatarFile) { toast({ title: '请先选择图片', status: 'warning' }); return; }
+    if (!avatarFile) { toast({ title: '请先选择图片', status: 'warning', duration: 3000 }); return; }
     setSavingAvatar(true);
     try {
       const uploadRes = await upload.image(avatarFile);
-      if (!uploadRes.url) { toast({ title: '上传失败', status: 'error' }); return; }
+      if (!uploadRes.url) { toast({ title: '上传失败', status: 'error', duration: 4000 }); return; }
       const res = await girls.updateAvatar(girlId, uploadRes.url);
       if (res.success) {
         setGirl(prev => ({ ...prev, avatar: uploadRes.url }));
@@ -615,7 +615,7 @@ export default function GirlDetail() {
         setAvatarPreview('');
       }
     } catch (e) {
-      toast({ title: '更新失败', status: 'error' });
+      toast({ title: '更新失败', status: 'error', duration: 4000 });
     } finally { setSavingAvatar(false); }
   };
 

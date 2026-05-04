@@ -389,8 +389,8 @@ export default function ChapterDetail() {
         ) : (
           <Center py={20}>
             <VStack>
-              <BookIcon boxSize={12} color="rgba(245,240,232,0.2)" />
-              <Text color="rgba(245,240,232,0.4)" mt={4}>暂无章节内容</Text>
+              <BookIcon boxSize={12} color="rgba(245,240,232,0.4)" />
+              <Text color="rgba(245,240,232,0.6)" mt={4}>暂无章节内容</Text>
               <Text color="rgba(245,240,232,0.55)" fontSize="sm" mt={1}>请联系管理员添加内容</Text>
             </VStack>
           </Center>
@@ -418,7 +418,7 @@ export default function ChapterDetail() {
                 _hover={{ bg: 'rgba(255,255,255,0.1)' }}
               >
                 <VStack spacing={0} align="center">
-                  <Text fontSize="xs" color="rgba(245,240,232,0.2)">上一章</Text>
+                  <Text fontSize="xs" color="rgba(245,240,232,0.6)">上一章</Text>
                   <Text fontSize="sm">{prevChapter.title}</Text>
                 </VStack>
               </Button>

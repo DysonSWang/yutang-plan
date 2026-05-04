@@ -1,6 +1,6 @@
 import { Modal, ModalOverlay, ModalContent, ModalBody, ModalFooter, Button, Text, VStack, Flex, Progress, Box } from '@chakra-ui/react';
-import { useState, useRef } from 'react';
-import { Filesystem, Directory } from '@capacitor/filesystem';
+import { useState } from 'react';
+import { CapDownloader } from '@bricks-soft/cap-downloader';
 import { FileOpener } from '@capawesome-team/capacitor-file-opener';
 import { Browser } from '@capacitor/browser';
 import { captureError } from '../utils/frontendErrorCapture';
@@ -14,10 +14,9 @@ export default function VersionUpdateModal({ isOpen, onClose, upgradeType, lates
   const [downloading, setDownloading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState(null);
-  const abortRef = useRef(null);
 
   const handleUpdate = async () => {
-    // 蒲公英等非直链 URL → 用系统浏览器打开
+    // 非直链 URL → 用系统浏览器打开
     if (!isDirectApkUrl(downloadUrl)) {
       await Browser.open({ url: downloadUrl });
       if (!isForce) onClose();
@@ -28,75 +27,35 @@ export default function VersionUpdateModal({ isOpen, onClose, upgradeType, lates
     setError(null);
     setProgress(0);
 
-    const controller = new AbortController();
-    abortRef.current = controller;
-
     try {
-      // 1. fetch 下载 APK 为 stream
-      const response = await fetch(downloadUrl, { method: 'GET', signal: controller.signal });
-      if (!response.ok) throw new Error(`下载失败 (${response.status})`);
-
-      const contentLength = response.headers.get('content-length');
-      const totalSize = contentLength ? parseInt(contentLength, 10) : 0;
-      let loaded = 0;
-
-      const reader = response.body.getReader();
-      const chunks = [];
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        chunks.push(value);
-        loaded += value.length;
-        if (totalSize) {
-          setProgress(Math.round((loaded / totalSize) * 100));
-        }
-      }
-
-      // 2. 拼接为 base64
-      const blob = new Blob(chunks);
-      const base64 = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result.split(',')[1]);
-        reader.readAsDataURL(blob);
-      });
-
-      // 3. 写入缓存目录（Android 10+ 推荐，使用 content:// URI）
       const filename = `zhuiai-${latestVersion}.apk`;
-      const result = await Filesystem.writeFile({
-        path: filename,
-        data: base64,
-        directory: Directory.Cache,
+
+      // 使用 Android DownloadManager 下载（应用内，不跳浏览器）
+      const result = await CapDownloader.download({
+        url: downloadUrl,
+        filename: filename,
+        title: '追AI 更新包',
+        mimetype: 'application/vnd.android.package-archive',
       });
 
-      // 4. 写入 internal cache 后再用 FileProvider 打开
-      // 先把文件复制到 cache（FileOpener 需要 app-owned 文件）
-      const cacheFile = await Filesystem.getUri({
-        path: filename,
-        directory: Directory.Cache,
-      });
-
+      // 下载完成，打开 APK 安装
       await FileOpener.openFile({
-        path: cacheFile.uri,
+        path: result.path,
         contentType: 'application/vnd.android.package-archive',
       });
 
       setDownloading(false);
+      if (!isForce) onClose();
     } catch (err) {
       setDownloading(false);
-      if (err.name === 'AbortError') {
-        setError('下载已取消');
-        return;
-      }
-      setError(err.message || '下载失败，请稍后重试');
-      captureError(err, { context: 'apk_download_install' });
+      // 下载失败，跳转浏览器作为 fallback
+      await Browser.open({ url: downloadUrl });
+      if (!isForce) onClose();
+      captureError(err, { context: 'apk_download_install', downloadUrl });
     }
   };
 
   const handleCancel = () => {
-    if (abortRef.current) {
-      abortRef.current.abort();
-    }
     setDownloading(false);
     setError(null);
     setProgress(0);
@@ -243,9 +202,9 @@ export default function VersionUpdateModal({ isOpen, onClose, upgradeType, lates
                 w="100%"
                 size="sm"
                 variant="ghost"
-                color="rgba(245,240,232,0.2)"
+                color="rgba(245,240,232,0.6)"
                 onClick={handleLater}
-                _hover={{ color: 'rgba(245,240,232,0.6)' }}
+                _hover={{ color: 'rgba(245,240,232,0.8)' }}
               >
                 稍后再说
               </Button>

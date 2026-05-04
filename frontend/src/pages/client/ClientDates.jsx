@@ -49,7 +49,7 @@ export default function ClientDates() {
   // 保存约会并自动生成AI方案
   const handleGenerateWithPlan = async () => {
     if (!selectedGirlForDate) {
-      toast({ title: '请先选择约会对象', status: 'warning' });
+      toast({ title: '请先选择约会对象', status: 'warning', duration: 3000 });
       return;
     }
     try {
@@ -74,17 +74,17 @@ export default function ClientDates() {
         }
         refresh();
       } else {
-        toast({ title: res.error || '创建失败', status: 'error' });
+        toast({ title: res.error || '创建失败', status: 'error', duration: 4000 });
       }
     } catch (e) {
-      toast({ title: '创建失败', status: 'error' });
+      toast({ title: '创建失败', status: 'error', duration: 4000 });
     }
     setGenerating(false);
   };
 
   const handleSaveDate = async () => {
     if (!selectedGirlForDate) {
-      toast({ title: '请选择约会对象', status: 'warning' });
+      toast({ title: '请选择约会对象', status: 'warning', duration: 3000 });
       return;
     }
     setSaving(true);
@@ -102,10 +102,10 @@ export default function ClientDates() {
         resetDateForm();
         refresh();
       } else {
-        toast({ title: res.error || '添加失败', status: 'error' });
+        toast({ title: res.error || '添加失败', status: 'error', duration: 4000 });
       }
     } catch (e) {
-      toast({ title: '添加失败', status: 'error' });
+      toast({ title: '添加失败', status: 'error', duration: 4000 });
     }
     setSaving(false);
   };
@@ -301,7 +301,7 @@ export default function ClientDates() {
         refresh();
       },
       onError: (msg) => {
-        toast({ title: msg || '重新生成失败', status: 'error' });
+        toast({ title: msg || '重新生成失败', status: 'error', duration: 4000 });
         reoptimizingRef.current = false;
         setReoptimizing(false);
         isStreamingRef.current = false;
@@ -334,10 +334,10 @@ export default function ClientDates() {
           refresh();
         }
       } else {
-        toast({ title: res.error || '删除失败', status: 'error' });
+        toast({ title: res.error || '删除失败', status: 'error', duration: 4000 });
       }
     } catch (e) {
-      toast({ title: '删除失败', status: 'error' });
+      toast({ title: '删除失败', status: 'error', duration: 4000 });
     }
     setDeleting(false);
   };

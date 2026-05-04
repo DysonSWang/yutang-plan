@@ -82,31 +82,31 @@ function ManageModal({ client, onClose }) {
 
   async function handleRecharge() {
     if (!pointsForm.amount || parseInt(pointsForm.amount) <= 0) {
-      toast({ title: '请输入有效金额', status: 'warning' });
+      toast({ title: '请输入有效金额', status: 'warning', duration: 3000 });
       return;
     }
     try {
       await membershipApi.pointsRecharge(client.id, parseInt(pointsForm.amount), pointsForm.note);
-      toast({ title: '充值成功', status: 'success', duration: 2000 });
+      toast({ title: '充值成功', status: 'success', duration: 2000, duration: 2000 });
       setPointsForm({ amount: '', note: '' });
       loadPointsHistory();
     } catch (err) {
-      toast({ title: '充值失败', description: err.message, status: 'error' });
+      toast({ title: '充值失败', description: err.message, status: 'error', duration: 4000 });
     }
   }
 
   async function handleDeduct() {
     if (!pointsForm.amount || parseInt(pointsForm.amount) <= 0) {
-      toast({ title: '请输入有效金额', status: 'warning' });
+      toast({ title: '请输入有效金额', status: 'warning', duration: 3000 });
       return;
     }
     try {
       await membershipApi.pointsDeduct(client.id, parseInt(pointsForm.amount), pointsForm.note);
-      toast({ title: '扣减成功', status: 'success', duration: 2000 });
+      toast({ title: '扣减成功', status: 'success', duration: 2000, duration: 2000 });
       setPointsForm({ amount: '', note: '' });
       loadPointsHistory();
     } catch (err) {
-      toast({ title: '扣减失败', description: err.message, status: 'error' });
+      toast({ title: '扣减失败', description: err.message, status: 'error', duration: 4000 });
     }
   }
 
@@ -121,17 +121,17 @@ function ManageModal({ client, onClose }) {
       toast({ title: '会员设置成功', status: 'success' });
       onClose();
     } catch (err) {
-      toast({ title: '设置失败', description: err.message, status: 'error' });
+      toast({ title: '设置失败', description: err.message, status: 'error', duration: 4000 });
     }
   }
 
   async function handleCancelMembership() {
     try {
       await membershipApi.adminSet(client.id, 'cancel', {});
-      toast({ title: '会员已取消', status: 'info' });
+      toast({ title: '会员已取消', status: 'info', duration: 2000 });
       onClose();
     } catch (err) {
-      toast({ title: '取消失败', description: err.message, status: 'error' });
+      toast({ title: '取消失败', description: err.message, status: 'error', duration: 4000 });
     }
   }
 
@@ -182,7 +182,7 @@ function ManageModal({ client, onClose }) {
                   <Thead><Tr><Th color="rgba(245,240,232,0.4)">类型</Th><Th color="rgba(245,240,232,0.4)" isNumeric>变动</Th><Th color="rgba(245,240,232,0.4)" isNumeric>余额</Th><Th color="rgba(245,240,232,0.4)">时间</Th></Tr></Thead>
                   <Tbody>
                     {pointsHistory.length === 0 ? (
-                      <Tr><Td colSpan={4} color="rgba(245,240,232,0.2)" textAlign="center">暂无记录</Td></Tr>
+                      <Tr><Td colSpan={4} color="rgba(245,240,232,0.6)" textAlign="center">暂无记录</Td></Tr>
                     ) : pointsHistory.map(r => (
                       <Tr key={r.id}>
                         <Td>
@@ -194,7 +194,7 @@ function ManageModal({ client, onClose }) {
                           {r.amount > 0 ? '+' : ''}{r.amount}
                         </Td>
                         <Td isNumeric color="gray.300">{r.balanceAfter}</Td>
-                        <Td color="rgba(245,240,232,0.2)" fontSize="xs">{new Date(r.createdAt).toLocaleString()}</Td>
+                        <Td color="rgba(245,240,232,0.6)" fontSize="xs">{new Date(r.createdAt).toLocaleString()}</Td>
                       </Tr>
                     ))}
                   </Tbody>
@@ -286,7 +286,7 @@ function ScreenshotProfilesTab() {
     const file = e.target.files[0];
     if (!file) return;
     if (!selectedClient) {
-      toast({ title: '请先选择客户', status: 'warning' });
+      toast({ title: '请先选择客户', status: 'warning', duration: 3000 });
       return;
     }
     setUploading(true);
@@ -300,7 +300,7 @@ function ScreenshotProfilesTab() {
         toast({ title: '截图上传成功，AI正在提取信息...', status: 'success' });
       }
     } catch (err) {
-      toast({ title: '上传失败', description: err.message, status: 'error' });
+      toast({ title: '上传失败', description: err.message, status: 'error', duration: 4000 });
     } finally {
       setUploading(false);
     }
@@ -314,7 +314,7 @@ function ScreenshotProfilesTab() {
         loadProfiles();
       }
     } catch (err) {
-      toast({ title: '操作失败', description: err.message, status: 'error' });
+      toast({ title: '操作失败', description: err.message, status: 'error', duration: 4000 });
     }
   }
 
@@ -345,7 +345,7 @@ function ScreenshotProfilesTab() {
         <Center py={10}>
           <VStack>
             <CameraIcon boxSize={10} color="warm.600" />
-            <Text color="rgba(245,240,232,0.2)">暂无截图档案</Text>
+            <Text color="rgba(245,240,232,0.6)">暂无截图档案</Text>
           </VStack>
         </Center>
       ) : (
@@ -354,7 +354,7 @@ function ScreenshotProfilesTab() {
             <Box key={p.id} p={4} bg="warm.800" border="1px solid" borderColor="warm.700" borderRadius="lg">
               <HStack justify="space-between" mb={3}>
                 <Badge colorScheme={statusColor[p.status]}>{p.status === 'pending' ? '待确认' : p.status === 'confirmed' ? '已确认' : '已拒绝'}</Badge>
-                <Text color="rgba(245,240,232,0.2)" fontSize="xs">{new Date(p.createdAt).toLocaleString()}</Text>
+                <Text color="rgba(245,240,232,0.6)" fontSize="xs">{new Date(p.createdAt).toLocaleString()}</Text>
               </HStack>
               {p.imagePath && (
                 <Box mb={3}>
@@ -405,7 +405,7 @@ function TrialConfigTab() {
       await membershipApi.updateTrialConfig(config);
       toast({ title: '配置已保存', status: 'success' });
     } catch (err) {
-      toast({ title: '保存失败', description: err.message, status: 'error' });
+      toast({ title: '保存失败', description: err.message, status: 'error', duration: 4000 });
     } finally { setSaving(false); }
   }
 
@@ -465,7 +465,7 @@ function TrialConfigTab() {
                 <NumberInputField bg="warm.700" borderColor="warm.600" />
               </NumberInput>
             </HStack>
-            <Text color="rgba(245,240,232,0.2)" fontSize="sm">
+            <Text color="rgba(245,240,232,0.6)" fontSize="sm">
               说明：试用次数是各功能共用的（约会方案、AI教练、回复建议、话术优化、女生聊天）
             </Text>
           </VStack>
@@ -511,7 +511,7 @@ export default function MembershipManagement() {
 
           {clients.length === 0 && (
             <Center py={20}>
-              <Text color="rgba(245,240,232,0.2)">暂无客户数据</Text>
+              <Text color="rgba(245,240,232,0.6)">暂无客户数据</Text>
             </Center>
           )}
         </>

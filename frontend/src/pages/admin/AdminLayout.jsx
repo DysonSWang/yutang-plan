@@ -55,7 +55,7 @@ function DesktopSidebar() {
             >
               追AI
             </Text>
-            <Text fontSize="10px" color="rgba(245,240,232,0.2)" letterSpacing="2px">
+            <Text fontSize="10px" color="rgba(245,240,232,0.6)" letterSpacing="2px">
               Z H U I A I
             </Text>
           </Box>

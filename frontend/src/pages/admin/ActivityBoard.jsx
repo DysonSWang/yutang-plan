@@ -63,7 +63,7 @@ export default function ActivityBoard() {
 
   // 趋势柱状图
   const BarChart = ({ items, color, label, unit }) => {
-    if (!items?.length) return <Flex justify="center" align="center" h="160px" color="rgba(245,240,232,0.3)">暂无数据</Flex>;
+    if (!items?.length) return <Flex justify="center" align="center" h="160px" color="rgba(245,240,232,0.6)">暂无数据</Flex>;
     const max = Math.max(...items.map(i => i.count || 0), 1);
     return (
       <Box>
@@ -79,7 +79,7 @@ export default function ActivityBoard() {
             );
           })}
         </Flex>
-        <Flex justify="space-between" mt={1} fontSize="xs" color="rgba(245,240,232,0.3)">
+        <Flex justify="space-between" mt={1} fontSize="xs" color="rgba(245,240,232,0.6)">
           <Text>{items[0]?.date || ''}</Text>
           <Text>{label}</Text>
           <Text>{items[items.length - 1]?.date || ''}</Text>
@@ -184,7 +184,7 @@ export default function ActivityBoard() {
                 </Tr>
               ))}
               {dormantUsers.length === 0 && (
-                <Tr><Td colSpan={4} textAlign="center" color="rgba(245,240,232,0.2)">暂无沉睡用户</Td></Tr>
+                <Tr><Td colSpan={4} textAlign="center" color="rgba(245,240,232,0.6)">暂无沉睡用户</Td></Tr>
               )}
             </Tbody>
           </Table>

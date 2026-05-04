@@ -390,7 +390,7 @@ export default function Logs() {
                   </Tooltip>
                 ))}
               </HStack>
-              <HStack justify="space-between" mt={1} fontSize="xs" color="rgba(245,240,232,0.2)">
+              <HStack justify="space-between" mt={1} fontSize="xs" color="rgba(245,240,232,0.6)">
                 <Text>0时</Text>
                 <Text>6时</Text>
                 <Text>12时</Text>
@@ -414,7 +414,7 @@ export default function Logs() {
                   </Tooltip>
                 ))}
               </HStack>
-              <Text fontSize="xs" color="rgba(245,240,232,0.2)" mt={1} textAlign="center">
+              <Text fontSize="xs" color="rgba(245,240,232,0.6)" mt={1} textAlign="center">
                 共 {slowAnalysis.total} 次慢请求
               </Text>
             </CardBody>
@@ -423,7 +423,7 @@ export default function Logs() {
       )}
 
       {slowAnalysisLoading && !slowAnalysis && (
-        <Text color="rgba(245,240,232,0.2)" textAlign="center" py={8}>
+        <Text color="rgba(245,240,232,0.6)" textAlign="center" py={8}>
           正在加载慢请求分析...
         </Text>
       )}
@@ -487,7 +487,7 @@ export default function Logs() {
       )}
 
       {!traceResult && !traceLoading && (
-        <Text color="rgba(245,240,232,0.2)" textAlign="center" py={8}>
+        <Text color="rgba(245,240,232,0.6)" textAlign="center" py={8}>
           输入 trace-id 查询完整调用链
         </Text>
       )}
@@ -621,7 +621,7 @@ export default function Logs() {
               sx={{ '&::-webkit-scrollbar': { width: '8px' }, '&::-webkit-scrollbar-track': { bg: 'warm.800' }, '&::-webkit-scrollbar-thumb': { bg: 'warm.600', borderRadius: '4px' } }}
             >
               {logs.length === 0 ? (
-                <Text color="rgba(245,240,232,0.2)" textAlign="center" py={8}>暂无日志数据</Text>
+                <Text color="rgba(245,240,232,0.6)" textAlign="center" py={8}>暂无日志数据</Text>
               ) : (
                 logs.map((log, i) => (
                   <Box key={`${log.time}-${i}`} mb={2} p={2} bg={levelBg[log.level] || 'warm.800'} borderRadius="sm" borderLeft="3px solid" borderLeftColor={`${levelColor[log.level] || 'gray'}.400`}>
@@ -658,7 +658,7 @@ export default function Logs() {
                 ))
               )}
             </Box>
-            <Text fontSize="xs" color="rgba(245,240,232,0.2)" mt={2}>实时更新中... 显示最近 200 条日志</Text>
+            <Text fontSize="xs" color="rgba(245,240,232,0.6)" mt={2}>实时更新中... 显示最近 200 条日志</Text>
           </TabPanel>
 
           {/* 慢请求分析Tab */}

@@ -27,7 +27,7 @@ function PersonalizationDetailModal({ isOpen, onClose, user }) {
       setExpandedChapterId(null);
       membershipApi.adminGetUserPersonalizedChapters(user.id)
         .then(res => { if (res.success) setChapters(res.chapters); })
-        .catch(err => toast({ title: '加载失败', description: err.message, status: 'error' }))
+        .catch(err => toast({ title: '加载失败', description: err.message, status: 'error', duration: 4000 }))
         .finally(() => setLoading(false));
     }
   }, [isOpen, user, toast]);
@@ -53,7 +53,7 @@ function PersonalizationDetailModal({ isOpen, onClose, user }) {
             <Center py={12}><Spinner color="teal.400" /></Center>
           ) : chapters.length === 0 ? (
             <Center py={12}>
-              <Text color="rgba(245,240,232,0.3)">该用户暂无个性化章节</Text>
+              <Text color="rgba(245,240,232,0.6)">该用户暂无个性化章节</Text>
             </Center>
           ) : (
             <VStack align="stretch" spacing={3}>
@@ -82,7 +82,7 @@ function PersonalizationDetailModal({ isOpen, onClose, user }) {
                       <Badge colorScheme={statusColor[ch.status] || 'gray'} variant="subtle">
                         {statusLabel[ch.status] || ch.status}
                       </Badge>
-                      <Text color="rgba(245,240,232,0.3)" fontSize="xs">
+                      <Text color="rgba(245,240,232,0.6)" fontSize="xs">
                         {new Date(ch.updatedAt).toLocaleDateString()}
                       </Text>
                       <Icon as={expandedChapterId === ch.chapterId ? FiChevronUp : FiChevronDown} color="rgba(245,240,232,0.4)" />
@@ -168,9 +168,9 @@ function PreviewModal({ isOpen, onClose, chapterId, chapter }) {
       membershipApi.adminGetChapter(chapterId)
         .then(res => {
           if (res.success) setDetail(res.chapter);
-          else toast({ title: '加载失败', status: 'error', duration: 2000 });
+          else toast({ title: '加载失败', status: 'error', duration: 4000, duration: 2000 });
         })
-        .catch(err => toast({ title: '加载失败', description: err.message, status: 'error', duration: 3000 }))
+        .catch(err => toast({ title: '加载失败', description: err.message, status: 'error', duration: 4000, duration: 3000 }))
         .finally(() => setLoading(false));
     }
   }, [isOpen, chapterId, toast]);
@@ -227,7 +227,7 @@ function PreviewModal({ isOpen, onClose, chapterId, chapter }) {
               </Box>
             </Box>
           ) : (
-            <Text color="rgba(245,240,232,0.2)" textAlign="center" py={8}>加载失败</Text>
+            <Text color="rgba(245,240,232,0.6)" textAlign="center" py={8}>加载失败</Text>
           )}
         </ModalBody>
       </ModalContent>
@@ -250,7 +250,7 @@ function DeleteDialog({ isOpen, onClose, chapter, onDeleted }) {
         onClose();
       }
     } catch (err) {
-      toast({ title: '删除失败', description: err.message, status: 'error', duration: 3000 });
+      toast({ title: '删除失败', description: err.message, status: 'error', duration: 4000, duration: 3000 });
     } finally {
       setDeleting(false);
     }
@@ -341,7 +341,7 @@ export default function ChapterManagement() {
         refresh();
       }
     } catch (err) {
-      toast({ title: '操作失败', description: err.message, status: 'error', duration: 3000 });
+      toast({ title: '操作失败', description: err.message, status: 'error', duration: 4000, duration: 3000 });
     } finally {
       setToggling(prev => ({ ...prev, [chapter.chapterId]: false }));
     }
@@ -363,7 +363,7 @@ export default function ChapterManagement() {
     } catch (err) {
       // 失败回滚
       setPerUsers(prev => prev.map(u => u.id === userId ? { ...u, personalizationEnabled: !enabled } : u));
-      toast({ title: '操作失败', description: err.message, status: 'error', duration: 3000 });
+      toast({ title: '操作失败', description: err.message, status: 'error', duration: 4000, duration: 3000 });
     } finally {
       setPerToggling(prev => ({ ...prev, [userId]: false }));
     }
@@ -410,11 +410,11 @@ export default function ChapterManagement() {
       const orderedIds = newChapters.map(c => c.chapterId);
       const res = await membershipApi.adminReorderChapters(orderedIds);
       if (!res.success) {
-        toast({ title: '排序失败', status: 'error', duration: 2000 });
+        toast({ title: '排序失败', status: 'error', duration: 4000, duration: 2000 });
         refresh();
       }
     } catch (err) {
-      toast({ title: '排序失败', description: err.message, status: 'error', duration: 3000 });
+      toast({ title: '排序失败', description: err.message, status: 'error', duration: 4000, duration: 3000 });
       loadChapters();
     } finally {
       setReordering(false);
@@ -450,7 +450,7 @@ export default function ChapterManagement() {
       {chapters.length === 0 ? (
         <Center py={16}>
           <VStack spacing={3}>
-            <Text color="rgba(245,240,232,0.2)" fontSize="lg">暂无章节数据</Text>
+            <Text color="rgba(245,240,232,0.6)" fontSize="lg">暂无章节数据</Text>
             <Button
               leftIcon={<FiPlus />}
               colorScheme="gold"
@@ -495,7 +495,7 @@ export default function ChapterManagement() {
                   <Td border="none" p={2}>
                     <Icon
                       as={FiMenu}
-                      color="rgba(245,240,232,0.2)"
+                      color="rgba(245,240,232,0.6)"
                       cursor="grab"
                       _hover={{ color: 'teal.300' }}
                     />
@@ -633,16 +633,16 @@ export default function ChapterManagement() {
                 <Tr key={u.id} _hover={{ bg: 'warm.800' }} borderBottom="1px" borderColor="warm.700">
                   <Td borderColor="warm.700">
                     <Text color="white" fontWeight="medium">{u.nickname || u.username}</Text>
-                    <Text color="rgba(245,240,232,0.3)" fontSize="xs">{u.username}</Text>
+                    <Text color="rgba(245,240,232,0.6)" fontSize="xs">{u.username}</Text>
                   </Td>
                   <Td borderColor="warm.700" isNumeric>
                     <Badge colorScheme="green">{u.totalCompleted}</Badge>
                   </Td>
                   <Td borderColor="warm.700" isNumeric>
-                    {u.totalGenerating > 0 ? <Badge colorScheme="blue">{u.totalGenerating}</Badge> : <Text color="rgba(245,240,232,0.2)">—</Text>}
+                    {u.totalGenerating > 0 ? <Badge colorScheme="blue">{u.totalGenerating}</Badge> : <Text color="rgba(245,240,232,0.6)">—</Text>}
                   </Td>
                   <Td borderColor="warm.700" isNumeric>
-                    {u.totalFailed > 0 ? <Badge colorScheme="red">{u.totalFailed}</Badge> : <Text color="rgba(245,240,232,0.2)">—</Text>}
+                    {u.totalFailed > 0 ? <Badge colorScheme="red">{u.totalFailed}</Badge> : <Text color="rgba(245,240,232,0.6)">—</Text>}
                   </Td>
                   <Td borderColor="warm.700">
                     <Badge colorScheme={u.personalizationEnabled ? 'green' : 'gray'}>
@@ -676,7 +676,7 @@ export default function ChapterManagement() {
         </Box>
         {perUsers.length === 0 && (
           <Center py={8}>
-            <Text color="rgba(245,240,232,0.2)">暂无用户生成个性化学习内容</Text>
+            <Text color="rgba(245,240,232,0.6)">暂无用户生成个性化学习内容</Text>
           </Center>
         )}
       </Collapse>

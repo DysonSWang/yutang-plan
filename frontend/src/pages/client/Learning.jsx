@@ -204,7 +204,7 @@ export default function ClientLearning() {
         });
       }
     } catch (err) {
-      toast({ title: '更新失败', description: err.message, status: 'error' });
+      toast({ title: '更新失败', description: err.message, status: 'error', duration: 4000 });
     }
   }
 
@@ -358,8 +358,8 @@ export default function ClientLearning() {
       {chapters.length === 0 && (
         <Center py={20}>
           <VStack>
-            <BookIcon boxSize={12} color="rgba(245,240,232,0.2)" />
-            <Text color="rgba(245,240,232,0.4)" mt={2}>暂无章节数据，请联系管理员</Text>
+            <BookIcon boxSize={12} color="rgba(245,240,232,0.4)" />
+            <Text color="rgba(245,240,232,0.6)" mt={2}>暂无章节数据，请联系管理员</Text>
           </VStack>
         </Center>
       )}

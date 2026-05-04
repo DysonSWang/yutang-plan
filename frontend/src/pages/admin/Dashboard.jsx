@@ -208,7 +208,7 @@ export default function AdminDashboard() {
                 <Stat size="sm">
                   <StatLabel color="rgba(245,240,232,0.4)">客户数量</StatLabel>
                   <StatNumber color="gold.400">{stats.clientCount}</StatNumber>
-                  <StatHelpText color="rgba(245,240,232,0.2)">活跃客户</StatHelpText>
+                  <StatHelpText color="rgba(245,240,232,0.6)">活跃客户</StatHelpText>
                 </Stat>
               </CardBody>
             </Card>
@@ -217,7 +217,7 @@ export default function AdminDashboard() {
                 <Stat size="sm">
                   <StatLabel color="rgba(245,240,232,0.4)">女生资源</StatLabel>
                   <StatNumber color="gold.400">{stats.girlCount}</StatNumber>
-                  <StatHelpText color="rgba(245,240,232,0.2)">总数</StatHelpText>
+                  <StatHelpText color="rgba(245,240,232,0.6)">总数</StatHelpText>
                 </Stat>
               </CardBody>
             </Card>
@@ -226,7 +226,7 @@ export default function AdminDashboard() {
                 <Stat size="sm">
                   <StatLabel color="rgba(245,240,232,0.4)">今日待办</StatLabel>
                   <StatNumber color="orange.400">{todayTasks.length}</StatNumber>
-                  <StatHelpText color="rgba(245,240,232,0.2)">待处理</StatHelpText>
+                  <StatHelpText color="rgba(245,240,232,0.6)">待处理</StatHelpText>
                 </Stat>
               </CardBody>
             </Card>
@@ -237,7 +237,7 @@ export default function AdminDashboard() {
                   <StatNumber color={getTensionColor(parseFloat(stats.avgTension))}>
                     {stats.avgTension} {getTensionIcon(parseFloat(stats.avgTension))}
                   </StatNumber>
-                  <StatHelpText color="rgba(245,240,232,0.2)">关系热度</StatHelpText>
+                  <StatHelpText color="rgba(245,240,232,0.6)">关系热度</StatHelpText>
                 </Stat>
               </CardBody>
             </Card>
@@ -286,13 +286,13 @@ export default function AdminDashboard() {
                     <Text color="white" fontWeight="bold">今日待办 ({todayTasks.length})</Text>
                   </HStack>
                   {briefUpdatedAt && (
-                    <Text color="rgba(245,240,232,0.2)" fontSize="xs">
+                    <Text color="rgba(245,240,232,0.6)" fontSize="xs">
                       更新: {new Date(briefUpdatedAt).toLocaleString('zh-CN')}
                     </Text>
                   )}
                 </Flex>
                 {todayTasks.length === 0 ? (
-                  <Text color="rgba(245,240,232,0.2)" textAlign="center" py={8}>暂无待办</Text>
+                  <Text color="rgba(245,240,232,0.6)" textAlign="center" py={8}>暂无待办</Text>
                 ) : (
                   <VStack spacing={3} align="stretch">
                     {todayTasks.slice(0, 5).map((task, idx) => (
@@ -312,7 +312,7 @@ export default function AdminDashboard() {
                               </HStack>
                               <Text color="gray.300" fontSize="sm">{task.action}</Text>
                               {task.reason && (
-                                <Text color="rgba(245,240,232,0.2)" fontSize="xs" mt={1}>{task.reason}</Text>
+                                <Text color="rgba(245,240,232,0.6)" fontSize="xs" mt={1}>{task.reason}</Text>
                               )}
                             </Box>
                             <Badge colorScheme={task.priority === 'P0' ? 'red' : 'orange'} alignSelf="flex-start">
@@ -335,13 +335,13 @@ export default function AdminDashboard() {
                     <Text color="white" fontWeight="bold">重要提醒 ({alerts.length})</Text>
                   </HStack>
                   {briefUpdatedAt && (
-                    <Text color="rgba(245,240,232,0.2)" fontSize="xs">
+                    <Text color="rgba(245,240,232,0.6)" fontSize="xs">
                       更新: {new Date(briefUpdatedAt).toLocaleString('zh-CN')}
                     </Text>
                   )}
                 </Flex>
                 {alerts.length === 0 ? (
-                  <Text color="rgba(245,240,232,0.2)" textAlign="center" py={8}>暂无重要提醒</Text>
+                  <Text color="rgba(245,240,232,0.6)" textAlign="center" py={8}>暂无重要提醒</Text>
                 ) : (
                   <VStack spacing={3} align="stretch">
                     {alerts.map((alert, idx) => (
@@ -376,7 +376,7 @@ export default function AdminDashboard() {
                 <Text color="white" fontWeight="bold">本周待办 ({weekTasks.length})</Text>
               </HStack>
               {weekTasks.length === 0 ? (
-                <Text color="rgba(245,240,232,0.2)" textAlign="center" py={8}>暂无本周待办</Text>
+                <Text color="rgba(245,240,232,0.6)" textAlign="center" py={8}>暂无本周待办</Text>
               ) : (
                 <Table variant="simple" color="gray.300" size="sm">
                   <Thead>
@@ -412,7 +412,7 @@ export default function AdminDashboard() {
                   <Icon as={ChartIcon} color="gold.400" />
                   <Text color="white" fontWeight="bold">本周复盘报告</Text>
                   {weeklyReport?.generatedAt && (
-                    <Text color="rgba(245,240,232,0.2)" fontSize="xs">
+                    <Text color="rgba(245,240,232,0.6)" fontSize="xs">
                       生成: {new Date(weeklyReport.generatedAt).toLocaleString('zh-CN')}
                     </Text>
                   )}
@@ -452,9 +452,9 @@ export default function AdminDashboard() {
               </Flex>
 
               {!selectedClientId ? (
-                <Text color="rgba(245,240,232,0.2)" textAlign="center" py={4}>请先选择客户以查看周报</Text>
+                <Text color="rgba(245,240,232,0.6)" textAlign="center" py={4}>请先选择客户以查看周报</Text>
               ) : weeklyLoading && !weeklyReport ? (
-                <Text color="rgba(245,240,232,0.2)" textAlign="center" py={4}>加载中...</Text>
+                <Text color="rgba(245,240,232,0.6)" textAlign="center" py={4}>加载中...</Text>
               ) : weeklyReport ? (
                 <VStack spacing={4} align="stretch">
                   {/* 数据总览 */}
@@ -472,7 +472,7 @@ export default function AdminDashboard() {
                           <Stat size="sm">
                             <StatLabel color="rgba(245,240,232,0.4)" fontSize="xs">{item.label}</StatLabel>
                             <StatNumber color={item.color} fontSize="lg">{item.value}</StatNumber>
-                            {item.help && <StatHelpText color="rgba(245,240,232,0.2)" fontSize="xs">{item.help}</StatHelpText>}
+                            {item.help && <StatHelpText color="rgba(245,240,232,0.6)" fontSize="xs">{item.help}</StatHelpText>}
                           </Stat>
                         </CardBody>
                       </Card>
@@ -502,7 +502,7 @@ export default function AdminDashboard() {
                           {weeklyReport.alertStats.byType.P0 > 0 && <Badge colorScheme="red">P0 {weeklyReport.alertStats.byType.P0}</Badge>}
                           {weeklyReport.alertStats.byType.P1 > 0 && <Badge colorScheme="orange">P1 {weeklyReport.alertStats.byType.P1}</Badge>}
                           {weeklyReport.alertStats.byType.P2 > 0 && <Badge colorScheme="gray">P2 {weeklyReport.alertStats.byType.P2}</Badge>}
-                          <Text color="rgba(245,240,232,0.2)" fontSize="xs">本周预警</Text>
+                          <Text color="rgba(245,240,232,0.6)" fontSize="xs">本周预警</Text>
                         </HStack>
                       )}
                     </Box>
@@ -528,7 +528,7 @@ export default function AdminDashboard() {
                           )}
                         </VStack>
                       ) : (
-                        <Text color="rgba(245,240,232,0.2)" fontSize="sm">AI 未生成评估（可点击"重新生成"）</Text>
+                        <Text color="rgba(245,240,232,0.6)" fontSize="sm">AI 未生成评估（可点击"重新生成"）</Text>
                       )}
                     </Box>
                   </SimpleGrid>
@@ -546,7 +546,7 @@ export default function AdminDashboard() {
                                   <Badge colorScheme={p.girlName === 'ALL' ? 'teal' : 'blue'}>{p.girlName}</Badge>
                                   <Text color="gray.300" fontSize="sm">{p.priority}</Text>
                                 </HStack>
-                                <Text color="rgba(245,240,232,0.2)" fontSize="xs">{p.reason}</Text>
+                                <Text color="rgba(245,240,232,0.6)" fontSize="xs">{p.reason}</Text>
                               </Flex>
                             </CardBody>
                           </Card>
@@ -556,7 +556,7 @@ export default function AdminDashboard() {
                   )}
                 </VStack>
               ) : (
-                <Text color="rgba(245,240,232,0.2)" textAlign="center" py={4}>暂无周报数据</Text>
+                <Text color="rgba(245,240,232,0.6)" textAlign="center" py={4}>暂无周报数据</Text>
               )}
             </CardBody>
           </Card>

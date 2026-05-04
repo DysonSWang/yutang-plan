@@ -96,7 +96,7 @@ export default function SelectionToCalendar({ clientId, girlList }) {
 
   const openModal = () => {
     if (!clientId) {
-      toast({ title: '请先选择客户', status: 'warning', duration: 2000 });
+      toast({ title: '请先选择客户', status: 'warning', duration: 3000, duration: 2000 });
       return;
     }
 
@@ -118,11 +118,11 @@ export default function SelectionToCalendar({ clientId, girlList }) {
 
   const handleSave = async () => {
     if (!form.title) {
-      toast({ title: '请填写标题', status: 'warning', duration: 2000 });
+      toast({ title: '请填写标题', status: 'warning', duration: 3000, duration: 2000 });
       return;
     }
     if (!form.dateTime) {
-      toast({ title: '请选择时间', status: 'warning', duration: 2000 });
+      toast({ title: '请选择时间', status: 'warning', duration: 3000, duration: 2000 });
       return;
     }
     if (!clientId) return;
@@ -142,16 +142,16 @@ export default function SelectionToCalendar({ clientId, girlList }) {
       });
 
       if (res.success) {
-        toast({ title: '事件已添加到日历', status: 'success', duration: 2000 });
+        toast({ title: '事件已添加到日历', status: 'success', duration: 2000, duration: 2000 });
         // 清除选择
         window.getSelection()?.removeAllRanges();
         onClose();
       } else {
-        toast({ title: res.error || '添加失败', status: 'error', duration: 2000 });
+        toast({ title: res.error || '添加失败', status: 'error', duration: 4000, duration: 2000 });
       }
     } catch (e) {
       captureError(e);
-      toast({ title: '添加失败', status: 'error', duration: 2000 });
+      toast({ title: '添加失败', status: 'error', duration: 4000, duration: 2000 });
     } finally {
       setLoading(false);
     }
