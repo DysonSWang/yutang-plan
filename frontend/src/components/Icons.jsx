@@ -364,3 +364,67 @@ export const ClockIcon = createIcon({
     <polyline key="2" points="12 6 12 12 16 14" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
   ]
 });
+
+// Stars 图标
+export const StarsIcon = createIcon({
+  displayName: 'StarsIcon',
+  viewBox: '0 0 24 24',
+  path: [
+    <path key="1" d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>,
+    <path key="2" d="M5 16l.75 2.25L8 19l-2.25.75L5 22l-.75-2.25L2 19l2.25-.75L5 16z" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>,
+    <path key="3" d="M19 13l.5 1.5L21 15l-1.5.5L19 17l-.5-1.5L17 15l1.5-.5L19 13z" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+  ]
+});
+
+// Inbox 图标
+export const InboxIcon = createIcon({
+  displayName: 'InboxIcon',
+  viewBox: '0 0 24 24',
+  path: [
+    <path key="1" d="M22 12h-6l-2 3h-4l-2-3H2" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>,
+    <path key="2" d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+  ]
+});
+
+// Mic 图标
+export const MicIcon = createIcon({
+  displayName: 'MicIcon',
+  viewBox: '0 0 24 24',
+  path: [
+    <path key="1" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>,
+    <path key="2" d="M19 10v2a7 7 0 01-14 0v-2" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>,
+    <line key="3" x1="12" y1="19" x2="12" y2="23" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>,
+    <line key="4" x1="8" y1="23" x2="16" y2="23" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+  ]
+});
+
+// Stop 图标
+export const StopIcon = createIcon({
+  displayName: 'StopIcon',
+  viewBox: '0 0 24 24',
+  path: [
+    <rect key="1" x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="2" fill="currentColor" fillOpacity="0.3"/>
+  ]
+});
+
+// Speaker 图标
+export const SpeakerIcon = createIcon({
+  displayName: 'SpeakerIcon',
+  viewBox: '0 0 24 24',
+  path: [
+    <path key="1" d="M11 5L6 9H2v6h4l5 4V5z" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>,
+    <path key="2" d="M15.54 8.46a5 5 0 010 7.07" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>,
+    <path key="3" d="M19.07 4.93a10 10 0 010 14.14" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
+  ]
+});
+
+// CreditCard 图标
+export const CreditCardIcon = createIcon({
+  displayName: 'CreditCardIcon',
+  viewBox: '0 0 24 24',
+  path: [
+    <rect key="1" x="1" y="4" width="22" height="16" rx="2" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>,
+    <line key="2" x1="1" y1="10" x2="23" y2="10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>,
+    <line key="3" x1="6" y1="15" x2="10" y2="15" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+  ]
+});

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Box, VStack, HStack, Stack, Input, Button, Text, Flex, IconButton, Image, Badge, useToast, Center, Spinner } from '@chakra-ui/react';
+import { Box, VStack, HStack, Stack, Input, Button, Text, Flex, IconButton, Image, Badge, useToast, Center, Spinner, Icon } from '@chakra-ui/react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { api, chat, upload } from '../../utils/api';
 import { captureError } from '../../utils/frontendErrorCapture';
@@ -7,6 +7,7 @@ import { useSocket } from '../../contexts/SocketContext';
 import { useRouteActivated } from '../../hooks/useRouteLifecycle';
 import FlashImageViewer from '../../components/FlashImageViewer';
 import EmojiPanel from '../../components/EmojiPanel';
+import { CameraIcon, MicIcon, StopIcon, FireIcon, SparklesIcon, SpeakerIcon, UserIcon, ArrowLeftIcon } from '../../components/Icons';
 
 export default function ClientChat() {
   const { on } = useSocket();
@@ -512,7 +513,7 @@ export default function ClientChat() {
     const destroyedColor = msg.senderRole === 'client' ? 'rgba(30,20,0,0.55)' : 'rgba(255,255,255,0.5)';
     if (msg.recalledAt) return <Text color={destroyedColor} fontStyle="italic">{msg.content}</Text>;
     if (msg.burnedAt) return <Text color={destroyedColor} fontStyle="italic">{msg.content}</Text>;
-    if (msg.isFlashImage && msg.flashBurnedByMe) return <Text color={destroyedColor} fontStyle="italic">⚡ 闪图已销毁</Text>;
+    if (msg.isFlashImage && msg.flashBurnedByMe) return <Text color={destroyedColor} fontStyle="italic"><Icon as={SparklesIcon} boxSize={4} mr={1} />闪图已销毁</Text>;
     if (msg.type === 'image') {
       const isClickable = msg.isBurnAfterRead && msg.senderRole !== 'client' && !msg.burnedAt;
       const imageUrl = getMediaUrl(msg);
@@ -547,7 +548,7 @@ export default function ClientChat() {
               border="1px dashed"
               borderColor="rgba(255,200,0,0.5)"
             >
-              <Text fontSize="lg">⚡</Text>
+              <Icon as={SparklesIcon} boxSize={5} />
               <Text fontSize="xs" color="rgba(255,200,0,0.9)" mt={0.5}>闪图</Text>
             </Box>
           ) : (
@@ -574,7 +575,7 @@ export default function ClientChat() {
             cursor="pointer"
             onClick={() => openFlashViewer({ imageUrl: videoUrl, messageId: msg.id, senderRole: msg.senderRole, isFlashMode: true, mediaType: 'video' })}
           >
-            <Text fontSize="lg">⚡</Text>
+            <Icon as={SparklesIcon} boxSize={5} />
             <Text fontSize="xs" color="rgba(255,200,0,0.9)" mt={0.5}>闪图</Text>
           </Box>
         );
@@ -588,7 +589,7 @@ export default function ClientChat() {
     if (msg.type === 'audio') {
       return (
         <HStack bg={msg.isBurnAfterRead && !msg.burnedAt ? 'rgba(255,140,0,0.15)' : 'blackAlpha.300'} px={3} py={2} borderRadius="md" spacing={2} cursor={msg.isBurnAfterRead && msg.senderRole !== 'client' ? 'pointer' : 'default'} onClick={() => msg.isBurnAfterRead && msg.senderRole !== 'client' && handleBurnMessage(msg)}>
-          <Text fontSize="lg" flexShrink={0}>🔊</Text>
+          <Icon as={SpeakerIcon} boxSize={5} flexShrink={0} />
           <Box flex={1} minW={0} maxW="200px">
             <audio src={getMediaUrl(msg)} style={{ width: '100%', height: '24px' }} controls={!msg.isBurnAfterRead || msg.burnedAt} />
           </Box>
@@ -723,7 +724,7 @@ export default function ClientChat() {
                         {renderMessageContent(msg)}
                         {msg.isBurnAfterRead && !msg.burnedAt && (
                           <HStack mt={2} spacing={1} justify="flex-end">
-                            <Text fontSize="xs" color="orange.300">🔥</Text>
+                            <Icon as={FireIcon} boxSize={3} color="orange.300" />
                             <Text fontSize="sm" fontWeight="bold" color="orange.300">
                               {countdowns[msg.id] != null ? `${countdowns[msg.id]}s` : (msg.burnAfterSeconds ? `${msg.burnAfterSeconds}s` : '手动')}
                             </Text>
@@ -732,7 +733,7 @@ export default function ClientChat() {
                         {!msg.recalledAt && !msg.burnedAt && isClient && (
                           <IconButton
                             className="recall-btn"
-                            icon={<Text fontSize="xs">↩</Text>}
+                            icon={<Icon as={ArrowLeftIcon} boxSize={3} />}
                             size="xs"
                             variant="ghost"
                             color="rgba(245,240,232,0.4)"
@@ -759,7 +760,7 @@ export default function ClientChat() {
                           flexShrink={0}
                           border="2px solid rgba(255,200,100,0.15)"
                         >
-                          <Text fontSize="sm">👤</Text>
+                          <Icon as={UserIcon} boxSize={6} color="rgba(245,240,232,0.4)" />
                         </Box>
                       )}
                     </HStack>
@@ -781,7 +782,8 @@ export default function ClientChat() {
                 )}
                 {previewFile.type === 'audio' && (
                   <HStack>
-                    <Text color="white" fontSize="sm">🎤 语音 {recordTime || previewFile.duration || 0}"</Text>
+                    <Icon as={MicIcon} boxSize={4} color="white" />
+                    <Text color="white" fontSize="sm">语音 {recordTime || previewFile.duration || 0}"</Text>
                     <audio src={previewFile.preview} style={{ height: '28px' }} controls />
                   </HStack>
                 )}
@@ -810,7 +812,7 @@ export default function ClientChat() {
             {/* 工具栏按钮 — 移动端独占一行 */}
             <HStack spacing={1} justify={{ base: 'space-around', md: 'start' }}>
               <IconButton
-                icon={<Text>📷</Text>}
+                icon={<Icon as={CameraIcon} boxSize={4} />}
                 variant="ghost"
                 size="sm"
                 color="rgba(245,240,232,0.4)"
@@ -828,7 +830,7 @@ export default function ClientChat() {
                 onChange={handleFileSelect}
               />
               <IconButton
-                icon={<Text>{recording ? '⏹' : '🎤'}</Text>}
+                icon={<Icon as={recording ? StopIcon : MicIcon} boxSize={4} />}
                 variant="ghost"
                 size="sm"
                 color={recording ? 'red.400' : 'rgba(245,240,232,0.4)'}
@@ -845,7 +847,7 @@ export default function ClientChat() {
                   isDisabled={!!previewFile || flashMode}
                   title="阅后即焚"
                 >
-                  🔥 焚{burnMode ? `${burnSeconds}s` : ''}
+                  <Icon as={FireIcon} boxSize={4} color="orange.400" /> 焚{burnMode ? `${burnSeconds}s` : ''}
                 </Button>
                 {burnMode && (
                   <Box
@@ -877,7 +879,7 @@ export default function ClientChat() {
                 )}
               </Box>
               <IconButton
-                icon={<Text>⚡ {flashMode ? '闪图' : '闪'}</Text>}
+                icon={<Icon as={SparklesIcon} boxSize={4} />}
                 variant="ghost"
                 color={flashMode ? 'yellow.400' : 'rgba(245,240,232,0.4)'}
                 aria-label="闪图模式"
@@ -954,7 +956,7 @@ export default function ClientChat() {
                 bg="rgba(255,255,255,0.05)"
                 border="1px solid rgba(255,255,255,0.1)"
                 color="white"
-                _placeholder={{ color: 'rgba(245,240,232,0.2)' }}
+                _placeholder={{ color: 'rgba(245,240,232,0.4)' }}
                 _focus={{ borderColor: 'gold.500' }}
               />
               <Button colorScheme="gold" onClick={sendMessage} isLoading={sending} isDisabled={!input.trim()} size="sm">

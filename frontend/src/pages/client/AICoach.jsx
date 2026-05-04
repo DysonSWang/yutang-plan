@@ -299,9 +299,9 @@ const ReplySuggestionsPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
         document.execCommand('copy');
         document.body.removeChild(ta);
       }
-      toast({ title: '已复制', status: 'success', duration: 1500 });
+      toast({ title: '已复制', status: 'success', duration: 2000 });
     } catch (e) {
-      toast({ title: '复制失败', status: 'error', duration: 1500 });
+      toast({ title: '复制失败', status: 'error', duration: 2000 });
     }
   }, [toast]);
 
@@ -427,9 +427,9 @@ const OptimizeReplyPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
         document.execCommand('copy');
         document.body.removeChild(ta);
       }
-      toast({ title: '已复制', status: 'success', duration: 1500 });
+      toast({ title: '已复制', status: 'success', duration: 2000 });
     } catch (e) {
-      toast({ title: '复制失败', status: 'error', duration: 1500 });
+      toast({ title: '复制失败', status: 'error', duration: 2000 });
     }
   }, [toast]);
 
@@ -2363,9 +2363,9 @@ export default function AICoach() {
   const handleCopySuggestion = useCallback((text) => {
     if (navigator.clipboard?.writeText) {
       navigator.clipboard.writeText(text).then(() => {
-        toast({ title: '已复制到剪贴板', duration: 1500, colorScheme: 'green' });
+        toast({ title: '已复制到剪贴板', duration: 2000, colorScheme: 'green' });
       }).catch(() => {
-        toast({ title: '复制失败', duration: 1500, colorScheme: 'red' });
+        toast({ title: '复制失败', duration: 2000, colorScheme: 'red' });
       });
     } else {
       try {
@@ -2376,9 +2376,9 @@ export default function AICoach() {
         ta.select();
         document.execCommand('copy');
         document.body.removeChild(ta);
-        toast({ title: '已复制到剪贴板', duration: 1500, colorScheme: 'green' });
+        toast({ title: '已复制到剪贴板', duration: 2000, colorScheme: 'green' });
       } catch {
-        toast({ title: '复制失败', duration: 1500, colorScheme: 'red' });
+        toast({ title: '复制失败', duration: 2000, colorScheme: 'red' });
       }
     }
   }, [toast]);
@@ -2393,12 +2393,12 @@ export default function AICoach() {
       if (exists) {
         const next = prev.filter(s => s.reply !== text);
         localStorage.setItem('zhuiai_saved_replies', JSON.stringify(next));
-        toast({ title: '已取消收藏', duration: 1500 });
+        toast({ title: '已取消收藏', duration: 2000 });
         return next;
       } else {
         const next = [entry, ...prev].slice(0, 100);
         localStorage.setItem('zhuiai_saved_replies', JSON.stringify(next));
-        toast({ title: '已收藏到话术库', duration: 1500, colorScheme: 'pink' });
+        toast({ title: '已收藏到话术库', duration: 2000, colorScheme: 'pink' });
         return next;
       }
     });
@@ -2702,9 +2702,9 @@ export default function AICoach() {
         document.execCommand('copy');
         document.body.removeChild(ta);
       }
-      toast({ title: '已复制', status: 'success', duration: 1500 });
+      toast({ title: '已复制', status: 'success', duration: 2000 });
     } catch (e) {
-      toast({ title: '复制失败', status: 'error', duration: 1500 });
+      toast({ title: '复制失败', status: 'error', duration: 2000 });
     }
   };
 

@@ -1,4 +1,5 @@
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { parseJSON, cleanStreamText, filterReasoning, formatLocalDateTime, formatDateRelative } from '../../utils/uiHelpers';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import {
   Box, Heading, Card, CardBody, Button, Badge, Modal, ModalOverlay, ModalContent,
   ModalHeader, ModalBody, ModalCloseButton, useDisclosure, VStack, HStack, Text,
@@ -8,61 +9,13 @@ import {
 import DatePicker, { registerLocale } from 'react-datepicker';
 import { zhCN } from 'date-fns/locale/zh-CN';
 import 'react-datepicker/dist/react-datepicker.css';
-import { CalendarIcon, SparklesIcon, QuestionIcon, MapPinIcon, ClockIcon } from '../../components/Icons';
+import { CalendarIcon, SparklesIcon, QuestionIcon, MapPinIcon, ClockIcon, CreditCardIcon, CheckCircleIcon, WarningIcon, CheckIcon, GiftIcon } from '../../components/Icons';
 import ClientCalendar from '../../components/ClientCalendar';
 import { dates, clients, getMediaUrl } from '../../utils/api';
 import { captureError } from '../../utils/frontendErrorCapture';
 import useKeepAliveData from '../../hooks/useKeepAliveData';
-
-function formatLocalDateTime(date) {
-  if (!date) return '';
-  const pad = n => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
+import { useConfirmModal } from '../../components/ConfirmModal';
 registerLocale('zh-CN', zhCN);
-
-function parseJSON(val, fallback = null) {
-  if (!val) return fallback;
-  if (typeof val === 'object') return val;
-  try { return JSON.parse(val); } catch { return fallback; }
-}
-
-// 流式输出时清除 JSON 结构符号，只保留可读文本
-function cleanStreamText(text) {
-  if (!text) return '';
-  return text
-    .replace(/^[\s]*[\[\{][\s]*/gm, '')       // 行首的 { 或 [
-    .replace(/[\s]*[\]\}][\s]*[,]?[\s]*$/gm, '') // 行尾的 } 或 ] 及逗号
-    .replace(/"[^"]*"\s*:\s*/g, '')            // "key":
-    .replace(/^\s*"|"\s*[,]?\s*$/gm, '')       // 行首尾的引号
-    .replace(/\\n/g, '\n')                      // 转义换行
-    .replace(/\\"/g, '"')                       // 转义引号
-    .replace(/\n{3,}/g, '\n\n')                 // 合并多余空行
-    .trim();
-}
-
-// 过滤思考过程中的业务无关元指令
-function filterReasoning(text) {
-  if (!text) return '';
-  return text
-    .split(/[。\n]/)
-    .filter(s => {
-      const t = s.trim();
-      if (!t) return false;
-      // 包含 JSON 的句子全部去掉
-      if (/json/i.test(t)) return false;
-      // 包含字段名枚举的去掉
-      if (/overview.*venue.*schedule|包含.*字段|字段.*包含/.test(t)) return false;
-      // 元指令类去掉
-      if (/我们被要求|需要生成|注意.*格式|按照.*格式|确保.*输出|返回.*格式|根据.*要求.*生成/.test(t)) return false;
-      return true;
-    })
-    .join('\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-}
-
 export default function ClientDates() {
   const [clientId, setClientId] = useState(null);
   const [girlList, setGirlList] = useState([]);
@@ -92,49 +45,6 @@ export default function ClientDates() {
       setDateForm(prev => ({ ...prev, transportMode: savedTransport }));
     }
   }, []);
-
-
-  // 获取头像（优先用自定义头像，其次用照片，最后用名字生成默认头像）
-  const getAvatar = (girl) => {
-    if (!girl) return null;
-    // 优先使用用户自定义头像
-    if (girl.avatar) return getMediaUrl(girl.avatar);
-    // 其次使用第一张照片
-    if (girl.photos) {
-      try {
-        const photos = typeof girl.photos === 'string' ? JSON.parse(girl.photos) : girl.photos;
-        if (Array.isArray(photos) && photos[0]) return getMediaUrl(photos[0]);
-      } catch {}
-    }
-    // 用名字生成固定头像索引
-    const name = girl.name || '';
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-      hash = ((hash << 5) - hash) + name.charCodeAt(i);
-      hash = hash & hash;
-    }
-    return `https://i.pravatar.cc/150?img=${Math.abs(hash) % 70}`;
-  };
-
-  // 格式化日期显示
-  const formatDateRelative = (dateStr) => {
-    if (!dateStr) return '-';
-    const date = new Date(dateStr);
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-
-    if (target.getTime() === today.getTime()) return '今天';
-    if (target.getTime() === tomorrow.getTime()) return '明天';
-    if (target < today) return '已过期';
-
-    const diff = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
-    if (diff <= 7) return `本周${'日一二三四五六'[date.getDay()]}`;
-
-    return `${date.getMonth() + 1}月${date.getDate()}日`;
-  };
 
   // 保存约会并自动生成AI方案
   const handleGenerateWithPlan = async () => {
@@ -401,10 +311,16 @@ export default function ClientDates() {
   };
 
   const [deleting, setDeleting] = useState(false);
+  const { confirm, ConfirmModal } = useConfirmModal();
   const handleDeleteDate = async (dateId) => {
     const id = dateId || selected?.id;
     if (!id) return;
-    if (!window.confirm('确定要删除这个约会吗？关联的日历事件也会一并删除。')) return;
+    const ok = await confirm({
+      title: '删除约会',
+      message: '确定要删除这个约会吗？关联的日历事件也会一并删除。',
+      confirmText: '删除',
+    });
+    if (!ok) return;
     setDeleting(true);
     try {
       const res = await dates.delete(id);
@@ -456,11 +372,11 @@ export default function ClientDates() {
         setInterviewModal(null);
         refresh();
       } else {
-        toast({ title: res.error || '提交失败', status: 'error', duration: 2500 });
+        toast({ title: res.error || '提交失败', status: 'error', duration: 4000 });
       }
     } catch (e) {
       captureError(e);
-      toast({ title: '提交失败', status: 'error', duration: 2500 });
+      toast({ title: '提交失败', status: 'error', duration: 4000 });
     }
     setInterviewSubmitting(false);
   };
@@ -504,7 +420,7 @@ export default function ClientDates() {
                       <Text color="white" fontSize="sm">{s.activity}</Text>
                       {s.note && <Text color="rgba(245,240,232,0.4)" fontSize="xs">{s.note}</Text>}
                     </Box>
-                    <Text color="rgba(245,240,232,0.2)" fontSize="xs">{s.duration}</Text>
+                    <Text color="rgba(245,240,232,0.55)" fontSize="xs">{s.duration}</Text>
                   </Flex>
                 ))}
               </VStack>
@@ -538,7 +454,7 @@ export default function ClientDates() {
               <VStack spacing={2} align="stretch">
                 {p.precautions.map((p2, i) => (
                   <Box key={i} p={2} bg="warm.700" borderRadius="md">
-                    <Text color="red.300" fontSize="sm">⚠ {p2.point}</Text>
+                    <HStack spacing={1}><Icon as={WarningIcon} boxSize={4} color="red.300" /><Text color="red.300" fontSize="sm">{p2.point}</Text></HStack>
                     <Text color="rgba(245,240,232,0.4)" fontSize="xs">{p2.suggestion}</Text>
                   </Box>
                 ))}
@@ -645,7 +561,7 @@ export default function ClientDates() {
                 <Card bg="warm.800" border="1px solid" borderColor="orange.600">
                   <CardBody py={4} px={4}>
                     <Flex align="center" gap={3}>
-                      <Box w="40px" h="40px" borderRadius="10px" bg="rgba(249,115,22,0.2)" display="flex" alignItems="center" justifyContent="center" fontSize="20px">📋</Box>
+                      <Box w="40px" h="40px" borderRadius="10px" bg="rgba(249,115,22,0.2)" display="flex" alignItems="center" justifyContent="center"><Icon as={WarningIcon} boxSize={5} color="orange.400" /></Box>
                       <Box>
                         <Text fontSize="2xl" fontWeight="bold" color="orange.400">{stats.interviews}</Text>
                         <Text fontSize="xs" color="rgba(245,240,232,0.4)">待反馈</Text>
@@ -657,7 +573,7 @@ export default function ClientDates() {
                 <Card bg="warm.800" border="1px solid" borderColor="green.600">
                   <CardBody py={4} px={4}>
                     <Flex align="center" gap={3}>
-                      <Box w="40px" h="40px" borderRadius="10px" bg="rgba(34,197,94,0.2)" display="flex" alignItems="center" justifyContent="center" fontSize="20px">🎉</Box>
+                      <Box w="40px" h="40px" borderRadius="10px" bg="rgba(34,197,94,0.2)" display="flex" alignItems="center" justifyContent="center"><Icon as={CheckCircleIcon} boxSize={5} color="green.400" /></Box>
                       <Box>
                         <Text fontSize="2xl" fontWeight="bold" color="green.400">{stats.completed}</Text>
                         <Text fontSize="xs" color="rgba(245,240,232,0.4)">已完成</Text>
@@ -669,7 +585,7 @@ export default function ClientDates() {
                 <Card bg="warm.800" border="1px solid" borderColor="cyan.600">
                   <CardBody py={4} px={4}>
                     <Flex align="center" gap={3}>
-                      <Box w="40px" h="40px" borderRadius="10px" bg="rgba(6,182,212,0.2)" display="flex" alignItems="center" justifyContent="center" fontSize="20px">📅</Box>
+                      <Box w="40px" h="40px" borderRadius="10px" bg="rgba(6,182,212,0.2)" display="flex" alignItems="center" justifyContent="center"><Icon as={CalendarIcon} boxSize={5} color="cyan.400" /></Box>
                       <Box>
                         <Text fontSize="2xl" fontWeight="bold" color="cyan.400">{stats.thisMonth}</Text>
                         <Text fontSize="xs" color="rgba(245,240,232,0.4)">本月约会</Text>
@@ -681,7 +597,7 @@ export default function ClientDates() {
                 <Card bg="warm.800" border="1px solid" borderColor="pink.600">
                   <CardBody py={4} px={4}>
                     <Flex align="center" gap={3}>
-                      <Box w="40px" h="40px" borderRadius="10px" bg="rgba(244,114,182,0.2)" display="flex" alignItems="center" justifyContent="center" fontSize="20px">💳</Box>
+                      <Box w="40px" h="40px" borderRadius="10px" bg="rgba(244,114,182,0.2)" display="flex" alignItems="center" justifyContent="center"><Icon as={CreditCardIcon} boxSize={5} color="pink.400" /></Box>
                       <Box>
                         <Text fontSize="2xl" fontWeight="bold" color="pink.400">¥{stats.thisWeekExpense}</Text>
                         <Text fontSize="xs" color="rgba(245,240,232,0.4)">本周花费</Text>
@@ -723,7 +639,7 @@ export default function ClientDates() {
                       {/* 约会信息 */}
                       <Box flex={1}>
                         <HStack spacing={2} mb={1}>
-                          <Avatar size="sm" name={upcomingDate.girl?.name} src={getAvatar(upcomingDate.girl)} />
+                          <Avatar size="sm" name={upcomingDate.girl?.name} src={upcomingDate.girl?.avatar ? getMediaUrl(upcomingDate.girl.avatar) : undefined} />
                           <Text color="white" fontWeight="bold" fontSize="lg">{upcomingDate.girl?.name}</Text>
                           <Badge colorScheme={upcomingDate.status === 'confirmed' || upcomingDate.status === 'planned' ? 'green' : 'yellow'}>
                             {upcomingDate.status === 'confirmed' ? '已确认' : upcomingDate.status === 'planned' ? '已策划' : '待确认'}
@@ -762,9 +678,9 @@ export default function ClientDates() {
               <Card bg="warm.800">
                 <CardBody>
                   <Flex direction="column" align="center" py={12} gap={3}>
-                    <Icon as={CalendarIcon} color="rgba(245,240,232,0.2)" boxSize={12} />
+                    <Icon as={CalendarIcon} color="rgba(245,240,232,0.4)" boxSize={12} />
                     <Text color="rgba(245,240,232,0.4)">暂无约会</Text>
-                    <Text color="rgba(245,240,232,0.2)" fontSize="sm">点击右上角"添加约会"开始</Text>
+                    <Text color="rgba(245,240,232,0.55)" fontSize="sm">点击右上角"添加约会"开始</Text>
                   </Flex>
                 </CardBody>
               </Card>
@@ -814,7 +730,7 @@ export default function ClientDates() {
                     >
                       <CardBody py={4} px={5}>
                         <Flex gap={4} align="flex-start">
-                          <Avatar size="lg" name={d.girl?.name} src={getAvatar(d.girl)} />
+                          <Avatar size="lg" name={d.girl?.name} src={d.girl?.avatar ? getMediaUrl(d.girl.avatar) : undefined} />
                           <Box flex={1}>
                             <Flex justify="space-between" align="flex-start" mb={2}>
                               <Box>
@@ -1019,7 +935,7 @@ export default function ClientDates() {
                             <Box flex={1}>
                               <Text color="white" fontSize="sm" mb={1}>{q.question}</Text>
                               {q.purpose && (
-                                <Text color="rgba(245,240,232,0.2)" fontSize="xs">（{q.purpose}）</Text>
+                                <Text color="rgba(245,240,232,0.55)" fontSize="xs">（{q.purpose}）</Text>
                               )}
                             </Box>
                           </Flex>
@@ -1040,7 +956,7 @@ export default function ClientDates() {
                                         setInterviewAnswers({ ...interviewAnswers, [qId]: next.join(',') });
                                       }}
                                     >
-                                      {selected ? '✓ ' : ''}{opt}
+                                      {selected ? <><Icon as={CheckIcon} boxSize={3} mr={1} /> </> : ''}{opt}
                                     </Tag>
                                   </WrapItem>
                                 );
@@ -1101,7 +1017,7 @@ export default function ClientDates() {
                 <Text color="rgba(245,240,232,0.4)" textAlign="center" mb={2}>选择约会对象</Text>
                 <VStack spacing={3} align="stretch" maxH="300px" overflowY="auto">
                   {girlList.length === 0 ? (
-                    <Text color="rgba(245,240,232,0.2)" textAlign="center" py={8}>暂无比心仪的女生</Text>
+                    <Text color="rgba(245,240,232,0.55)" textAlign="center" py={8}>暂无比心仪的女生</Text>
                   ) : girlList.map(girl => {
                     const stageLabels = {
                       '陌生': { color: 'gray', text: '陌生' },
@@ -1147,7 +1063,7 @@ export default function ClientDates() {
                     >
                       <CardBody py={3} px={4}>
                         <HStack spacing={3}>
-                          <Avatar size="md" name={girl.name} src={getAvatar(girl)} />
+                          <Avatar size="md" name={girl.name} src={girl.avatar ? getMediaUrl(girl.avatar) : undefined} />
                           <Box flex={1}>
                             <HStack spacing={2}>
                               <Text color="white" fontWeight="bold">{girl.name}</Text>
@@ -1155,19 +1071,19 @@ export default function ClientDates() {
                             </HStack>
                             <HStack spacing={2} mt={1} flexWrap="wrap">
                               {girl.age && <Text color="rgba(245,240,232,0.4)" fontSize="xs">{girl.age}岁</Text>}
-                              {girl.occupation && <Text color="rgba(245,240,232,0.2)" fontSize="xs">· {girl.occupation}</Text>}
-                              {girl.personalityTags && <Text color="rgba(245,240,232,0.2)" fontSize="xs">· {girl.personalityTags}</Text>}
+                              {girl.occupation && <Text color="rgba(245,240,232,0.55)" fontSize="xs">· {girl.occupation}</Text>}
+                              {girl.personalityTags && <Text color="rgba(245,240,232,0.55)" fontSize="xs">· {girl.personalityTags}</Text>}
                             </HStack>
                             {(girl.dietPreferences || girl.dietRestrictions) && (
                               <HStack spacing={1} mt={1} flexWrap="wrap">
-                                <Text color="rgba(245,240,232,0.2)" fontSize="xs">🍽</Text>
+                                <Icon as={GiftIcon} boxSize={3} color="rgba(245,240,232,0.55)" />
                                 {girl.dietRestrictions && <Badge size="sm" colorScheme="red" mr={1}>{girl.dietRestrictions}</Badge>}
                                 {girl.dietPreferences && <Badge size="sm" colorScheme="green">{girl.dietPreferences}</Badge>}
                               </HStack>
                             )}
                           </Box>
                           {selectedGirlForDate?.id === girl.id && (
-                            <Box color="gold.400" fontSize="20px">✓</Box>
+                            <Icon as={CheckIcon} color="gold.400" boxSize={5} />
                           )}
                         </HStack>
                       </CardBody>
@@ -1194,7 +1110,7 @@ export default function ClientDates() {
                   <Card bg="warm.800" border="1px solid" borderColor="gold.500">
                     <CardBody py={3} px={4}>
                       <Flex align="center" gap={3}>
-                        <Avatar size="md" name={selectedGirlForDate.name} src={getAvatar(selectedGirlForDate)} />
+                        <Avatar size="md" name={selectedGirlForDate.name} src={selectedGirlForDate?.avatar ? getMediaUrl(selectedGirlForDate.avatar) : undefined} />
                         <Box flex={1}>
                           <Text color="white" fontWeight="bold">{selectedGirlForDate.name}</Text>
                           <HStack spacing={2} mt={1} flexWrap="wrap">
@@ -1235,7 +1151,7 @@ export default function ClientDates() {
                     customInput={
                       <Input
                         bg="warm.700" borderColor="warm.600"
-                        _placeholder={{ color: 'rgba(245,240,232,0.2)' }}
+                        _placeholder={{ color: 'rgba(245,240,232,0.4)' }}
                       />
                     }
                     calendarClassName="chinese-calendar"
@@ -1249,7 +1165,7 @@ export default function ClientDates() {
                     value={dateForm.location}
                     onChange={e => setDateForm({ ...dateForm, location: e.target.value })}
                     bg="warm.700" borderColor="warm.600"
-                    _placeholder={{ color: 'rgba(245,240,232,0.2)' }}
+                    _placeholder={{ color: 'rgba(245,240,232,0.4)' }}
                   />
                 </FormControl>
 
@@ -1290,7 +1206,7 @@ export default function ClientDates() {
                 {showAiFields && (
                   <VStack spacing={4} align="stretch" mt={2}>
                     <Divider />
-                    <Text color="gold.400" fontWeight="bold" fontSize="sm">✨ AI 增强信息（可选填，填得越详细方案越精准）</Text>
+                    <HStack spacing={2}><Icon as={SparklesIcon} boxSize={4} color="gold.400" /><Text color="gold.400" fontWeight="bold" fontSize="sm">AI 增强信息（可选填，填得越详细方案越精准）</Text></HStack>
 
                     <FormControl>
                       <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">出行方式</FormLabel>
@@ -1330,7 +1246,7 @@ export default function ClientDates() {
                         value={dateForm.specialRequirements}
                         onChange={e => setDateForm({ ...dateForm, specialRequirements: e.target.value })}
                         bg="warm.700" borderColor="warm.600"
-                        _placeholder={{ color: 'rgba(245,240,232,0.2)' }}
+                        _placeholder={{ color: 'rgba(245,240,232,0.4)' }}
                       />
                     </FormControl>
 
@@ -1341,7 +1257,7 @@ export default function ClientDates() {
                         value={dateForm.scene}
                         onChange={e => setDateForm({ ...dateForm, scene: e.target.value })}
                         bg="warm.700" borderColor="warm.600"
-                        _placeholder={{ color: 'rgba(245,240,232,0.2)' }}
+                        _placeholder={{ color: 'rgba(245,240,232,0.4)' }}
                         rows={3}
                       />
                     </FormControl>
@@ -1354,7 +1270,7 @@ export default function ClientDates() {
                           value={dateForm.budget}
                           onChange={e => setDateForm({ ...dateForm, budget: e.target.value })}
                           bg="warm.700" borderColor="warm.600"
-                          _placeholder={{ color: 'rgba(245,240,232,0.2)' }}
+                          _placeholder={{ color: 'rgba(245,240,232,0.4)' }}
                         />
                       </FormControl>
                       <FormControl>
@@ -1398,6 +1314,7 @@ export default function ClientDates() {
           </ModalBody>
         </ModalContent>
       </Modal>
+      <ConfirmModal />
     </Box>
   );
 }

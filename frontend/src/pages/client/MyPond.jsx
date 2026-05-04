@@ -1,3 +1,4 @@
+import { parseJSON, cleanStreamText, filterReasoning, formatLocalDateTime, formatDateRelative } from '../../utils/uiHelpers';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -11,7 +12,7 @@ import {
 import DatePicker, { registerLocale } from 'react-datepicker';
 import { zhCN } from 'date-fns/locale/zh-CN';
 import 'react-datepicker/dist/react-datepicker.css';
-import { CalendarIcon, SparklesIcon, QuestionIcon, MapPinIcon, ClockIcon, HeartIcon, FishIcon } from '../../components/Icons';
+import { CalendarIcon, SparklesIcon, QuestionIcon, MapPinIcon, ClockIcon, HeartIcon, FishIcon, CreditCardIcon, CheckCircleIcon, CheckIcon, ClipboardIcon } from '../../components/Icons';
 import ClientCalendar from '../../components/ClientCalendar';
 import { dates, clients, girls as girlsApi, getMediaUrl } from '../../utils/api';
 import { captureError } from '../../utils/frontendErrorCapture';
@@ -25,49 +26,6 @@ registerLocale('zh-CN', zhCN);
 const STAGE_COLORS = {
   '陌生': 'gray', '搭讪': 'blue', '聊天': 'cyan', '暧昧': 'yellow', '约会': 'orange', '长期': 'green',
 };
-
-function parseJSON(val, fallback = null) {
-  if (!val) return fallback;
-  if (typeof val === 'object') return val;
-  try { return JSON.parse(val); } catch { return fallback; }
-}
-
-function formatLocalDateTime(date) {
-  if (!date) return '';
-  const pad = n => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
-function cleanStreamText(text) {
-  if (!text) return '';
-  return text
-    .replace(/^[\s]*[\[\{][\s]*/gm, '')
-    .replace(/[\s]*[\]\}][\s]*[,]?[\s]*$/gm, '')
-    .replace(/"[^"]*"\s*:\s*/g, '')
-    .replace(/^\s*"|"\s*[,]?\s*$/gm, '')
-    .replace(/\\n/g, '\n')
-    .replace(/\\"/g, '"')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-}
-
-function filterReasoning(text) {
-  if (!text) return '';
-  return text
-    .split(/[。\n]/)
-    .filter(s => {
-      const t = s.trim();
-      if (!t) return false;
-      if (/json/i.test(t)) return false;
-      if (/overview.*venue.*schedule|包含.*字段|字段.*包含/.test(t)) return false;
-      if (/我们被要求|需要生成|注意.*格式|按照.*格式|确保.*输出|返回.*格式|根据.*要求.*生成/.test(t)) return false;
-      return true;
-    })
-    .join('\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-}
-
 /** ===================== 女生 Tab ===================== */
 function GirlsTab({ girlsList, isInitialLoad, onAddGirl, onGirlClick }) {
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -212,38 +170,6 @@ function DatesTab({ datesList, allDates, pendingInterviews, isInitialLoad, onRef
     .filter(d => !filterGirlId || d.girlId === filterGirlId)
     .sort((a, b) => new Date(a.dateTime || 0) - new Date(b.dateTime || 0)), [datesList, filterGirlId]);
 
-  const formatDateRelative = (dateStr) => {
-    if (!dateStr) return '-';
-    const date = new Date(dateStr);
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
-    const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    if (target.getTime() === today.getTime()) return '今天';
-    if (target.getTime() === tomorrow.getTime()) return '明天';
-    if (target < today) return '已过期';
-    const diff = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
-    if (diff <= 7) return `本周${'日一二三四五六'[date.getDay()]}`;
-    return `${date.getMonth() + 1}月${date.getDate()}日`;
-  };
-
-  const getAvatar = (girl) => {
-    if (!girl) return null;
-    if (girl.avatar) return getMediaUrl(girl.avatar);
-    if (girl.photos) {
-      try {
-        const photos = typeof girl.photos === 'string' ? JSON.parse(girl.photos) : girl.photos;
-        if (Array.isArray(photos) && photos[0]) return getMediaUrl(photos[0]);
-      } catch {}
-    }
-    const name = girl.name || '';
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-      hash = ((hash << 5) - hash) + name.charCodeAt(i);
-      hash = hash & hash;
-    }
-    return `https://i.pravatar.cc/150?img=${Math.abs(hash) % 70}`;
-  };
 
   return (
     <Box>
@@ -263,7 +189,7 @@ function DatesTab({ datesList, allDates, pendingInterviews, isInitialLoad, onRef
           <Card bg="warm.800" border="1px solid" borderColor="orange.600">
             <CardBody py={4} px={4}>
               <Flex align="center" gap={3}>
-                <Box w="40px" h="40px" borderRadius="10px" bg="rgba(249,115,22,0.2)" display="flex" alignItems="center" justifyContent="center" fontSize="20px">📋</Box>
+                <Box w="40px" h="40px" borderRadius="10px" bg="rgba(249,115,22,0.2)" display="flex" alignItems="center" justifyContent="center"><Icon as={ClipboardIcon} boxSize={5} color="orange.400" /></Box>
                 <Box>
                   <Text fontSize="2xl" fontWeight="bold" color="orange.400">{stats.interviews}</Text>
                   <Text fontSize="xs" color="rgba(245,240,232,0.4)">待反馈</Text>
@@ -274,7 +200,7 @@ function DatesTab({ datesList, allDates, pendingInterviews, isInitialLoad, onRef
           <Card bg="warm.800" border="1px solid" borderColor="green.600">
             <CardBody py={4} px={4}>
               <Flex align="center" gap={3}>
-                <Box w="40px" h="40px" borderRadius="10px" bg="rgba(34,197,94,0.2)" display="flex" alignItems="center" justifyContent="center" fontSize="20px">🎉</Box>
+                <Box w="40px" h="40px" borderRadius="10px" bg="rgba(34,197,94,0.2)" display="flex" alignItems="center" justifyContent="center"><Icon as={CheckCircleIcon} boxSize={5} color="green.400" /></Box>
                 <Box>
                   <Text fontSize="2xl" fontWeight="bold" color="green.400">{stats.completed}</Text>
                   <Text fontSize="xs" color="rgba(245,240,232,0.4)">已完成</Text>
@@ -285,7 +211,7 @@ function DatesTab({ datesList, allDates, pendingInterviews, isInitialLoad, onRef
           <Card bg="warm.800" border="1px solid" borderColor="cyan.600">
             <CardBody py={4} px={4}>
               <Flex align="center" gap={3}>
-                <Box w="40px" h="40px" borderRadius="10px" bg="rgba(6,182,212,0.2)" display="flex" alignItems="center" justifyContent="center" fontSize="20px">📅</Box>
+                <Box w="40px" h="40px" borderRadius="10px" bg="rgba(6,182,212,0.2)" display="flex" alignItems="center" justifyContent="center"><Icon as={CalendarIcon} boxSize={5} color="cyan.400" /></Box>
                 <Box>
                   <Text fontSize="2xl" fontWeight="bold" color="cyan.400">{stats.thisMonth}</Text>
                   <Text fontSize="xs" color="rgba(245,240,232,0.4)">本月约会</Text>
@@ -296,7 +222,7 @@ function DatesTab({ datesList, allDates, pendingInterviews, isInitialLoad, onRef
           <Card bg="warm.800" border="1px solid" borderColor="pink.600">
             <CardBody py={4} px={4}>
               <Flex align="center" gap={3}>
-                <Box w="40px" h="40px" borderRadius="10px" bg="rgba(244,114,182,0.2)" display="flex" alignItems="center" justifyContent="center" fontSize="20px">💳</Box>
+                <Box w="40px" h="40px" borderRadius="10px" bg="rgba(244,114,182,0.2)" display="flex" alignItems="center" justifyContent="center"><Icon as={CreditCardIcon} boxSize={5} color="pink.400" /></Box>
                 <Box>
                   <Text fontSize="2xl" fontWeight="bold" color="pink.400">¥{stats.thisWeekExpense}</Text>
                   <Text fontSize="xs" color="rgba(245,240,232,0.4)">本周花费</Text>
@@ -327,7 +253,7 @@ function DatesTab({ datesList, allDates, pendingInterviews, isInitialLoad, onRef
                 </Box>
                 <Box flex={1}>
                   <HStack spacing={2} mb={1}>
-                    <Avatar size="sm" name={upcomingDate.girl?.name} src={getAvatar(upcomingDate.girl)} />
+                    <Avatar size="sm" name={upcomingDate.girl?.name} src={upcomingDate.girl?.avatar ? getMediaUrl(upcomingDate.girl.avatar) : undefined} />
                     <Text color="white" fontWeight="bold" fontSize="lg">{upcomingDate.girl?.name}</Text>
                     <Badge colorScheme={upcomingDate.status === 'confirmed' || upcomingDate.status === 'planned' ? 'green' : 'yellow'}>
                       {upcomingDate.status === 'confirmed' ? '已确认' : upcomingDate.status === 'planned' ? '已策划' : '待确认'}
@@ -350,9 +276,9 @@ function DatesTab({ datesList, allDates, pendingInterviews, isInitialLoad, onRef
       ) : filteredDates.length === 0 && pendingInterviews.length === 0 ? (
         <Card bg="warm.800"><CardBody>
           <Flex direction="column" align="center" py={12} gap={3}>
-            <Icon as={CalendarIcon} color="rgba(245,240,232,0.2)" boxSize={12} />
+            <Icon as={CalendarIcon} color="rgba(245,240,232,0.4)" boxSize={12} />
             <Text color="rgba(245,240,232,0.4)">暂无约会</Text>
-            <Text color="rgba(245,240,232,0.2)" fontSize="sm">点击女生卡片"约她"开始</Text>
+            <Text color="rgba(245,240,232,0.55)" fontSize="sm">点击女生卡片"约她"开始</Text>
           </Flex>
         </CardBody></Card>
       ) : (
@@ -369,7 +295,7 @@ function DatesTab({ datesList, allDates, pendingInterviews, isInitialLoad, onRef
               _hover={{ borderColor: 'purple.400', transform: 'translateY(-2px)' }} transition="all 0.2s">
               <CardBody py={4} px={5}>
                 <Flex gap={4} align="flex-start">
-                  <Avatar size="lg" name={d.girl?.name} src={getAvatar(d.girl)} />
+                  <Avatar size="lg" name={d.girl?.name} src={d.girl?.avatar ? getMediaUrl(d.girl.avatar) : undefined} />
                   <Box flex={1}>
                     <Flex justify="space-between" align="flex-start" mb={2}>
                       <Box>
@@ -510,9 +436,9 @@ export default function MyPond() {
 
       <Tabs colorScheme="gold" variant="soft-rounded" defaultIndex={window.location.hash === '#calendar' ? 2 : window.location.hash === '#dates' ? 1 : 0} isLazy lazyBehavior="keepMounted">
         <TabList sx={{ '& button': { transition: 'all 0.2s ease' } }}>
-          <Tab _selected={{ color: 'warm.950', bg: 'gold.500' }}>女生</Tab>
-          <Tab _selected={{ color: 'warm.950', bg: 'gold.500' }}>约会</Tab>
-          <Tab _selected={{ color: 'warm.950', bg: 'gold.500' }}>日历</Tab>
+          <Tab _selected={{ color: 'warm.950', bg: 'gold.500' }}><Icon as={FemaleIcon} boxSize={4} mr={1} />女生</Tab>
+          <Tab _selected={{ color: 'warm.950', bg: 'gold.500' }}><Icon as={GiftIcon} boxSize={4} mr={1} />约会</Tab>
+          <Tab _selected={{ color: 'warm.950', bg: 'gold.500' }}><Icon as={CalendarIcon} boxSize={4} mr={1} />日历</Tab>
         </TabList>
         <TabPanels>
           <TabPanel px={0}>
@@ -558,7 +484,7 @@ export default function MyPond() {
                 <Text color="rgba(245,240,232,0.4)" textAlign="center" mb={2}>选择约会对象</Text>
                 <VStack spacing={3} align="stretch" maxH="300px" overflowY="auto">
                   {(girlsList ?? []).length === 0 ? (
-                    <Text color="rgba(245,240,232,0.2)" textAlign="center" py={8}>暂无比心仪的女生</Text>
+                    <Text color="rgba(245,240,232,0.55)" textAlign="center" py={8}>暂无比心仪的女生</Text>
                   ) : girlsList.map(girl => (
                     <Card key={girl.id}
                       cursor="pointer"
@@ -577,7 +503,7 @@ export default function MyPond() {
                             </HStack>
                             {girl.age && <Text color="rgba(245,240,232,0.4)" fontSize="xs">{girl.age}岁{girl.occupation ? ` · ${girl.occupation}` : ''}</Text>}
                           </Box>
-                          {selectedGirlForDate?.id === girl.id && <Box color="gold.400" fontSize="20px">✓</Box>}
+                          {selectedGirlForDate?.id === girl.id && <Icon as={CheckIcon} color="gold.400" boxSize={5} />}
                         </HStack>
                       </CardBody>
                     </Card>

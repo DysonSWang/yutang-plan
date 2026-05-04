@@ -62,7 +62,7 @@ function StatCard({ label, value, icon, accent = 'gold', subtitle }) {
             <Text color="white" fontSize="2xl" fontWeight="700" fontFamily="heading">
               <AnimatedNumber value={value} />
             </Text>
-            {subtitle && <Text color="rgba(245,240,232,0.2)" fontSize="xs">{subtitle}</Text>}
+            {subtitle && <Text color="rgba(245,240,232,0.55)" fontSize="xs">{subtitle}</Text>}
           </VStack>
           <Box opacity={0.6}>
             <Icon as={icon} boxSize={6} color={`${accent}.400`} />
@@ -86,7 +86,7 @@ export default function ClientHome() {
   const navigate = useNavigate();
   const { isOpen: isPricingOpen, onOpen: onPricingOpen, onClose: onPricingClose } = useDisclosure();
 
-  const { data, isInitialLoad } = useKeepAliveData(async () => {
+  const { data, isInitialLoad, refresh } = useKeepAliveData(async () => {
     const [clientRes, memberRes] = await Promise.all([
       clients.me(),
       membershipApi.status().catch(() => ({ success: false }))
@@ -256,7 +256,7 @@ export default function ClientHome() {
                         <Text color="white" fontSize="3xl" fontWeight="700">{plan.price.toLocaleString()}</Text>
                         <Text color="rgba(245,240,232,0.4)" fontSize="sm">元/{plan.period}</Text>
                       </HStack>
-                      <Text color="rgba(245,240,232,0.2)" fontSize="xs">约{Math.round(plan.perMonth).toLocaleString()}元/月</Text>
+                      <Text color="rgba(245,240,232,0.55)" fontSize="xs">约{Math.round(plan.perMonth).toLocaleString()}元/月</Text>
                       <Divider borderColor="rgba(245,240,232,0.08)" my={2} />
                       {plan.features.map((f, i) => (
                         <HStack key={i} spacing={2}>
@@ -281,7 +281,7 @@ export default function ClientHome() {
                   </Box>
                 ))}
               </SimpleGrid>
-              <Text color="rgba(245,240,232,0.2)" fontSize="xs" mt={2}>积分只能用于续费抵扣，无有效期限制。被邀请人首单可享8折优惠</Text>
+              <Text color="rgba(245,240,232,0.55)" fontSize="xs" mt={2}>积分只能用于续费抵扣，无有效期限制。被邀请人首单可享8折优惠</Text>
             </Box>
           </ModalBody>
         </ModalContent>

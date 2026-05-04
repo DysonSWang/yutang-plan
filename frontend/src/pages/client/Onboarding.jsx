@@ -195,7 +195,7 @@ export default function Onboarding() {
                 color="white"
                 w="100px"
               />
-              <Text color="rgba(245,240,232,0.2)" fontSize="sm">（诚实评估，AI教练会帮你找到最优策略）</Text>
+              <Text color="rgba(245,240,232,0.55)" fontSize="sm">（诚实评估，AI教练会帮你找到最优策略）</Text>
             </HStack>
           </FormControl>
           <FormControl isRequired>
@@ -395,9 +395,9 @@ export default function Onboarding() {
                 borderRadius="full"
                 fontSize="xs"
               >
-                {i < step ? '✓ ' : ''}{s.label}
+                {i < step ? <><Icon as={CheckIcon} boxSize={3} mr={1} /></> : ''}{s.label}
               </Badge>
-              <Text color="rgba(245,240,232,0.2)" fontSize="xs" textAlign="center">{s.desc}</Text>
+              <Text color="rgba(245,240,232,0.55)" fontSize="xs" textAlign="center">{s.desc}</Text>
             </VStack>
           ))}
         </Flex>
@@ -429,7 +429,7 @@ export default function Onboarding() {
                 上一步
               </Button>
               <HStack>
-                <Text color="rgba(245,240,232,0.2)" fontSize="sm">
+                <Text color="rgba(245,240,232,0.55)" fontSize="sm">
                   {step + 1} / 3
                 </Text>
                 {step < 2 ? (

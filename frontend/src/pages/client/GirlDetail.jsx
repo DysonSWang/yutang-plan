@@ -7,7 +7,7 @@ import {
 } from '@chakra-ui/react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiEdit2, FiCamera, FiFileText, FiZap, FiUser, FiCheck, FiX } from 'react-icons/fi';
-import { HeartIcon } from '../../components/Icons';
+import { HeartIcon, SparklesIcon } from '../../components/Icons';
 import { girls, upload, getMediaUrl } from '../../utils/api';
 import useKeepAliveData from '../../hooks/useKeepAliveData';
 import PullToRefresh from '../../components/PullToRefresh';
@@ -132,7 +132,7 @@ function FieldRow({ label, value }) {
   if (!value && value !== 0) return null;
   return (
     <Box>
-      <Text color="rgba(245,240,232,0.2)" fontSize="xs">{label}</Text>
+      <Text color="rgba(245,240,232,0.55)" fontSize="xs">{label}</Text>
       <Text color="gray.200" fontSize="sm">{String(value)}</Text>
     </Box>
   );
@@ -142,7 +142,7 @@ function TagRow({ label, value }) {
   const tags = String(value).split(/[,，、/]/).map(t => t.trim()).filter(Boolean);
   return (
     <Box>
-      <Text color="rgba(245,240,232,0.2)" fontSize="xs" mb={1}>{label}</Text>
+      <Text color="rgba(245,240,232,0.55)" fontSize="xs" mb={1}>{label}</Text>
       <Wrap spacing={1}>
         {tags.map((t, i) => (
           <WrapItem key={i}><Tag size="sm" colorScheme="gold" variant="subtle" borderRadius="full"><TagLabel fontSize="xs">{t}</TagLabel></Tag></WrapItem>
@@ -156,7 +156,7 @@ function EQBar({ label, value }) {
   const pct = Math.min(100, Math.max(0, (value / 10) * 100));
   return (
     <HStack spacing={3} mb={2}>
-      <Text color="rgba(245,240,232,0.2)" fontSize="xs" w="80px" flexShrink={0}>{label}</Text>
+      <Text color="rgba(245,240,232,0.55)" fontSize="xs" w="80px" flexShrink={0}>{label}</Text>
       <Box flex={1} bg="warm.600" borderRadius="full" h="6px">
         <Box bg="gold.400" h="6px" borderRadius="full" w={`${pct}%`} transition="width 0.3s" />
       </Box>
@@ -440,7 +440,7 @@ export default function GirlDetail() {
       if (file) {
         setQuickImages(prev => [...prev, file]);
         setQuickImagePreviews(prev => [...prev, URL.createObjectURL(file)]);
-        toast({ title: '已粘贴图片', status: 'info', duration: 1500 });
+        toast({ title: '已粘贴图片', status: 'info', duration: 2000 });
       }
     }
   };
@@ -673,7 +673,7 @@ export default function GirlDetail() {
   if (!girl) {
     return (
       <Flex flex={1} align="center" justify="center" minH="60vh">
-        <Text color="rgba(245,240,232,0.2)">女生不存在</Text>
+        <Text color="rgba(245,240,232,0.55)">女生不存在</Text>
       </Flex>
     );
   }
@@ -696,7 +696,7 @@ export default function GirlDetail() {
       {/* ---- 返回按钮 ---- */}
       <HStack mb={4}>
         <IconButton icon={<Icon as={FiArrowLeft} />} variant="ghost" color="rgba(245,240,232,0.4)" onClick={() => navigate('/my-pond')} aria-label="返回" size="sm" />
-        <Text color="rgba(245,240,232,0.2)" fontSize="sm">我的缘分</Text>
+        <Text color="rgba(245,240,232,0.55)" fontSize="sm">我的缘分</Text>
       </HStack>
 
       {/* ---- Hero 身份卡片 ---- */}
@@ -757,17 +757,17 @@ export default function GirlDetail() {
         {/* 关系指标条 */}
         <SimpleGrid columns={{ base: 2, md: 4 }} spacing={3} mt={4} pt={4} borderTop="1px solid" borderColor="warm.600">
           <HStack spacing={2}><Icon as={HeartIcon} color="red.400" boxSize={4} /><Text color="rgba(245,240,232,0.4)" fontSize="xs">亲密度</Text><Text color="white" fontWeight="bold" fontSize="sm">Lv.{girl.intimacyLevel || 1}</Text></HStack>
-          <HStack spacing={2}><Text color="rgba(245,240,232,0.2)" fontSize="xs">热度</Text><Text color="white" fontWeight="bold" fontSize="sm">{girl.tensionScore?.toFixed(1) || '5.0'}<Text as="span" color="rgba(245,240,232,0.2)" fontSize="xs">/10</Text></Text></HStack>
-          <HStack spacing={2}><Text color="rgba(245,240,232,0.2)" fontSize="xs">最后联系</Text><Text color="white" fontSize="xs">{lastContact || '未记录'}</Text></HStack>
-          <HStack spacing={2}><Text color="rgba(245,240,232,0.2)" fontSize="xs">约会</Text><Text color="white" fontWeight="bold" fontSize="sm">{related?.dates?.length || 0} 次</Text></HStack>
+          <HStack spacing={2}><Text color="rgba(245,240,232,0.55)" fontSize="xs">热度</Text><Text color="white" fontWeight="bold" fontSize="sm">{girl.tensionScore?.toFixed(1) || '5.0'}<Text as="span" color="rgba(245,240,232,0.55)" fontSize="xs">/10</Text></Text></HStack>
+          <HStack spacing={2}><Text color="rgba(245,240,232,0.55)" fontSize="xs">最后联系</Text><Text color="white" fontSize="xs">{lastContact || '未记录'}</Text></HStack>
+          <HStack spacing={2}><Text color="rgba(245,240,232,0.55)" fontSize="xs">约会</Text><Text color="white" fontWeight="bold" fontSize="sm">{related?.dates?.length || 0} 次</Text></HStack>
         </SimpleGrid>
       </Box>
 
       {/* ====== 快速记录 ====== */}
       <Box bg="warm.800" bgGradient="linear(to-b, warm.700, warm.800)" borderRadius="lg" p={5} mb={6}>
         <Heading color="white" size="sm" mb={3}>
-          ⚡ 快速记录
-          <Text as="span" color="rgba(245,240,232,0.2)" fontWeight="normal" fontSize="sm" ml={2}>输入文字或粘贴图片，AI 自动学习完善档案</Text>
+          <Icon as={SparklesIcon} boxSize={4} mr={2} /> 快速记录
+          <Text as="span" color="rgba(245,240,232,0.55)" fontWeight="normal" fontSize="sm" ml={2}>输入文字或粘贴图片，AI 自动学习完善档案</Text>
         </Heading>
         <VStack spacing={3} align="stretch">
           <Textarea
@@ -858,7 +858,7 @@ export default function GirlDetail() {
             <HStack spacing={3}>
               <Text color="warm.600" fontSize="xs">{quickText.length} / 2000</Text>
               {quickImages.length > 0 && (
-                <Text color="rgba(245,240,232,0.2)" fontSize="xs">{quickImages.length} 张图片</Text>
+                <Text color="rgba(245,240,232,0.55)" fontSize="xs">{quickImages.length} 张图片</Text>
               )}
             </HStack>
             <Button
@@ -910,7 +910,7 @@ export default function GirlDetail() {
             <VStack spacing={3} align="stretch">
               {[...infoNotes].reverse().map(note => (
                 <Box key={note.id} bg="warm.800" p={3} borderRadius="md" borderLeft="3px solid" borderColor="warm.600">
-                  <Text color="rgba(245,240,232,0.2)" fontSize="xs" mb={1}>
+                  <Text color="rgba(245,240,232,0.55)" fontSize="xs" mb={1}>
                     {new Date(note.createdAt).toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </Text>
                   {note.text ? (
@@ -965,7 +965,7 @@ export default function GirlDetail() {
                 if (fk === 'weight') return <FieldRow key={fk} label="体重" value={val ? `${val}kg` : null} />;
                 if (fk === 'age') return <FieldRow key={fk} label="年龄" value={val ? `${val}岁` : null} />;
                 return <EmptyValue key={fk} value={val}>
-                  <Box><Text color="rgba(245,240,232,0.2)" fontSize="xs">{getFieldLabel(fk)}</Text><Text color="gray.200" fontSize="sm">{val}</Text></Box>
+                  <Box><Text color="rgba(245,240,232,0.55)" fontSize="xs">{getFieldLabel(fk)}</Text><Text color="gray.200" fontSize="sm">{val}</Text></Box>
                 </EmptyValue>;
               })}
             </SimpleGrid>
@@ -983,15 +983,15 @@ export default function GirlDetail() {
             <Text color="gold.400" fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">主页与来源</Text>
             <VStack spacing={3} align="stretch">
               <EmptyValue value={girl.homepageUrl}>
-                <Text color="rgba(245,240,232,0.2)" fontSize="xs">主页链接</Text>
+                <Text color="rgba(245,240,232,0.55)" fontSize="xs">主页链接</Text>
                 <Text color="gold.300" fontSize="sm" noOfLines={1} wordBreak="break-all">{girl.homepageUrl}</Text>
               </EmptyValue>
               <EmptyValue value={girl.sourcePlatform}>
-                <Text color="rgba(245,240,232,0.2)" fontSize="xs">来源平台</Text>
+                <Text color="rgba(245,240,232,0.55)" fontSize="xs">来源平台</Text>
                 <Text color="gray.200" fontSize="sm">{girl.sourcePlatform}</Text>
               </EmptyValue>
               <EmptyValue value={girl.sourceUrl}>
-                <Text color="rgba(245,240,232,0.2)" fontSize="xs">来源链接</Text>
+                <Text color="rgba(245,240,232,0.55)" fontSize="xs">来源链接</Text>
                 <Text color="rgba(245,240,232,0.4)" fontSize="xs" noOfLines={1} wordBreak="break-all">{girl.sourceUrl}</Text>
               </EmptyValue>
             </VStack>
@@ -1097,9 +1097,9 @@ export default function GirlDetail() {
         <SectionCard title="匹配分析" color="orange.400">
           {girl.matchScore ? (
             <HStack mb={3}>
-              <Text color="rgba(245,240,232,0.2)" fontSize="xs">匹配度</Text>
+              <Text color="rgba(245,240,232,0.55)" fontSize="xs">匹配度</Text>
               <Text color="gold.400" fontSize="2xl" fontWeight="bold">{girl.matchScore}</Text>
-              <Text color="rgba(245,240,232,0.2)" fontSize="xs">/ 100</Text>
+              <Text color="rgba(245,240,232,0.55)" fontSize="xs">/ 100</Text>
             </HStack>
           ) : <Text color="warm.600" fontSize="sm" mb={3}>暂无评分</Text>}
           <FieldRow label="计算依据" value={girl.matchScoreBasis} />
@@ -1133,7 +1133,7 @@ export default function GirlDetail() {
                       <HStack key={i} spacing={2} bg="warm.600" p={2} borderRadius="md" align="start">
                         <Badge colorScheme={typeColor} fontSize="xs" mt="1px" flexShrink={0}>{typeLabel}</Badge>
                         <Text color="gray.200" fontSize="sm" flex={1}>{event}</Text>
-                        {date && <Text color="rgba(245,240,232,0.2)" fontSize="xs" flexShrink={0}>{date}</Text>}
+                        {date && <Text color="rgba(245,240,232,0.55)" fontSize="xs" flexShrink={0}>{date}</Text>}
                       </HStack>
                     );
                   })}
@@ -1178,7 +1178,7 @@ export default function GirlDetail() {
                       {d.status === 'confirmed' ? '已确认' : d.status === 'pending' ? '待确认' : d.status || '未知'}
                     </Badge>
                   </HStack>
-                  <Text color="rgba(245,240,232,0.2)" fontSize="xs">
+                  <Text color="rgba(245,240,232,0.55)" fontSize="xs">
                     {d.dateTime ? new Date(d.dateTime).toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
                     {d.location ? ` · ${d.location}` : ''}
                   </Text>
@@ -1201,9 +1201,9 @@ export default function GirlDetail() {
                       {h.fromStage ? `${RELATIONSHIP_STAGE_LABELS[h.fromStage] || h.fromStage} → ` : ''}
                       {RELATIONSHIP_STAGE_LABELS[h.toStage] || h.toStage}
                     </Text>
-                    <Text color="rgba(245,240,232,0.2)" fontSize="xs">{new Date(h.createdAt).toLocaleDateString('zh-CN')}</Text>
+                    <Text color="rgba(245,240,232,0.55)" fontSize="xs">{new Date(h.createdAt).toLocaleDateString('zh-CN')}</Text>
                   </HStack>
-                  {h.reason && <Text color="rgba(245,240,232,0.2)" fontSize="xs" mt={1}>{h.reason}</Text>}
+                  {h.reason && <Text color="rgba(245,240,232,0.55)" fontSize="xs" mt={1}>{h.reason}</Text>}
                 </Box>
               ))}
             </VStack>

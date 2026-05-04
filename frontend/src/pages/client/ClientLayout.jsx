@@ -84,7 +84,7 @@ function DesktopSidebar({ chatUnread, unreadCount, notifications, showNotificati
                       <Box key={n.id} p={3} bg="rgba(255,255,255,0.04)" borderRadius="md" border="1px solid rgba(255,255,255,0.06)">
                         <Text color="white" fontSize="sm" fontWeight="bold">{n.title}</Text>
                         <Text color="rgba(245,240,232,0.6)" fontSize="xs" mt={1}>{n.content}</Text>
-                        <Text color="rgba(245,240,232,0.2)" fontSize="xs" mt={1}>
+                        <Text color="rgba(245,240,232,0.55)" fontSize="xs" mt={1}>
                           {new Date(n.createdAt).toLocaleString()}
                         </Text>
                       </Box>
@@ -249,7 +249,7 @@ export default function ClientLayout() {
         title: '操盘手发来代聊记录',
         description: log.content?.slice(0, 30) + (log.content?.length > 30 ? '...' : ''),
         status: 'info',
-        duration: 5000,
+        duration: 3000,
         isClosable: true,
         position: 'top',
       });

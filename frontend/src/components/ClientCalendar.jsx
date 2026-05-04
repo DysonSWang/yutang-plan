@@ -12,6 +12,7 @@ import {
 import { events as eventsApi, dates as datesApi } from '../utils/api';
 import { captureError } from '../utils/frontendErrorCapture';
 import { FireIcon, CalendarIcon, PlusIcon, TrashIcon, EditIcon, CheckIcon } from './Icons';
+import { useConfirmModal } from './ConfirmModal';
 
 const DATE_STATUS_CONFIG = {
   pending_plan: { label: '待策划', color: 'orange' },
@@ -63,6 +64,7 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [editMode, setEditMode] = useState('view'); // 'view' | 'edit' | 'create'
   const [isDateEvent, setIsDateEvent] = useState(false);
+  const { confirm, ConfirmModal } = useConfirmModal();
   const [form, setForm] = useState({
     girlId: '', dateTime: '', title: '', content: '', type: 'manual', status: 'pending'
   });
@@ -323,7 +325,12 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
 
   const handleDelete = async () => {
     if (!selectedEvent) return;
-    if (!window.confirm(isDateEvent ? '确定删除这条约会记录？' : '确定删除这个事件？')) return;
+    const ok = await confirm({
+      title: '删除事件',
+      message: isDateEvent ? '确定删除这条约会记录？' : '确定删除这个事件？',
+      confirmText: '删除',
+    });
+    if (!ok) return;
     setDeleting(true);
     try {
       let res;
@@ -383,11 +390,11 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
           <HStack spacing={2} ml={4}>
             <HStack spacing={1}>
               <Box w={2} h={2} borderRadius="sm" bg="green.500" />
-              <Text fontSize="xs" color="rgba(245,240,232,0.2)">约会</Text>
+              <Text fontSize="xs" color="rgba(245,240,232,0.55)">约会</Text>
             </HStack>
             <HStack spacing={1}>
               <Box w={2} h={2} borderRadius="sm" bg="orange.500" />
-              <Text fontSize="xs" color="rgba(245,240,232,0.2)">行动项</Text>
+              <Text fontSize="xs" color="rgba(245,240,232,0.55)">行动项</Text>
             </HStack>
             <HStack spacing={1}>
               <Box w={2} h={2} borderRadius="sm" bg="blue.500" />
@@ -542,7 +549,7 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
                 {selectedEvent?.aiContext && (
                   <Box bg="warm.800" p={3} borderRadius="md">
                     <Text color="rgba(245,240,232,0.4)" fontSize="xs">AI 原文</Text>
-                    <Text color="rgba(245,240,232,0.2)" fontSize="xs" fontStyle="italic">
+                    <Text color="rgba(245,240,232,0.55)" fontSize="xs" fontStyle="italic">
                       "{selectedEvent.aiContext}"
                     </Text>
                   </Box>
@@ -697,6 +704,7 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
           </ModalFooter>
         </ModalContent>
       </Modal>
+      <ConfirmModal />
     </Box>
   );
 }

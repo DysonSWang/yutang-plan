@@ -330,7 +330,7 @@ export default function ClientProfile() {
               title: '档案已更新',
               description: '你的专属学习版本可能需要重新生成以匹配新档案。前往学习中心重新生成。',
               status: 'info',
-              duration: 5000,
+              duration: 4000,
               isClosable: true,
             });
           }
@@ -962,7 +962,7 @@ export default function ClientProfile() {
           <CardBody>
           <VStack spacing={2} align="stretch">
             <HStack justify="space-between">
-              <Text color="rgba(245,240,232,0.2)" fontSize="sm">当前版本</Text>
+              <Text color="rgba(245,240,232,0.55)" fontSize="sm">当前版本</Text>
               <Text color="white" fontSize="sm">V{VERSION}</Text>
             </HStack>
             <HStack spacing={2}>
@@ -1193,7 +1193,7 @@ export default function ClientProfile() {
                         <Text color="gold.400" fontSize="3xl" fontWeight="bold">¥{plan.price}</Text>
                         <Text color="rgba(245,240,232,0.4)" fontSize="sm">/{plan.period}</Text>
                       </HStack>
-                      <Text color="rgba(245,240,232,0.2)" fontSize="xs">约¥{plan.perMonth}/月</Text>
+                      <Text color="rgba(245,240,232,0.55)" fontSize="xs">约¥{plan.perMonth}/月</Text>
                     </VStack>
                     <VStack spacing={2} align="stretch">
                       {plan.features.map((f, i) => (
@@ -1223,7 +1223,7 @@ export default function ClientProfile() {
                   <Text color="rgba(245,240,232,0.4)" fontSize="xs">高端会员邀请积分</Text>
                 </Box>
               </SimpleGrid>
-              <Text color="rgba(245,240,232,0.2)" fontSize="xs" mt={2}>
+              <Text color="rgba(245,240,232,0.55)" fontSize="xs" mt={2}>
                 积分只能用于续费抵扣，无有效期限制。被邀请人首单可享8折优惠
               </Text>
             </Box>
@@ -1306,7 +1306,7 @@ export default function ClientProfile() {
               })()}
             </Box>
 
-            <Text color="rgba(245,240,232,0.2)" fontSize="xs" mt={3}>
+            <Text color="rgba(245,240,232,0.55)" fontSize="xs" mt={3}>
               系统仅支持积分支付，1积分=1元。
               {memberStatus?.membership
                 ? '续费后有效期将在现有基础上累加。'

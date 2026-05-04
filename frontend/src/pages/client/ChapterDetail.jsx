@@ -171,7 +171,7 @@ export default function ChapterDetail() {
               <Badge colorScheme={statusColor} variant="subtle" fontSize="xs">
                 {statusLabel}
               </Badge>
-              <Text color="rgba(245,240,232,0.2)" fontSize="xs">第 {chapter.chapterId} 章</Text>
+              <Text color="rgba(245,240,232,0.55)" fontSize="xs">第 {chapter.chapterId} 章</Text>
             </HStack>
             <Text color="white" fontSize="xl" fontWeight="bold" lineHeight="short">
               {chapter.title}
@@ -237,7 +237,7 @@ export default function ChapterDetail() {
                 <VStack align="flex-start" spacing={0}>
                   <Text color="white" fontWeight="semibold" fontSize="lg">{chapter.title}</Text>
                   {chapter.subtitle && (
-                    <Text color="rgba(245,240,232,0.2)" fontSize="sm">{chapter.subtitle}</Text>
+                    <Text color="rgba(245,240,232,0.55)" fontSize="sm">{chapter.subtitle}</Text>
                   )}
                 </VStack>
               </HStack>
@@ -391,7 +391,7 @@ export default function ChapterDetail() {
             <VStack>
               <BookIcon boxSize={12} color="rgba(245,240,232,0.2)" />
               <Text color="rgba(245,240,232,0.4)" mt={4}>暂无章节内容</Text>
-              <Text color="rgba(245,240,232,0.2)" fontSize="sm" mt={1}>请联系管理员添加内容</Text>
+              <Text color="rgba(245,240,232,0.55)" fontSize="sm" mt={1}>请联系管理员添加内容</Text>
             </VStack>
           </Center>
         )}
