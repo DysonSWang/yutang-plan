@@ -198,57 +198,31 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
         </VStack>
       )}
 
-      {/* 状态 2: 可生成 */}
+      {/* 状态 2: 可生成 → 改为提示用户联系管理员 */}
       {status === 'ready' && (
         <VStack align="stretch" spacing={4}>
-          <HStack justify="space-between">
-            <HStack>
-              <Badge colorScheme="purple" variant="subtle" fontSize="sm" px={2} py={0.5}>因材施教</Badge>
-              <Text color="rgba(245,240,232,0.6)" fontSize="sm">
-                档案完善度 {completeness?.percentage || 0}%
-              </Text>
-            </HStack>
+          <HStack>
+            <Badge colorScheme="purple" variant="subtle" fontSize="sm" px={2} py={0.5}>因材施教</Badge>
+            <Text color="rgba(245,240,232,0.6)" fontSize="sm">
+              档案完善度 {completeness?.percentage || 0}%
+            </Text>
           </HStack>
 
           <Box>
             <Text color="white" fontSize="md" fontWeight="bold" mb={3}>
-              你看过那些建议。有道理。但没用。
+              你已达到专属版生成标准
             </Text>
             <Text color="rgba(245,240,232,0.6)" fontSize="sm" lineHeight="1.9">
-              问题不在方法。在于不匹配。
-            </Text>
-            <Text color="rgba(245,240,232,0.6)" fontSize="sm" lineHeight="1.9">
-              内向的人和外向的人，不能用同一套话术。
-              奔着结婚去的，和还在观望的，不该走同一条路。
-            </Text>
-            <Text color="rgba(245,240,232,0.6)" fontSize="sm" lineHeight="1.9" mt={3}>
-              所以我们不给你标准版。
-            </Text>
-            <Text color="rgba(245,240,232,0.6)" fontSize="sm" lineHeight="1.9">
-              系统读你的档案——性格、沟通风格、目标、经历——
-              然后从底层重写每一章。
+              完善度已达 {completeness?.percentage || 0}%，满足生成条件。
             </Text>
             <Text color="gold.300" fontSize="sm" fontWeight="medium" mt={2}>
-              不是润色。是重写。案例变成适合你的案例。语气像在跟你说话。
-              行动匹配你当前的阶段。一个完整的体系，为一个人建造。
+              联系操盘手，申请生成你的专属版本。
             </Text>
           </Box>
 
-          <HStack gap={2} flexWrap="wrap">
-            {['你的案例', '你的语气', '你的阶段', '你的体系'].map(tag => (
-              <Badge key={tag} colorScheme="gold" variant="subtle" fontSize="xs">{tag}</Badge>
-            ))}
-          </HStack>
-
-          <Button
-            size="md"
-            colorScheme="gold"
-            alignSelf="flex-start"
-            onClick={handleGenerate}
-            px={6}
-          >
-            生成我的专属版本 · 预计 3-5 分钟
-          </Button>
+          <Text color="rgba(245,240,232,0.3)" fontSize="xs">
+            操盘手可在管理后台 &gt; 学习版块管理 &gt; 个性化学习管理 中为你生成。
+          </Text>
         </VStack>
       )}
 

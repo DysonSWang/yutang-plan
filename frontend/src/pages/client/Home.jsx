@@ -74,12 +74,12 @@ function StatCard({ label, value, icon, accent = 'gold', subtitle }) {
 }
 
 const QUICK_ENTRIES = [
-  { path: null, label: '联系专属顾问', desc: '人工沟通，更私密', icon: ChatIcon, gradient: 'linear(135deg, gold.500, gold.400)' },
+  { path: null, label: '联系Mo哥', desc: '人工沟通，更私密', icon: ChatIcon, gradient: 'linear(135deg, gold.500, gold.400)' },
   { path: '/ai-coach', label: 'AI教练咨询', desc: '24小时在线', icon: SparklesIcon, gradient: 'linear(135deg, gold.500, gold.400)' },
   { path: '/my-pond', label: '查看我的缘分', desc: '管理我的缘分', icon: FishIcon, gradient: 'linear(135deg, rose.500, rose.400)' },
   { path: '/learning', label: '学习中心', desc: 'Mo哥宝典章节学习', icon: BookIcon, gradient: 'linear(135deg, gold.500, gold.400)' },
-  { path: '/dates', label: '约会与方案', desc: '约会确认和AI方案', icon: GiftIcon, gradient: 'linear(135deg, gold.500, gold.400)' },
-  { path: '/dates#calendar', label: '我的日历', desc: '查看约会与活动', icon: CalendarIcon, gradient: 'linear(135deg, gold.500, gold.400)' },
+  { path: '/my-pond', label: '约会与方案', desc: '约会确认和AI方案', icon: GiftIcon, gradient: 'linear(135deg, gold.500, gold.400)' },
+  { path: '/my-pond#calendar', label: '我的日历', desc: '查看约会与活动', icon: CalendarIcon, gradient: 'linear(135deg, gold.500, gold.400)' },
 ];
 
 export default function ClientHome() {
@@ -148,7 +148,9 @@ export default function ClientHome() {
         <Text color="rgba(245,240,232,0.3)" fontSize="sm" mb={8}>
           {stats.serviceStage !== '未开始'
             ? `服务阶段 · ${stats.serviceStage}`
-            : '开启你的缘分之旅'}
+            : hasAnyData
+              ? `已添加 ${stats.girlCount} 位女生`
+              : '开启你的缘分之旅'}
         </Text>
       </Box>
 

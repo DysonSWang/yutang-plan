@@ -61,22 +61,23 @@ export default function VersionUpdateModal({ isOpen, onClose, upgradeType, lates
         reader.readAsDataURL(blob);
       });
 
-      // 3. 写入手机存储
+      // 3. 写入缓存目录（Android 10+ 推荐，使用 content:// URI）
       const filename = `zhuiai-${latestVersion}.apk`;
-      await Filesystem.writeFile({
+      const result = await Filesystem.writeFile({
         path: filename,
         data: base64,
-        directory: Directory.Documents,
+        directory: Directory.Cache,
       });
 
-      // 4. 获取文件路径并打开
-      const fileUri = await Filesystem.getUri({
+      // 4. 写入 internal cache 后再用 FileProvider 打开
+      // 先把文件复制到 cache（FileOpener 需要 app-owned 文件）
+      const cacheFile = await Filesystem.getUri({
         path: filename,
-        directory: Directory.Documents,
+        directory: Directory.Cache,
       });
 
       await FileOpener.openFile({
-        path: fileUri.uri,
+        path: cacheFile.uri,
         contentType: 'application/vnd.android.package-archive',
       });
 
