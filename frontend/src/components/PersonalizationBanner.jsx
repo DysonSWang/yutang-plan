@@ -144,7 +144,7 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
             <Text color="rgba(245,240,232,0.6)" fontSize="sm">当前不可用</Text>
           </HStack>
           <Text color="rgba(245,240,232,0.4)" fontSize="sm" lineHeight="1.9">
-            个性化学习功能暂时不可用。如有疑问，请联系操盘手。
+            个性化学习功能暂时不可用。如有疑问，请联系 Mo哥。
           </Text>
         </VStack>
       </Box>
@@ -216,12 +216,12 @@ export default function PersonalizationBanner({ onSwitchVersion, currentVersion 
               完善度已达 {completeness?.percentage || 0}%，满足生成条件。
             </Text>
             <Text color="gold.300" fontSize="sm" fontWeight="medium" mt={2}>
-              联系操盘手，申请生成你的专属版本。
+              联系 Mo哥，申请生成你的专属版本。
             </Text>
           </Box>
 
           <Text color="rgba(245,240,232,0.3)" fontSize="xs">
-            操盘手可在管理后台 &gt; 学习版块管理 &gt; 个性化学习管理 中为你生成。
+            Mo哥可在管理后台 &gt; 学习版块管理 &gt; 个性化学习管理 中为你生成。
           </Text>
         </VStack>
       )}
