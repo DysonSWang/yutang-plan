@@ -2411,13 +2411,12 @@ export default function AICoach() {
     if (combatMode === 'suggest') {
       // 回复建议：先追加女生消息气泡
       const herMsg = { id: `combat-${Date.now()}`, role: 'girl', content: text, timestamp: now };
-      setCombatHistories(prev => ({
-        ...prev,
-        [key]: [...(prev[key] || []), herMsg]
-      }));
-      persistCombatMessages(key, [herMsg]);
-      // 更新 combatContextRef
-      updateCombatContext(combatHistories[key] || [], importAnalysis);
+      setCombatHistories(prev => {
+        const updated = [...(prev[key] || []), herMsg];
+        persistCombatMessages(key, [herMsg]);
+        updateCombatContext(updated, importAnalysis);
+        return { ...prev, [key]: updated };
+      });
       setCombatSuggestions(null);
       setSelectedSuggestionIndex(null);
       setCombatLoading(true);
@@ -2480,13 +2479,12 @@ export default function AICoach() {
     setSelectedSuggestionIndex(index);
     const now = new Date().toISOString();
     const myMsg = { id: `combat-${Date.now()}`, role: 'user', content: replyText, timestamp: now };
-    setCombatHistories(prev => ({
-      ...prev,
-      [combatHistoryKey]: [...(prev[combatHistoryKey] || []), myMsg]
-    }));
-    persistCombatMessages(combatHistoryKey, [myMsg]);
-    // 更新 combatContextRef
-    updateCombatContext(combatHistories[combatHistoryKey] || [], importAnalysis);
+    setCombatHistories(prev => {
+      const updated = [...(prev[combatHistoryKey] || []), myMsg];
+      persistCombatMessages(combatHistoryKey, [myMsg]);
+      updateCombatContext(updated, importAnalysis);
+      return { ...prev, [combatHistoryKey]: updated };
+    });
     // 选中后清除建议卡片
     setCombatSuggestions(null);
   }, [selectedSuggestionIndex, combatSuggestions, combatHistoryKey, persistCombatMessages, updateCombatContext, importAnalysis]);
