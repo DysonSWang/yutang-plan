@@ -1075,6 +1075,27 @@ router.post('/reply-suggestions', authMiddleware, async (req, res) => {
     const relStageLabel = relStage ? STAGE_LABELS[relStage] || relStage : null;
     const stageContext = addStageContext(relStage);
 
+    // M007: 构建对话历史上下文
+    let contextSection = '';
+    if (girlId) {
+      try {
+        const chatHistory = await prisma.chatMessage.findMany({
+          where: { girlId: girlId },
+          orderBy: { createdAt: 'desc' },
+          take: 20
+        });
+        if (chatHistory && chatHistory.length > 0) {
+          const reversed = chatHistory.reverse();
+          contextSection = reversed.map(m =>
+            `${m.isFromUser ? '用户' : '女生'}: ${m.content}`
+          ).join('\n');
+          contextSection = `\n【最近对话历史】\n${contextSection}`;
+        }
+      } catch (e) {
+        logger.warn(`[reply-suggestions] 获取聊天历史失败: ${e.message}`);
+      }
+    }
+
     // 获取动态路由的多位大师视角（带调试meta）
     const { skills, meta: routingMeta } = getMultiDimensionalSkillsWithMeta(lastMessage, { girlId, girlStage: fullContext.girlInfo?.stage });
 
@@ -1135,6 +1156,7 @@ ${hiddenContext?.keyInsights ? `\n【AI教练实时洞察】\n${hiddenContext.ke
 
 ${girlContextInfo}
 ${stageContext}
+${contextSection}
 【对方最后一条消息】
 ${lastMessage}
 
