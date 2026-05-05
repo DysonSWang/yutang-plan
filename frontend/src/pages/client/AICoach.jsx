@@ -2685,7 +2685,11 @@ export default function AICoach() {
       fetch(`${apiUrl}/api/ai-coach/reply-suggestions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ girlId: selectedGirlId || undefined, lastMessage: lastGirlMsg.content })
+        body: JSON.stringify({
+          girlId: selectedGirlId || undefined,
+          lastMessage: lastGirlMsg.content,
+          hiddenContext: combatContextRef.current || null
+        })
       }).then(r => r.json()).then(data => {
         if (data.success && data.suggestions?.options?.length) {
           setCombatSuggestions({ type: 'suggestions', items: data.suggestions.options });
