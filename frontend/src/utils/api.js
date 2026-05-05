@@ -581,6 +581,30 @@ moment: (data) => api.post('/api/ai-coach/moment', data),
     } finally {
       clearTimeout(timeoutId);
     }
+  },
+  // 聊天记录分析
+  analyzeChatHistory: async (messages, girlId = null) => {
+    const token = api.getToken();
+    const res = await fetch(`${api.baseUrl}/api/ai-coach/analyze-chat-history`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ messages, girlId })
+    });
+    if (!res.ok) throw new Error('聊天分析失败');
+    return res.json();
+  },
+  // 删除实战消息
+  deleteCombatMessage: async (girlId, messageId) => {
+    const token = api.getToken();
+    const res = await fetch(`${api.baseUrl}/api/ai-coach/combat-message/${girlId}/${messageId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('删除失败');
+    return res.json();
   }
 };
 
@@ -741,3 +765,8 @@ export const membership = {
 export const reports = {
   overview: (range = 'day') => api.get('/api/reports/overview?range=' + range),
 };
+
+// AI军师 - 聊天记录分析
+export const analyzeChatHistory = (messages, girlId) => api.analyzeChatHistory(messages, girlId);
+// AI军师 - 删除实战消息
+export const deleteCombatMessage = (girlId, messageId) => api.deleteCombatMessage(girlId, messageId);
