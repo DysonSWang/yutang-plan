@@ -26,6 +26,7 @@ const { extractLearningsFromConversation } = require('../services/learning');
 const { buildDynamicPersona, buildPersonaSection, buildFullPersona } = require('../services/coachPersona');
 const { addStageContext, appendStageWarning, STAGE_LABELS } = require('../services/stageGuard');
 const { analyzeImage } = require('../services/imageAnalyzer');
+const { analyzeChatHistory } = require('../services/chatAnalyzer');
 
 const multer = require('multer');
 const { JWT_SECRET, getAIConfig, getVLModelConfig } = require('../config');
@@ -1691,6 +1692,29 @@ router.post('/import-chat-screenshots', authMiddleware, chatImportUpload.array('
       }
     }
     res.status(500).json({ error: '识别失败，请重试' });
+  }
+});
+
+// ========== 聊天记录分析 ==========
+
+/**
+ * POST /api/ai-coach/analyze-chat-history
+ * 分析聊天记录并给出建议
+ */
+router.post('/analyze-chat-history', authMiddleware, async (req, res) => {
+  try {
+    const { messages, girlProfile } = req.body;
+
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({ error: '请提供有效的聊天记录' });
+    }
+
+    const result = await analyzeChatHistory(messages, girlProfile);
+
+    res.json(result);
+  } catch (error) {
+    logger.error(`[AnalyzeChatHistory] 分析失败: ${error.message}`);
+    res.status(500).json({ error: '分析失败，请重试' });
   }
 });
 
