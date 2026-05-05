@@ -7,7 +7,7 @@ import {
   Image
 } from '@chakra-ui/react';
 import { useAuth } from '../../contexts/AuthContext';
-import { girls as girlsApi, analyzeChatHistory } from '../../utils/api';
+import { girls as girlsApi, analyzeChatHistory, deleteCombatMessage } from '../../utils/api';
 import { captureError } from '../../utils/frontendErrorCapture';
 import { FireIcon, SnowIcon, SparklesIcon, BrainIcon } from '../../components/Icons';
 import ReactMarkdown from 'react-markdown';
@@ -859,7 +859,8 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
 // ====== 聊天实战子组件 ======
 
 // 聊天实战消息气泡（girl/me 两种角色）
-const CombatChatMessage = memo(({ msg, girlName }) => {
+const CombatChatMessage = memo(({ msg, girlName, onDelete }) => {
+  const [hovered, setHovered] = useState(false);
   const isGirl = msg.role === 'girl';
   const timeStr = msg.timestamp
     ? (typeof msg.timestamp === 'string'
@@ -867,7 +868,7 @@ const CombatChatMessage = memo(({ msg, girlName }) => {
         : msg.timestamp.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }))
     : null;
   return (
-    <Flex justify={isGirl ? 'flex-start' : 'flex-end'} mb={3}>
+    <Flex justify={isGirl ? 'flex-start' : 'flex-end'} mb={3} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
       <Box maxW="85%">
         <Flex justify={isGirl ? 'flex-start' : 'flex-end'} mb={1} gap={1} align="center">
           <Text fontSize="11px" color="rgba(245,240,232,0.4)" textAlign={isGirl ? 'left' : 'right'}>
@@ -875,6 +876,17 @@ const CombatChatMessage = memo(({ msg, girlName }) => {
           </Text>
           {timeStr && (
             <Text fontSize="10px" color="rgba(245,240,232,0.55)">{timeStr}</Text>
+          )}
+          {hovered && onDelete && (
+            <Text
+              fontSize="12px"
+              cursor="pointer"
+              color="rgba(245,240,232,0.5)"
+              _hover={{ color: 'red.400' }}
+              onClick={() => onDelete(msg.id)}
+            >
+              🗑
+            </Text>
           )}
         </Flex>
         <Box
@@ -1649,7 +1661,7 @@ const CombatChatPanel = memo(({
   history, suggestions, selectedIndex, onSelect,
   onRegenerate, onDismissAll, onSendDirect,
   loading, girlName, combatMode, contextData,
-  onCopy, onFavorite, isSaved
+  onCopy, onFavorite, isSaved, onDelete
 }) => {
   const scrollRef = useRef(null);
   const endRef = useRef(null);
@@ -1675,7 +1687,7 @@ const CombatChatPanel = memo(({
       ) : (
         <>
           {history.map(msg => (
-            <CombatChatMessage key={msg.id} msg={msg} girlName={girlName} />
+            <CombatChatMessage key={msg.id} msg={msg} girlName={girlName} onDelete={onDelete} />
           ))}
           <SuggestionGroup
             suggestions={suggestions}
@@ -1805,6 +1817,24 @@ export default function AICoach() {
       importAnalysis: analysis || importAnalysis || combatContextRef.current?.importAnalysis
     };
   }, [chatSummary, importAnalysis, analysis]);
+
+  // 删除实战消息
+  const handleDeleteCombatMessage = useCallback((messageId) => {
+    const key = combatHistoryKey;
+    const currentMessages = combatHistories[key] || [];
+    const updatedMessages = currentMessages.filter(m => m.id !== messageId);
+
+    setCombatHistories(prev => ({
+      ...prev,
+      [key]: updatedMessages
+    }));
+
+    deleteCombatMessage(selectedGirlId || key, messageId).catch(e => {
+      console.warn('[AICoach] delete message failed:', e);
+    });
+
+    updateCombatContext(updatedMessages, importAnalysis);
+  }, [combatHistories, combatHistoryKey, selectedGirlId, importAnalysis, updateCombatContext]);
 
   // 使用 useCallback 稳定 deepMode 切换函数
   const handleDeepModeToggle = useCallback(() => {
@@ -3237,6 +3267,7 @@ export default function AICoach() {
                       onCopy={handleCopySuggestion}
                       onFavorite={handleFavoriteSuggestion}
                       isSaved={savedReplies}
+                      onDelete={handleDeleteCombatMessage}
                     />
                     <CombatInputBar
                       mode={combatMode}
