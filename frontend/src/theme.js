@@ -137,8 +137,9 @@ const theme = extendTheme({
         bg: 'warm.700',
       },
       '@keyframes skeleton-shimmer': {
-        '0%': { backgroundPosition: '-200% 0' },
-        '100%': { backgroundPosition: '200% 0' },
+        '0%': { opacity: 0.4 },
+        '50%': { opacity: 0.85 },
+        '100%': { opacity: 0.4 },
       },
     },
   },
@@ -415,10 +416,8 @@ const theme = extendTheme({
       },
       variants: {
         shimmer: {
-          bg: 'warm.800',
-          background: 'linear-gradient(90deg, warm.800 0%, warm.700 25%, gold.600 50%, warm.700 75%, warm.800 100%)',
-          backgroundSize: '200% 100%',
-          animation: 'skeleton-shimmer 1s ease-in-out infinite',
+          bg: 'warm.700',
+          animation: 'skeleton-shimmer 1.2s ease-in-out infinite',
         },
       },
     },
