@@ -8,11 +8,11 @@ const router = express.Router();
 // 版本配置（每次发版时更新）
 // upgradeType: 'force' | 'suggest' | 'none'
 const VERSION_CONFIG = {
-  latestVersion: '1.1.6',
-  minVersion: '1.1.6',     // 强制升级版本，低于此版本必须更新（1.1.6以下都需要强制更
+  latestVersion: '1.1.7',
+  minVersion: '1.0.0',
   downloadUrl: 'https://zhuiai.club/apk/app-release.apk',
-  updateDescription: '修复私教聊天图片显示问题\n优化应用内下载体验',
-  buildNumber: 26
+  updateDescription: '视觉优化：全新主题配色，更现代的界面风格',
+  buildNumber: 27
 };
 
 router.get('/check', (req, res) => {
