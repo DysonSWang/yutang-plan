@@ -1291,6 +1291,27 @@ router.post('/optimize-reply', authMiddleware, async (req, res) => {
 // 获取动态路由的多位大师视角（带调试meta）
     const { skills, meta: routingMeta } = getMultiDimensionalSkillsWithMeta(originalReply, { girlId, girlStage: fullContext?.girlInfo?.stage });
 
+    // M007: 构建对话历史上下文（Task 4 新增）
+    let contextSection = '';
+    if (girlId) {
+      try {
+        const chatHistory = await prisma.chatMessage.findMany({
+          where: { girlId: girlId },
+          orderBy: { createdAt: 'desc' },
+          take: 20
+        });
+        if (chatHistory && chatHistory.length > 0) {
+          const reversed = chatHistory.reverse();
+          contextSection = reversed.map(m =>
+            `${m.isFromUser ? '用户' : '女生'}: ${m.content}`
+          ).join('\n');
+          contextSection = `\n【最近对话历史】\n${contextSection}`;
+        }
+      } catch (e) {
+        logger.warn(`[optimize-reply] 获取聊天历史失败: ${e.message}`);
+      }
+    }
+
     // 构建女生上下文（可选）
     let girlContextInfo = '';
     if (fullContext && fullContext.girlInfo) {
@@ -1321,6 +1342,7 @@ router.post('/optimize-reply', authMiddleware, async (req, res) => {
 聊天禁忌：${(personality?.thingsToAvoid || []).join('、') || '暂无'}
 喜欢话题：${(personality?.talkingTopics || []).join('、') || '未知'}
 ${stageContext}
+${contextSection}
 
 【待优化话术】
 "${originalReply}"
