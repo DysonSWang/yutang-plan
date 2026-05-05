@@ -7,7 +7,7 @@ import {
   Image
 } from '@chakra-ui/react';
 import { useAuth } from '../../contexts/AuthContext';
-import { girls as girlsApi } from '../../utils/api';
+import { girls as girlsApi, analyzeChatHistory } from '../../utils/api';
 import { captureError } from '../../utils/frontendErrorCapture';
 import { FireIcon, SnowIcon, SparklesIcon, BrainIcon } from '../../components/Icons';
 import ReactMarkdown from 'react-markdown';
@@ -1757,6 +1757,10 @@ export default function AICoach() {
   // P2-6: AI教练分析结果（女生核心需求/当前状态），实时注入到聊天实战上下文
   const combatContextRef = useRef(null); // { recentSignals, pendingActions, clientProfile, keyInsights }
 
+  // 聊天上下文状态
+  const [chatSummary, setChatSummary] = useState('');
+  const [importAnalysis, setImportAnalysis] = useState(null); // { girlStyle, userStyle, problems, suggestions }
+
   // 计算女生侧 dataHash（与后端 computeGirlDataHash 对应，仅取关键变动字段）
   const computeGirlDataHash = useCallback((girl) => {
     if (!girl) return '';
@@ -1781,6 +1785,26 @@ export default function AICoach() {
   const getCurrentCombatHistory = useCallback(() => {
     return combatHistories[combatHistoryKey] || [];
   }, [combatHistoryKey, combatHistories]);
+
+  // 更新 combatContextRef：同步 chatSummary、recentMessages、importAnalysis
+  const updateCombatContext = useCallback((messages, analysis = null) => {
+    // 更新 recentMessages（最近10-20条）
+    const recentMessages = messages.slice(-20);
+
+    // 生成简单摘要（用于显示）
+    const recentChatText = recentMessages.map(m => {
+      const role = m.role === 'girl' ? '她' : '我';
+      return `${role}: ${m.content.substring(0, 30)}${m.content.length > 30 ? '...' : ''}`;
+    }).join('\n');
+
+    // 更新 combatContextRef
+    combatContextRef.current = {
+      ...(combatContextRef.current || {}),
+      chatSummary: chatSummary || recentChatText,
+      recentMessages: recentMessages,
+      importAnalysis: importAnalysis || combatContextRef.current?.importAnalysis
+    };
+  }, [chatSummary, importAnalysis]);
 
   // 使用 useCallback 稳定 deepMode 切换函数
   const handleDeepModeToggle = useCallback(() => {
@@ -2392,6 +2416,8 @@ export default function AICoach() {
         [key]: [...(prev[key] || []), herMsg]
       }));
       persistCombatMessages(key, [herMsg]);
+      // 更新 combatContextRef
+      updateCombatContext(combatHistories[key] || [], importAnalysis);
       setCombatSuggestions(null);
       setSelectedSuggestionIndex(null);
       setCombatLoading(true);
@@ -2459,9 +2485,11 @@ export default function AICoach() {
       [combatHistoryKey]: [...(prev[combatHistoryKey] || []), myMsg]
     }));
     persistCombatMessages(combatHistoryKey, [myMsg]);
+    // 更新 combatContextRef
+    updateCombatContext(combatHistories[combatHistoryKey] || [], importAnalysis);
     // 选中后清除建议卡片
     setCombatSuggestions(null);
-  }, [selectedSuggestionIndex, combatSuggestions, combatHistoryKey, persistCombatMessages]);
+  }, [selectedSuggestionIndex, combatSuggestions, combatHistoryKey, persistCombatMessages, updateCombatContext, importAnalysis]);
 
   // 聊天实战 - 全部删除
   const handleDismissAllSuggestions = useCallback(() => {
@@ -2597,6 +2625,25 @@ export default function AICoach() {
     // 持久化
     persistCombatMessages(key, msgs);
 
+    // 调用聊天分析API
+    if (selectedGirlId) {
+      try {
+        const analysisResult = await analyzeChatHistory(messages, selectedGirlId);
+        setChatSummary(analysisResult.chatSummary || '');
+        setImportAnalysis(analysisResult.importAnalysis || null);
+
+        // 更新 combatContextRef
+        combatContextRef.current = {
+          ...(combatContextRef.current || {}),
+          chatSummary: analysisResult.chatSummary || '',
+          recentMessages: msgs.slice(-20),
+          importAnalysis: analysisResult.importAnalysis || null
+        };
+      } catch (e) {
+        console.warn('[AICoach] analyze chat history failed:', e);
+      }
+    }
+
     // 切换到聊天实战 Tab
     setActiveTabIndex(1);
     // 切换到回复建议模式
@@ -2617,7 +2664,7 @@ export default function AICoach() {
         }
       }).catch(() => {}).finally(() => setCombatLoading(false));
     }
-  }, [combatHistoryKey, selectedGirlId, apiUrl, persistCombatMessages]);
+  }, [combatHistoryKey, selectedGirlId, apiUrl, persistCombatMessages, analyzeChatHistory]);
 
   // 处理图片提交
   const handleImageSubmit = useCallback(async (imageFile, textInput) => {
