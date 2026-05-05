@@ -1487,6 +1487,38 @@ router.post('/combat-history/:girlId', authMiddleware, async (req, res) => {
   }
 });
 
+/**
+ * DELETE /api/ai-coach/combat-message/:id
+ * 删除单条聊天实战消息
+ */
+router.delete('/combat-message/:id', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const message = await prisma.girlCombatMessage.findUnique({
+      where: { id }
+    });
+
+    if (!message) {
+      return res.status(404).json({ error: '消息不存在' });
+    }
+
+    if (message.userId !== userId) {
+      return res.status(403).json({ error: '无权删除此消息' });
+    }
+
+    await prisma.girlCombatMessage.delete({
+      where: { id }
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    logger.error(`[AICoach] 删除聊天实战消息失败: ${error.message}`);
+    res.status(500).json({ error: '删除失败' });
+  }
+});
+
 // ========== 聊天截图导入 ==========
 
 /**
