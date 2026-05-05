@@ -716,9 +716,9 @@ router.post('/new-session', authMiddleware, async (req, res) => {
 
 /**
  * 聊天分析 - 分析聊天内容，识别意图和情绪
- * POST /api/ai-coach/analyze-chat
+ * POST /api/ai-coach/analyze-chat-history
  */
-router.post('/analyze-chat', authMiddleware, async (req, res) => {
+router.post('/analyze-chat-history', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
       return res.status(403).json({ error: '无权限' });
