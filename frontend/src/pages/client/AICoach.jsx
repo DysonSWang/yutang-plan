@@ -2482,7 +2482,11 @@ export default function AICoach() {
         const res = await fetch(`${apiUrl}/api/ai-coach/optimize-reply`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ girlId: selectedGirlId || undefined, originalReply: text })
+          body: JSON.stringify({
+            girlId: selectedGirlId || undefined,
+            originalReply: text,
+            hiddenContext: combatContextRef.current || null
+          })
         });
         if (!res.ok) throw new Error(`话术优化请求失败 (${res.status})`);
         const data = await res.json();
