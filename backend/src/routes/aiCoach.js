@@ -1488,16 +1488,16 @@ router.post('/combat-history/:girlId', authMiddleware, async (req, res) => {
 });
 
 /**
- * DELETE /api/ai-coach/combat-message/:id
+ * DELETE /api/ai-coach/combat-message/:girlId/:messageId
  * 删除单条聊天实战消息
  */
-router.delete('/combat-message/:id', authMiddleware, async (req, res) => {
+router.delete('/combat-message/:girlId/:messageId', authMiddleware, async (req, res) => {
   try {
-    const { id } = req.params;
+    const { girlId, messageId } = req.params;
     const userId = req.user.id;
 
     const message = await prisma.girlCombatMessage.findUnique({
-      where: { id }
+      where: { id: messageId, girlId }
     });
 
     if (!message) {
@@ -1509,7 +1509,7 @@ router.delete('/combat-message/:id', authMiddleware, async (req, res) => {
     }
 
     await prisma.girlCombatMessage.delete({
-      where: { id }
+      where: { id: messageId, girlId }
     });
 
     res.json({ success: true });
