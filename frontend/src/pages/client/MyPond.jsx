@@ -7,7 +7,7 @@ import {
   Input, Button, useToast, NumberInput, NumberInputField, NumberInputStepper,
   NumberIncrementStepper, NumberDecrementStepper, Select, FormControl, FormLabel,
   Skeleton, Tabs, TabList, TabPanels, Tab, TabPanel, Avatar, Divider, Alert, AlertIcon,
-  AlertDescription, Spinner, Progress,
+  AlertDescription, Progress,
 } from '@chakra-ui/react';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import { zhCN } from 'date-fns/locale/zh-CN';
@@ -272,7 +272,9 @@ function DatesTab({ datesList, allDates, pendingInterviews, isInitialLoad, onRef
 
       {/* 约会列表 */}
       {isInitialLoad ? (
-        <Flex justify="center" py={12}><Spinner /></Flex>
+        <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4}>
+          {[1,2,3].map(i => <Skeleton key={i} height="100px" borderRadius="lg" />)}
+        </SimpleGrid>
       ) : filteredDates.length === 0 && pendingInterviews.length === 0 ? (
         <Card bg="warm.800"><CardBody>
           <Flex direction="column" align="center" py={12} gap={3}>
@@ -325,7 +327,7 @@ function DatesTab({ datesList, allDates, pendingInterviews, isInitialLoad, onRef
 
 /** ===================== 日历 Tab ===================== */
 function CalendarTab({ clientId, girlList, refreshKey }) {
-  if (!clientId) return <Flex justify="center" py={12}><Spinner /></Flex>;
+  if (!clientId) return <Flex justify="center" py={12}><Skeleton h="200px" w="100%" borderRadius="lg" /></Flex>;
   return <ClientCalendar clientId={clientId} girlList={girlList} refreshKey={refreshKey} />;
 }
 
@@ -429,7 +431,6 @@ export default function MyPond() {
       <Flex justify="space-between" align="center" mb={6}>
         <Heading color="white">缘分与约会</Heading>
         <HStack spacing={2}>
-          <Button variant="outline" colorScheme="gray" size="sm" onClick={handleRefresh} isLoading={isInitialLoad}>刷新</Button>
           <Button colorScheme="gold" leftIcon={<SparklesIcon />} onClick={() => setShowAddModal(true)}>添加约会</Button>
         </HStack>
       </Flex>

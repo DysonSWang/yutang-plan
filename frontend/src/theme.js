@@ -20,6 +20,25 @@ const theme = extendTheme({
     mono: "'JetBrains Mono', 'Consolas', monospace",
   },
   breakpoints,
+  radii: {
+    xs: '4px',
+    sm: '6px',
+    md: '8px',
+    lg: '12px',
+    xl: '16px',
+    '2xl': '20px',
+    full: '9999px',
+  },
+  space: {
+    xxs: '4px',
+    xs: '8px',
+    sm: '12px',
+    md: '16px',
+    lg: '24px',
+    xl: '32px',
+    '2xl': '48px',
+    section: '96px',
+  },
   colors: {
     gold: {
       50: '#fef8e5',
@@ -150,6 +169,13 @@ const theme = extendTheme({
           _focus: { bg: 'warm.700', borderColor: 'gold.500', boxShadow: '0 0 0 3px rgba(226,176,68,0.15)' },
         },
       },
+      defaultProps: { variant: 'filled' },
+      sizes: {
+        xs: { field: { h: '24px', px: '8px', fontSize: '10px' } },
+        sm: { field: { h: '32px', px: '12px', fontSize: '12px' } },
+        md: { field: { h: '40px', px: '16px', fontSize: '14px' } },
+        lg: { field: { h: '48px', px: '20px', fontSize: '16px' } },
+      },
       variants: {
         filled: {
           field: {
@@ -164,9 +190,16 @@ const theme = extendTheme({
     },
     Input: {
       defaultProps: {
+        variant: 'filled',
         bg: 'rgba(255,255,255,0.03)',
         color: 'warm.50',
         borderColor: 'rgba(255,255,255,0.08)',
+      },
+      sizes: {
+        xs: { field: { h: '24px', px: '8px', fontSize: '10px' } },
+        sm: { field: { h: '32px', px: '12px', fontSize: '12px' } },
+        md: { field: { h: '40px', px: '16px', fontSize: '14px' } },
+        lg: { field: { h: '48px', px: '20px', fontSize: '16px' } },
       },
       variants: {
         filled: {
@@ -183,6 +216,7 @@ const theme = extendTheme({
     },
     Textarea: {
       defaultProps: {
+        variant: 'filled',
         bg: 'rgba(255,255,255,0.03)',
         color: 'warm.50',
         borderColor: 'rgba(255,255,255,0.08)',
@@ -258,7 +292,7 @@ const theme = extendTheme({
           borderColor: 'rgba(255,255,255,0.08)',
           borderRadius: { base: 'md', md: 'lg' },
           p: { base: 3, md: 4 },
-          transition: 'all 400ms ease-out',
+          transition: 'all transition.slow ease-out',
           _hover: {
             transform: 'translateY(-3px)',
             boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 24px rgba(226,176,68,0.08)',
@@ -266,7 +300,7 @@ const theme = extendTheme({
           },
           _active: {
             transform: 'translateY(-1px) scale(0.98)',
-            transition: 'transform 150ms spring',
+            transition: 'transform transition.ultra-fast spring',
           },
           _disabled: {
             opacity: 0.38,
@@ -305,16 +339,32 @@ const theme = extendTheme({
         color: 'warm.50',
         fontWeight: 'medium',
         letterSpacing: '0.02em',
+        borderRadius: 'sm',
+        px: 2,
+        py: 0.5,
       },
+      variants: {
+        solid: { bg: 'warm.700' },
+        subtle: { bg: 'warm.700', color: 'warm.50' },
+        outline: { borderWidth: '1px', borderStyle: 'solid', borderColor: 'warm.600', bg: 'transparent' },
+      },
+      defaultProps: { variant: 'subtle' },
     },
     Button: {
       baseStyle: {
         borderRadius: 'md',
         fontWeight: 'semibold',
-        transition: 'all 250ms ease-out',
+        transition: 'all transition.normal ease-out',
         position: 'relative',
         overflow: 'hidden',
       },
+      sizes: {
+        xs: { h: '24px', px: '10px', fontSize: '10px' },
+        sm: { h: '32px', px: '16px', fontSize: '12px' },
+        md: { h: '40px', px: '24px', fontSize: '14px' },
+        lg: { h: '48px', px: '32px', fontSize: '16px' },
+      },
+      defaultProps: { size: 'md', variant: 'solid' },
       variants: {
         solid: {
           bgGradient: 'linear-gradient(135deg, gold.500, gold.600)',
@@ -325,20 +375,20 @@ const theme = extendTheme({
             boxShadow: '0 0 28px rgba(226,176,68,0.30)',
             transform: 'scale(1.02)',
           },
-          _active: { transform: 'scale(0.97)', transition: 'transform 150ms spring' },
+          _active: { transform: 'scale(0.97)', transition: 'transform transition.ultra-fast spring' },
           _disabled: { opacity: 0.38 },
         },
         ghost: {
           color: 'rgba(245,240,232,0.6)',
           _hover: { bg: 'rgba(255,255,255,0.06)', color: 'warm.50' },
-          _active: { transform: 'scale(0.97)', transition: 'transform 150ms spring' },
+          _active: { transform: 'scale(0.97)', transition: 'transform transition.ultra-fast spring' },
           _disabled: { opacity: 0.38, pointerEvents: 'none' },
         },
         outline: {
           borderColor: 'gold.500',
           color: 'gold.500',
           _hover: { bg: 'rgba(226,176,68,0.12)', borderColor: 'gold.400', boxShadow: '0 0 16px rgba(226,176,68,0.12)' },
-          _active: { transform: 'scale(0.97)', transition: 'transform 150ms spring' },
+          _active: { transform: 'scale(0.97)', transition: 'transform transition.ultra-fast spring' },
           _disabled: { opacity: 0.38, pointerEvents: 'none' },
         },
       },
@@ -366,9 +416,9 @@ const theme = extendTheme({
       variants: {
         shimmer: {
           bg: 'warm.800',
-          background: 'linear-gradient(90deg, warm.800 0%, warm.700 50%, warm.800 100%)',
+          background: 'linear-gradient(90deg, warm.800 0%, warm.700 25%, gold.600 50%, warm.700 75%, warm.800 100%)',
           backgroundSize: '200% 100%',
-          animation: 'skeleton-shimmer 1.5s ease-in-out infinite',
+          animation: 'skeleton-shimmer 1s ease-in-out infinite',
         },
       },
     },

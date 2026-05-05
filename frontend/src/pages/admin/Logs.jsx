@@ -10,8 +10,10 @@ import {
   CardBody, Stat, StatLabel, StatNumber, StatHelpText, useToast, Table, Thead,
   Tbody, Tr, Th, Td, Tabs, TabList, TabPanels, Tab, TabPanel, Progress, Tooltip,
   useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton,
+  Icon,
 } from '@chakra-ui/react';
 import { useSocket } from '../../contexts/SocketContext';
+import { CalendarIcon, SearchIcon, FireIcon, CheckIcon, ClipboardIcon, ClockIcon, WarningIcon } from '../../components/Icons';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3005';
 
@@ -186,7 +188,7 @@ export default function Logs() {
   // 加载统计数据
   useEffect(() => {
     const dateParam = filter.date ? `?date=${filter.date}` : '';
-    fetch(`/api/logs/stats${dateParam}`)
+    fetch(`${API_BASE}/api/logs/stats${dateParam}`)
       .then(r => r.json())
       .then(d => {
         if (d.today) {
@@ -208,7 +210,7 @@ export default function Logs() {
     if (filter.source) params.set('source', filter.source);
     if (filter.search) params.set('search', filter.search);
 
-    fetch(`/api/logs/file/${date}?${params}`)
+    fetch(`${API_BASE}/api/logs/file/${date}?${params}`)
       .then(r => r.json())
       .then(d => {
         setLogs(d.logs || []);
@@ -241,7 +243,7 @@ export default function Logs() {
     setTraceResult(null);
     setTraceLoading(true);
     setTabIndex(2);
-    fetch(`/api/logs/trace/${id}`)
+    fetch(`${API_BASE}/api/logs/trace/${id}`)
       .then(r => r.json())
       .then(d => {
         setTraceResult(d);
@@ -254,7 +256,7 @@ export default function Logs() {
   const searchTrace = () => {
     if (!traceId.trim()) return;
     setTraceLoading(true);
-    fetch(`/api/logs/trace/${traceId.trim()}`)
+    fetch(`${API_BASE}/api/logs/trace/${traceId.trim()}`)
       .then(r => r.json())
       .then(d => {
         setTraceResult(d);
@@ -403,7 +405,7 @@ export default function Logs() {
           {/* 按天分布 */}
           <Card>
             <CardBody>
-              <Text fontWeight="bold" mb={3}>📅 近7天慢请求分布</Text>
+              <Text fontWeight="bold" mb={3}><Icon as={CalendarIcon} boxSize={3} mr={1} verticalAlign="middle" />近7天慢请求分布</Text>
               <HStack spacing={2} align="end" h="80px">
                 {slowAnalysis.dailyDistribution?.map(d => (
                   <Tooltip key={d.date} label={`${d.date} - ${d.count}次`}>
@@ -435,7 +437,7 @@ export default function Logs() {
     <Box>
       <Card mb={4}>
         <CardBody>
-          <Text fontWeight="bold" mb={3}>🔍 Trace追踪</Text>
+          <Text fontWeight="bold" mb={3}><Icon as={SearchIcon} boxSize={3} mr={1} verticalAlign="middle" />Trace追踪</Text>
           <Text color="rgba(245,240,232,0.4)" fontSize="sm" mb={3}>
             输入 trace-id 或 request-id 查询完整调用链
           </Text>
@@ -499,7 +501,7 @@ export default function Logs() {
       <Flex justify="space-between" align="center" mb={4}>
         <Heading size="lg">日志监控</Heading>
         <Badge colorScheme="red" p={2} fontSize="md" animate={isAlerting ? 'pulse' : 'none'}>
-          {isAlerting ? '🔥 告警中' : '✓ 正常'}
+          {isAlerting ? <><Icon as={FireIcon} boxSize={3} mr={1} />告警中</> : <><Icon as={CheckIcon} boxSize={3} mr={1} />正常</>}
         </Badge>
       </Flex>
 
@@ -546,9 +548,9 @@ export default function Logs() {
       {/* Tab切换 */}
       <Tabs variant="soft-rounded" colorScheme="gold" mb={4} index={tabIndex} onChange={handleTabChange}>
         <TabList>
-          <Tab>📋 日志列表</Tab>
-          <Tab>🐌 慢请求分析</Tab>
-          <Tab>🔍 Trace追踪</Tab>
+          <Tab><Icon as={ClipboardIcon} boxSize={4} mr={1} />日志列表</Tab>
+          <Tab><Icon as={ClockIcon} boxSize={4} mr={1} />慢请求分析</Tab>
+          <Tab><Icon as={SearchIcon} boxSize={4} mr={1} />Trace追踪</Tab>
         </TabList>
 
         <TabPanels>
