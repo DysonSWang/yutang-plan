@@ -2,6 +2,9 @@
 include ':capacitor-android'
 project(':capacitor-android').projectDir = new File('../node_modules/@capacitor/android/capacitor')
 
+include ':bricks-soft-cap-downloader'
+project(':bricks-soft-cap-downloader').projectDir = new File('../node_modules/@bricks-soft/cap-downloader/android')
+
 include ':capacitor-app'
 project(':capacitor-app').projectDir = new File('../node_modules/@capacitor/app/android')
 
