@@ -1802,9 +1802,9 @@ export default function AICoach() {
       ...(combatContextRef.current || {}),
       chatSummary: chatSummary || recentChatText,
       recentMessages: recentMessages,
-      importAnalysis: importAnalysis || combatContextRef.current?.importAnalysis
+      importAnalysis: analysis || importAnalysis || combatContextRef.current?.importAnalysis
     };
-  }, [chatSummary, importAnalysis]);
+  }, [chatSummary, importAnalysis, analysis]);
 
   // 使用 useCallback 稳定 deepMode 切换函数
   const handleDeepModeToggle = useCallback(() => {
