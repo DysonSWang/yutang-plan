@@ -1075,9 +1075,33 @@ router.post('/reply-suggestions', authMiddleware, async (req, res) => {
     const relStageLabel = relStage ? STAGE_LABELS[relStage] || relStage : null;
     const stageContext = addStageContext(relStage);
 
-    // M007: 构建对话历史上下文
+    // M007: 构建对话历史上下文（支持 hiddenContext 优先）
     let contextSection = '';
-    if (girlId) {
+    if (hiddenContext?.chatSummary || hiddenContext?.recentMessages || hiddenContext?.importAnalysis) {
+      // 优先使用 hiddenContext（前端注入的上下文）
+      if (hiddenContext?.chatSummary) {
+        contextSection += `\n【聊天摘要】\n${hiddenContext.chatSummary}`;
+      }
+      if (hiddenContext?.recentMessages && hiddenContext.recentMessages.length > 0) {
+        const recentChat = hiddenContext.recentMessages.map(m => {
+          const role = m.role === 'girl' ? '女生' : '用户';
+          return `${role}: ${m.content}`;
+        }).join('\n');
+        contextSection += `\n【最近聊天记录】\n${recentChat}`;
+      }
+      if (hiddenContext?.importAnalysis) {
+        contextSection += `\n【对话分析】\n`;
+        contextSection += `- 女生风格: ${hiddenContext.importAnalysis.girlStyle || '未知'}\n`;
+        contextSection += `- 用户风格: ${hiddenContext.importAnalysis.userStyle || '未知'}\n`;
+        if (hiddenContext.importAnalysis.problems?.length > 0) {
+          contextSection += `- 问题点: ${hiddenContext.importAnalysis.problems.join(', ')}\n`;
+        }
+        if (hiddenContext.importAnalysis.suggestions?.length > 0) {
+          contextSection += `- 改进建议: ${hiddenContext.importAnalysis.suggestions.join(', ')}\n`;
+        }
+      }
+    } else if (girlId) {
+      // 降级：从数据库加载聊天历史
       try {
         const chatHistory = await prisma.chatMessage.findMany({
           where: { girlId: girlId },
