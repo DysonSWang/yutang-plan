@@ -16,6 +16,11 @@ async function analyzeChatHistory(messages, girlProfile = null) {
     throw new Error('多模态AI未配置');
   }
 
+  // 类型验证：确保 girlProfile 是对象或 null
+  if (girlProfile && typeof girlProfile !== 'object') {
+    girlProfile = null;
+  }
+
   // 构建对话文本
   const chatText = messages.map(m => {
     const role = m.role === 'girl' ? '女生' : '用户';
