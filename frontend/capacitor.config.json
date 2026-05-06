@@ -2,9 +2,9 @@
   "appId": "com.zhuiai.app",
   "appName": "追AI",
   "webDir": "dist",
-  "backgroundColor": "#0a0f1a",
+  "backgroundColor": "#111110",
   "android": {
-    "backgroundColor": "#0a0f1a",
+    "backgroundColor": "#111110",
     "allowMixedContent": true,
     "webContentsDebuggingEnabled": false
   },
