@@ -21,6 +21,8 @@ export default function AdminChat() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null); // 视频上传进度 0-100
   const [previewFile, setPreviewFile] = useState(null);
+  const [videoThumbnail, setVideoThumbnail] = useState(null); // 视频缩略图
+  const [videoLoading, setVideoLoading] = useState(false); // 视频加载中
   const [recording, setRecording] = useState(false);
   const [recordTime, setRecordTime] = useState(0);
   const [burnMode, setBurnMode] = useState(false);
@@ -55,6 +57,33 @@ export default function AdminChat() {
     }
     if (msg.mediaUrl?.startsWith('http')) return msg.mediaUrl;
     return `${API_BASE}${msg.mediaUrl}`;
+  };
+
+  // 生成视频缩略图
+  const generateThumbnail = (file, callback) => {
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.muted = true;
+    video.playsInline = true;
+    const url = URL.createObjectURL(file);
+    video.src = url;
+    video.onloadeddata = () => {
+      video.currentTime = 0.1; // 跳到开头
+    };
+    video.onseeked = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 160;
+      canvas.height = 90;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const thumbnail = canvas.toDataURL('image/jpeg', 0.7);
+      URL.revokeObjectURL(url);
+      callback(thumbnail);
+    };
+    video.onerror = () => {
+      URL.revokeObjectURL(url);
+      callback(null);
+    };
   };
 
   const handleEmojiSelect = useCallback((emoji) => {
@@ -407,11 +436,13 @@ export default function AdminChat() {
       captureError(e);
     } finally {
       setSending(false);
-      setPreviewFile(null);
     }
   };
 
-  // 图片直接发送（不预览），视频仍需确认
+  // 生成唯一ID用于跟踪上传中的消息
+  const generateTempId = () => `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  // 图片直接发送（带进度）
   const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
@@ -420,55 +451,100 @@ export default function AdminChat() {
     const imageFiles = files.filter(f => f.type.startsWith('image/'));
     const videoFiles = files.filter(f => f.type.startsWith('video/'));
 
-    if (videoFiles.length > 0) {
-      const file = videoFiles[0];
-      setPreviewFile({ file, preview: URL.createObjectURL(file), type: 'video' });
-    }
+    // 图片直接发送，带进度显示
+    for (const file of imageFiles) {
+      const tempId = generateTempId();
+      const previewUrl = URL.createObjectURL(file);
 
-    if (imageFiles.length > 0) {
-      await sendImagesDirectly(imageFiles);
-    }
-  };
+      // 添加临时消息（显示缩略图和进度）
+      const tempMsg = {
+        id: tempId,
+        tempId,
+        type: 'image',
+        senderRole: 'admin',
+        senderId: 'admin',
+        content: '',
+        mediaUrl: previewUrl,
+        isUploading: true,
+        uploadProgress: 0,
+        createdAt: new Date().toISOString(),
+      };
+      setMessages(prev => [...prev, tempMsg]);
 
-  const sendImagesDirectly = async (files) => {
-    if (!currentSession || sending) return;
-    setSending(true);
-    try {
-      for (const file of files) {
-        const res = await upload.image(file, burnMode);
+      try {
+        const res = await upload.image(file, burnMode, false, (info) => {
+          // 更新上传进度
+          setMessages(prev => prev.map(m => m.tempId === tempId ? { ...m, uploadProgress: info.percent } : m));
+        });
         if (res.url) {
           const effectiveSeconds = burnDurationType === 'adaptive' ? 5 : burnSeconds;
-          await sendMediaMessage(res.url, 'image', null, effectiveSeconds);
+          const sendRes = await chat.send(currentSession.id, null, 'image', res.url, null, burnMode, effectiveSeconds, burnTrigger);
+          if (sendRes.success) {
+            // 替换临时消息为真实消息
+            URL.revokeObjectURL(previewUrl);
+            setMessages(prev => prev.map(m => m.tempId === tempId ? sendRes.message : m));
+          }
         }
+      } catch (err) {
+        captureError(err);
+        // 移除临时消息
+        URL.revokeObjectURL(previewUrl);
+        setMessages(prev => prev.filter(m => m.tempId !== tempId));
       }
-    } catch (e) {
-      captureError(e);
-    } finally {
-      setSending(false);
     }
-  };
 
-  // 视频确认发送
-  const confirmSendVideo = async () => {
-    if (!previewFile || previewFile.type !== 'video') return;
-    setUploading(true);
-    setUploadProgress(0);
-    try {
-      const videoDuration = await getMediaDuration(previewFile.file, 'video');
-      const effectiveSeconds = burnDurationType === 'adaptive'
-        ? Math.max(3, Math.ceil(videoDuration))
-        : burnSeconds;
-      const res = await upload.video(previewFile.file, burnMode, false, (info) => {
-        setUploadProgress(info.percent);
+    // 视频直接发送，带进度显示
+    for (const file of videoFiles) {
+      const tempId = generateTempId();
+      const previewUrl = URL.createObjectURL(file);
+
+      // 生成缩略图
+      let thumbnail = null;
+      const thumbnailData = await new Promise((resolve) => {
+        generateThumbnail(file, (t) => resolve(t));
       });
-      if (res.url) {
-        await sendMediaMessage(res.url, 'video', videoDuration, effectiveSeconds);
+      thumbnail = thumbnailData;
+
+      // 获取视频时长
+      const duration = await getMediaDuration(file, 'video');
+
+      // 添加临时消息（显示缩略图和进度）
+      const tempMsg = {
+        id: tempId,
+        tempId,
+        type: 'video',
+        senderRole: 'admin',
+        senderId: 'admin',
+        content: '',
+        mediaUrl: thumbnail || previewUrl,
+        mediaPreview: previewUrl,
+        duration: Math.ceil(duration),
+        isUploading: true,
+        uploadProgress: 0,
+        createdAt: new Date().toISOString(),
+      };
+      setMessages(prev => [...prev, tempMsg]);
+
+      try {
+        const effectiveSeconds = burnDurationType === 'adaptive' ? Math.max(3, Math.ceil(duration)) : burnSeconds;
+        const res = await upload.video(file, burnMode, false, (info) => {
+          // 更新上传进度
+          setMessages(prev => prev.map(m => m.tempId === tempId ? { ...m, uploadProgress: info.percent } : m));
+        });
+        if (res.url) {
+          const sendRes = await chat.send(currentSession.id, null, 'video', res.url, Math.ceil(duration), burnMode, effectiveSeconds, burnTrigger);
+          if (sendRes.success) {
+            // 替换临时消息为真实消息
+            URL.revokeObjectURL(previewUrl);
+            setMessages(prev => prev.map(m => m.tempId === tempId ? sendRes.message : m));
+          }
+        }
+      } catch (err) {
+        captureError(err);
+        // 移除临时消息
+        URL.revokeObjectURL(previewUrl);
+        setMessages(prev => prev.filter(m => m.tempId !== tempId));
       }
-    } catch (e) {
-      captureError(e);
-    } finally {
-      setUploading(false);
-      setUploadProgress(null);
     }
   };
 
@@ -541,6 +617,9 @@ export default function AdminChat() {
   const cancelPreview = () => {
     if (previewFile?.preview) URL.revokeObjectURL(previewFile.preview);
     setPreviewFile(null);
+    setVideoThumbnail(null);
+    setVideoLoading(false);
+    setUploadProgress(null);
   };
 
   const sendMessage = async () => {
@@ -603,6 +682,7 @@ export default function AdminChat() {
           cursor="pointer"
           position="relative"
           onClick={() => {
+            if (msg.isUploading) return;
             if (isBurnMask) {
               openFlashViewer({
                 imageUrl,
@@ -640,6 +720,26 @@ export default function AdminChat() {
               </HStack>
             </Box>
           )}
+          {/* 上传进度覆盖层 */}
+          {msg.isUploading && (
+            <Box
+              position="absolute"
+              inset={0}
+              bg="blackAlpha.700"
+              borderRadius="md"
+              display="flex"
+              flexDirection="column"
+              alignItems="center"
+              justifyContent="center"
+              zIndex={2}
+            >
+              <Spinner size="lg" color="orange.400" thickness="3px" mb={2} />
+              <Text color="white" fontSize="sm">{msg.uploadProgress || 0}%</Text>
+              <Box w="80%" h="4px" bg="warm.600" borderRadius="full" mt={2} overflow="hidden">
+                <Box h="full" bg="orange.500" w={`${msg.uploadProgress || 0}%`} transition="width 0.2s" borderRadius="full" />
+              </Box>
+            </Box>
+          )}
           <Image
             src={imageUrl}
             alt="图片消息"
@@ -647,14 +747,16 @@ export default function AdminChat() {
             maxH="200px"
             objectFit="cover"
             filter={isBurnMask ? 'blur(4px)' : 'none'}
+            opacity={msg.isUploading ? 0.3 : 1}
           />
         </Box>
       );
     }
     if (msg.type === 'video') {
-      const videoUrl = getMediaUrl(msg);
+      const videoUrl = msg.mediaPreview || getMediaUrl(msg);
       return (
         <Box maxW="250px" cursor="pointer" position="relative" onClick={() => {
+          if (msg.isUploading) return;
           if (isBurnMask) {
             openFlashViewer({ imageUrl: videoUrl, messageId: msg.id, senderRole: msg.senderRole, isBurnAfterRead: true, burnAfterSeconds: msg.burnAfterSeconds, mediaType: 'video' });
           } else {
@@ -678,10 +780,30 @@ export default function AdminChat() {
               </HStack>
             </Box>
           )}
+          {/* 上传进度覆盖层 */}
+          {msg.isUploading && (
+            <Box
+              position="absolute"
+              inset={0}
+              bg="blackAlpha.700"
+              borderRadius="md"
+              display="flex"
+              flexDirection="column"
+              alignItems="center"
+              justifyContent="center"
+              zIndex={2}
+            >
+              <Spinner size="lg" color="orange.400" thickness="3px" mb={2} />
+              <Text color="white" fontSize="sm">{msg.uploadProgress || 0}%</Text>
+              <Box w="80%" h="4px" bg="warm.600" borderRadius="full" mt={2} overflow="hidden">
+                <Box h="full" bg="orange.500" w={`${msg.uploadProgress || 0}%`} transition="width 0.2s" borderRadius="full" />
+              </Box>
+            </Box>
+          )}
           <video
             src={videoUrl}
             controls={!isBurnMask}
-            style={{ borderRadius: '8px', maxHeight: '200px', width: '100%', filter: isBurnMask ? 'blur(4px)' : 'none' }}
+            style={{ borderRadius: '8px', maxHeight: '200px', width: '100%', filter: isBurnMask ? 'blur(4px)' : 'none', opacity: msg.isUploading ? 0.3 : 1 }}
           />
         </Box>
       );
@@ -1025,10 +1147,47 @@ export default function AdminChat() {
                 {/* 媒体预览（仅视频/语音需要确认） */}
                 {previewFile && (
                   <Box mb={2} p={2} bg="warm.700" borderRadius="md">
+                    {/* 视频预览区 */}
+                    {previewFile.type === 'video' && (
+                      <Box mb={2} position="relative" borderRadius="md" overflow="hidden" bg="black">
+                        {/* 视频加载中显示缩略图或loading */}
+                        <Box position="relative" w="160px" h="90px">
+                          {videoLoading ? (
+                            <Flex w="full" h="full" align="center" justify="center" bg="warm.900">
+                              <Spinner size="lg" color="orange.400" thickness="3px" />
+                            </Flex>
+                          ) : videoThumbnail ? (
+                            <Image src={videoThumbnail} alt="视频预览" w="160px" h="90px" objectFit="cover" />
+                          ) : (
+                            <video
+                              src={previewFile.preview}
+                              style={{ width: '160px', height: '90px', objectFit: 'cover' }}
+                              muted
+                              playsInline
+                              onLoadedData={() => setVideoLoading(false)}
+                            />
+                          )}
+                          {/* 播放图标 */}
+                          <Flex position="absolute" inset={0} align="center" justify="center" pointerEvents="none">
+                            <Box bg="blackAlpha.600" borderRadius="full" p={2}>
+                              <Text fontSize="lg">▶</Text>
+                            </Box>
+                          </Flex>
+                          {/* 时长显示 */}
+                          {previewFile.duration && (
+                            <Text position="absolute" bottom={1} right={1} color="white" fontSize="xs" bg="blackAlpha.700" px={1} borderRadius="sm">
+                              {Math.floor(previewFile.duration / 60)}:{(previewFile.duration % 60).toString().padStart(2, '0')}
+                            </Text>
+                          )}
+                        </Box>
+                      </Box>
+                    )}
+
+                    {/* 上传进度条 */}
                     {previewFile.type === 'video' && uploadProgress !== null && uploading && (
                       <Box mb={2}>
                         <HStack justify="space-between" mb={1}>
-                          <Text color="white" fontSize="sm">上传进度</Text>
+                          <Text color="white" fontSize="sm">上传中...</Text>
                           <Text color="orange.300" fontSize="sm">{uploadProgress}%</Text>
                         </HStack>
                         <Box h="4px" bg="warm.600" borderRadius="full" overflow="hidden">
@@ -1036,10 +1195,8 @@ export default function AdminChat() {
                         </Box>
                       </Box>
                     )}
+
                     <HStack>
-                      {previewFile.type === 'video' && (
-                        <video src={previewFile.preview} style={{ maxHeight: '80px', borderRadius: '4px', opacity: uploading ? 0.5 : 1 }} />
-                      )}
                       {previewFile.type === 'audio' && (
                         <HStack>
                           <Text color="white" fontSize="sm">🎤 语音 {recordTime || previewFile.duration || 0}"</Text>
