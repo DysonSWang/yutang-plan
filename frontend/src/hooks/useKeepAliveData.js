@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 
 /**
  * 页面级 keep-alive 数据管理 Hook。
@@ -34,7 +34,7 @@ export default function useKeepAliveData(fetcher, { key, refreshOnActivate = tru
   const mountedRef = useRef(true);
 
   // 核心 fetch 函数
-  const fetchData = async (showLoading = true) => {
+  const fetchData = useCallback(async (showLoading = true) => {
     if (!mountedRef.current) return;
     if (showLoading) {
       setLoading(true);
@@ -52,14 +52,14 @@ export default function useKeepAliveData(fetcher, { key, refreshOnActivate = tru
       if (mountedRef.current) {
         setError(err);
         setLoading(false);
-        hasLoadedRef.current = true; // 即使出错也标记为已加载，避免无限 loading
+        hasLoadedRef.current = true;
       }
     } finally {
       if (mountedRef.current) {
         setIsFetching(false);
       }
     }
-  };
+  }, []);
 
   // 挂载时自动触发首次加载
   useEffect(() => {
@@ -106,9 +106,9 @@ export default function useKeepAliveData(fetcher, { key, refreshOnActivate = tru
   }, [key]);
 
   // 手动刷新（供页面内按钮调用）
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     await fetchData(false);
-  };
+  }, [fetchData]);
 
   return {
     data,
