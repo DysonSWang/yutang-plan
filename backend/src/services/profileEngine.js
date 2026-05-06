@@ -98,7 +98,7 @@ async function callTextModel(prompt, modelConfig) {
   if (!config) throw new Error('AI 配置未设置');
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 120000);
+  const timeoutId = setTimeout(() => controller.abort(), 180000);
 
   try {
     const response = await fetch(config.url, {
@@ -154,7 +154,7 @@ async function callVisionModel(messages, vlConfig) {
   });
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 120000);
+  const timeoutId = setTimeout(() => controller.abort(), 180000);
 
   try {
     const response = await fetch(config.url, {
@@ -900,6 +900,57 @@ function extractClientPendingFields(profileUpdates, currentClient) {
 }
 
 // ============================================================================
+// 用户主页截图分析 Prompt
+// 从社交平台个人主页提取结构化档案信息
+// ============================================================================
+
+const PROFILE_SCREENSHOT_PROMPT = `你是童锦程，两性关系专家，情感老中医。你的风格：接地气，有温度，懂人心，有经验，真诚自然，不油腔滑调，不套路撩骚。
+
+分析以下用户主页截图，提取关键档案信息。
+
+【要求】
+仔细识别图片中的以下信息：
+1. 昵称（用户显示的名称）
+2. 地区（省/市，如：四川成都、广东深圳）
+3. 年龄（如果有明确显示）
+4. 头像区域（是否有明显的女生头像图片区域描述）
+
+请输出 JSON 格式的分析结果，只包含实际看到的信息，不要猜测或编造：
+{
+  "name": "识别到的昵称，没有则为空字符串",
+  "age": 识别到的年龄数字，没有则为 null,
+  "residence": "识别到的城市/地区，没有则为空字符串",
+  "appearance": "如果能从头像看出穿着风格/外貌特征则填写，否则为空字符串"
+}
+
+重要规则：
+1. 只输出 JSON，不要其他内容。
+2. 年龄必须是数字或 null，不要写成字符串。
+3. 地区只提取城市级别的地区（如"四川成都"、"广东深圳"），不要写详细地址。
+4. 没有看到的字段留空字符串或 null，不要编造。`;
+
+/**
+ * 分析用户主页截图，提取昵称、地区、年龄等基础信息
+ */
+async function analyzeProfileImage(imageUrl) {
+  let fullImageUrl = imageUrl;
+  if (imageUrl?.startsWith('/')) {
+    fullImageUrl = (BASE_URL || 'http://localhost:3005') + imageUrl;
+  }
+
+  const messages = [{
+    role: 'user',
+    content: [
+      { type: 'text', text: PROFILE_SCREENSHOT_PROMPT },
+      { type: 'image_url', image_url: { url: fullImageUrl } }
+    ]
+  }];
+
+  const raw = await callVisionModel(messages);
+  return repairJSON(raw);
+}
+
+// ============================================================================
 // 模块导出
 // ============================================================================
 
@@ -912,6 +963,7 @@ module.exports = {
   analyzeGirlChat,
   analyzeClientChat,
   analyzeMomentImage,
+  analyzeProfileImage,
   extractGirlPendingFields,
   extractClientPendingFields,
   GIRL_FIELD_LABELS,

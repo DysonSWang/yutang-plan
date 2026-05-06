@@ -301,6 +301,35 @@ export const girls = {
   },
   // 获取女生关联数据
   getRelated: (id) => api.get(`/api/girls/${id}/related`),
+  // 用户主页截图 AI 提取基础档案
+  extractProfileScreenshot: async (file) => {
+    const token = api.getToken();
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+    try {
+      const response = await fetch(`${API_BASE}/api/girls/extract-profile-screenshot`, {
+        method: 'POST',
+        headers: {
+          Authorization: token ? `Bearer ${token}` : ''
+        },
+        body: formData,
+        signal: controller.signal
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: '上传失败' }));
+        throw new Error(err.error || '上传失败');
+      }
+
+      return response.json();
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  },
 };
 
 // 客户
@@ -316,7 +345,7 @@ export const clients = {
     const formData = new FormData();
     formData.append('image', file);
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const timeoutId = setTimeout(() => controller.abort(), 180000);
     try {
       const res = await fetch(`${api.baseUrl}/api/clients/extract-from-screenshot`, {
         method: 'POST',

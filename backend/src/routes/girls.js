@@ -1017,6 +1017,64 @@ router.post('/:id/extract-note', authMiddleware, (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// 用户主页截图上传 + AI 提取基础档案（昵称、地区、年龄）
+// ---------------------------------------------------------------------------
+const GIRL_PROFILE_DIR = path.join(__dirname, '../../uploads/girl-profiles');
+if (!fs.existsSync(GIRL_PROFILE_DIR)) {
+  fs.mkdirSync(GIRL_PROFILE_DIR, { recursive: true });
+}
+const girlProfileUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, GIRL_PROFILE_DIR),
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = /jpeg|jpg|png|gif|webp/;
+    const ext = allowed.test(path.extname(file.originalname).toLowerCase());
+    const mime = allowed.test(file.mimetype);
+    if (ext && mime) cb(null, true);
+    else cb(new Error('仅支持图片格式：jpeg, jpg, png, gif, webp'));
+  }
+});
+
+router.post('/extract-profile-screenshot', authMiddleware, (req, res) => {
+  girlProfileUpload.single('image')(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({ error: err.message || '上传失败' });
+    }
+
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: '请上传图片' });
+      }
+
+      const { analyzeProfileImage } = require('../services/profileEngine');
+      const imageUrl = `/uploads/girl-profiles/${req.file.filename}`;
+      const result = await analyzeProfileImage(imageUrl);
+
+      const extracted = {};
+      if (result?.name && result.name !== '空') extracted.name = result.name;
+      if (result?.age && typeof result.age === 'number') extracted.age = result.age;
+      if (result?.residence && result.residence !== '空') extracted.residence = result.residence;
+      if (result?.appearance && result.appearance !== '空') extracted.appearance = result.appearance;
+
+      res.json({
+        success: true,
+        extracted,
+        imageUrl
+      });
+    } catch (error) {
+      console.error('[Girls] 主页截图提取失败:', error);
+      res.status(500).json({ error: error.message || '分析失败' });
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
 // 获取女生关联数据（约会 + 阶段历史 + 信号/待办/观察）
 // ---------------------------------------------------------------------------
 router.get('/:id/related', authMiddleware, async (req, res) => {

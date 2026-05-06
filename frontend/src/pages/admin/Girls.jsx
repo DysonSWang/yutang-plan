@@ -84,6 +84,13 @@ export default function AdminGirls() {
   const [previewMomentImage, setPreviewMomentImage] = useState('');
   const momentFileRef = useRef(null);
 
+  // 主页截图提取
+  const [profileFile, setProfileFile] = useState(null);
+  const [profilePreview, setProfilePreview] = useState('');
+  const [profileExtracting, setProfileExtracting] = useState(false);
+  const [profileImageUrl, setProfileImageUrl] = useState('');
+  const profileFileRef = useRef(null);
+
   // M007 S01: 关系阶段状态
   const [stageHistory, setStageHistory] = useState([]);
   const [stageEvaluating, setStageEvaluating] = useState(false);
@@ -340,6 +347,9 @@ export default function AdminGirls() {
       // photos/videos: comma-separated to JSON array
       if (data.photos) {
         data.photos = JSON.stringify((data.photos || '').split(',').map(s => s.trim()).filter(Boolean));
+      } else if (profileImageUrl && !selectedGirl) {
+        // 主页截图作为附件记录
+        data.photos = JSON.stringify([profileImageUrl]);
       }
       if (data.videos) {
         data.videos = JSON.stringify((data.videos || '').split(',').map(s => s.trim()).filter(Boolean));
@@ -550,6 +560,53 @@ export default function AdminGirls() {
     } catch (e) {
       captureError(e);
     }
+  };
+
+  // 主页截图提取
+  const handleProfileFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setProfileFile(file);
+    // 生成预览
+    const reader = new FileReader();
+    reader.onload = (ev) => setProfilePreview(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleExtractProfile = async () => {
+    if (!profileFile) return;
+    setProfileExtracting(true);
+    try {
+      const res = await girls.extractProfileScreenshot(profileFile);
+      if (res.success) {
+        // 自动填充识别到的字段
+        const updates = {};
+        if (res.extracted.name) updates.name = res.extracted.name;
+        if (res.extracted.age) updates.age = res.extracted.age;
+        if (res.extracted.residence) updates.residence = res.extracted.residence;
+        if (res.extracted.appearance) updates.appearance = res.extracted.appearance;
+        if (Object.keys(updates).length > 0) {
+          setFormData(prev => ({ ...prev, ...updates }));
+        }
+        // 保存截图 URL 作为附件记录
+        setProfileImageUrl(res.imageUrl);
+        toast({ title: `已识别 ${Object.keys(updates).length} 个字段`, status: 'success', duration: 2000 });
+      } else {
+        toast({ title: res.error || '识别失败', status: 'error', duration: 3000 });
+      }
+    } catch (e) {
+      captureError(e);
+      toast({ title: '识别失败', status: 'error', duration: 3000 });
+    } finally {
+      setProfileExtracting(false);
+    }
+  };
+
+  const handleClearProfileImage = () => {
+    setProfileFile(null);
+    setProfilePreview('');
+    setProfileImageUrl('');
+    if (profileFileRef.current) profileFileRef.current.value = '';
   };
 
   // 朋友圈截图 - 上传并 AI 分析
@@ -974,6 +1031,57 @@ export default function AdminGirls() {
                       <FormLabel color="rgba(245,240,232,0.4)">昵称</FormLabel>
                       <Input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} bg="warm.700" />
                     </FormControl>
+                    {/* 主页截图提取 */}
+                    {!selectedGirl && (
+                      <FormControl>
+                        <FormLabel color="rgba(245,240,232,0.4)">主页截图（可选）</FormLabel>
+                        <HStack spacing={3} align="flex-start">
+                          <input
+                            ref={profileFileRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleProfileFileSelect}
+                            style={{ display: 'none' }}
+                          />
+                          <Button
+                            size="sm"
+                            colorScheme="purple"
+                            variant="outline"
+                            onClick={() => profileFileRef.current?.click()}
+                          >
+                            选择图片
+                          </Button>
+                          {profileFile && !profileExtracting && (
+                            <Button size="sm" colorScheme="gold" onClick={handleExtractProfile}>
+                              AI 提取信息
+                            </Button>
+                          )}
+                          {profileFile && (
+                            <Button size="sm" variant="ghost" colorScheme="red" onClick={handleClearProfileImage}>
+                              清除
+                            </Button>
+                          )}
+                          {profileExtracting && (
+                            <Text fontSize="xs" color="gold.300">AI 分析中...</Text>
+                          )}
+                        </HStack>
+                        {profilePreview && (
+                          <Box mt={2} position="relative" display="inline-block">
+                            <Image
+                              src={profilePreview}
+                              alt="主页截图"
+                              maxH="120px"
+                              borderRadius="md"
+                              border="1px solid"
+                              borderColor="warm.600"
+                            />
+                          </Box>
+                        )}
+                        <Text fontSize="xs" color="rgba(245,240,232,0.3)" mt={1}>
+                          上传社交平台主页截图，AI 自动识别昵称、地区、年龄
+                        </Text>
+                      </FormControl>
+                    )}
                     <SimpleGrid columns={{ base: 1, sm: 2, md: 4 }} spacing={4}>
                       <FormControl>
                         <FormLabel color="rgba(245,240,232,0.4)">年龄</FormLabel>
