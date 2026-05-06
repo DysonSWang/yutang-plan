@@ -2770,8 +2770,12 @@ export default function AICoach() {
 
       // analyze-image 返回简单 JSON（非流式）
       const data = await res.json();
+      // 根据类型添加前缀提示
+      const typeLabel = data.type === '聊天记录' ? '【聊天记录分析】\n'
+        : data.type === '朋友圈' ? '【朋友圈分析】\n'
+        : '【图片分析】\n';
       setMessages(prev =>
-        prev.map(m => m.id === assistantId ? { ...m, content: data.content || '' } : m)
+        prev.map(m => m.id === assistantId ? { ...m, content: typeLabel + (data.content || '') } : m)
       );
       scrollToBottom();
     } catch (e) {
@@ -2852,8 +2856,12 @@ export default function AICoach() {
 
       // analyze-image 返回简单 JSON（非流式）
       const data = await res.json();
+      // 根据类型添加前缀提示
+      const typeLabel = data.type === '聊天记录' ? '【聊天记录分析】\n'
+        : data.type === '朋友圈' ? '【朋友圈分析】\n'
+        : '【图片分析】\n';
       setMessages(prev =>
-        prev.map(m => m.id === assistantId ? { ...m, content: data.content || '' } : m)
+        prev.map(m => m.id === assistantId ? { ...m, content: typeLabel + (data.content || '') } : m)
       );
       scrollToBottom();
     } catch (e) {
