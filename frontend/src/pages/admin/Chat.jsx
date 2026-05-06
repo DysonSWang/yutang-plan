@@ -1144,65 +1144,14 @@ export default function AdminChat() {
               </Box>
 
               <Box p={4} borderTop="1px" borderColor="rgba(255,255,255,0.06)">
-                {/* 媒体预览（仅视频/语音需要确认） */}
-                {previewFile && (
+                {/* 媒体预览（仅语音需要确认，视频/图片直接发送） */}
+                {previewFile && previewFile.type === 'audio' && (
                   <Box mb={2} p={2} bg="warm.700" borderRadius="md">
-                    {/* 视频预览区 */}
-                    {previewFile.type === 'video' && (
-                      <Box mb={2} position="relative" borderRadius="md" overflow="hidden" bg="black">
-                        {/* 视频加载中显示缩略图或loading */}
-                        <Box position="relative" w="160px" h="90px">
-                          {videoLoading ? (
-                            <Flex w="full" h="full" align="center" justify="center" bg="warm.900">
-                              <Spinner size="lg" color="orange.400" thickness="3px" />
-                            </Flex>
-                          ) : videoThumbnail ? (
-                            <Image src={videoThumbnail} alt="视频预览" w="160px" h="90px" objectFit="cover" />
-                          ) : (
-                            <video
-                              src={previewFile.preview}
-                              style={{ width: '160px', height: '90px', objectFit: 'cover' }}
-                              muted
-                              playsInline
-                              onLoadedData={() => setVideoLoading(false)}
-                            />
-                          )}
-                          {/* 播放图标 */}
-                          <Flex position="absolute" inset={0} align="center" justify="center" pointerEvents="none">
-                            <Box bg="blackAlpha.600" borderRadius="full" p={2}>
-                              <Text fontSize="lg">▶</Text>
-                            </Box>
-                          </Flex>
-                          {/* 时长显示 */}
-                          {previewFile.duration && (
-                            <Text position="absolute" bottom={1} right={1} color="white" fontSize="xs" bg="blackAlpha.700" px={1} borderRadius="sm">
-                              {Math.floor(previewFile.duration / 60)}:{(previewFile.duration % 60).toString().padStart(2, '0')}
-                            </Text>
-                          )}
-                        </Box>
-                      </Box>
-                    )}
-
-                    {/* 上传进度条 */}
-                    {previewFile.type === 'video' && uploadProgress !== null && uploading && (
-                      <Box mb={2}>
-                        <HStack justify="space-between" mb={1}>
-                          <Text color="white" fontSize="sm">上传中...</Text>
-                          <Text color="orange.300" fontSize="sm">{uploadProgress}%</Text>
-                        </HStack>
-                        <Box h="4px" bg="warm.600" borderRadius="full" overflow="hidden">
-                          <Box h="full" bg="orange.500" w={`${uploadProgress}%`} transition="width 0.2s" borderRadius="full" />
-                        </Box>
-                      </Box>
-                    )}
-
                     <HStack>
-                      {previewFile.type === 'audio' && (
-                        <HStack>
-                          <Text color="white" fontSize="sm">🎤 语音 {recordTime || previewFile.duration || 0}"</Text>
-                          <audio src={previewFile.preview} style={{ height: '28px' }} controls />
-                        </HStack>
-                      )}
+                      <HStack>
+                        <Text color="white" fontSize="sm">🎤 语音 {recordTime || previewFile.duration || 0}"</Text>
+                        <audio src={previewFile.preview} style={{ height: '28px' }} controls />
+                      </HStack>
                       {burnMode && <Text color="orange.300" fontSize="sm">🔥 {burnTrigger === 'onView' ? '阅后' : '即时'}{burnDurationType === 'adaptive' ? '(自适应)' : `${burnSeconds}s`}</Text>}
                       <IconButton
                         icon={<Text>✕</Text>}
@@ -1217,8 +1166,8 @@ export default function AdminChat() {
                         size="sm"
                         colorScheme="gold"
                         isLoading={uploading}
-                        loadingText={previewFile.type === 'video' ? '上传中...' : '发送中'}
-                        onClick={previewFile.type === 'audio' ? confirmSendAudio : confirmSendVideo}
+                        loadingText="发送中"
+                        onClick={confirmSendAudio}
                         isDisabled={uploading}
                       >
                         {!(uploading) ? '发送' : ''}
