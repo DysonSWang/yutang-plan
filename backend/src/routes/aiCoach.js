@@ -1269,13 +1269,13 @@ router.post('/optimize-reply', authMiddleware, async (req, res) => {
 ${stageContext}
 ${contextSection}
 
-【待优化话术】
+【用户想说的原文】
 "${originalReply}"
 
-${goalHint ? goalHint : `【优化目标】分析这段话术的策略层面——推拉节奏是否合适、有没有建立框架、是否契合当前关系阶段（${relStageLabel || '未设置'}），然后给出策略更强的优化版本。`}
+${goalHint ? `【优化目标】${goal}` : `【诊断要求】先分析用户原文的意图和策略——他想达到什么效果？当前的表达是否契合女生的风格和关系阶段？存在什么问题（太直白/太模糊/暴露需求感/缺乏张力等）？然后给出策略更强的优化版本。`}
 
 请生成3个优化版本，每个15-50字，从不同策略角度出发：
-${goal ? `用户指定了优化方向「${goal}」，请按该方向优化。` : `
+${goal ? `用户指定了优化方向「${goal}」，请按该方向给出3个不同表达方式的版本。` : `
 1. 策略型：优化推拉节奏和框架感——哪里该推、哪里该拉、怎么建立主导框架
 2. 升温型：增加暧昧感和情绪波动——用模糊性语言制造想象空间，不挑明但能心跳
 3. 适配型：针对${personality?.communicationStyle || '未知'}风格的女生优化——用她能接住的表达方式，避免踩雷`}
@@ -1287,6 +1287,7 @@ ${goal ? `用户指定了优化方向「${goal}」，请按该方向优化。` :
 
 请按以下 JSON 格式返回：
 {
+  "diagnosis": "对用户原文的诊断：意图是什么、策略是否合适、存在什么问题",
   "original": "${originalReply}",
   "optimizations": [
     { "text": "优化版本1", "point": "策略分析：为什么这样改更有效", "style": "策略型", "riskLevel": "低/中/高" },
@@ -1308,7 +1309,7 @@ ${goal ? `用户指定了优化方向「${goal}」，请按该方向优化。` :
         model: aiConfig.model,
         messages: [{ role: 'user', content: systemPrompt }],
         temperature: 0.8,
-        max_tokens: 1200
+        max_tokens: 2000
       })
     });
 
