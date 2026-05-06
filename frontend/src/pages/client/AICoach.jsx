@@ -964,7 +964,7 @@ const SuggestionCard = memo(({ item, index, isSelected, isDismissed, onSelect, o
       )}
       <Text fontSize="13px" lineHeight="1.6">{text}</Text>
       {subtext && <Text fontSize="11px" color="rgba(245,240,232,0.4)" mt={1}>{subtext}</Text>}
-      {riskNote && <Text fontSize="11px" color="orange.300" mt={1}>⚠ {riskNote}</Text>}
+      {riskNote && riskNote !== '无' && <Text fontSize="11px" color="orange.300" mt={1}>⚠ {riskNote}</Text>}
       {riskLevel && riskLevel !== '低' && !riskNote && (
         <Text fontSize="10px" color={riskLevel === '高' ? 'red.300' : 'orange.300'} mt={1}>
           {riskLevel === '高' ? '⚠ 高风险' : '⚡ 中风险'}
