@@ -274,6 +274,9 @@ export default function ClientProfile() {
   const [aiScreenshotFile, setAiScreenshotFile] = useState(null);
   const [aiScreenshotPreview, setAiScreenshotPreview] = useState('');
   const [aiConfirmSelections, setAiConfirmSelections] = useState({});
+  const [aiTab, setAiTab] = useState('text'); // 'text' | 'upload'
+  const [tweakLayout, setTweakLayout] = useState('step'); // 'step' | 'all'
+  const [tweakProgress, setTweakProgress] = useState('color'); // 'color' | 'grey'
   const fileInputRef = useRef(null);
   const screenshotInputRef = useRef(null);
   const aiStreamRef = useRef('');
@@ -1032,163 +1035,230 @@ export default function ClientProfile() {
 
       {/* 编辑档案弹窗 */}
       <Modal isOpen={isOpen} onClose={onClose} size="xl">
-        <ModalOverlay bg="blackAlpha.700" />
-        <ModalContent bg="warm.800" overflow="auto">
-          <ModalHeader color="white">编辑我的档案</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody pb={6} ref={editModalBodyRef} style={{ overflowY: 'auto', maxHeight: '70vh' }}>
-            <VStack spacing={5} align="stretch">
-              {/* AI 智能识别 */}
-              <Card bg="warm.700" border="1px solid" borderColor="warm.600">
+        <ModalOverlay bg="blackAlpha.700" backdropFilter="blur(4px)" />
+        <ModalContent bg="warm.800" borderRadius="xl" maxH="90vh">
+          {/* Sticky Header */}
+          <Box position="sticky" top={0} zIndex={10} bg="warm.800" borderBottom="1px solid" borderColor="warm.700" px={6} py={4}>
+            <Flex justify="space-between" align="center">
+              <Heading size="md" color="white" fontFamily="heading" fontWeight="600">编辑我的档案</Heading>
+              <IconButton
+                aria-label="关闭"
+                icon={<Text>✕</Text>}
+                variant="ghost"
+                size="sm"
+                onClick={onClose}
+                color="rgba(245,240,232,0.4)"
+                _hover={{ bg: 'warm.700', color: 'white' }}
+                borderRadius="lg"
+              />
+            </Flex>
+          </Box>
+
+          {/* Scrollable Body */}
+          <Box overflowY="auto" maxH="calc(90vh - 140px)" pb={4}>
+            <VStack spacing={6} align="stretch" px={6} pt={4}>
+              {/* AI 智能识别 - 双 Tab 版本 */}
+              <Card bg="rgba(212,168,83,0.08)" border="1px solid" borderColor="gold.500" borderRadius="xl">
                 <CardBody>
-                  <Heading size="xs" color="teal.400" mb={3}>AI 智能识别</Heading>
-                  <VStack spacing={3} align="stretch">
-                    {/* 文字输入 */}
-                    <Textarea
-                      value={aiText}
-                      onChange={e => setAiText(e.target.value)}
-                      placeholder="粘贴自我介绍文字，AI 自动提取档案字段（年龄、职业、性格、感情观等）..."
-                      rows={3}
-                      bg="warm.800"
-                      color="white"
-                      border="1px solid"
-                      borderColor="warm.600"
-                      _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
-                      _focus={{ borderColor: 'blue.500', boxShadow: '0 0 0 1px var(--chakra-colors-blue-500)' }}
-                    />
+                  {/* AI Header */}
+                  <HStack spacing={2} mb={4}>
+                    <Box w="20px" h="20px" borderRadius="full" bg="gold.500" display="flex" alignItems="center" justifyContent="center">
+                      <Text fontSize="12px" color="warm.900">✦</Text>
+                    </Box>
+                    <Text color="gold.400" fontWeight="500" fontSize="sm">AI 智能填充</Text>
+                  </HStack>
+
+                  {/* 双 Tab 切换 */}
+                  <HStack spacing={3} mb={4}>
                     <Button
-                      size="sm"
-                      colorScheme="blue"
-                      onClick={handleAiTextExtract}
-                      isLoading={aiExtracting}
-                      loadingText="分析中..."
-                      isDisabled={aiText.trim().length < 20}
-                    >智能分析</Button>
+                      flex={1}
+                      variant={aiTab === 'text' ? 'solid' : 'outline'}
+                      colorScheme={aiTab === 'text' ? 'gold' : 'gray'}
+                      onClick={() => setAiTab('text')}
+                      size="md"
+                      borderRadius="lg"
+                      _hover={{ transform: aiTab !== 'text' ? 'translateY(-1px)' : 'none' }}
+                    >
+                      <Text mr={2}>📝</Text> 文字输入
+                    </Button>
+                    <Button
+                      flex={1}
+                      variant={aiTab === 'upload' ? 'solid' : 'outline'}
+                      colorScheme={aiTab === 'upload' ? 'gold' : 'gray'}
+                      onClick={() => setAiTab('upload')}
+                      size="md"
+                      borderRadius="lg"
+                      _hover={{ transform: aiTab !== 'upload' ? 'translateY(-1px)' : 'none' }}
+                    >
+                      <Text mr={2}>🖼</Text> 上传截图
+                    </Button>
+                  </HStack>
 
-                    {/* 流式分析进度 */}
-                    {aiExtracting && aiStreamText && (
-                      <Card bg="warm.800" border="1px solid" borderColor="blue.700">
-                        <CardBody py={3}>
-                          <Text color="blue.300" fontWeight="bold" fontSize="sm" mb={2}>AI 正在分析...</Text>
-                          <Text color="gray.300" fontSize="sm" whiteSpace="pre-wrap" maxH="150px" overflowY="auto">
-                            {aiStreamText}
-                          </Text>
-                        </CardBody>
-                      </Card>
-                    )}
-
-                    {/* 或 */}
-                    <HStack>
-                      <Box flex={1} h="1px" bg="warm.600" />
-                      <Text color="rgba(245,240,232,0.6)" fontSize="xs">或</Text>
-                      <Box flex={1} h="1px" bg="warm.600" />
-                    </HStack>
-
-                    {/* 截图上传 */}
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      ref={screenshotInputRef}
-                      onChange={handleScreenshotSelect}
-                      display="none"
-                    />
-                    {aiScreenshotPreview ? (
-                      <Box position="relative" borderRadius="md" overflow="hidden" bg="gray.900">
-                        <Image src={aiScreenshotPreview} alt="预览" maxH="160px" w="full" objectFit="contain" />
-                        <IconButton
-                          icon={<Icon as={FiEdit2} />}
-                          size="xs"
-                          position="absolute"
-                          top={2}
-                          right={2}
-                          colorScheme="red"
-                          onClick={() => { setAiScreenshotFile(null); setAiScreenshotPreview(''); setAiExtractedFields(null); setAiConfirmSelections({}); }}
-                          aria-label="移除图片"
-                        />
-                      </Box>
-                    ) : (
+                  {/* 文字输入 Tab */}
+                  {aiTab === 'text' && (
+                    <VStack spacing={3} align="stretch">
+                      <Textarea
+                        value={aiText}
+                        onChange={e => setAiText(e.target.value)}
+                        placeholder="粘贴自我介绍文字，AI 自动提取档案字段（年龄、职业、性格、感情观等）..."
+                        rows={4}
+                        bg="warm.700"
+                        color="white"
+                        border="1px solid"
+                        borderColor="warm.600"
+                        _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
+                        _focus={{ borderColor: 'gold.500', boxShadow: '0 0 0 1px var(--chakra-colors-gold-500)' }}
+                      />
                       <Button
-                        variant="outline"
-                        colorScheme="blue"
-                        onClick={() => screenshotInputRef.current?.click()}
-                        h="60px"
-                        borderStyle="dashed"
-                      >选择聊天截图</Button>
-                    )}
-                    {aiScreenshotFile && (
-                      <Button
-                        size="sm"
-                        colorScheme="blue"
-                        onClick={handleAiScreenshotExtract}
+                        colorScheme="gold"
+                        onClick={handleAiTextExtract}
                         isLoading={aiExtracting}
-                        loadingText={aiScreenshotStep || '分析中...'}
-                      >上传分析</Button>
-                    )}
+                        loadingText="分析中..."
+                        isDisabled={aiText.trim().length < 20}
+                        borderRadius="lg"
+                        _hover={{ transform: 'translateY(-1px)', filter: 'brightness(1.1)' }}
+                      >
+                        ✦ 智能分析
+                      </Button>
 
-                    {/* 截图分析思考过程 */}
-                    {aiScreenshotThinking && (
-                      <Card bg="warm.800" border="1px solid" borderColor="blue.600">
-                        <CardBody py={3}>
-                          <HStack mb={2}>
-                            <Spinner size="sm" color="blue.400" />
-                            <Text color="blue.300" fontWeight="bold" fontSize="sm">{aiScreenshotStep || 'AI 思考中...'}</Text>
-                          </HStack>
-                          <Text color="rgba(245,240,232,0.5)" fontSize="xs">
-                            {aiScreenshotThinkingContent}
-                          </Text>
-                          <Progress value={undefined} size="xs" colorScheme="blue" mt={2} isIndeterminate />
-                        </CardBody>
-                      </Card>
-                    )}
-
-                    {/* AI 提取结果 */}
-                    {aiExtractedFields && (
-                      <Card bg="warm.800" border="1px solid" borderColor="teal.600">
-                        <CardBody>
-                          <HStack justify="space-between" mb={3}>
-                            <Text color="teal.400" fontWeight="bold" fontSize="sm">
-                              AI 识别结果（共 {Object.entries(aiExtractedFields).filter(([, v]) => v).length} 个字段）
+                      {/* 流式分析进度 */}
+                      {aiExtracting && aiStreamText && (
+                        <Card bg="warm.800" border="1px solid" borderColor="gold.600">
+                          <CardBody py={3}>
+                            <Text color="gold.300" fontWeight="bold" fontSize="sm" mb={2}>AI 正在分析...</Text>
+                            <Text color="gray.300" fontSize="sm" whiteSpace="pre-wrap" maxH="150px" overflowY="auto">
+                              {aiStreamText}
                             </Text>
-                            <HStack spacing={2}>
-                              <Button size="xs" variant="ghost" color="teal.400" onClick={() => {
-                                const all = {};
-                                Object.keys(aiExtractedFields).forEach(k => { all[k] = true; });
-                                setAiConfirmSelections(all);
-                              }}>全选</Button>
-                              <Button size="xs" variant="ghost" color="rgba(245,240,232,0.4)" onClick={() => setAiConfirmSelections({})}>反选</Button>
-                            </HStack>
-                          </HStack>
-                          <VStack spacing={1} align="stretch">
-                            {Object.entries(aiExtractedFields).map(([key, value]) => {
-                              if (!value) return null;
-                              const label = ALL_FIELD_LABELS[key] || key;
-                              return (
-                                <HStack key={key} bg="warm.700" px={3} py={1.5} borderRadius="md">
-                                  <Checkbox
-                                    isChecked={!!aiConfirmSelections[key]}
-                                    onChange={e => setAiConfirmSelections(prev => ({ ...prev, [key]: e.target.checked }))}
-                                    colorScheme="teal"
-                                    size="sm"
-                                  />
-                                  <Text color="rgba(245,240,232,0.4)" fontSize="sm" minW="80px">{label}</Text>
-                                  <Text color="white" fontSize="sm" fontWeight="medium" flex={1}>{String(value)}</Text>
-                                </HStack>
-                              );
-                            })}
+                          </CardBody>
+                        </Card>
+                      )}
+                    </VStack>
+                  )}
+
+                  {/* 截图上传 Tab */}
+                  {aiTab === 'upload' && (
+                    <VStack spacing={3} align="stretch">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        ref={screenshotInputRef}
+                        onChange={handleScreenshotSelect}
+                        display="none"
+                      />
+                      {aiScreenshotPreview ? (
+                        <Box position="relative" borderRadius="lg" overflow="hidden" bg="gray.900">
+                          <Image src={aiScreenshotPreview} alt="预览" maxH="160px" w="full" objectFit="contain" />
+                          <IconButton
+                            icon={<Icon as={FiEdit2} />}
+                            size="xs"
+                            position="absolute"
+                            top={2}
+                            right={2}
+                            colorScheme="red"
+                            onClick={() => { setAiScreenshotFile(null); setAiScreenshotPreview(''); setAiExtractedFields(null); setAiConfirmSelections({}); }}
+                            aria-label="移除图片"
+                          />
+                        </Box>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          colorScheme="gold"
+                          onClick={() => screenshotInputRef.current?.click()}
+                          h="80px"
+                          borderStyle="dashed"
+                          borderRadius="lg"
+                          _hover={{ bg: 'rgba(212,168,83,0.1)' }}
+                        >
+                          <VStack spacing={1}>
+                            <Text>点击选择聊天截图</Text>
+                            <Text fontSize="xs" color="rgba(245,240,232,0.4)">支持朋友圈、探探、Soul 等截图</Text>
                           </VStack>
-                          <HStack justify="flex-end" mt={3} spacing={3}>
-                            <Button size="sm" variant="ghost" color="rgba(245,240,232,0.4)" onClick={() => { setAiExtractedFields(null); setAiConfirmSelections({}); }}>清除</Button>
-                            <Button size="sm" colorScheme="teal" onClick={handleApplySelectedFields}>应用已选字段</Button>
+                        </Button>
+                      )}
+                      {aiScreenshotFile && (
+                        <Button
+                          colorScheme="gold"
+                          onClick={handleAiScreenshotExtract}
+                          isLoading={aiExtracting}
+                          loadingText={aiScreenshotStep || '分析中...'}
+                          borderRadius="lg"
+                        >
+                          ✦ 上传分析
+                        </Button>
+                      )}
+
+                      {/* 截图分析思考过程 */}
+                      {aiScreenshotThinking && (
+                        <Card bg="warm.800" border="1px solid" borderColor="gold.600">
+                          <CardBody py={3}>
+                            <HStack mb={2}>
+                              <Spinner size="sm" color="gold.400" />
+                              <Text color="gold.300" fontWeight="bold" fontSize="sm">{aiScreenshotStep || 'AI 思考中...'}</Text>
+                            </HStack>
+                            <Text color="rgba(245,240,232,0.5)" fontSize="xs">
+                              {aiScreenshotThinkingContent}
+                            </Text>
+                            <Progress value={undefined} size="xs" colorScheme="yellow" mt={2} isIndeterminate />
+                          </CardBody>
+                        </Card>
+                      )}
+                    </VStack>
+                  )}
+
+                  {/* AI 提取结果 */}
+                  {aiExtractedFields && (
+                    <Card bg="warm.800" border="1px solid" borderColor="teal.500" mt={4}>
+                      <CardBody>
+                        <HStack justify="space-between" mb={3}>
+                          <Text color="teal.400" fontWeight="bold" fontSize="sm">
+                            AI 识别结果（共 {Object.entries(aiExtractedFields).filter(([, v]) => v).length} 个字段）
+                          </Text>
+                          <HStack spacing={2}>
+                            <Button size="xs" variant="ghost" color="teal.400" onClick={() => {
+                              const all = {};
+                              Object.keys(aiExtractedFields).forEach(k => { all[k] = true; });
+                              setAiConfirmSelections(all);
+                            }}>全选</Button>
+                            <Button size="xs" variant="ghost" color="rgba(245,240,232,0.4)" onClick={() => setAiConfirmSelections({})}>反选</Button>
                           </HStack>
-                        </CardBody>
-                      </Card>
-                    )}
-                  </VStack>
+                        </HStack>
+                        <VStack spacing={1} align="stretch" maxH="200px" overflowY="auto">
+                          {Object.entries(aiExtractedFields).map(([key, value]) => {
+                            if (!value) return null;
+                            const label = ALL_FIELD_LABELS[key] || key;
+                            return (
+                              <HStack key={key} bg="warm.700" px={3} py={2} borderRadius="md">
+                                <Checkbox
+                                  isChecked={!!aiConfirmSelections[key]}
+                                  onChange={e => setAiConfirmSelections(prev => ({ ...prev, [key]: e.target.checked }))}
+                                  colorScheme="teal"
+                                  size="sm"
+                                />
+                                <Text color="rgba(245,240,232,0.4)" fontSize="sm" minW="80px">{label}</Text>
+                                <Text color="white" fontSize="sm" fontWeight="medium" flex={1}>{String(value)}</Text>
+                              </HStack>
+                            );
+                          })}
+                        </VStack>
+                        <HStack justify="flex-end" mt={3} spacing={3}>
+                          <Button size="sm" variant="ghost" color="rgba(245,240,232,0.4)" onClick={() => { setAiExtractedFields(null); setAiConfirmSelections({}); }}>清除</Button>
+                          <Button size="sm" colorScheme="teal" onClick={handleApplySelectedFields}>应用已选字段</Button>
+                        </HStack>
+                      </CardBody>
+                    </Card>
+                  )}
                 </CardBody>
               </Card>
 
-              {/* 手动填写表单 */}
-              <SimpleGrid columns={2} spacing={4} data-section-form>
+              {/* 分隔符 */}
+              <HStack>
+                <Box flex={1} h="1px" bg="warm.600" />
+                <Text color="rgba(245,240,232,0.4)" fontSize="xs">或</Text>
+                <Box flex={1} h="1px" bg="warm.600" />
+              </HStack>
+
+              {/* 手动填写表单 - 增加间距 */}
+              <SimpleGrid columns={2} spacing={6} data-section-form>
                 {CLIENT_EDITABLE_FIELDS.map(field => (
                   <div data-section={getSectionForField(field.key)} key={field.key}>
                   <ProfileField
@@ -1201,15 +1271,102 @@ export default function ClientProfile() {
                 ))}
               </SimpleGrid>
 
+              {/* 彩色进度条 */}
+              <Box borderTop="1px solid" borderColor="warm.700" pt={4}>
+                <HStack spacing={4}>
+                  <Text color="rgba(245,240,232,0.4)" fontSize="sm" whiteSpace="nowrap">完整度</Text>
+                  <Box flex={1} h="6px" bg="warm.700" borderRadius="full" overflow="hidden">
+                    <Box
+                      h="100%"
+                      w={`${completenessPercent}%`}
+                      bgGradient={tweakProgress === 'color' ? 'linear(to-r, gold.500, yellow.400)' : 'linear(to-r, gray.500, gray.400)'}
+                      borderRadius="full"
+                      transition="width 0.3s ease"
+                    />
+                  </Box>
+                  <Text color="gold.400" fontSize="sm" fontWeight="600" fontVariant="tabular-nums" minW="45px" textAlign="right">
+                    {completenessPercent}%
+                  </Text>
+                </HStack>
+              </Box>
+
               {/* 底部按钮 */}
-              <HStack justify="flex-end" spacing={3}>
-                <Button variant="ghost" color="rgba(245,240,232,0.4)" onClick={onClose}>取消</Button>
-                <Button colorScheme="gold" onClick={handleSave} isLoading={saving}>保存</Button>
+              <HStack justify="flex-end" spacing={3} pb={2}>
+                <Button variant="ghost" color="rgba(245,240,232,0.4)" onClick={onClose} borderRadius="lg">取消</Button>
+                <Button colorScheme="gold" onClick={handleSave} isLoading={saving} borderRadius="lg">保存</Button>
               </HStack>
             </VStack>
-          </ModalBody>
+          </Box>
         </ModalContent>
       </Modal>
+
+      {/* Tweaks Panel - 固定在右下角 */}
+      <Box
+        position="fixed"
+        bottom={6}
+        right={6}
+        bg="warm.800"
+        border="1px solid"
+        borderColor="warm.600"
+        borderRadius="xl"
+        p={4}
+        w="280px"
+        boxShadow="0 8px 32px rgba(0,0,0,0.4)"
+        zIndex={1001}
+      >
+        <Text fontSize="xs" fontWeight="600" color="rgba(245,240,232,0.4)" textTransform="uppercase" letterSpacing="0.05em" mb={3}>Tweaks</Text>
+        <VStack spacing={3} align="stretch">
+          <HStack justify="space-between">
+            <Text fontSize="sm" color="white">布局</Text>
+            <HStack spacing={1}>
+              <Button
+                size="xs"
+                variant={tweakLayout === 'step' ? 'solid' : 'outline'}
+                colorScheme={tweakLayout === 'step' ? 'gold' : 'gray'}
+                onClick={() => setTweakLayout('step')}
+                borderRadius="md"
+              >分步</Button>
+              <Button
+                size="xs"
+                variant={tweakLayout === 'all' ? 'solid' : 'outline'}
+                colorScheme={tweakLayout === 'all' ? 'gold' : 'gray'}
+                onClick={() => setTweakLayout('all')}
+                borderRadius="md"
+              >一步</Button>
+            </HStack>
+          </HStack>
+          <HStack justify="space-between">
+            <Text fontSize="sm" color="white">进度条</Text>
+            <HStack spacing={1}>
+              <Button
+                size="xs"
+                variant={tweakProgress === 'color' ? 'solid' : 'outline'}
+                colorScheme={tweakProgress === 'color' ? 'gold' : 'gray'}
+                onClick={() => setTweakProgress('color')}
+                borderRadius="md"
+              >彩色</Button>
+              <Button
+                size="xs"
+                variant={tweakProgress === 'grey' ? 'solid' : 'outline'}
+                colorScheme={tweakProgress === 'grey' ? 'gold' : 'gray'}
+                onClick={() => setTweakProgress('grey')}
+                borderRadius="md"
+              >灰色</Button>
+            </HStack>
+          </HStack>
+          <HStack justify="space-between">
+            <Text fontSize="sm" color="white">AI 入口</Text>
+            <HStack spacing={1}>
+              <Button
+                size="xs"
+                variant="solid"
+                colorScheme="gold"
+                borderRadius="md"
+              >双入口</Button>
+            </HStack>
+          </HStack>
+        </VStack>
+      </Box>
 
       {/* 定价方案弹窗 */}
       <Modal isOpen={isPricingOpen} onClose={onPricingClose} size="2xl">
