@@ -415,7 +415,7 @@ export default function ChapterManagement() {
       }
     } catch (err) {
       toast({ title: '排序失败', description: err.message, status: 'error', duration: 4000, duration: 3000 });
-      loadChapters();
+      refresh();
     } finally {
       setReordering(false);
     }
@@ -566,7 +566,7 @@ export default function ChapterManagement() {
         isOpen={isDeleteOpen}
         onClose={closeDelete}
         chapter={deleting}
-        onDeleted={loadChapters}
+        onDeleted={refresh}
       />
 
       <PreviewModal
