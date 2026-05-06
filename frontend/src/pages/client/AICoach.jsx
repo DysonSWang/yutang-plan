@@ -1799,7 +1799,7 @@ export default function AICoach() {
   }, [combatHistoryKey, combatHistories]);
 
   // 更新 combatContextRef：同步 chatSummary、recentMessages、importAnalysis
-  const updateCombatContext = useCallback((messages, analysis = null) => {
+  const updateCombatContext = useCallback((messages, newAnalysis = null) => {
     // 更新 recentMessages（最近10-20条）
     const recentMessages = messages.slice(-20);
 
@@ -1814,9 +1814,10 @@ export default function AICoach() {
       ...(combatContextRef.current || {}),
       chatSummary: chatSummary || recentChatText,
       recentMessages: recentMessages,
-      importAnalysis: analysis || importAnalysis || combatContextRef.current?.importAnalysis
+      importAnalysis: newAnalysis || importAnalysis || combatContextRef.current?.importAnalysis
     };
-  }, [chatSummary, importAnalysis, analysis]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatSummary, importAnalysis]);
 
   // 删除实战消息
   const handleDeleteCombatMessage = useCallback((messageId) => {
