@@ -268,6 +268,9 @@ export default function ClientProfile() {
   const [aiExtracting, setAiExtracting] = useState(false);
   const [aiStreamText, setAiStreamText] = useState('');
   const [aiExtractedFields, setAiExtractedFields] = useState(null);
+  const [aiScreenshotThinking, setAiScreenshotThinking] = useState(false);
+  const [aiScreenshotStep, setAiScreenshotStep] = useState(''); // '上传图片' | 'AI 思考中...' | '解析信号...' | '生成报告...'
+  const [aiScreenshotThinkingContent, setAiScreenshotThinkingContent] = useState('');
   const [aiScreenshotFile, setAiScreenshotFile] = useState(null);
   const [aiScreenshotPreview, setAiScreenshotPreview] = useState('');
   const [aiConfirmSelections, setAiConfirmSelections] = useState({});
@@ -474,25 +477,63 @@ export default function ClientProfile() {
       return;
     }
     setAiExtracting(true);
+    setAiScreenshotThinking(true);
     setAiExtractedFields(null);
+    setAiScreenshotStep('上传图片');
+    setAiScreenshotThinkingContent('正在上传截图...');
+
+    // 模拟思考步骤（实际 AI 分析会更快）
+    const steps = [
+      { step: 'AI 思考中...', content: '正在识别截图中的对话内容...', duration: 2000 },
+      { step: '解析信号...', content: '提取用户画像信息和关系信号...', duration: 1500 },
+      { step: '生成报告...', content: '整合分析结果，生成档案更新建议...', duration: 1000 },
+    ];
+
+    let stepIndex = 0;
+    const stepTimer = setInterval(() => {
+      stepIndex++;
+      if (stepIndex < steps.length) {
+        setAiScreenshotStep(steps[stepIndex].step);
+        setAiScreenshotThinkingContent(steps[stepIndex].content);
+      }
+    }, steps[0].duration);
+
     try {
       const res = await clients.extractFromScreenshot(aiScreenshotFile);
+
+      clearInterval(stepTimer);
+      setAiScreenshotStep('分析完成');
+
       if (res.success && res.pendingFields) {
         setAiExtractedFields(res.pendingFields);
-        // 默认全选
         const selections = {};
         Object.keys(res.pendingFields).forEach(k => { selections[k] = true; });
         setAiConfirmSelections(selections);
         const count = Object.keys(res.pendingFields).filter(k => res.pendingFields[k]).length;
+        setAiScreenshotThinkingContent(`识别到 ${count} 个字段，已选中待确认`);
         toast({ title: 'AI 分析完成', description: `识别到 ${count} 个字段`, status: 'success' });
       } else {
+        setAiScreenshotThinkingContent('未识别到客户信息，请尝试其他截图');
         toast({ title: res.message || '未识别到信息', status: 'warning', duration: 3000 });
       }
     } catch (e) {
+      clearInterval(stepTimer);
       captureError(e);
-      toast({ title: '截图分析失败', description: e.message || '请重试', status: 'error', duration: 4000 });
+      if (e.name === 'AbortError') {
+        setAiScreenshotStep('超时');
+        setAiScreenshotThinkingContent('AI 分析超时，请稍后重试');
+        toast({ title: 'AI 分析超时', description: '图片较大，请稍后重试', status: 'error', duration: 4000 });
+      } else {
+        setAiScreenshotStep('失败');
+        setAiScreenshotThinkingContent('分析失败，请重试');
+        toast({ title: '截图分析失败', description: e.message || '请重试', status: 'error', duration: 4000 });
+      }
     } finally {
-      setAiExtracting(false);
+      setTimeout(() => {
+        setAiExtracting(false);
+        setAiScreenshotThinking(false);
+        setAiScreenshotStep('');
+      }, 1500);
     }
   };
 
@@ -1080,8 +1121,24 @@ export default function ClientProfile() {
                         colorScheme="blue"
                         onClick={handleAiScreenshotExtract}
                         isLoading={aiExtracting}
-                        loadingText="分析中..."
+                        loadingText={aiScreenshotStep || '分析中...'}
                       >上传分析</Button>
+                    )}
+
+                    {/* 截图分析思考过程 */}
+                    {aiScreenshotThinking && (
+                      <Card bg="warm.800" border="1px solid" borderColor="blue.600">
+                        <CardBody py={3}>
+                          <HStack mb={2}>
+                            <Spinner size="sm" color="blue.400" />
+                            <Text color="blue.300" fontWeight="bold" fontSize="sm">{aiScreenshotStep || 'AI 思考中...'}</Text>
+                          </HStack>
+                          <Text color="rgba(245,240,232,0.5)" fontSize="xs">
+                            {aiScreenshotThinkingContent}
+                          </Text>
+                          <Progress value={undefined} size="xs" colorScheme="blue" mt={2} isIndeterminate />
+                        </CardBody>
+                      </Card>
                     )}
 
                     {/* AI 提取结果 */}
