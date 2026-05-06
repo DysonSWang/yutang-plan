@@ -275,8 +275,6 @@ export default function ClientProfile() {
   const [aiScreenshotPreview, setAiScreenshotPreview] = useState('');
   const [aiConfirmSelections, setAiConfirmSelections] = useState({});
   const [aiTab, setAiTab] = useState('text'); // 'text' | 'upload'
-  const [tweakLayout, setTweakLayout] = useState('step'); // 'step' | 'all'
-  const [tweakProgress, setTweakProgress] = useState('color'); // 'color' | 'grey'
   const fileInputRef = useRef(null);
   const screenshotInputRef = useRef(null);
   const aiStreamRef = useRef('');
@@ -1271,25 +1269,6 @@ export default function ClientProfile() {
                 ))}
               </SimpleGrid>
 
-              {/* 彩色进度条 */}
-              <Box borderTop="1px solid" borderColor="warm.700" pt={4}>
-                <HStack spacing={4}>
-                  <Text color="rgba(245,240,232,0.4)" fontSize="sm" whiteSpace="nowrap">完整度</Text>
-                  <Box flex={1} h="6px" bg="warm.700" borderRadius="full" overflow="hidden">
-                    <Box
-                      h="100%"
-                      w={`${completenessPercent}%`}
-                      bgGradient={tweakProgress === 'color' ? 'linear(to-r, gold.500, yellow.400)' : 'linear(to-r, gray.500, gray.400)'}
-                      borderRadius="full"
-                      transition="width 0.3s ease"
-                    />
-                  </Box>
-                  <Text color="gold.400" fontSize="sm" fontWeight="600" fontVariant="tabular-nums" minW="45px" textAlign="right">
-                    {completenessPercent}%
-                  </Text>
-                </HStack>
-              </Box>
-
               {/* 底部按钮 */}
               <HStack justify="flex-end" spacing={3} pb={2}>
                 <Button variant="ghost" color="rgba(245,240,232,0.4)" onClick={onClose} borderRadius="lg">取消</Button>
@@ -1299,74 +1278,6 @@ export default function ClientProfile() {
           </Box>
         </ModalContent>
       </Modal>
-
-      {/* Tweaks Panel - 固定在右下角 */}
-      <Box
-        position="fixed"
-        bottom={6}
-        right={6}
-        bg="warm.800"
-        border="1px solid"
-        borderColor="warm.600"
-        borderRadius="xl"
-        p={4}
-        w="280px"
-        boxShadow="0 8px 32px rgba(0,0,0,0.4)"
-        zIndex={1001}
-      >
-        <Text fontSize="xs" fontWeight="600" color="rgba(245,240,232,0.4)" textTransform="uppercase" letterSpacing="0.05em" mb={3}>Tweaks</Text>
-        <VStack spacing={3} align="stretch">
-          <HStack justify="space-between">
-            <Text fontSize="sm" color="white">布局</Text>
-            <HStack spacing={1}>
-              <Button
-                size="xs"
-                variant={tweakLayout === 'step' ? 'solid' : 'outline'}
-                colorScheme={tweakLayout === 'step' ? 'gold' : 'gray'}
-                onClick={() => setTweakLayout('step')}
-                borderRadius="md"
-              >分步</Button>
-              <Button
-                size="xs"
-                variant={tweakLayout === 'all' ? 'solid' : 'outline'}
-                colorScheme={tweakLayout === 'all' ? 'gold' : 'gray'}
-                onClick={() => setTweakLayout('all')}
-                borderRadius="md"
-              >一步</Button>
-            </HStack>
-          </HStack>
-          <HStack justify="space-between">
-            <Text fontSize="sm" color="white">进度条</Text>
-            <HStack spacing={1}>
-              <Button
-                size="xs"
-                variant={tweakProgress === 'color' ? 'solid' : 'outline'}
-                colorScheme={tweakProgress === 'color' ? 'gold' : 'gray'}
-                onClick={() => setTweakProgress('color')}
-                borderRadius="md"
-              >彩色</Button>
-              <Button
-                size="xs"
-                variant={tweakProgress === 'grey' ? 'solid' : 'outline'}
-                colorScheme={tweakProgress === 'grey' ? 'gold' : 'gray'}
-                onClick={() => setTweakProgress('grey')}
-                borderRadius="md"
-              >灰色</Button>
-            </HStack>
-          </HStack>
-          <HStack justify="space-between">
-            <Text fontSize="sm" color="white">AI 入口</Text>
-            <HStack spacing={1}>
-              <Button
-                size="xs"
-                variant="solid"
-                colorScheme="gold"
-                borderRadius="md"
-              >双入口</Button>
-            </HStack>
-          </HStack>
-        </VStack>
-      </Box>
 
       {/* 定价方案弹窗 */}
       <Modal isOpen={isPricingOpen} onClose={onPricingClose} size="2xl">
