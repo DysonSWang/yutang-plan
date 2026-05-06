@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Box, Flex, VStack, Stack, Input, Button, Text, Heading, IconButton, Image, Spinner, useDisclosure, Menu, MenuButton, MenuList, MenuItem, MenuDivider, Badge, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton, Select, List, ListItem, Switch, FormControl, FormLabel } from '@chakra-ui/react';
+import { Box, Flex, VStack, HStack, Stack, Input, Button, Text, Heading, IconButton, Image, Spinner, useDisclosure, Menu, MenuButton, MenuList, MenuItem, MenuDivider, Badge, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton, Select, List, ListItem, Switch, FormControl, FormLabel } from '@chakra-ui/react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { api, chat, upload, clients } from '../../utils/api';
 import { captureError } from '../../utils/frontendErrorCapture';
