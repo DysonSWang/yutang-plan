@@ -531,7 +531,7 @@ router.post('/situation', authMiddleware, async (req, res) => {
       const streamParams = {
         messages: [{ role: 'user', content: systemPrompt }],
         temperature: 0.7,
-        max_tokens: 131072,
+        max_tokens: 200000,
         stream: true
       };
       // deepseek-v4-pro 启用思考过程（deepseek-chat 不支持）
