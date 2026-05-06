@@ -2749,13 +2749,13 @@ export default function AICoach() {
       const formData = new FormData();
       formData.append('image', imageFile);
       if (textInput) {
-        formData.append('situation', textInput);
+        formData.append('message', textInput);
       }
       if (selectedGirlId) {
         formData.append('girlId', selectedGirlId);
       }
 
-      const res = await fetch(`${apiUrl}/api/ai-coach/situation`, {
+      const res = await fetch(`${apiUrl}/api/ai-coach/analyze-image`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -2768,96 +2768,12 @@ export default function AICoach() {
         throw new Error(errData.error || `HTTP ${res.status}`);
       }
 
-      // 始终使用流式模式
-      if (false) {
-        const data = await res.json();
-        setMessages(prev =>
-          prev.map(m => m.id === assistantId ? { ...m, content: data.content || data.analysis || '' } : m)
-        );
-      } else {
-        // 流式模式
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        let lastUpdate = 0;
-        let rafId = null;
-
-        // 按段落/句子缓冲：遇到句号、问号、感叹号或换行时才更新UI
-        const SENTENCE_ENDINGS = /[。！？\n]/;
-
-        const flushUpdate = (content) => {
-          const now = Date.now();
-          const shouldFlush = now - lastUpdate >= 150 ||  // 150ms间隔（减少闪烁）
-            SENTENCE_ENDINGS.test(content.slice(-1));  // 遇到句子结束符
-
-          if (shouldFlush) {
-            lastUpdate = now;
-            // 取消之前的 requestAnimationFrame
-            if (rafId) cancelAnimationFrame(rafId);
-            // 使用 requestAnimationFrame 批量更新，减少重渲染
-            rafId = requestAnimationFrame(() => {
-              rafId = null;
-              setMessages(prev =>
-                prev.map(m => m.id === assistantId ? { ...m, content } : m)
-              );
-              if (isStreamingRef.current) scrollToBottom();
-            });
-          } else {
-            streamingContentRef.current = content;
-          }
-        };
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed || trimmed === 'data: [DONE]') continue;
-
-            if (trimmed.startsWith('data: ')) {
-              const jsonStr = trimmed.substring(6);
-              if (!jsonStr.startsWith('{')) continue;
-              try {
-                const parsed = JSON.parse(jsonStr);
-                if (parsed.meta?.routedType) {
-                  setThinkingLabel(`正在从「${parsed.meta.routedType}」视角分析...`);
-                }
-                if (parsed.reasoning) {
-                  reasoningContentRef.current += parsed.reasoning;
-                  setReasoningContent(reasoningContentRef.current);
-                }
-                if (parsed.content) {
-                  setThinkingLabel(null);
-                  streamingContentRef.current += parsed.content;
-                  flushUpdate(streamingContentRef.current);
-                }
-              } catch { /* ignore parse errors */ }
-            }
-          }
-        }
-
-        // 处理尾部残留
-        if (buffer.trim()) {
-          try {
-            const parsed = JSON.parse(buffer.trim());
-            if (parsed.content) {
-              streamingContentRef.current += parsed.content;
-            }
-          } catch { /* ignore */ }
-        }
-
-        isStreamingRef.current = false;
-        setMessages(prev =>
-          prev.map(m => m.id === assistantId ? { ...m, content: streamingContentRef.current } : m)
-        );
-        // 流式结束后滚动到底部
-        scrollToBottom();
-      }
+      // analyze-image 返回简单 JSON（非流式）
+      const data = await res.json();
+      setMessages(prev =>
+        prev.map(m => m.id === assistantId ? { ...m, content: data.content || '' } : m)
+      );
+      scrollToBottom();
     } catch (e) {
       captureError(e);
       setError(e.message || '网络错误，请重试');
@@ -2934,96 +2850,12 @@ export default function AICoach() {
         throw new Error(errData.error || `HTTP ${res.status}`);
       }
 
-      // 始终使用流式模式
-      if (false) {
-        const data = await res.json();
-        setMessages(prev =>
-          prev.map(m => m.id === assistantId ? { ...m, content: data.content || data.analysis || '' } : m)
-        );
-      } else {
-        // 流式模式
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        let lastUpdate = 0;
-        let rafId = null;
-
-        // 按段落/句子缓冲：遇到句号、问号、感叹号或换行时才更新UI
-        const SENTENCE_ENDINGS = /[。！？\n]/;
-
-        const flushUpdate = (content) => {
-          const now = Date.now();
-          const shouldFlush = now - lastUpdate >= 150 ||  // 150ms间隔（减少闪烁）
-            SENTENCE_ENDINGS.test(content.slice(-1));  // 遇到句子结束符
-
-          if (shouldFlush) {
-            lastUpdate = now;
-            // 取消之前的 requestAnimationFrame
-            if (rafId) cancelAnimationFrame(rafId);
-            // 使用 requestAnimationFrame 批量更新，减少重渲染
-            rafId = requestAnimationFrame(() => {
-              rafId = null;
-              setMessages(prev =>
-                prev.map(m => m.id === assistantId ? { ...m, content } : m)
-              );
-              if (isStreamingRef.current) scrollToBottom();
-            });
-          } else {
-            streamingContentRef.current = content;
-          }
-        };
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed || trimmed === 'data: [DONE]') continue;
-
-            if (trimmed.startsWith('data: ')) {
-              const jsonStr = trimmed.substring(6);
-              if (!jsonStr.startsWith('{')) continue;
-              try {
-                const parsed = JSON.parse(jsonStr);
-                if (parsed.meta?.routedType) {
-                  setThinkingLabel(`正在从「${parsed.meta.routedType}」视角分析...`);
-                }
-                if (parsed.reasoning) {
-                  reasoningContentRef.current += parsed.reasoning;
-                  setReasoningContent(reasoningContentRef.current);
-                }
-                if (parsed.content) {
-                  setThinkingLabel(null);
-                  streamingContentRef.current += parsed.content;
-                  flushUpdate(streamingContentRef.current);
-                }
-              } catch { /* ignore parse errors */ }
-            }
-          }
-        }
-
-        // 处理尾部残留
-        if (buffer.trim()) {
-          try {
-            const parsed = JSON.parse(buffer.trim());
-            if (parsed.content) {
-              streamingContentRef.current += parsed.content;
-            }
-          } catch { /* ignore */ }
-        }
-
-        isStreamingRef.current = false;
-        setMessages(prev =>
-          prev.map(m => m.id === assistantId ? { ...m, content: streamingContentRef.current } : m)
-        );
-        // 流式结束后滚动到底部
-        scrollToBottom();
-      }
+      // analyze-image 返回简单 JSON（非流式）
+      const data = await res.json();
+      setMessages(prev =>
+        prev.map(m => m.id === assistantId ? { ...m, content: data.content || '' } : m)
+      );
+      scrollToBottom();
     } catch (e) {
       captureError(e);
       setError(e.message || '网络错误，请重试');
