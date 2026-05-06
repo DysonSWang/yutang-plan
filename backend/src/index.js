@@ -251,3 +251,53 @@ function tailLogFile() {
 
 setInterval(tailLogFile, 1000);
 logger.info('[LogTailing] 实时日志推送已启动');
+
+// ============================================================
+// 阅后即焚 - 即时模式主动销毁定时器
+// ============================================================
+async function burnExpiredImmediateMessages() {
+  try {
+    const expiredMessages = await prisma.message.findMany({
+      where: {
+        isBurnAfterRead: true,
+        burnTrigger: 'immediately',
+        burnedAt: null,
+        createdAt: {
+          lte: new Date(Date.now()), // will filter in SQL below
+        },
+      },
+      select: { id: true, sessionId: true, createdAt: true, burnAfterSeconds: true },
+    });
+
+    const now = new Date();
+    const toBurn = expiredMessages.filter(
+      (m) => new Date(m.createdAt).getTime() + (m.burnAfterSeconds || 5) * 1000 <= now.getTime()
+    );
+
+    if (toBurn.length === 0) return;
+
+    await prisma.message.updateMany({
+      where: { id: { in: toBurn.map((m) => m.id) } },
+      data: { burnedAt: now },
+    });
+
+    // 推送销毁通知给在线双方
+    const sessionIds = [...new Set(toBurn.map((m) => m.sessionId))];
+    for (const sessionId of sessionIds) {
+      const burnedInSession = toBurn.filter((m) => m.sessionId === sessionId);
+      io.emit('message:burned', {
+        sessionId,
+        messageIds: burnedInSession.map((m) => m.id),
+      });
+    }
+
+    if (toBurn.length > 0) {
+      logger.info('[BurnScheduler] 主动销毁即时消息', { count: toBurn.length });
+    }
+  } catch (err) {
+    logger.error('[BurnScheduler] 即时消息销毁失败', { err: err.message });
+  }
+}
+
+setInterval(burnExpiredImmediateMessages, 1000);
+logger.info('[BurnScheduler] 即时模式销毁定时器已启动（每秒）');

@@ -1557,9 +1557,11 @@ router.post('/analyze-image', authMiddleware, chatImportUpload.single('image'), 
       return res.status(400).json({ error: '请上传图片' });
     }
 
-    // 转换为 base64
+    // 转换为 base64（磁盘存储模式，需要从文件读取）
     const mime = req.file.mimetype;
-    const base64Image = `data:${mime};base64,${req.file.buffer.toString('base64')}`;
+    const filePath = path.join(chatImportUploadDir, req.file.filename);
+    const fileBuffer = fs.readFileSync(filePath);
+    const base64Image = `data:${mime};base64,${fileBuffer.toString('base64')}`;
 
     const userMessage = req.body.message || '';
     const sessionId = req.body.sessionId || null;
@@ -1574,7 +1576,7 @@ router.post('/analyze-image', authMiddleware, chatImportUpload.single('image'), 
           sessionId,
           role: 'user',
           content: userMessage || `[上传了图片]`,
-          imageUrl: `/uploads/${req.file.filename}`
+          imageUrl: `/uploads/chat-imports/${req.file.filename}`
         }
       });
 
@@ -1597,9 +1599,16 @@ router.post('/analyze-image', authMiddleware, chatImportUpload.single('image'), 
       success: true,
       type,
       content,
-      imageUrl: `/uploads/${req.file.filename}`
+      imageUrl: `/uploads/chat-imports/${req.file.filename}`
     });
+
+    // 分析完成后删除临时文件
+    try { fs.unlinkSync(filePath); } catch (_) {}
   } catch (err) {
+    // 分析失败时也清理临时文件
+    if (filePath) {
+      try { fs.unlinkSync(filePath); } catch (_) {}
+    }
     console.error('[AI Coach] analyze-image error:', err);
     res.status(500).json({ error: '图片分析失败' });
   }

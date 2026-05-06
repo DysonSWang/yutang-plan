@@ -242,8 +242,29 @@ module.exports = function(io) {
         take: parseInt(limit)
       });
 
+      // 即时模式：过滤已到期的消息并主动标记销毁
+      const now = new Date();
+      const filteredMessages = messages.filter(m => {
+        if (!m.isBurnAfterRead || m.burnTrigger !== 'immediately' || m.burnedAt !== null) {
+          return true;
+        }
+        const expiryTime = new Date(m.createdAt).getTime() + (m.burnAfterSeconds || 5) * 1000;
+        return expiryTime > now.getTime();
+      });
+
+      // Lazy burn：标记即时模式中已到期的消息
+      const expiredIds = messages
+        .filter(m => !filteredMessages.some(f => f.id === m.id))
+        .map(m => m.id);
+      if (expiredIds.length > 0) {
+        await prisma.message.updateMany({
+          where: { id: { in: expiredIds } },
+          data: { burnedAt: now },
+        });
+      }
+
       // 闪图：查询当前用户已销毁的消息
-      const flashMessageIds = messages.filter(m => m.isFlashImage).map(m => m.id);
+      const flashMessageIds = filteredMessages.filter(m => m.isFlashImage).map(m => m.id);
       let burnedMessageIds = new Set();
       if (flashMessageIds.length > 0) {
         const burns = await prisma.flashImageBurn.findMany({
@@ -257,7 +278,7 @@ module.exports = function(io) {
       }
 
       // 附加 flashBurnedByMe 字段
-      const enrichedMessages = messages.map(m => ({
+      const enrichedMessages = filteredMessages.map(m => ({
         ...m,
         flashBurnedByMe: m.isFlashImage ? burnedMessageIds.has(m.id) : false
       }));
@@ -291,7 +312,7 @@ module.exports = function(io) {
   // 发送消息
   router.post('/messages', authMiddleware, async (req, res) => {
     try {
-      const { sessionId, content, type = 'text', isBurnAfterRead = false, burnAfterSeconds, isFlashImage = false, mediaUrl } = req.body;
+      const { sessionId, content, type = 'text', isBurnAfterRead = false, burnAfterSeconds, isFlashImage = false, mediaUrl, burnTrigger = 'onView' } = req.body;
 
       const session = await prisma.chatSession.findUnique({
         where: { id: sessionId }
@@ -384,6 +405,7 @@ module.exports = function(io) {
           mediaUrl: finalMediaUrl,
           isBurnAfterRead,
           burnAfterSeconds: isBurnAfterRead ? burnAfterSeconds : null,
+          burnTrigger: isBurnAfterRead ? burnTrigger : 'onView',
           isFlashImage
         }
       });
@@ -393,13 +415,13 @@ module.exports = function(io) {
         // operator 或 admin 发消息 → client 端未读 +1，operator 自己清零
         await prisma.chatSession.update({
           where: { id: sessionId },
-          data: { lastMessage: content?.substring(0, 50), lastMessageAt: new Date(), operatorUnreadCount: 0, clientUnreadCount: session.clientUnreadCount + 1 }
+          data: { lastMessage: content?.substring(0, 50), lastMessageAt: new Date(), unreadCount: session.unreadCount + 1 }
         });
       } else {
         // client 发消息 → operator 端未读 +1，client 自己清零
         await prisma.chatSession.update({
           where: { id: sessionId },
-          data: { lastMessage: content?.substring(0, 50), lastMessageAt: new Date(), operatorUnreadCount: session.operatorUnreadCount + 1, clientUnreadCount: 0 }
+          data: { lastMessage: content?.substring(0, 50), lastMessageAt: new Date(), unreadCount: session.unreadCount + 1 }
         });
       }
 

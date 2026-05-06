@@ -373,8 +373,8 @@ export const chat = {
   // 管理端为客户创建会话
   createSessionForClient: (clientId) => api.post('/api/chat/sessions', { clientId }),
   messages: (sessionId, params) => api.get(`/api/chat/sessions/${sessionId}/messages` + (params ? '?' + new URLSearchParams(params) : '')),
-  send: (sessionId, content, type = 'text', mediaUrl, duration, isBurnAfterRead = false, burnAfterSeconds = null, isFlashImage = false) =>
-    api.post('/api/chat/messages', { sessionId, content, type, mediaUrl, duration, isBurnAfterRead, burnAfterSeconds, isFlashImage }),
+  send: (sessionId, content, type = 'text', mediaUrl, duration, isBurnAfterRead = false, burnAfterSeconds = null, burnTrigger = 'onView') =>
+    api.post('/api/chat/messages', { sessionId, content, type, mediaUrl, duration, isBurnAfterRead, burnAfterSeconds, burnTrigger }),
   burn: (id) => api.post(`/api/chat/messages/${id}/burn`),
   recall: (messageId) => api.post(`/api/chat/messages/${messageId}/recall`),
   read: (id) => api.post(`/api/chat/messages/${id}/read`),
@@ -421,19 +421,44 @@ export const upload = {
     if (onProgress) onProgress({ stage: 'done', percent: 100 });
     return json;
   },
-  video: async (file, isBurnAfterRead = false, isFlashImage = false) => {
-    const token = api.getToken();
-    const formData = new FormData();
-    formData.append('file', file);
-    if (isBurnAfterRead) formData.append('isBurnAfterRead', 'true');
-    if (isFlashImage) formData.append('isFlashImage', 'true');
-    const res = await fetch(`${api.baseUrl}/api/upload/video`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` },
-      body: formData
+  video: async (file, isBurnAfterRead = false, isFlashImage = false, onProgress = null) => {
+    return new Promise((resolve, reject) => {
+      const token = api.getToken();
+      const xhr = new XMLHttpRequest();
+      const formData = new FormData();
+      formData.append('file', file);
+      if (isBurnAfterRead) formData.append('isBurnAfterRead', 'true');
+      if (isFlashImage) formData.append('isFlashImage', 'true');
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && onProgress) {
+          const percent = Math.round((e.loaded / e.total) * 100);
+          onProgress({ stage: 'uploading', percent });
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const json = JSON.parse(xhr.responseText);
+            if (onProgress) onProgress({ stage: 'done', percent: 100 });
+            resolve(json);
+          } catch {
+            reject(new Error('解析响应失败'));
+          }
+        } else {
+          reject(new Error(`上传视频失败 (${xhr.status})`));
+        }
+      };
+
+      xhr.onerror = () => reject(new Error('网络错误'));
+      xhr.ontimeout = () => reject(new Error('上传超时'));
+
+      xhr.open('POST', `${api.baseUrl}/api/upload/video`);
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      xhr.timeout = 120000; // 2分钟超时
+      xhr.send(formData);
     });
-    if (!res.ok) throw new Error(`上传视频失败 (${res.status})`);
-    return res.json();
   },
   audio: async (file) => {
     const token = api.getToken();

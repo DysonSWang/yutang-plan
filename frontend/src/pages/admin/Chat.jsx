@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Box, Flex, VStack, HStack, Stack, Input, Button, Text, Heading, IconButton, Image, Spinner, useDisclosure, Menu, MenuButton, MenuList, MenuItem, Badge, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton, Select, List, ListItem } from '@chakra-ui/react';
+import { Box, Flex, VStack, Stack, Input, Button, Text, Heading, IconButton, Image, Spinner, useDisclosure, Menu, MenuButton, MenuList, MenuItem, MenuDivider, Badge, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton, Select, List, ListItem, Switch, FormControl, FormLabel } from '@chakra-ui/react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { api, chat, upload, clients } from '../../utils/api';
 import { captureError } from '../../utils/frontendErrorCapture';
@@ -19,20 +19,20 @@ export default function AdminChat() {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(null); // 视频上传进度 0-100
   const [previewFile, setPreviewFile] = useState(null);
   const [recording, setRecording] = useState(false);
   const [recordTime, setRecordTime] = useState(0);
   const [burnMode, setBurnMode] = useState(false);
   const [burnSeconds, setBurnSeconds] = useState(5);
-  const [flashMode, setFlashMode] = useState(false); // 闪图模式
+  const [burnTrigger, setBurnTrigger] = useState('onView');    // 'immediately' | 'onView'
+  const [burnDurationType, setBurnDurationType] = useState('fixed'); // 'fixed' | 'adaptive'
   const burnTimersRef = useRef({});
   const [countdowns, setCountdowns] = useState({});
   const { isOpen: isModalOpen, onOpen: onModalOpen, onClose: onModalClose } = useDisclosure();
   const { isOpen: isNewChatOpen, onOpen: onNewChatOpen, onClose: onNewChatClose } = useDisclosure();
-  const [flashViewer, setFlashViewer] = useState({ isOpen: false, imageUrl: '', messageId: null, senderRole: '', isFlashMode: false, mediaType: 'image' });
-  const [forceShow, setForceShow] = useState(0);
+  const [flashViewer, setFlashViewer] = useState({ isOpen: false, imageUrl: '', messageId: null, senderRole: '', isBurnAfterRead: false, mediaType: 'image' });
   const openFlashViewer = useCallback((params) => {
-    setForceShow(f => f + 1);
     setFlashViewer({ isOpen: true, ...params });
   }, []);
   const [allClients, setAllClients] = useState([]);
@@ -144,7 +144,7 @@ export default function AdminChat() {
   };
 
   const handleBurnMessage = useCallback(async (msg) => {
-    if (msg.burnedAt || msg.senderRole === 'operator' || msg.senderRole === 'admin') return;
+    if (msg.burnedAt) return; // 已被销毁则跳过
     try {
       const res = await chat.burn(msg.id);
       if (res.success) {
@@ -205,6 +205,7 @@ export default function AdminChat() {
     }
   }, []);
 
+  // 阅后即焚蒙层点击查看
   const startBurnTimer = useCallback((msg) => {
     if (!msg.burnAfterSeconds || msg.burnedAt) return;
     if (burnTimersRef.current[msg.id]) return;
@@ -238,21 +239,34 @@ export default function AdminChat() {
     burnTimersRef.current[msg.id] = setTimeout(tick, 1000);
   }, [handleBurnMessage]);
 
+  const handleViewBurnMessage = useCallback((msg) => {
+    // 启动倒计时（onView 模式点击后开始计时）
+    startBurnTimer(msg);
+    if (msg.type === 'text') {
+      handleBurnMessage(msg);
+    } else {
+      openFlashViewer({
+        imageUrl: getMediaUrl(msg),
+        messageId: msg.id,
+        senderRole: msg.senderRole,
+        isBurnAfterRead: true,
+        burnAfterSeconds: msg.burnAfterSeconds,
+        mediaType: msg.type || 'image'
+      });
+    }
+  }, [openFlashViewer, handleBurnMessage, getMediaUrl, startBurnTimer]);
+
   const loadMessages = useCallback(async (sessionId) => {
     try {
       const res = await chat.messages(sessionId);
       if (res.success) {
         setMessages(res.messages);
-        res.messages.forEach(msg => {
-          if (msg.isBurnAfterRead && !msg.burnedAt && msg.burnAfterSeconds) {
-            startBurnTimer(msg);
-          }
-        });
+        // 注意：onView 模式的倒计时在点击查看后才开始，不在这里启动
       }
     } catch (e) {
       captureError(e);
     }
-  }, [startBurnTimer]);
+  }, []);
 
   useEffect(() => {
     loadSessions();
@@ -293,8 +307,8 @@ export default function AdminChat() {
       if (currentSession && message.sessionId === currentSession.id) {
         // 当前会话，直接添加消息
         setMessages(prev => [...prev, message]);
-        // 阅后即焚自动倒计时
-        if (message.isBurnAfterRead && !message.burnedAt && message.burnAfterSeconds) {
+        // 阅后即焚自动倒计时（仅阅后模式，即时模式由服务端处理）
+        if (message.isBurnAfterRead && !message.burnedAt && message.burnAfterSeconds && message.burnTrigger === 'onView') {
           startBurnTimer(message);
         }
         // 清空当前会话未读
@@ -319,15 +333,19 @@ export default function AdminChat() {
     };
     const unsub1 = on('message:new', handler);
 
-    const burnHandler = ({ sessionId, messageId }) => {
+    const burnHandler = ({ sessionId, messageId, messageIds }) => {
       if (currentSession && sessionId === currentSession.id) {
+        const ids = messageIds || (messageId ? [messageId] : []);
         setMessages(prev => prev.map(m => {
-          if (m.id !== messageId) return m;
+          if (!ids.includes(m.id)) return m;
           if (m.isFlashImage) {
             return { ...m, flashBurnedByMe: true };
           }
           return { ...m, content: '[消息已销毁]', mediaUrl: null, burnedAt: new Date() };
         }));
+        if (flashViewer.messageId && ids.includes(flashViewer.messageId)) {
+          setFlashViewer(v => ({ ...v, isOpen: false }));
+        }
       }
     };
     const unsub2 = on('message:burned', burnHandler);
@@ -356,11 +374,26 @@ export default function AdminChat() {
     }
   }, [messages, virtualizer]);
 
-  const sendMediaMessage = async (url, type, duration) => {
+  // 获取视频/音频实际时长
+  const getMediaDuration = (file, type) => {
+    return new Promise((resolve) => {
+      const el = document.createElement(type === 'video' ? 'video' : 'audio');
+      el.preload = 'metadata';
+      el.onloadedmetadata = () => {
+        URL.revokeObjectURL(el.src);
+        resolve(el.duration);
+      };
+      el.onerror = () => resolve(0);
+      el.src = URL.createObjectURL(file);
+    });
+  };
+
+  const sendMediaMessage = async (url, type, duration, overrideBurnSeconds = null) => {
     if (!currentSession || sending) return;
     setSending(true);
     try {
-      const res = await chat.send(currentSession.id, null, type, url, duration, burnMode, burnSeconds, flashMode);
+      const effectiveBurn = overrideBurnSeconds != null ? overrideBurnSeconds : (burnDurationType === 'adaptive' ? 5 : burnSeconds);
+      const res = await chat.send(currentSession.id, null, type, url, duration, burnMode, burnMode ? effectiveBurn : null, burnTrigger);
       if (res.success) {
         setMessages(prev => [...prev, res.message]);
         setSessions(prev => prev.map(s => {
@@ -389,23 +422,7 @@ export default function AdminChat() {
 
     if (videoFiles.length > 0) {
       const file = videoFiles[0];
-      if (flashMode) {
-        // 闪图模式：视频直接上传发送，不预览
-        setSending(true);
-        try {
-          const res = await upload.video(file, burnMode, flashMode);
-          if (res.url) {
-            await sendMediaMessage(res.url, 'video', null);
-            setFlashMode(false);
-          }
-        } catch (e) {
-          captureError(e);
-        } finally {
-          setSending(false);
-        }
-      } else {
-        setPreviewFile({ file, preview: URL.createObjectURL(file), type: 'video' });
-      }
+      setPreviewFile({ file, preview: URL.createObjectURL(file), type: 'video' });
     }
 
     if (imageFiles.length > 0) {
@@ -418,13 +435,12 @@ export default function AdminChat() {
     setSending(true);
     try {
       for (const file of files) {
-        const res = await upload.image(file, burnMode, flashMode);
+        const res = await upload.image(file, burnMode);
         if (res.url) {
-          await sendMediaMessage(res.url, 'image', null);
+          const effectiveSeconds = burnDurationType === 'adaptive' ? 5 : burnSeconds;
+          await sendMediaMessage(res.url, 'image', null, effectiveSeconds);
         }
       }
-      setBurnMode(false);
-      setFlashMode(false);
     } catch (e) {
       captureError(e);
     } finally {
@@ -436,17 +452,23 @@ export default function AdminChat() {
   const confirmSendVideo = async () => {
     if (!previewFile || previewFile.type !== 'video') return;
     setUploading(true);
+    setUploadProgress(0);
     try {
-      const res = await upload.video(previewFile.file, burnMode, flashMode);
+      const videoDuration = await getMediaDuration(previewFile.file, 'video');
+      const effectiveSeconds = burnDurationType === 'adaptive'
+        ? Math.max(3, Math.ceil(videoDuration))
+        : burnSeconds;
+      const res = await upload.video(previewFile.file, burnMode, false, (info) => {
+        setUploadProgress(info.percent);
+      });
       if (res.url) {
-        await sendMediaMessage(res.url, 'video', null);
-        setBurnMode(false);
-        setFlashMode(false);
+        await sendMediaMessage(res.url, 'video', videoDuration, effectiveSeconds);
       }
     } catch (e) {
       captureError(e);
     } finally {
       setUploading(false);
+      setUploadProgress(null);
     }
   };
 
@@ -501,7 +523,11 @@ export default function AdminChat() {
     try {
       const res = await upload.audio(previewFile.file);
       if (res.url) {
-        await sendMediaMessage(res.url, 'audio', previewFile.duration || recordTime);
+        const audioDuration = await getMediaDuration(previewFile.file, 'audio');
+        const effectiveSeconds = burnDurationType === 'adaptive'
+          ? Math.max(3, Math.ceil(audioDuration))
+          : burnSeconds;
+        await sendMediaMessage(res.url, 'audio', audioDuration, effectiveSeconds);
       } else {
         captureError(new Error('上传失败: ' + JSON.stringify(res)), { context: 'upload_fail' });
       }
@@ -521,14 +547,13 @@ export default function AdminChat() {
     if (!input.trim() || !currentSession || sending) return;
     setSending(true);
     try {
-      const res = await chat.send(currentSession.id, input, 'text', null, null, burnMode, burnSeconds);
+      const effectiveSeconds = burnDurationType === 'adaptive' ? 5 : burnSeconds;
+      const res = await chat.send(currentSession.id, input, 'text', null, null, burnMode, burnMode ? effectiveSeconds : null, burnTrigger);
       if (res.success) {
         setMessages(prev => [...prev, res.message]);
         setInput('');
-        setBurnMode(false);
-        if (res.message.isBurnAfterRead && res.message.burnAfterSeconds) {
-          startBurnTimer(res.message);
-        }
+        // 注意：onView 模式的倒计时在客户端点击查看后才开始，不在这里启动
+        // 即时模式由后端定时器处理
         setSessions(prev => prev.map(s => {
           if (s.id === currentSession.id) {
             return { ...s, lastMessage: input.substring(0, 50), lastMessageAt: new Date() };
@@ -564,103 +589,166 @@ export default function AdminChat() {
       return <Text color={destroyedColor} fontStyle="italic">{msg.content}</Text>;
     }
     if (msg.isFlashImage && msg.flashBurnedByMe) {
-      return <Text color={destroyedColor} fontStyle="italic">⚡ 闪图已销毁</Text>;
+      return <Text color={destroyedColor} fontStyle="italic">闪图已销毁</Text>;
     }
+
+    // 阅后模式且是客户发的消息：显示橙色蒙层（操盘手/管理员视角）
+    const isBurnMask = msg.isBurnAfterRead && msg.burnTrigger === 'onView' && msg.senderRole !== 'operator' && msg.senderRole !== 'admin' && !msg.burnedAt;
+
     if (msg.type === 'image') {
-      const isClickable = msg.isBurnAfterRead && msg.senderRole !== 'operator' && msg.senderRole !== 'admin' && !msg.burnedAt;
-      const imageViewerUrl = getMediaUrl(msg);
+      const imageUrl = getMediaUrl(msg);
       return (
         <Box
           maxW="250px"
-          cursor={isClickable || msg.isFlashImage ? 'pointer' : 'default'}
-          opacity={msg.isBurnAfterRead ? 0.85 : 1}
+          cursor="pointer"
           position="relative"
           onClick={() => {
-            if (msg.isFlashImage && !msg.burnedAt && !msg.flashBurnedByMe) {
-              // 闪图：打开满屏查看器（带倒计时）
-              openFlashViewer({ imageUrl: imageViewerUrl, messageId: msg.id, senderRole: msg.senderRole, isFlashMode: true });
-            } else if (msg.isBurnAfterRead && msg.senderRole !== 'operator' && msg.senderRole !== 'admin') {
-              handleBurnMessage(msg);
+            if (isBurnMask) {
+              openFlashViewer({
+                imageUrl,
+                messageId: msg.id,
+                senderRole: msg.senderRole,
+                isBurnAfterRead: true,
+                burnAfterSeconds: msg.burnAfterSeconds,
+                mediaType: 'image'
+              });
             } else {
-              // 普通图片：打开满屏查看器（无倒计时）
-              openFlashViewer({ imageUrl: imageViewerUrl, messageId: msg.id, senderRole: msg.senderRole, isFlashMode: false });
+              openFlashViewer({
+                imageUrl,
+                messageId: msg.id,
+                senderRole: msg.senderRole,
+                isBurnAfterRead: false,
+                mediaType: 'image'
+              });
             }
           }}
         >
-          {msg.isFlashImage && !msg.burnedAt && !msg.flashBurnedByMe ? (
+          {isBurnMask && (
             <Box
-              w="100px"
-              h="70px"
-              bg="rgba(0,0,0,0.6)"
+              position="absolute"
+              inset={0}
+              bg="rgba(255, 140, 0, 0.25)"
               borderRadius="md"
               display="flex"
-              flexDirection="column"
               alignItems="center"
               justifyContent="center"
-              border="1px dashed"
-              borderColor="rgba(255,200,0,0.5)"
+              zIndex={1}
             >
-              <Text fontSize="lg">⚡</Text>
-              <Text fontSize="xs" color="rgba(255,200,0,0.9)" mt={0.5}>闪图</Text>
+              <HStack spacing={1}>
+                <Text fontSize="lg">🔥</Text>
+                <Text fontSize="sm" color="orange.300">阅后即焚</Text>
+              </HStack>
             </Box>
-          ) : (
-            <Image
-              src={getMediaUrl(msg)}
-              alt="图片消息"
-              borderRadius="md"
-              maxH="200px"
-              objectFit="cover"
-            />
           )}
+          <Image
+            src={imageUrl}
+            alt="图片消息"
+            borderRadius="md"
+            maxH="200px"
+            objectFit="cover"
+            filter={isBurnMask ? 'blur(4px)' : 'none'}
+          />
         </Box>
       );
     }
     if (msg.type === 'video') {
       const videoUrl = getMediaUrl(msg);
-      // 闪图视频：显示占位符，点击打开查看器
-      if (msg.isFlashImage && !msg.burnedAt && !msg.flashBurnedByMe) {
-        return (
-          <Box
-            w="100px"
-            h="70px"
-            bg="rgba(0,0,0,0.6)"
-            borderRadius="md"
-            display="flex"
-            flexDirection="column"
-            alignItems="center"
-            justifyContent="center"
-            border="1px dashed"
-            borderColor="rgba(255,200,0,0.5)"
-            cursor="pointer"
-            onClick={() => openFlashViewer({ imageUrl: videoUrl, messageId: msg.id, senderRole: msg.senderRole, isFlashMode: true, mediaType: 'video' })}
-          >
-            <Text fontSize="lg">⚡</Text>
-            <Text fontSize="xs" color="rgba(255,200,0,0.9)" mt={0.5}>闪图</Text>
-          </Box>
-        );
-      }
       return (
-        <Box maxW="250px" cursor={msg.isBurnAfterRead ? 'pointer' : 'default'} onClick={() => msg.isBurnAfterRead && msg.senderRole !== 'operator' && msg.senderRole !== 'admin' && handleBurnMessage(msg)}>
+        <Box maxW="250px" cursor="pointer" position="relative" onClick={() => {
+          if (isBurnMask) {
+            openFlashViewer({ imageUrl: videoUrl, messageId: msg.id, senderRole: msg.senderRole, isBurnAfterRead: true, burnAfterSeconds: msg.burnAfterSeconds, mediaType: 'video' });
+          } else {
+            openFlashViewer({ imageUrl: videoUrl, messageId: msg.id, senderRole: msg.senderRole, isBurnAfterRead: false, mediaType: 'video' });
+          }
+        }}>
+          {isBurnMask && (
+            <Box
+              position="absolute"
+              inset={0}
+              bg="rgba(255, 140, 0, 0.25)"
+              borderRadius="md"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              zIndex={1}
+            >
+              <HStack spacing={1}>
+                <Text fontSize="lg">🔥</Text>
+                <Text fontSize="sm" color="orange.300">阅后即焚</Text>
+              </HStack>
+            </Box>
+          )}
           <video
-            src={getMediaUrl(msg)}
-            controls={!msg.isBurnAfterRead}
-            style={{ borderRadius: '8px', maxHeight: '200px', width: '100%' }}
+            src={videoUrl}
+            controls={!isBurnMask}
+            style={{ borderRadius: '8px', maxHeight: '200px', width: '100%', filter: isBurnMask ? 'blur(4px)' : 'none' }}
           />
         </Box>
       );
     }
     if (msg.type === 'audio') {
       return (
-        <HStack bg={msg.isBurnAfterRead && !msg.burnedAt ? 'rgba(255,140,0,0.2)' : 'blackAlpha.300'} px={3} py={2} borderRadius="md" spacing={2} cursor={msg.isBurnAfterRead && msg.senderRole !== 'operator' && msg.senderRole !== 'admin' ? 'pointer' : 'default'} onClick={() => msg.isBurnAfterRead && msg.senderRole !== 'operator' && msg.senderRole !== 'admin' && handleBurnMessage(msg)}>
+        <HStack
+          bg={isBurnMask ? 'rgba(255,140,0,0.15)' : (msg.isBurnAfterRead ? 'rgba(255,140,0,0.1)' : 'blackAlpha.300')}
+          px={3} py={2} borderRadius="md" spacing={2}
+          cursor={isBurnMask ? 'pointer' : 'default'}
+          position="relative"
+          onClick={() => {
+            if (isBurnMask) {
+              openFlashViewer({ imageUrl: getMediaUrl(msg), messageId: msg.id, senderRole: msg.senderRole, isBurnAfterRead: true, burnAfterSeconds: msg.burnAfterSeconds, mediaType: 'audio' });
+            }
+          }}
+        >
+          {isBurnMask && (
+            <Box
+              position="absolute"
+              inset={0}
+              bg="rgba(255, 140, 0, 0.15)"
+              borderRadius="md"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              zIndex={1}
+            >
+              <HStack spacing={1}>
+                <Text fontSize="lg">🔥</Text>
+                <Text fontSize="sm" color="orange.300">阅后即焚</Text>
+              </HStack>
+            </Box>
+          )}
           <Text fontSize="lg" flexShrink={0}>🔊</Text>
           <Box flex={1} minW={0} maxW="200px">
-            <audio src={`${API_BASE}${msg.mediaUrl}`} style={{ width: '100%', height: '24px' }} controls={!msg.isBurnAfterRead || msg.burnedAt} />
+            <audio src={`${API_BASE}${msg.mediaUrl}`} style={{ width: '100%', height: '24px' }} controls={!isBurnMask || msg.burnedAt} />
           </Box>
           {msg.duration && (
             <Text fontSize="xs" color="rgba(245,240,232,0.5)" flexShrink={0}>{msg.duration}"</Text>
           )}
         </HStack>
       );
+    }
+    if (msg.type === 'text') {
+      if (isBurnMask) {
+        return (
+          <Box position="relative" cursor="pointer" onClick={() => handleViewBurnMessage(msg)}>
+            <Box
+              position="absolute"
+              inset={0}
+              bg="rgba(255, 140, 0, 0.15)"
+              borderRadius="md"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              zIndex={1}
+            >
+              <HStack spacing={1}>
+                <Text fontSize="lg">🔥</Text>
+                <Text fontSize="sm" color="orange.300">阅后即焚</Text>
+              </HStack>
+            </Box>
+            <Text color="gray.500" fontStyle="italic">[消息已加密]</Text>
+          </Box>
+        );
+      }
     }
     return <Text>{msg.content}</Text>;
   };
@@ -888,7 +976,7 @@ export default function AdminChat() {
                               <HStack mt={2} spacing={1} justify="flex-end">
                                 <Text fontSize="xs" color="orange.300">🔥</Text>
                                 <Text fontSize="sm" fontWeight="bold" color="orange.300">
-                                  {countdowns[msg.id] != null ? `${countdowns[msg.id]}s` : (msg.burnAfterSeconds ? `${msg.burnAfterSeconds}s` : '手动')}
+                                  {countdowns[msg.id] != null ? (countdowns[msg.id] > 0 ? `${countdowns[msg.id]}s` : '已销毁') : (msg.burnAfterSeconds ? `${msg.burnAfterSeconds}s` : '手动')}
                                 </Text>
                               </HStack>
                             )}
@@ -937,9 +1025,20 @@ export default function AdminChat() {
                 {/* 媒体预览（仅视频/语音需要确认） */}
                 {previewFile && (
                   <Box mb={2} p={2} bg="warm.700" borderRadius="md">
+                    {previewFile.type === 'video' && uploadProgress !== null && uploading && (
+                      <Box mb={2}>
+                        <HStack justify="space-between" mb={1}>
+                          <Text color="white" fontSize="sm">上传进度</Text>
+                          <Text color="orange.300" fontSize="sm">{uploadProgress}%</Text>
+                        </HStack>
+                        <Box h="4px" bg="warm.600" borderRadius="full" overflow="hidden">
+                          <Box h="full" bg="orange.500" w={`${uploadProgress}%`} transition="width 0.2s" borderRadius="full" />
+                        </Box>
+                      </Box>
+                    )}
                     <HStack>
                       {previewFile.type === 'video' && (
-                        <video src={previewFile.preview} style={{ maxHeight: '80px', borderRadius: '4px' }} />
+                        <video src={previewFile.preview} style={{ maxHeight: '80px', borderRadius: '4px', opacity: uploading ? 0.5 : 1 }} />
                       )}
                       {previewFile.type === 'audio' && (
                         <HStack>
@@ -947,8 +1046,7 @@ export default function AdminChat() {
                           <audio src={previewFile.preview} style={{ height: '28px' }} controls />
                         </HStack>
                       )}
-                      {burnMode && <Text color="orange.300" fontSize="sm">🔥 {burnSeconds}s</Text>}
-                      {flashMode && <Text color="yellow.300" fontSize="sm">⚡ 5s</Text>}
+                      {burnMode && <Text color="orange.300" fontSize="sm">🔥 {burnTrigger === 'onView' ? '阅后' : '即时'}{burnDurationType === 'adaptive' ? '(自适应)' : `${burnSeconds}s`}</Text>}
                       <IconButton
                         icon={<Text>✕</Text>}
                         size="sm"
@@ -956,15 +1054,17 @@ export default function AdminChat() {
                         color="rgba(245,240,232,0.4)"
                         onClick={cancelPreview}
                         aria-label="取消"
+                        isDisabled={uploading}
                       />
                       <Button
                         size="sm"
                         colorScheme="gold"
                         isLoading={uploading}
-                        loadingText={uploading && previewFile.type === 'video' ? '压缩中...' : '发送中'}
+                        loadingText={previewFile.type === 'video' ? '上传中...' : '发送中'}
                         onClick={previewFile.type === 'audio' ? confirmSendAudio : confirmSendVideo}
+                        isDisabled={uploading}
                       >
-                        {!(uploading && previewFile.type === 'video') ? '发送' : ''}
+                        {!(uploading) ? '发送' : ''}
                       </Button>
                     </HStack>
                   </Box>
@@ -1002,44 +1102,118 @@ export default function AdminChat() {
                     <Menu placement="top">
                       <MenuButton
                         as={IconButton}
-                        icon={<Text>🔥{burnMode ? `${burnSeconds}s` : ''}</Text>}
-                        variant="ghost"
+                        icon={<Text>🔥 {burnMode ? (burnTrigger === 'immediately' ? '即时' : '阅后') : '阅后即焚'}</Text>}
+                        variant={burnMode ? 'solid' : 'ghost'}
                         size="sm"
-                        color={burnMode ? 'orange.400' : 'rgba(245,240,232,0.4)'}
+                        colorScheme="orange"
+                        bg={burnMode ? 'orange.600' : 'transparent'}
+                        color={burnMode ? 'white' : 'rgba(245,240,232,0.4)'}
+                        border={burnMode ? '2px solid orange.300' : '2px solid transparent'}
+                        _hover={{ bg: burnMode ? 'orange.500' : 'whiteAlpha.100' }}
                         aria-label="阅后即焚模式"
-                        isDisabled={sending || !!previewFile || flashMode}
-                        title={burnMode ? `阅后即焚：${burnSeconds}s后自动销毁` : '阅后即焚：关'}
+                        isDisabled={sending || !!previewFile}
                       />
-                      <MenuList bg="warm.700" borderColor="rgba(255,255,255,0.06)">
-                        <MenuItem bg="warm.700" _hover={{ bg: 'warm.600' }} onClick={() => { setBurnMode(false); setBurnSeconds(5); }}>
-                          <HStack><Text color="rgba(245,240,232,0.4)">关闭</Text></HStack>
-                        </MenuItem>
-                        {[3, 5, 10, 15, 30, 60].map(s => (
-                          <MenuItem key={s} bg="warm.700" _hover={{ bg: 'warm.600' }} onClick={() => { setBurnMode(true); setBurnSeconds(s); }}>
-                            <HStack>
-                              <Text color="orange.300">🔥</Text>
-                              <Text color="white">{s}秒</Text>
-                              {s === 5 && <Badge colorScheme="orange" size="sm">默认</Badge>}
-                            </HStack>
-                          </MenuItem>
-                        ))}
+                      <MenuList bg="warm.700" borderColor="rgba(255,255,255,0.06)" minW="280px" p={4}>
+                        {/* 开关 */}
+                        <FormControl display="flex" alignItems="center" justifyContent="space-between" mb={4}>
+                          <FormLabel htmlFor="burn-mode-switch" mb="0" color={burnMode ? 'orange.300' : 'gray.300'} fontWeight="bold">
+                            {burnMode ? '🔥 阅后即焚已开启' : '○ 阅后即焚未开启'}
+                          </FormLabel>
+                          <Switch
+                            id="burn-mode-switch"
+                            size="lg"
+                            colorScheme="orange"
+                            isChecked={burnMode}
+                            onChange={(e) => {
+                              const isOn = e.target.checked;
+                              setBurnMode(isOn);
+                              if (!isOn) {
+                                setBurnTrigger('onView');
+                                setBurnDurationType('fixed');
+                                setBurnSeconds(5);
+                              }
+                            }}
+                          />
+                        </FormControl>
+
+                        {burnMode && (
+                          <>
+                            <MenuDivider borderColor="rgba(255,255,255,0.06)" />
+                            {/* 触发时机 */}
+                            <Box mb={3}>
+                              <Text fontSize="xs" color="gray.400" fontWeight="bold" mb={2}>触发时机</Text>
+                              <Stack spacing={2}>
+                                <Button
+                                  size="sm"
+                                  variant={burnTrigger === 'immediately' ? 'solid' : 'outline'}
+                                  colorScheme="orange"
+                                  onClick={() => setBurnTrigger('immediately')}
+                                  w="full"
+                                >
+                                  即时（发出后立即计时）
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant={burnTrigger === 'onView' ? 'solid' : 'outline'}
+                                  colorScheme="orange"
+                                  onClick={() => setBurnTrigger('onView')}
+                                  w="full"
+                                >
+                                  阅后（点击后计时）
+                                </Button>
+                              </Stack>
+                            </Box>
+
+                            <MenuDivider borderColor="rgba(255,255,255,0.06)" />
+                            {/* 时长类型 */}
+                            <Box mb={3}>
+                              <Text fontSize="xs" color="gray.400" fontWeight="bold" mb={2}>时长</Text>
+                              <Stack spacing={2}>
+                                <Button
+                                  size="sm"
+                                  variant={burnDurationType === 'fixed' ? 'solid' : 'outline'}
+                                  colorScheme="orange"
+                                  onClick={() => setBurnDurationType('fixed')}
+                                  w="full"
+                                >
+                                  固定秒数
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant={burnDurationType === 'adaptive' ? 'solid' : 'outline'}
+                                  colorScheme="orange"
+                                  onClick={() => setBurnDurationType('adaptive')}
+                                  w="full"
+                                >
+                                  自适应（文字/图片5秒，视频/音频按实际时长）
+                                </Button>
+                              </Stack>
+                            </Box>
+
+                            {burnDurationType === 'fixed' && (
+                              <>
+                                <MenuDivider borderColor="rgba(255,255,255,0.06)" />
+                                <Text fontSize="xs" color="gray.400" fontWeight="bold" mb={2}>选择秒数</Text>
+                                <HStack spacing={2} justify="center">
+                                  {[3, 5, 10, 15, 30, 60].map(s => (
+                                    <Button
+                                      key={s}
+                                      size="md"
+                                      variant={burnSeconds === s ? 'solid' : 'outline'}
+                                      colorScheme="orange"
+                                      onClick={() => setBurnSeconds(s)}
+                                      minW="50px"
+                                    >
+                                      {s}s
+                                    </Button>
+                                  ))}
+                                </HStack>
+                              </>
+                            )}
+                          </>
+                        )}
                       </MenuList>
                     </Menu>
-                    <IconButton
-                      icon={<Text>⚡{flashMode ? '闪图' : ''}</Text>}
-                      variant="ghost"
-                      color={flashMode ? 'yellow.400' : 'rgba(245,240,232,0.4)'}
-                      aria-label="闪图模式"
-                      isDisabled={sending || !!previewFile || burnMode}
-                      title={flashMode ? '闪图：查阅后5秒自动销毁' : '闪图模式'}
-                      onClick={() => {
-                        const newMode = !flashMode;
-                        setFlashMode(newMode);
-                        setBurnMode(false);
-                        if (newMode) fileInputRef.current?.click();
-                      }}
-                      size="sm"
-                    />
                     <EmojiPanel onSelect={handleEmojiSelect} isDisabled={sending || !!previewFile} variant="admin" />
                   </HStack>
                   {/* 输入框 + 发送 — 移动端独占第二行 */}
@@ -1156,12 +1330,12 @@ export default function AdminChat() {
         onClose={onModalClose}
       />
       <FlashImageViewer
-        forceShow={forceShow}
         isOpen={flashViewer.isOpen}
         onClose={() => setFlashViewer(v => ({ ...v, isOpen: false }))}
         imageUrl={flashViewer.imageUrl}
         messageId={flashViewer.messageId}
-        isFlashMode={flashViewer.isFlashMode || false}
+        isBurnAfterRead={flashViewer.isBurnAfterRead || false}
+        burnAfterSeconds={flashViewer.burnAfterSeconds}
         mediaType={flashViewer.mediaType || 'image'}
       />
     </Box>

@@ -412,6 +412,7 @@ model Message {
 
   isBurnAfterRead Boolean   @default(false)
   burnAfterSeconds Int?     // 自动销毁倒计时秒数（阅后即焚时）
+  burnTrigger    String    @default("onView") // 'immediately' | 'onView'
   burnedAt        DateTime?
   recalledAt     DateTime?
 

@@ -1,15 +1,14 @@
 /**
- * 闪图查看器 — 满屏显示图片/视频，支持闪图模式（5秒倒计时）和普通模式
- * 闪图模式：点击查看 → 满屏显示 → 倒计时 → 自动burn
- * 关闭查看器/切换页面不会停止倒计时，闪图到时间仍会被销毁
- * 普通模式：点击查看 → 满屏显示 → 手动关闭
+ * 闪图查看器 — 阅后即焚消息满屏查看器
+ * 点击查看 → 满屏显示 → 倒计时 → 时间到自动销毁
+ * 关闭查看器/切换页面不会停止倒计时，时间到仍会被销毁
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Text, Flex, Image, IconButton, Spinner } from '@chakra-ui/react';
 import { chat } from '../utils/api';
 import { captureError } from '../utils/frontendErrorCapture';
 
-// sessionStorage 持久化：刷新页面/切换路由后倒计时不丢失，关标签页自动清除
+// sessionStorage 持久化：刷新页面/切换路由后倒计时不丢失
 const BURN_KEY_PREFIX = 'flash_burn_';
 
 function getBurnEntry(messageId) {
@@ -47,10 +46,9 @@ function getPendingBurn(messageId) {
   };
 }
 
-export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId, isFlashMode = false, mediaType = 'image', forceShow }) {
+export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId, isBurnAfterRead = false, burnAfterSeconds = 5, mediaType = 'image' }) {
   const [remaining, setRemaining] = useState(5);
   const [totalDuration, setTotalDuration] = useState(5);
-  const [hidden, setHidden] = useState(false);
   const [mediaLoaded, setMediaLoaded] = useState(false);
   const [videoPaused, setVideoPaused] = useState(false);
   const timerRef = useRef(null);
@@ -74,20 +72,14 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
       setRemaining(pending.remaining);
       setTotalDuration(pending.totalDuration);
     } else {
-      setRemaining(5);
-      setTotalDuration(5);
+      // 阅后即焚模式使用传入的秒数
+      const defaultSeconds = isBurnAfterRead ? (burnAfterSeconds || 5) : 5;
+      setRemaining(defaultSeconds);
+      setTotalDuration(defaultSeconds);
     }
-    setHidden(false);
     burnRef.current = false;
     setMediaLoaded(false);
-  }, [isOpen, imageUrl]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // 再次打开已隐藏的查看器：只恢复可见，不重置倒计时
-  useEffect(() => {
-    if (forceShow != null && isOpen) {
-      setHidden(false);
-    }
-  }, [forceShow, isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOpen, imageUrl, isBurnAfterRead, burnAfterSeconds]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleBurn = useCallback(async () => {
     if (burnRef.current) return;
@@ -104,23 +96,25 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
   }, []);
 
   // 视频加载元数据：根据视频时长设置倒计时（最低3秒）
-  // 如果有持久化的截止时间，不覆盖
   const handleVideoMeta = useCallback((e) => {
     const hasPending = getBurnEntry(messageIdRef.current) !== null;
+    const actualDuration = Math.max(3, Math.ceil(e.target.duration));
+
     if (!hasPending) {
-      const dur = Math.max(3, Math.ceil(e.target.duration));
-      setTotalDuration(dur);
-      setRemaining(dur);
+      // 自适应模式：使用视频实际时长
+      const duration = burnAfterSeconds === actualDuration ? actualDuration : burnAfterSeconds;
+      setTotalDuration(duration);
+      setRemaining(duration);
     }
     setMediaLoaded(true);
     if (videoRef.current) {
       videoRef.current.play().catch(() => {});
     }
-  }, []);
+  }, [burnAfterSeconds]);
 
-  // 媒体加载完成后开始倒计时，同时记录截止时间到模块级 Map
+  // 媒体加载完成后开始倒计时
   useEffect(() => {
-    if (!isOpen || !isFlashMode || !mediaLoaded) return;
+    if (!isOpen || !isBurnAfterRead || !mediaLoaded) return;
 
     if (!getBurnEntry(messageId)) {
       setBurnEntry(messageId, {
@@ -143,11 +137,12 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isOpen, isFlashMode, mediaLoaded, handleBurn, messageId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOpen, isBurnAfterRead, mediaLoaded, handleBurn, messageId, remaining, totalDuration]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleClose = () => {
-    if (isFlashMode) {
-      setHidden(true);
+    // 阅后即焚模式：点击关闭直接销毁
+    if (isBurnAfterRead) {
+      handleBurn();
     } else {
       onClose();
     }
@@ -156,7 +151,7 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
   if (!isOpen) return null;
 
   const isVideo = mediaType === 'video';
-  const mediaLabel = isVideo ? '视频' : '图片';
+  const isAudio = mediaType === 'audio';
 
   return (
     <Flex
@@ -171,32 +166,29 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
       justify="center"
       direction="column"
       onClick={handleClose}
-      display={hidden ? 'none' : 'flex'}
     >
       {/* 顶部信息 */}
-      {isFlashMode && (
-        <Flex
-          position="absolute"
-          top={6}
-          align="center"
-          gap={2}
-          bg="blackAlpha.600"
-          px={4}
-          py={2}
-          borderRadius="full"
-          zIndex={1}
-        >
-          <Text fontSize="lg">⚡</Text>
-          <Text color="yellow.300" fontWeight="bold" fontSize="md">闪图</Text>
-          {mediaLoaded ? (
-            <Text color="white" fontSize="md" fontWeight="bold" ml={2}>
-              {remaining}s
-            </Text>
-          ) : (
-            <Spinner size="sm" color="yellow.300" ml={2} />
-          )}
-        </Flex>
-      )}
+      <Flex
+        position="absolute"
+        top={6}
+        align="center"
+        gap={2}
+        bg="blackAlpha.600"
+        px={4}
+        py={2}
+        borderRadius="full"
+        zIndex={1}
+      >
+        <Text fontSize="lg">🔥</Text>
+        <Text color="orange.300" fontWeight="bold" fontSize="md">阅后即焚</Text>
+        {mediaLoaded ? (
+          <Text color="white" fontSize="md" fontWeight="bold" ml={2}>
+            {remaining}s
+          </Text>
+        ) : (
+          <Spinner size="sm" color="orange.300" ml={2} />
+        )}
+      </Flex>
 
       {/* 关闭按钮 */}
       <IconButton
@@ -207,7 +199,7 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
         variant="ghost"
         color="white"
         _hover={{ bg: 'whiteAlpha.200' }}
-        onClick={handleClose}
+        onClick={(e) => { e.stopPropagation(); handleClose(); }}
         aria-label="关闭"
         borderRadius="full"
         size="sm"
@@ -215,11 +207,11 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
       />
 
       {/* 加载中 */}
-      {!mediaLoaded && isFlashMode && (
-        <Spinner size="xl" color="yellow.300" thickness="3px" />
+      {!mediaLoaded && (
+        <Spinner size="xl" color="orange.300" thickness="3px" />
       )}
 
-      {/* 媒体内容 — 视频用原生 <video> 避免 Chakra Box 吞掉布尔属性 */}
+      {/* 媒体内容 — 视频用原生 <video> */}
       {isVideo ? (
         <Box
           maxW="95vw"
@@ -227,14 +219,14 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
           borderRadius="lg"
           overflow="hidden"
           position="relative"
-          boxShadow={isFlashMode ? "0 0 60px rgba(255,200,0,0.15)" : "0 4px 30px rgba(0,0,0,0.5)"}
-          sx={isFlashMode ? {
+          boxShadow="0 4px 30px rgba(0,0,0,0.5)"
+          sx={{
             '& video::-webkit-media-controls-enclosure': { display: 'none !important' },
             '& video::-webkit-media-controls': { display: 'none !important' },
-          } : {}}
+          }}
         >
-          {/* 闪图视频暂停时：居中播放按钮 */}
-          {isFlashMode && videoPaused && mediaLoaded && (
+          {/* 视频暂停时：居中播放按钮 */}
+          {videoPaused && mediaLoaded && (
             <Flex
               position="absolute"
               inset={0}
@@ -259,7 +251,7 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
           <video
             ref={videoRef}
             src={imageUrl}
-            controls={isFlashMode ? false : true}
+            controls={false}
             controlsList="nodownload nofullscreen"
             disablePictureInPicture
             autoPlay
@@ -286,10 +278,35 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
             onLoadedMetadata={handleVideoMeta}
           />
         </Box>
+      ) : isAudio ? (
+        /* 音频类型 */
+        <Box
+          maxW="95vw"
+          maxH="85vh"
+          borderRadius="lg"
+          p={8}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+        >
+          <audio
+            ref={videoRef}
+            src={imageUrl}
+            controls={false}
+            autoPlay
+            playsInline
+            onPlay={() => setVideoPaused(false)}
+            onPause={() => setVideoPaused(true)}
+            onLoadedMetadata={handleVideoMeta}
+            onEnded={() => handleBurn()}
+          />
+          <Text color="white" fontSize="xl">🎵 音频播放中 {remaining}s</Text>
+        </Box>
       ) : (
+        /* 图片类型 */
         <Image
           src={imageUrl}
-          alt={isFlashMode ? "闪图" : mediaLabel}
+          alt="阅后即焚"
           maxW="95vw"
           maxH="90vh"
           objectFit="contain"
@@ -297,8 +314,8 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
           onClick={handleClose}
           onContextMenu={e => e.preventDefault()}
           onLoad={() => setMediaLoaded(true)}
-          display={!mediaLoaded && isFlashMode ? 'none' : 'block'}
-          boxShadow={isFlashMode ? "0 0 60px rgba(255,200,0,0.15)" : "0 4px 30px rgba(0,0,0,0.5)"}
+          display={!mediaLoaded ? 'none' : 'block'}
+          boxShadow="0 4px 30px rgba(0,0,0,0.5)"
           draggable={false}
           userSelect="none"
           cursor="pointer"
@@ -313,29 +330,8 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
         color="whiteAlpha.500"
         fontSize="xs"
       >
-        {isFlashMode
-          ? (mediaLoaded ? `点击任意处关闭 · ${remaining}s后自动销毁` : '加载中...')
-          : '点击任意处关闭'}
+        {mediaLoaded ? `点击任意处关闭 · ${remaining}s后自动销毁` : '加载中...'}
       </Text>
-
-      {/* 进度条（仅闪图模式） */}
-      {isFlashMode && (
-        <Box
-          position="absolute"
-          bottom={0}
-          left={0}
-          right={0}
-          h="3px"
-          bg="whiteAlpha.200"
-        >
-          <Box
-            h="100%"
-            bg="yellow.400"
-            w={`${(remaining / totalDuration) * 100}%`}
-            transition="width 1s linear"
-          />
-        </Box>
-      )}
     </Flex>
   );
 }
