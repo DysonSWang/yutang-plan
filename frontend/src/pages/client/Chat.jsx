@@ -38,8 +38,6 @@ export default function ClientChat() {
     setFlashViewer({ isOpen: true, ...params });
   }, []);
   const [loading, setLoading] = useState(true);
-  // 上传中的图片 { id, preview, progress, stage: 'compressing'|'uploading'|'done' }
-  const [uploadingImages, setUploadingImages] = useState([]);
   const toast = useToast();
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3005';
 
@@ -348,46 +346,47 @@ export default function ClientChat() {
     setSending(true);
     const isBurn = burnMode;
 
-    // 为每张图片创建上传跟踪项
-    const uploadIds = files.map((_, i) => `upload-${Date.now()}-${i}`);
-    const initialUploads = files.map((file, i) => ({
-      id: uploadIds[i],
-      preview: URL.createObjectURL(file),
-      progress: 0,
-      stage: 'compressing'
-    }));
-    setUploadingImages(prev => [...prev, ...initialUploads]);
-
     try {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const uploadId = uploadIds[i];
+      for (const file of files) {
+        const tempId = `upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const previewUrl = URL.createObjectURL(file);
+
+        // 添加临时消息（显示预览和进度）
+        const tempMsg = {
+          id: tempId,
+          tempId,
+          type: 'image',
+          senderRole: 'client',
+          senderId: session?.clientId,
+          content: '',
+          mediaUrl: previewUrl,
+          isUploading: true,
+          uploadProgress: 0,
+          createdAt: new Date().toISOString(),
+        };
+        setMessages(prev => [...prev, tempMsg]);
 
         const res = await upload.image(file, isBurn, (info) => {
-          setUploadingImages(prev => prev.map(u =>
-            u.id === uploadId
-              ? { ...u, stage: info.stage, progress: info.percent }
-              : u
+          setMessages(prev => prev.map(m =>
+            m.tempId === tempId ? { ...m, uploadProgress: info.percent } : m
           ));
         });
 
         if (res.url) {
           const effectiveSeconds = burnDurationType === 'adaptive' ? 5 : burnSeconds;
-          await sendMediaMessage(res.url, 'image', null, isBurn, effectiveSeconds);
+          const sendRes = await chat.send(session.id, null, 'image', res.url, null, isBurn, effectiveSeconds);
+          if (sendRes.success) {
+            URL.revokeObjectURL(previewUrl);
+            setMessages(prev => prev.map(m => m.tempId === tempId ? sendRes.message : m));
+          }
+        } else {
+          URL.revokeObjectURL(previewUrl);
+          setMessages(prev => prev.filter(m => m.tempId !== tempId));
         }
-
-        // 上传完成，标记为done
-        setUploadingImages(prev => prev.map(u =>
-          u.id === uploadId ? { ...u, stage: 'done', progress: 100 } : u
-        ));
       }
     } catch (e) {
       captureError(e);
     } finally {
-      // 延迟清除，让用户看到100%状态
-      setTimeout(() => {
-        setUploadingImages(prev => prev.filter(u => !uploadIds.includes(u.id)));
-      }, 500);
       setSending(false);
     }
   };
@@ -666,6 +665,26 @@ export default function ClientChat() {
               </HStack>
             </Box>
           )}
+          {/* 上传进度覆盖层 */}
+          {msg.isUploading && (
+            <Box
+              position="absolute"
+              inset={0}
+              bg="blackAlpha.700"
+              borderRadius="md"
+              display="flex"
+              flexDirection="column"
+              alignItems="center"
+              justifyContent="center"
+              zIndex={2}
+            >
+              <Spinner size="lg" color="orange.400" thickness="3px" mb={2} />
+              <Text color="white" fontSize="sm">{msg.uploadProgress || 0}%</Text>
+              <Box w="80%" h="4px" bg="warm.600" borderRadius="full" mt={2} overflow="hidden">
+                <Box h="full" bg="orange.500" w={`${msg.uploadProgress || 0}%`} transition="width 0.2s" borderRadius="full" />
+              </Box>
+            </Box>
+          )}
           <Image
             src={imageUrl}
             alt="图片消息"
@@ -674,6 +693,7 @@ export default function ClientChat() {
             objectFit="cover"
             loading="lazy"
             filter={isBurnMask ? 'blur(4px)' : 'none'}
+            opacity={msg.isUploading ? 0.3 : 1}
           />
         </Box>
       );
@@ -1157,54 +1177,6 @@ export default function ClientChat() {
               </Box>
               <EmojiPanel onSelect={handleEmojiSelect} isDisabled={sending || !!previewFile} variant="client" />
             </HStack>
-            {/* 上传进度指示器（微信式） */}
-            {uploadingImages.length > 0 && (
-              <HStack spacing={2} px={2} py={1} overflowX="auto" flexShrink={0}>
-                {uploadingImages.map(u => (
-                  <Box key={u.id} position="relative" w="48px" h="48px" flexShrink={0}>
-                    <Image
-                      src={u.preview}
-                      alt="上传中"
-                      w="48px"
-                      h="48px"
-                      objectFit="cover"
-                      borderRadius="md"
-                      opacity={u.stage === 'done' ? 1 : 0.6}
-                      filter={u.stage === 'done' ? 'none' : 'grayscale(30%)'}
-                    />
-                    {/* 圆形进度遮罩 */}
-                    <Box
-                      position="absolute"
-                      inset="0"
-                      borderRadius="md"
-                      bg="blackAlpha.600"
-                      display="flex"
-                      alignItems="center"
-                      justifyContent="center"
-                    >
-                      <Text fontSize="10px" color="white" fontWeight="bold">
-                        {u.stage === 'compressing' ? '压' : u.stage === 'uploading' ? `${u.progress}%` : '✓'}
-                      </Text>
-                    </Box>
-                    {/* 进度条（可选，圆形进度更好看） */}
-                    {u.stage === 'uploading' && (
-                      <Box
-                        position="absolute"
-                        bottom="2px"
-                        left="2px"
-                        right="2px"
-                        h="3px"
-                        bg="blackAlpha.500"
-                        borderRadius="full"
-                        overflow="hidden"
-                      >
-                        <Box h="100%" w={`${u.progress}%`} bg="gold.400" transition="width 0.2s" />
-                      </Box>
-                    )}
-                  </Box>
-                ))}
-              </HStack>
-            )}
             {/* 输入框 + 发送 — 移动端独占第二行 */}
             <HStack flex={1} spacing={1}>
               <Input
