@@ -1487,14 +1487,24 @@ router.post('/import-chat-screenshots', authMiddleware, chatImportUpload.array('
         const mime = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
         const base64Image = `data:${mime};base64,${buffer.toString('base64')}`;
 
-        const prompt = `你是聊天记录识别专家。请仔细识别这张聊天截图中的对话内容。
-要求：
-1. 区分左右两侧：左侧发言者标记为"girl"，右侧标记为"user"
-2. 只提取纯文字消息，忽略表情包/图片/语音消息/红包/系统提示
-3. 输出严格的 JSON 数组格式：[{"role":"girl"|"user","content":"消息文本"}]
-4. 如果有时间戳也一并记录：[{"role":"girl","content":"...","time":"14:30"}]
-5. 如果截图无法识别或无对话内容，输出空数组 []
-只输出 JSON，不要其他说明文字。`;
+        const prompt = `你是截图识别专家。请仔细识别这张截图。
+
+首先判断这是什么类型的截图：
+1. 聊天记录截图（微信等，左右两侧对话）
+2. 朋友圈截图（有小红点、评论等）
+
+【如果是聊天记录】
+请识别对话内容，JSON格式：
+{"type":"chat","messages":[{"role":"girl"|"user","content":"消息文本","time":"时间戳"}]}
+
+【如果是朋友圈截图】
+请识别：
+- 朋友圈文字内容
+- 评论内容（如果有）
+JSON格式：
+{"type":"moments","content":"朋友圈文字","comments":"评论内容（没有则为空）"}
+
+只输出JSON，不要其他说明文字。`;
 
         const response = await fetch(vlConfig.url, {
           method: 'POST',
@@ -1537,7 +1547,31 @@ router.post('/import-chat-screenshots', authMiddleware, chatImportUpload.array('
         }
 
         if (Array.isArray(parsed)) {
+          // 聊天记录：逐条提取
           for (const msg of parsed) {
+            if (msg.role && msg.content && ['girl', 'user'].includes(msg.role)) {
+              allMessages.push({ role: msg.role, content: msg.content, time: msg.time || null });
+            }
+          }
+        } else if (parsed && parsed.type === 'moments') {
+          // 朋友圈：构建导入消息
+          let momentContent = '';
+          if (parsed.content) {
+            momentContent += parsed.content;
+          }
+          if (parsed.comments) {
+            momentContent += momentContent ? `\n\n评论：${parsed.comments}` : `评论：${parsed.comments}`;
+          }
+          if (momentContent) {
+            allMessages.push({
+              role: 'girl',
+              content: `📱 她发了朋友圈：${momentContent}`,
+              time: null
+            });
+          }
+        } else if (parsed && parsed.type === 'chat' && parsed.messages) {
+          // 聊天记录（新版格式）
+          for (const msg of parsed.messages) {
             if (msg.role && msg.content && ['girl', 'user'].includes(msg.role)) {
               allMessages.push({ role: msg.role, content: msg.content, time: msg.time || null });
             }
