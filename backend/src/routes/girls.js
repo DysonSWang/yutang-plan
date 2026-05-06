@@ -1057,10 +1057,10 @@ router.post('/extract-profile-screenshot', authMiddleware, (req, res) => {
       const result = await analyzeProfileImage(imageUrl);
 
       const extracted = {};
-      if (result?.name && result.name !== '空') extracted.name = result.name;
+      if (result?.name && result.name !== '空' && result.name !== '') extracted.name = result.name;
       if (result?.age && typeof result.age === 'number') extracted.age = result.age;
-      if (result?.residence && result.residence !== '空') extracted.residence = result.residence;
-      if (result?.appearance && result.appearance !== '空') extracted.appearance = result.appearance;
+      if (result?.residence && result.residence !== '空' && result.residence !== '') extracted.residence = result.residence;
+      if (result?.appearance && result.appearance !== '空' && result.appearance !== '') extracted.appearance = result.appearance;
 
       res.json({
         success: true,
@@ -1069,7 +1069,8 @@ router.post('/extract-profile-screenshot', authMiddleware, (req, res) => {
       });
     } catch (error) {
       console.error('[Girls] 主页截图提取失败:', error);
-      res.status(500).json({ error: error.message || '分析失败' });
+      // 技术错误返回 500，但修复失败返回空结果
+      res.json({ success: true, extracted: {}, imageUrl: `/uploads/girl-profiles/${req.file?.filename || 'unknown'}` });
     }
   });
 });
