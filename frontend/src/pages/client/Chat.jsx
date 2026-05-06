@@ -296,7 +296,7 @@ export default function ClientChat() {
     });
   };
 
-  // 图片直接发送（不预览），视频仍需确认
+  // 图片/视频直接发送（类微信体验）
   const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
@@ -305,14 +305,14 @@ export default function ClientChat() {
     const imageFiles = files.filter(f => f.type.startsWith('image/'));
     const videoFiles = files.filter(f => f.type.startsWith('video/'));
 
-    if (videoFiles.length > 0) {
-      const file = videoFiles[0];
-      setPreviewFile({ file, preview: URL.createObjectURL(file), type: 'video' });
-    }
-
     // 图片：直接上传发送
     if (imageFiles.length > 0) {
       await sendImagesDirectly(imageFiles);
+    }
+
+    // 视频：直接上传发送
+    for (const file of videoFiles) {
+      await sendVideoDirectly(file);
     }
   };
 
@@ -362,6 +362,60 @@ export default function ClientChat() {
         setUploadingImages(prev => prev.filter(u => !uploadIds.includes(u.id)));
       }, 500);
       setSending(false);
+    }
+  };
+
+  // 视频直接发送（类微信体验）
+  const sendVideoDirectly = async (file) => {
+    if (!session || sending) return;
+    const isBurn = burnMode;
+    const tempId = `upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const previewUrl = URL.createObjectURL(file);
+
+    // 生成缩略图
+    let thumbnail = null;
+    const thumbnailData = await new Promise((resolve) => {
+      generateThumbnail(file, (t) => resolve(t));
+    });
+    thumbnail = thumbnailData;
+
+    // 获取视频时长
+    const duration = await getMediaDuration(file, 'video');
+
+    // 添加临时消息（显示缩略图和进度）
+    const tempMsg = {
+      id: tempId,
+      tempId,
+      type: 'video',
+      senderRole: 'client',
+      senderId: session?.clientId,
+      content: '',
+      mediaUrl: thumbnail || previewUrl,
+      mediaPreview: previewUrl,
+      duration: Math.ceil(duration),
+      isUploading: true,
+      uploadProgress: 0,
+      createdAt: new Date().toISOString(),
+    };
+    setMessages(prev => [...prev, tempMsg]);
+
+    try {
+      const effectiveSeconds = burnDurationType === 'adaptive' ? Math.max(3, Math.ceil(duration)) : burnSeconds;
+      const res = await upload.video(file, isBurn, false, (info) => {
+        // 更新上传进度
+        setMessages(prev => prev.map(m => m.tempId === tempId ? { ...m, uploadProgress: info.percent } : m));
+      });
+      if (res.url) {
+        const sendRes = await chat.sendMessage(session.id, null, 'video', res.url, Math.ceil(duration), effectiveSeconds);
+        if (sendRes.success) {
+          URL.revokeObjectURL(previewUrl);
+          setMessages(prev => prev.map(m => m.tempId === tempId ? sendRes.message : m));
+        }
+      }
+    } catch (e) {
+      captureError(e);
+      URL.revokeObjectURL(previewUrl);
+      setMessages(prev => prev.filter(m => m.tempId !== tempId));
     }
   };
 
@@ -630,7 +684,27 @@ export default function ClientChat() {
               </HStack>
             </Box>
           )}
-          <video src={videoUrl} controls={!msg.isBurnAfterRead || msg.burnedAt} style={{ borderRadius: '8px', maxHeight: '200px', width: '100%', filter: isBurnMask ? 'blur(4px)' : 'none' }} />
+          {/* 上传进度覆盖层 */}
+          {msg.isUploading && (
+            <Box
+              position="absolute"
+              inset={0}
+              bg="blackAlpha.700"
+              borderRadius="md"
+              display="flex"
+              flexDirection="column"
+              alignItems="center"
+              justifyContent="center"
+              zIndex={2}
+            >
+              <Spinner size="lg" color="orange.400" thickness="3px" mb={2} />
+              <Text color="white" fontSize="sm">{msg.uploadProgress || 0}%</Text>
+              <Box w="80%" h="4px" bg="warm.600" borderRadius="full" mt={2} overflow="hidden">
+                <Box h="full" bg="orange.500" w={`${msg.uploadProgress || 0}%`} transition="width 0.2s" borderRadius="full" />
+              </Box>
+            </Box>
+          )}
+          <video src={videoUrl} controls={!msg.isBurnAfterRead || msg.burnedAt} style={{ borderRadius: '8px', maxHeight: '200px', width: '100%', filter: isBurnMask ? 'blur(4px)' : 'none', opacity: msg.isUploading ? 0.3 : 1 }} />
         </Box>
       );
     }
@@ -874,31 +948,15 @@ export default function ClientChat() {
 
         {/* 输入区域 */}
         <Box p={4} borderTop="1px solid rgba(255,255,255,0.06)">
-          {/* 媒体预览（仅视频/语音需要确认） */}
-          {previewFile && (
+          {/* 媒体预览（仅语音需要确认，视频/图片直接发送） */}
+          {previewFile && previewFile.type === 'audio' && (
             <Box mb={2} p={2} bg="rgba(255,255,255,0.05)" borderRadius="md">
-              {previewFile.type === 'video' && uploadProgress !== null && uploading && (
-                <Box mb={2}>
-                  <HStack justify="space-between" mb={1}>
-                    <Text color="white" fontSize="sm">上传进度</Text>
-                    <Text color="orange.300" fontSize="sm">{uploadProgress}%</Text>
-                  </HStack>
-                  <Box h="4px" bg="warm.600" borderRadius="full" overflow="hidden">
-                    <Box h="full" bg="orange.500" w={`${uploadProgress}%`} transition="width 0.2s" borderRadius="full" />
-                  </Box>
-                </Box>
-              )}
               <HStack>
-                {previewFile.type === 'video' && (
-                  <video src={previewFile.preview} style={{ maxHeight: '80px', borderRadius: '4px', opacity: uploading ? 0.5 : 1 }} />
-                )}
-                {previewFile.type === 'audio' && (
-                  <HStack>
-                    <Icon as={MicIcon} boxSize={4} color="white" />
-                    <Text color="white" fontSize="sm">语音 {recordTime || previewFile.duration || 0}"</Text>
-                    <audio src={previewFile.preview} style={{ height: '28px' }} controls />
-                  </HStack>
-                )}
+                <HStack>
+                  <Icon as={MicIcon} boxSize={4} color="white" />
+                  <Text color="white" fontSize="sm">语音 {recordTime || previewFile.duration || 0}"</Text>
+                  <audio src={previewFile.preview} style={{ height: '28px' }} controls />
+                </HStack>
                 <IconButton
                   icon={<Text>✕</Text>}
                   size="sm"
@@ -912,8 +970,8 @@ export default function ClientChat() {
                   size="sm"
                   colorScheme="gold"
                   isLoading={uploading}
-                  loadingText={previewFile.type === 'video' ? '上传中...' : '发送中'}
-                  onClick={previewFile.type === 'audio' ? confirmSendAudio : confirmSendVideo}
+                  loadingText="发送中"
+                  onClick={confirmSendAudio}
                   isDisabled={uploading}
                 >
                   {!(uploading) ? '发送' : ''}
