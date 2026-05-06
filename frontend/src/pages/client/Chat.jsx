@@ -795,7 +795,13 @@ export default function ClientChat() {
           )}
           <Icon as={SpeakerIcon} boxSize={5} flexShrink={0} />
           <Box flex={1} minW={0} maxW="200px">
-            <audio src={getMediaUrl(msg)} style={{ width: '100%', height: '24px' }} controls={!msg.isBurnAfterRead || msg.burnedAt} />
+            <audio
+              src={getMediaUrl(msg)}
+              style={{ width: '100%', height: '24px' }}
+              controls={true}
+              controlsList="nodownload"
+              preload="metadata"
+            />
           </Box>
           {msg.duration && <Text fontSize="xs" color="gray.300" flexShrink={0}>{msg.duration}"</Text>}
         </HStack>
