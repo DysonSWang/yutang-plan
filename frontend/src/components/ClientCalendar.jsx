@@ -704,7 +704,7 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
           </ModalFooter>
         </ModalContent>
       </Modal>
-      <ConfirmModal />
+      {ConfirmModal}
     </Box>
   );
 }

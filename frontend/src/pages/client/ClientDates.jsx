@@ -1314,7 +1314,7 @@ export default function ClientDates() {
           </ModalBody>
         </ModalContent>
       </Modal>
-      <ConfirmModal />
+      {ConfirmModal}
     </Box>
   );
 }
