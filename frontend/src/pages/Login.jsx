@@ -42,6 +42,9 @@ export default function Login() {
       const result = await login(username, password);
       if (!result.success) {
         setLoginError(result.error || '用户名或密码错误');
+      } else {
+        // 登录成功，跳转到对应页面
+        window.location.href = result.user?.role === 'admin' ? '/admin' : '/client';
       }
     } catch (err) {
       setLoginError(err.message || '用户名或密码错误');
