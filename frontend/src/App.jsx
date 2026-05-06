@@ -128,7 +128,7 @@ function AppRoutes() {
   if (loading) return null;
 
   return (
-    <AnimatePresence mode="sync">
+    <AnimatePresence mode="wait">
       <motion.div
         // 注意：不加 key！KeepAliveOutlet 依赖 location 变化来管理缓存
         // 加 key 会导致 ClientLayout 每次路由都重建，破坏 keep-alive 状态

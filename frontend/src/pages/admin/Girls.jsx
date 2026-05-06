@@ -2375,12 +2375,12 @@ export default function AdminGirls() {
         </ModalContent>
       </Modal>
 
-      {/* 图片预览弹窗 */}
+      {/* 图片预览弹窗 - 点击图片或遮罩关闭 */}
       <Modal isOpen={!!previewImage} onClose={() => setPreviewImage(null)} size={{ base: 'full', md: '4xl' }}>
-        <ModalOverlay bg="blackAlpha.800" />
-        <ModalContent bg="transparent" boxShadow="none">
+        <ModalOverlay bg="blackAlpha.800" onClick={() => setPreviewImage(null)} cursor="pointer" />
+        <ModalContent bg="transparent" boxShadow="none" cursor="pointer">
           <ModalCloseButton color="white" zIndex={10} />
-          <ModalBody p={0} display="flex" alignItems="center" justifyContent="center">
+          <ModalBody p={0} display="flex" alignItems="center" justifyContent="center" onClick={() => setPreviewImage(null)}>
             {previewImage && (
               <Image
                 src={previewImage}
@@ -2388,6 +2388,7 @@ export default function AdminGirls() {
                 maxH="85vh"
                 objectFit="contain"
                 borderRadius="md"
+                cursor="pointer"
               />
             )}
           </ModalBody>

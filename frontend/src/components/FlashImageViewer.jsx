@@ -294,13 +294,14 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
           maxH="90vh"
           objectFit="contain"
           borderRadius="lg"
-          onClick={e => e.stopPropagation()}
+          onClick={handleClose}
           onContextMenu={e => e.preventDefault()}
           onLoad={() => setMediaLoaded(true)}
           display={!mediaLoaded && isFlashMode ? 'none' : 'block'}
           boxShadow={isFlashMode ? "0 0 60px rgba(255,200,0,0.15)" : "0 4px 30px rgba(0,0,0,0.5)"}
           draggable={false}
           userSelect="none"
+          cursor="pointer"
           css={{ WebkitTouchCallout: 'none', WebkitUserDrag: 'none' }}
         />
       )}
