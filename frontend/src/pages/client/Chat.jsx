@@ -296,6 +296,33 @@ export default function ClientChat() {
     });
   };
 
+  // 生成视频缩略图
+  const generateThumbnail = (file, callback) => {
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.muted = true;
+    video.playsInline = true;
+    const url = URL.createObjectURL(file);
+    video.src = url;
+    video.onloadeddata = () => {
+      video.currentTime = 0.1;
+    };
+    video.onseeked = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 160;
+      canvas.height = 90;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const thumbnail = canvas.toDataURL('image/jpeg', 0.7);
+      URL.revokeObjectURL(url);
+      callback(thumbnail);
+    };
+    video.onerror = () => {
+      URL.revokeObjectURL(url);
+      callback(null);
+    };
+  };
+
   // 图片/视频直接发送（类微信体验）
   const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files);
@@ -406,7 +433,7 @@ export default function ClientChat() {
         setMessages(prev => prev.map(m => m.tempId === tempId ? { ...m, uploadProgress: info.percent } : m));
       });
       if (res.url) {
-        const sendRes = await chat.sendMessage(session.id, null, 'video', res.url, Math.ceil(duration), effectiveSeconds);
+        const sendRes = await chat.send(session.id, null, 'video', res.url, Math.ceil(duration), isBurn, effectiveSeconds);
         if (sendRes.success) {
           URL.revokeObjectURL(previewUrl);
           setMessages(prev => prev.map(m => m.tempId === tempId ? sendRes.message : m));
