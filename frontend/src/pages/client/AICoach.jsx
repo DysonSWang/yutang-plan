@@ -257,23 +257,6 @@ const InputArea = memo(({ onSubmit, onImageSubmit, loading, deepMode, onDeepMode
           </Box>
         </Flex>
       )}
-      {onDeepModeToggle && (
-        <Flex mt={2} justify="flex-end">
-          <Tooltip label={deepMode ? '深度分析：调用工具链，全面分析' : '快速分析：流式输出，快'}>
-            <button type="button" onClick={onDeepModeToggle}
-              style={{
-                background: deepMode ? 'var(--warm-rose)' : 'var(--warm-matte)',
-                border: deepMode ? '1px solid var(--warm-rose)' : '1px solid transparent',
-                borderRadius: '6px', padding: '4px 10px', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: '6px',
-                color: deepMode ? 'var(--w80)' : 'rgba(245,240,232,0.4)', whiteSpace: 'nowrap'
-              }}>
-              <span style={{ fontSize: '12px' }}><SparklesIcon /></span>
-              <span style={{ fontSize: '11px', fontWeight: 'bold' }}>{deepMode ? '深度' : '快速'}</span>
-            </button>
-          </Tooltip>
-        </Flex>
-      )}
     </Box>
   );
 });
@@ -281,7 +264,7 @@ const InputArea = memo(({ onSubmit, onImageSubmit, loading, deepMode, onDeepMode
 // ====== 会话选择栏（模块级组件） ======
 const SessionBar = memo(({
   sessions, activeSessionId, selectedGirlId, loading,
-  onSelectSession, onNewSession
+  onSelectSession, onNewSession, deepMode, onDeepModeToggle
 }) => {
   const displaySessions = useMemo(() => {
     if (!selectedGirlId) return (sessions || []).filter(s => !s.girlId);
@@ -339,6 +322,21 @@ const SessionBar = memo(({
       >
         + 新建
       </Button>
+      {onDeepModeToggle && (
+        <Tooltip label={deepMode ? '深度分析：调用工具链，全面分析' : '快速分析：流式输出，快'}>
+          <button type="button" onClick={onDeepModeToggle}
+            style={{
+              background: deepMode ? 'var(--warm-rose)' : 'var(--warm-matte)',
+              border: deepMode ? '1px solid var(--warm-rose)' : '1px solid transparent',
+              borderRadius: '6px', padding: '4px 10px', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0,
+              color: deepMode ? 'var(--w80)' : 'rgba(245,240,232,0.4)', whiteSpace: 'nowrap'
+            }}>
+            <span style={{ fontSize: '12px' }}><SparklesIcon /></span>
+            <span style={{ fontSize: '11px', fontWeight: 'bold' }}>{deepMode ? '深度' : '快速'}</span>
+          </button>
+        </Tooltip>
+      )}
     </Flex>
   );
 });
@@ -3167,6 +3165,8 @@ export default function AICoach() {
         loading={sessionLoading}
         onSelectSession={handleSelectSession}
         onNewSession={handleNewConversation}
+        deepMode={deepMode}
+        onDeepModeToggle={handleDeepModeToggle}
       />
       {/* 固定高度的消息容器，flex布局 */}
       <Box flex="1" minH="0" display="flex" flexDirection="column" bg="warm.800" borderRadius="md" mb={2} overflow="hidden">
