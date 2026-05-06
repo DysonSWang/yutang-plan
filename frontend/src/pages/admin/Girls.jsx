@@ -756,7 +756,7 @@ export default function AdminGirls() {
     <Box>
       <Flex justify="space-between" align="center" mb={4} gap={2} direction={{ base: 'column', md: 'row' }}>
         <Heading color="white" size={{ base: 'md', md: 'lg' }}>女生资源</Heading>
-        <Button colorScheme="gold" size="sm" onClick={() => { setFormData(getInitialFormData()); onCreateOpen(); }}>
+        <Button colorScheme="gold" size="sm" onClick={openAddModal}>
           + 添加女生
         </Button>
       </Flex>
