@@ -322,7 +322,7 @@ const SessionBar = memo(({
       >
         + 新建
       </Button>
-      {onDeepModeToggle && (
+      {onDeepModeToggle ? (
         <Tooltip label={deepMode ? '深度分析：调用工具链，全面分析' : '快速分析：流式输出，快'}>
           <button type="button" onClick={onDeepModeToggle}
             style={{
@@ -336,7 +336,7 @@ const SessionBar = memo(({
             <span style={{ fontSize: '11px', fontWeight: 'bold' }}>{deepMode ? '深度' : '快速'}</span>
           </button>
         </Tooltip>
-      )}
+      ) : null}
     </Flex>
   );
 });

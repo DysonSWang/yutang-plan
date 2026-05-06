@@ -158,6 +158,7 @@ export default function ClientChat() {
   }, []);
 
   const startBurnTimer = useCallback((msg) => {
+    console.log('[DEBUG] startBurnTimer called', { id: msg.id, burnAfterSeconds: msg.burnAfterSeconds, burnedAt: msg.burnedAt, createdAt: msg.createdAt });
     if (!msg.burnAfterSeconds || msg.burnedAt) return;
     if (burnTimersRef.current[msg.id]) return;
 
@@ -220,6 +221,7 @@ export default function ClientChat() {
       if (message.senderRole === 'client') return;
       if (session && message.sessionId === session.id) {
         setMessages(prev => [...prev, message]);
+        console.log('[DEBUG] Socket收到消息', { isBurnAfterRead: message.isBurnAfterRead, burnAfterSeconds: message.burnAfterSeconds, id: message.id });
         if (message.isBurnAfterRead && message.burnAfterSeconds && !message.burnedAt) {
           startBurnTimer(message);
         }
@@ -485,6 +487,7 @@ export default function ClientChat() {
         setMessages(prev => [...prev, res.message]);
         setInput('');
         if (isBurn) setBurnMode(false);
+        console.log('[DEBUG] 发送阅后即焚消息', { isBurn, isBurnAfterRead: res.message.isBurnAfterRead, burnAfterSeconds: res.message.burnAfterSeconds, id: res.message.id });
         if (res.message.isBurnAfterRead && res.message.burnAfterSeconds) {
           startBurnTimer(res.message);
         }
