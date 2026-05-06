@@ -731,7 +731,7 @@ export default function ClientChat() {
               </HStack>
             </Box>
           )}
-          {/* 上传进度覆盖层 */}
+         {/* 上传进度覆盖层 */}
           {msg.isUploading && (
             <Box
               position="absolute"
@@ -743,6 +743,7 @@ export default function ClientChat() {
               alignItems="center"
               justifyContent="center"
               zIndex={2}
+              pointerEvents="none"
             >
               <Spinner size="lg" color="orange.400" thickness="3px" mb={2} />
               <Text color="white" fontSize="sm">{msg.uploadProgress || 0}%</Text>
@@ -751,7 +752,13 @@ export default function ClientChat() {
               </Box>
             </Box>
           )}
-          <video src={videoUrl} controls={!msg.isBurnAfterRead || msg.burnedAt} style={{ borderRadius: '8px', maxHeight: '200px', width: '100%', filter: isBurnMask ? 'blur(4px)' : 'none', opacity: msg.isUploading ? 0.3 : 1 }} />
+          <video
+            src={videoUrl}
+            controls={!msg.isBurnAfterRead || msg.burnedAt}
+            playsInline
+            muted={false}
+            style={{ borderRadius: '8px', maxHeight: '200px', width: '100%', filter: isBurnMask ? 'blur(4px)' : 'none' }}
+          />
         </Box>
       );
     }
