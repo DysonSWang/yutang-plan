@@ -179,14 +179,20 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
         borderRadius="full"
         zIndex={1}
       >
-        <Text fontSize="lg">🔥</Text>
-        <Text color="orange.300" fontWeight="bold" fontSize="md">阅后即焚</Text>
-        {mediaLoaded ? (
-          <Text color="white" fontSize="md" fontWeight="bold" ml={2}>
-            {remaining}s
-          </Text>
+        {isBurnAfterRead ? (
+          <>
+            <Text fontSize="lg">🔥</Text>
+            <Text color="orange.300" fontWeight="bold" fontSize="md">阅后即焚</Text>
+            {mediaLoaded ? (
+              <Text color="white" fontSize="md" fontWeight="bold" ml={2}>
+                {remaining}s
+              </Text>
+            ) : (
+              <Spinner size="sm" color="orange.300" ml={2} />
+            )}
+          </>
         ) : (
-          <Spinner size="sm" color="orange.300" ml={2} />
+          <Text color="white" fontSize="md" fontWeight="bold">媒体预览</Text>
         )}
       </Flex>
 
@@ -330,7 +336,11 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
         color="whiteAlpha.500"
         fontSize="xs"
       >
-        {mediaLoaded ? `点击任意处关闭 · ${remaining}s后自动销毁` : '加载中...'}
+        {mediaLoaded
+          ? isBurnAfterRead
+            ? `点击任意处关闭 · ${remaining}s后自动销毁`
+            : '点击任意处关闭'
+          : '加载中...'}
       </Text>
     </Flex>
   );
