@@ -8,6 +8,7 @@
  */
 
 const { loadSkills, getRoutingConfig } = require('./loader');
+const { routeByPhase, diagnoseStage } = require('./stage-diagnosis');
 
 /**
  * 关键词权重配置
@@ -287,6 +288,13 @@ function getMultiDimensionalSkills(question, context = {}) {
  * 获取多维度skill（带路由meta，用于调试）
  */
 function getMultiDimensionalSkillsWithMeta(question, context = {}) {
+  const { girlProfile } = context;
+
+  // OS 无女生上下文 fallback
+  if (!girlProfile?.stage && !girlProfile?.tensionScore) {
+    return routeGenericOS(question);
+  }
+
   const { type, meta } = routeQuestion(question, context);
   const routing = getRoutingConfig();
   const primarySkills = routing[type] || routing['通用'];
@@ -341,5 +349,47 @@ module.exports = {
   getMultiDimensionalSkills,
   getMultiDimensionalSkillsWithMeta,
   adjustPriority,
+  routeGenericOS,
   KEYWORD_WEIGHTS
 };
+
+/**
+ * 无女生上下文时的 OS 通用路由
+ * 使用 Leon（评估）+ 脱不花（沟通）+ 纳爷（深层逻辑）作为默认大师
+ * @param {string} question - 用户问题
+ * @returns {Object} { skills, meta: { source: 'generic_os', phase: 1 } }
+ */
+function routeGenericOS(question) {
+  // 先尝试用关键词推断阶段
+  const q = question || '';
+  // 默认大师（使用 INDEX.json 中实际存在的 ID）
+  let defaultMasters = ['tuobuhua', 'wang', 'haoge'];
+
+  // 关键词匹配特定阶段大师
+  if (q.includes('搭讪') || q.includes('认识') || q.includes('刚加')) {
+    defaultMasters = ['linlaotou', '马克', 'shege'];
+  } else if (q.includes('聊天') || q.includes('怎么聊') || q.includes('不回')) {
+    defaultMasters = ['tuobuhua', 'wang', 'linlaotou'];
+  } else if (q.includes('心态') || q.includes('焦虑') || q.includes('难受')) {
+    defaultMasters = ['xunuo', 'haoge', 'xuge'];
+  } else if (q.includes('分手') || q.includes('挽回')) {
+    defaultMasters = ['xuge', 'dadi', 'wang'];
+  } else if (q.includes('拉伸') || q.includes('暧昧') || q.includes('推进')) {
+    defaultMasters = ['kaige', 'moge', 'haoge'];
+  } else if (q.includes('长期') || q.includes('女朋友') || q.includes('结婚')) {
+    defaultMasters = ['tuobuhua', 'moge', 'xunuo'];
+  }
+
+  const meta = {
+    source: 'generic_os',
+    phase: 1,
+    phaseName: '入场',
+    confidence: 0.3,
+    note: '无女生上下文，使用OS通用默认路由'
+  };
+
+  return {
+    skills: loadSkills(defaultMasters),
+    meta
+  };
+}

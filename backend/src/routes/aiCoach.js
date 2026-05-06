@@ -716,6 +716,9 @@ router.post('/new-session', authMiddleware, async (req, res) => {
 });
 
 // ========== 聊天记录分析 ==========
+// NOTE: 以下为废弃代码片段（缺少 route handler 声明），实际实现在 line ~1576
+// 保留作参考，已注释
+/*
 8. interactionQuality：互动质量评价
 9. riskSignals：风险信号（如有）
 10. suggestions：操盘手建议（1-2条）
@@ -795,6 +798,7 @@ router.post('/new-session', authMiddleware, async (req, res) => {
     res.status(500).json({ error: '分析失败' });
   }
 });
+*/
 
 /**
  * 侧边栏上下文数据（结构化 JSON，供前端女生上下文面板使用）

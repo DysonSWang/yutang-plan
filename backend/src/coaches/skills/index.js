@@ -164,6 +164,37 @@ const toolDefinitions = [
         required: ['memoryId', 'clientId']
       }
     }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'diagnose_stage',
+      description: '诊断女生当前所处阶段（Phase 0-6），返回阶段名、置信度、跳步警告',
+      parameters: {
+        type: 'object',
+        properties: {
+          girlId: { type: 'string', description: '女生ID' },
+          question: { type: 'string', description: '用户当前问题（用于关键词推断，可选）' }
+        },
+        required: ['girlId']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'diagnostic_report',
+      description: '生成完整的阶段诊断报告，包含阶段定位、路由大师、行动建议',
+      parameters: {
+        type: 'object',
+        properties: {
+          girlId: { type: 'string', description: '女生ID' },
+          question: { type: 'string', description: '用户当前问题' },
+          clientId: { type: 'string', description: '客户ID' }
+        },
+        required: ['clientId', 'question']
+      }
+    }
   }
 ];
 
@@ -540,6 +571,30 @@ async function summarizeConversation({ memoryId, clientId }) {
   }
 }
 tools.summarize_conversation = summarizeConversation;
+
+// diagnose_stage
+const { diagnoseStage, generateDiagnosticReport } = require('../stage-diagnosis');
+
+async function diagnoseStageTool({ girlId, question = '' }) {
+  try {
+    return await diagnoseStage(girlId, question);
+  } catch (error) {
+    console.error('[Tools] diagnose_stage error:', error);
+    return { error: '阶段诊断失败', phase: 1, phaseName: '入场', confidence: 0.3, source: 'error_fallback' };
+  }
+}
+tools.diagnose_stage = diagnoseStageTool;
+
+// diagnostic_report
+async function diagnosticReportTool({ girlId, question, clientId }) {
+  try {
+    return await generateDiagnosticReport(girlId, question);
+  } catch (error) {
+    console.error('[Tools] diagnostic_report error:', error);
+    return { error: '诊断报告生成失败' };
+  }
+}
+tools.diagnostic_report = diagnosticReportTool;
 
 // ============ Tool Executor ============
 

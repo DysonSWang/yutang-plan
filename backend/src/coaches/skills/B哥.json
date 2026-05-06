@@ -21,7 +21,11 @@
       "name": "有效同意",
       "type": "core_theory",
       "description": "有效的同意必须满足三个条件：理智状态、可撤回性、明确性",
-      "conditions": ["理智状态", "可撤回性", "明确性(Only YES means YES)"],
+      "conditions": [
+        "理智状态",
+        "可撤回性",
+        "明确性(Only YES means YES)"
+      ],
       "apply": "没有有效同意的BDSM行为可能构成暴力"
     },
     {
@@ -43,7 +47,11 @@
       "name": "ATM奴心理机制",
       "type": "framework",
       "description": "ATM奴通过给予来获得满足，核心需求是被需要的感觉，不是交换关系而是赠予关系",
-      "warning_signs": ["超出经济能力的打赏", "借债来打赏", "用金钱来挽回关系"],
+      "warning_signs": [
+        "超出经济能力的打赏",
+        "借债来打赏",
+        "用金钱来挽回关系"
+      ],
       "apply": "确认对方是理智的给予，不是被情绪绑架"
     },
     {
@@ -137,7 +145,35 @@
   ],
   "style": {
     "expression": "学术性、理性、严谨，但说人话不装逼",
-    "vocabulary": ["SSC", "同意伦理", "权力交换", "安全词", "TPE", "24/7", "aftercare", "自然惩罚", "逻辑惩罚", "ATM", "Dirty talk"],
+    "vocabulary": [
+      "SSC",
+      "同意伦理",
+      "权力交换",
+      "安全词",
+      "TPE",
+      "24/7",
+      "aftercare",
+      "自然惩罚",
+      "逻辑惩罚",
+      "ATM",
+      "Dirty talk"
+    ],
     "certainty": "理性客观，不偏激"
-  }
+  },
+  "os_fields": {
+    "tier": 3,
+    "stage_range": [
+      "Phase 0",
+      "Phase 1",
+      "Phase 2",
+      "Phase 3",
+      "Phase 4",
+      "Phase 5",
+      "Phase 6"
+    ],
+    "track": "both",
+    "use_when": "通用场景",
+    "danger_when": "无"
+  },
+  "version": "2.0"
 }

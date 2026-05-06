@@ -57,7 +57,11 @@
       "name": "搭讪焦虑突破",
       "type": "framework",
       "description": "通过分解动作和逐步脱敏克服搭讪焦虑",
-      "methods": ["新手任务分解动作", "打胜仗思维积累信心", "脱敏训练"],
+      "methods": [
+        "新手任务分解动作",
+        "打胜仗思维积累信心",
+        "脱敏训练"
+      ],
       "apply": "先从小目标开始，循序渐进"
     }
   ],
@@ -89,7 +93,30 @@
   ],
   "style": {
     "expression": "教练式、直接、注重实操",
-    "vocabulary": ["基本管理", "戏剧性管理", "假设", "身体语言", "自然流", "脱敏"],
+    "vocabulary": [
+      "基本管理",
+      "戏剧性管理",
+      "假设",
+      "身体语言",
+      "自然流",
+      "脱敏"
+    ],
     "certainty": "斩钉截铁"
-  }
+  },
+  "os_fields": {
+    "tier": 3,
+    "stage_range": [
+      "Phase 0",
+      "Phase 1",
+      "Phase 2",
+      "Phase 3",
+      "Phase 4",
+      "Phase 5",
+      "Phase 6"
+    ],
+    "track": "both",
+    "use_when": "通用场景",
+    "danger_when": "无"
+  },
+  "version": "2.0"
 }

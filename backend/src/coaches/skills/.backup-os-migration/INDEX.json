@@ -1,0 +1,381 @@
+{
+  "skills": {
+    "分手与挽回": {
+      "name": "分手与挽回",
+      "file": "分手与挽回.json",
+      "specialties": []
+    },
+    "吸引": {
+      "name": "吸引",
+      "file": "吸引.json",
+      "specialties": []
+    },
+    "女性心理": {
+      "name": "女性心理",
+      "file": "女性心理.json",
+      "specialties": []
+    },
+    "婚姻": {
+      "name": "婚姻",
+      "file": "婚姻.json",
+      "specialties": []
+    },
+    "废物测试": {
+      "name": "废物测试",
+      "file": "废物测试.json",
+      "specialties": []
+    },
+    "形象": {
+      "name": "形象",
+      "file": "形象.json",
+      "specialties": []
+    },
+    "心态建设": {
+      "name": "心态建设",
+      "file": "心态建设.json",
+      "specialties": []
+    },
+    "情绪判断": {
+      "name": "情绪判断",
+      "file": "情绪判断.json",
+      "specialties": []
+    },
+    "拉伸": {
+      "name": "拉伸",
+      "file": "拉伸.json",
+      "specialties": []
+    },
+    "拉近对线": {
+      "name": "拉近对线",
+      "file": "拉近对线.json",
+      "specialties": []
+    },
+    "搭讪": {
+      "name": "搭讪",
+      "file": "搭讪.json",
+      "specialties": []
+    },
+    "框架规则": {
+      "name": "框架规则",
+      "file": "框架规则.json",
+      "specialties": []
+    },
+    "沟通": {
+      "name": "沟通",
+      "file": "沟通.json",
+      "specialties": []
+    },
+    "法律安全": {
+      "name": "法律安全",
+      "file": "法律安全.json",
+      "specialties": []
+    },
+    "特殊群体约会": {
+      "name": "特殊群体约会",
+      "file": "特殊群体约会.json",
+      "specialties": []
+    },
+    "社交软件": {
+      "name": "社交软件",
+      "file": "社交软件.json",
+      "specialties": []
+    },
+    "窗口识别": {
+      "name": "窗口识别",
+      "file": "窗口识别.json",
+      "specialties": []
+    },
+    "约会": {
+      "name": "约会",
+      "file": "约会.json",
+      "specialties": []
+    },
+    "线上社交": {
+      "name": "线上社交",
+      "file": "线上社交.json",
+      "specialties": []
+    },
+    "群体社交": {
+      "name": "群体社交",
+      "file": "群体社交.json",
+      "specialties": []
+    },
+    "聊天": {
+      "name": "聊天",
+      "file": "聊天.json",
+      "specialties": []
+    },
+    "话术": {
+      "name": "话术",
+      "file": "话术.json",
+      "specialties": []
+    },
+    "资源获取": {
+      "name": "资源获取",
+      "file": "资源获取.json",
+      "specialties": []
+    },
+    "邀约": {
+      "name": "邀约",
+      "file": "邀约.json",
+      "specialties": []
+    },
+    "长期关系": {
+      "name": "长期关系",
+      "file": "长期关系.json",
+      "specialties": []
+    },
+    "防骗": {
+      "name": "防骗",
+      "file": "防骗.json",
+      "specialties": []
+    },
+    "障碍区": {
+      "name": "障碍区",
+      "file": "障碍区.json",
+      "specialties": []
+    },
+    "需求感": {
+      "name": "需求感",
+      "file": "需求感.json",
+      "specialties": []
+    },
+    "浪哥": {
+      "name": "浪哥",
+      "file": "浪哥.json",
+      "specialties": [
+        "聊天五阶段",
+        "拉近对线",
+        "情绪判断",
+        "女生类型",
+        "吸引金字塔",
+        "破冰策略"
+      ]
+    },
+    "马克": {
+      "name": "马克",
+      "file": "马克.json",
+      "specialties": [
+        "自然流",
+        "搭讪焦虑",
+        "基本管理",
+        "戏剧性管理",
+        "假设理论",
+        "身体语言",
+        "无声游戏",
+        "脱敏训练"
+      ]
+    },
+    "七哥": {
+      "name": "七哥",
+      "file": "七哥.json",
+      "specialties": [
+        "价值吸引",
+        "聊天六步法",
+        "阶段聊天",
+        "推拉技巧",
+        "情绪波动",
+        "男神心态",
+        "骄傲风趣",
+        "ASD破解"
+      ]
+    },
+    "B哥": {
+      "name": "B哥",
+      "file": "B哥.json",
+      "specialties": [
+        "BDSM",
+        "SSC原则",
+        "权力交换",
+        "安全词",
+        "同意伦理",
+        "惩罚类型学",
+        "ATM奴心理",
+        "Dirtytalk",
+        "Sub/Slave区别"
+      ]
+    },
+    "kaige": {
+      "name": "凯哥",
+      "file": "kaige.json",
+      "specialties": [
+        "关系推进",
+        "拉伸阶段",
+        "吸引思维",
+        "奖品思维",
+        "窗口识别"
+      ]
+    },
+    "linlaotou": {
+      "name": "林老头",
+      "file": "linlaotou.json",
+      "specialties": [
+        "价值幻觉",
+        "侧面分析",
+        "筛选强攻",
+        "认知偏差",
+        "心理高位"
+      ]
+    },
+    "wang": {
+      "name": "王哥",
+      "file": "wang.json",
+      "specialties": [
+        "神聊七步",
+        "上帝视角",
+        "IOD化解",
+        "可进可退",
+        "结果反推"
+      ]
+    },
+    "dadi": {
+      "name": "大迪",
+      "file": "dadi.json",
+      "specialties": [
+        "吸引>追",
+        "需求感管理",
+        "窗口期思维",
+        "被拒即撤",
+        "肢体升级"
+      ]
+    },
+    "moge": {
+      "name": "Mo哥",
+      "file": "moge.json",
+      "specialties": [
+        "吸引力公式",
+        "生存价值×基因价值×情绪价值",
+        "长期关系",
+        "框架规则",
+        "不跪不PUA"
+      ]
+    },
+    "tuobuhua": {
+      "name": "脱不花",
+      "file": "tuobuhua.json",
+      "specialties": [
+        "沟通力",
+        "表达",
+        "情感连接",
+        "职场关系",
+        "上下级沟通"
+      ]
+    },
+    "xuge": {
+      "name": "旭哥",
+      "file": "xuge.json",
+      "specialties": [
+        "分手类型",
+        "挽回策略",
+        "价值交换",
+        "得失心",
+        "奖品思维"
+      ]
+    },
+    "haoge": {
+      "name": "昊哥",
+      "file": "haoge.json",
+      "specialties": [
+        "情绪波动",
+        "性张力",
+        "富裕vs匮乏心态",
+        "高位框架",
+        "心理派"
+      ]
+    },
+    "xunuo": {
+      "name": "许诺",
+      "file": "xunuo.json",
+      "specialties": [
+        "心态建设",
+        "障碍区",
+        "拐点",
+        "量变质变",
+        "得失心管理"
+      ]
+    },
+    "shege": {
+      "name": "社哥",
+      "file": "shege.json",
+      "specialties": [
+        "社交软件",
+        "情绪调动",
+        "价值展示",
+        "关系推进",
+        "微信聊天",
+        "性张力"
+      ]
+    }
+  },
+  "routing": {
+    "通用": [
+      "kaige",
+      "linlaotou",
+      "wang",
+      "浪哥",
+      "马克",
+      "七哥"
+    ],
+    "聊天卡壳": [
+      "wang",
+      "dadi",
+      "linlaotou",
+      "浪哥"
+    ],
+    "关系拉伸": [
+      "kaige",
+      "linlaotou",
+      "浪哥",
+      "七哥"
+    ],
+    "长期关系": [
+      "moge",
+      "tuobuhua"
+    ],
+    "分手挽回": [
+      "xuge",
+      "haoge"
+    ],
+    "心态问题": [
+      "xunuo"
+    ],
+    "吸引": [
+      "kaige",
+      "linlaotou",
+      "马克",
+      "七哥"
+    ],
+    "形象": [
+      "wang"
+    ],
+    "社交软件": [
+      "wang",
+      "shege",
+      "浪哥"
+    ],
+    "搭讪": [
+      "马克"
+    ],
+    "身体语言": [
+      "马克"
+    ],
+    "焦虑突破": [
+      "马克",
+      "xunuo"
+    ],
+    "情绪判断": [
+      "浪哥",
+      "xunuo"
+    ],
+    "女生类型": [
+      "浪哥",
+      "xuge"
+    ],
+    "推拉技巧": [
+      "七哥"
+    ],
+    "BDSM": [
+      "B哥"
+    ]
+  }
+}

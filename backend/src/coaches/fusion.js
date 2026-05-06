@@ -90,6 +90,164 @@ const COACH_LABELS = {
   'B哥': 'B哥',
 };
 
+// OS 13 条冲突裁决规则
+// 每条：{ id, conflict, rule: (context) => { winningCoach, reason } }
+const OS_CONFLICT_RULES = [
+  {
+    id: 1,
+    name: '人的定位',
+    description: '猎物 vs 善良的人',
+    resolve: (ctx) => {
+      const { phase } = ctx;
+      if (phase <= 3) return { winner: '乌哥', reason: 'Phase 1-3 是博弈对手，用乌哥的博弈论视角' };
+      return { winner: 'context_dependent', reason: 'Phase 4 后按轨道分：短轨=博弈，长轨=善良的人' };
+    }
+  },
+  {
+    id: 2,
+    name: '关系目标',
+    description: '速约 vs 长期',
+    resolve: (ctx) => {
+      const { userTrack } = ctx;
+      if (userTrack === 'short') return { winner: '表哥', reason: '用户选择短轨，走速约路线' };
+      if (userTrack === 'long') return { winner: '梵公子', reason: '用户选择长轨，走长期经营路线' };
+      return { winner: 'os_router', reason: 'Phase 4 分叉点，请用户选择短轨或长轨，不可混合' };
+    }
+  },
+  {
+    id: 3,
+    name: '走心/真诚',
+    description: '工具画饼 vs 真诚',
+    resolve: (ctx) => {
+      const { userTrack } = ctx;
+      if (userTrack === 'short') return { winner: '表哥', reason: '短轨允许策略性话术' };
+      if (userTrack === 'long') return { winner: '童锦程', reason: '长轨必须真诚，童锦程的真心路线' };
+      return { winner: 'phase_dependent', reason: '短轨可画饼，长轨必须真诚' };
+    }
+  },
+  {
+    id: 4,
+    name: '付出态度',
+    description: '不付出 vs 价值交换',
+    resolve: (ctx) => {
+      const { phase } = ctx;
+      if (phase <= 2) return { winner: '表哥', reason: 'Phase 1-2 不付出，先建立框架' };
+      if (phase === 3) return { winner: '脱不花', reason: 'Phase 3 价值交换，建立互信' };
+      return { winner: '梵公子', reason: 'Phase 5+ 长轨引导对方投资' };
+    }
+  },
+  {
+    id: 5,
+    name: '对感觉的态度',
+    description: '跟着感觉走 vs 理性决策',
+    resolve: () => ({
+      winner: '乌哥',
+      reason: 'OS统一：感觉是结果不是方法，用阶段/信号/数据决策'
+    })
+  },
+  {
+    id: 6,
+    name: '善良前提',
+    description: '要不要假设对方是善良的人',
+    resolve: () => ({
+      winner: '梵公子',
+      reason: 'OS底线：不善良的人消耗远大于产出，先验证善良度'
+    })
+  },
+  {
+    id: 7,
+    name: '时代错配',
+    description: '技术流 vs 时代对齐',
+    resolve: (ctx) => {
+      const { userTrack } = ctx;
+      if (userTrack === 'long') return { winner: '梵公子+Leon', reason: '长轨必须时代对齐，不依赖过时技术' };
+      return { winner: '表哥', reason: '短轨可用技术流快速推进' };
+    }
+  },
+  {
+    id: 8,
+    name: '框架vs真诚',
+    description: '高位框架 vs 真诚表达',
+    resolve: (ctx) => {
+      const { phase } = ctx;
+      if (phase <= 2) return { winner: '表哥', reason: 'Phase 1-2 框架优先，建立高位' };
+      return { winner: '童锦程', reason: 'Phase 3+ 真诚表达，框架内走心' };
+    }
+  },
+  {
+    id: 9,
+    name: '推拉vs稳定',
+    description: '情绪推拉 vs 稳定陪伴',
+    resolve: (ctx) => {
+      const { phase, userTrack } = ctx;
+      if (phase <= 3) return { winner: '表哥', reason: 'Phase 1-3 推拉制造情绪波动' };
+      if (userTrack === 'long' && phase >= 4) return { winner: '梵公子', reason: '长轨 Phase 4+ 稳定陪伴' };
+      return { winner: '熊哥', reason: '短轨 Phase 4+ 继续推拉推进' };
+    }
+  },
+  {
+    id: 10,
+    name: '进攻vs防守',
+    description: '主动进攻 vs 等待窗口',
+    resolve: (ctx) => {
+      const { antiFrustrationLevel } = ctx;
+      if (antiFrustrationLevel <= 3) return { winner: '许诺', reason: '低抗压客户，先稳心态' };
+      return { winner: '凯哥', reason: '正常抗压水平，主动推进' };
+    }
+  },
+  {
+    id: 11,
+    name: '速约vs培养',
+    description: '打猎思维 vs 养殖思维',
+    resolve: (ctx) => {
+      const { userTrack } = ctx;
+      if (userTrack === 'short') return { winner: '熊哥', reason: '短轨=打猎，快速筛选速约' };
+      if (userTrack === 'long') return { winner: '梵公子', reason: '长轨=养殖，耐心培养' };
+      return { winner: '熊哥', reason: '未指定轨道，默认打猎思维快速判断窗口' };
+    }
+  },
+  {
+    id: 12,
+    name: '话术vs真诚',
+    description: '话术模板 vs 自然表达',
+    resolve: (ctx) => {
+      const { phase } = ctx;
+      if (phase <= 1) return { winner: '王哥', reason: 'Phase 1 需要话术破冰' };
+      return { winner: '脱不花', reason: 'Phase 2+ 自然沟通优先' };
+    }
+  },
+  {
+    id: 13,
+    name: '筛选vs包容',
+    description: '严格筛选 vs 包容理解',
+    resolve: (ctx) => {
+      const { phase } = ctx;
+      if (phase <= 2) return { winner: 'Leon', reason: 'Phase 1-2 严格筛选，不合标准直接踢' };
+      return { winner: '童锦程', reason: 'Phase 3+ 包容理解，修复关系' };
+    }
+  }
+];
+
+/**
+ * OS 冲突裁决引擎
+ * @param {Array} ruleIds - 要应用的规则 ID 列表
+ * @param {Object} ctx - { phase, userTrack, antiFrustrationLevel }
+ * @returns {Array} { ruleId, name, winner, reason }
+ */
+function osResolveConflict(ruleIds, ctx) {
+  return OS_CONFLICT_RULES
+    .filter(r => ruleIds.includes(r.id))
+    .map(r => {
+      const result = r.resolve(ctx);
+      return {
+        ruleId: r.id,
+        name: r.name,
+        winner: result.winner,
+        reason: result.reason
+      };
+    });
+}
+
 /**
  * 检测技能之间的冲突方向
  * 返回: { hasConflict, conflictType, winningDirection }
@@ -251,7 +409,16 @@ async function fusionDecide(skills, meta, context = {}) {
   // 检测冲突
   const conflict = detectConflict(skills);
 
-  // 冲突处理：如果有冲突，根据上下文显式决策
+  // OS 冲突裁决（13 条规则）
+  const osCtx = {
+    phase: meta?.phase ?? 1,
+    userTrack: meta?.track ?? 'both',
+    antiFrustrationLevel: clientProfile?.antiFrustrationLevel ?? 5,
+    tensionScore: girlProfile?.tensionScore ?? 5
+  };
+  const osResolutions = osResolveConflict([1,2,3,4,5,6,7,8,9,10,11,12,13], osCtx);
+
+  // 冲突处理：OS 裁决优先于原有逻辑
   let fusionStrategy = 'multi_coach_blended';
   let decisionReason = '';
   let primaryCoach = coachScores[0];
@@ -294,6 +461,7 @@ async function fusionDecide(skills, meta, context = {}) {
     primaryScore: primaryCoach.score,
     priorityCoaches,
     conflict,
+    osResolutions,
     fusionStrategy,
     decisionReason,
     routedType,
@@ -337,6 +505,14 @@ async function buildStructuredFusion(skills, meta, context = {}) {
     }
   }
 
+  // 6. OS 冲突裁决结果
+  if (result.osResolutions && result.osResolutions.length > 0) {
+    hint += `\n\n【OS 裁决结果】`;
+    for (const r of result.osResolutions.slice(0, 5)) {
+      hint += `\n  - ${r.name}：${r.winner}（${r.reason}）`;
+    }
+  }
+
   return hint;
 }
 
@@ -344,5 +520,7 @@ module.exports = {
   fusionDecide,
   buildStructuredFusion,
   detectConflict,
-  calcCoachPriority
+  calcCoachPriority,
+  OS_CONFLICT_RULES,
+  osResolveConflict
 };

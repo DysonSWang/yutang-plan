@@ -3,10 +3,11 @@
  */
 
 const { getMultiDimensionalSkillsWithMeta } = require('./router');
-const { buildStructuredFusion } = require('./fusion');
+const { buildStructuredFusion, OS_CONFLICT_RULES } = require('./fusion');
 const { getAllLearnings, formatLearningsForPrompt } = require('../services/learning');
 const { buildDynamicPersona, buildPersonaSection } = require('../services/coachPersona');
 const { STAGE_LABELS } = require('../services/relationshipStage');
+const { PHASES, enforceNoSkip } = require('./stage-diagnosis');
 
 /**
  * 构建综合教练prompt
@@ -71,9 +72,14 @@ async function buildMasterPrompt(question, context = {}, options = {}) {
   // 预算感知上下文（信号、待办、观察、摘要等补充信息）
   const supplementaryContext = context.contextInfo || '';
 
+  // OS 元规则注入（阶段模型 + 冲突裁决）
+  const osMetaSection = buildOSMetaSection(context);
+
   // 核心：question 必须插入 prompt，否则AI看不到用户的问题
   return `
-你是追爱AI教练，一个有丰富情感经验的朋友，帮用户分析情感问题。你的身份是统一的、唯一的——就是用户信赖的私人情感顾问。
+你是追爱AI教练，一个有丰富经验的朋友，帮用户分析情感问题。你的身份是统一的、唯一的——就是用户信赖的私人情感顾问。
+
+${osMetaSection}
 
 【内部参考资料】（仅供你参考分析，严禁在回答中引用）
 ${masterSection}
@@ -428,6 +434,60 @@ ${skills.map(s => {
 
 只输出 JSON，不要其他内容。
 `;
+}
+
+/**
+ * 构建 OS 元规则区块（注入系统 prompt 顶部）
+ * 包含：7 阶段模型简述 + 当前阶段约束 + 核心冲突裁决规则
+ */
+function buildOSMetaSection(context) {
+  const { girlProfile = null, clientProfile = null } = context;
+  let lines = [];
+
+  lines.push('【恋爱操作系统 · 内部规则】');
+  lines.push('所有分析基于以下统一框架：');
+
+  // 1. 7 阶段简述
+  lines.push('');
+  lines.push('阶段模型：');
+  lines.push('- Phase 0 资源池：收集资源、展示面建设');
+  lines.push('- Phase 1 入场：破冰、意图表达、解决阻力');
+  lines.push('- Phase 2 探测：评估筛选、价值展示、意愿锁定');
+  lines.push('- Phase 3 升温：情绪推拉、叙事建立信任');
+  lines.push('- Phase 4 确认：【分叉点】用户必须选择短轨(速约)或长轨(长期)，不可混合');
+  lines.push('- Phase 5 确立：短轨=速约收尾 / 长轨=关系锁定');
+  lines.push('- Phase 6 经营：短轨=撤退策略 / 长轨=长期维护');
+
+  // 2. 当前阶段约束
+  if (girlProfile?.stage) {
+    const stagePhaseMap = { '陌生': 0, '搭讪': 0, '聊天': 2, '暧昧': 3, '约会': 4, '长期': 5 };
+    const currentPhase = stagePhaseMap[girlProfile.stage] ?? 1;
+    const enforcement = enforceNoSkip(currentPhase);
+    lines.push('');
+    lines.push(`当前阶段：Phase ${currentPhase}（${enforcement.phaseName}）`);
+    lines.push(`核心任务：${enforcement.coreAction}`);
+    if (enforcement.warning) {
+      lines.push(`⚠️ 注意：${enforcement.warning}`);
+    }
+  }
+
+  // 3. 轨道判断
+  if (girlProfile?.track) {
+    lines.push('');
+    lines.push(`用户轨道：${girlProfile.track === 'short' ? '短轨(速约)' : '长轨(长期)'}`);
+    lines.push(girlProfile.track === 'short' ? '策略：效率优先、快速筛选' : '策略：真诚优先、长期经营');
+  }
+
+  // 4. 核心裁决规则（选 5 条最关键的）
+  lines.push('');
+  lines.push('冲突裁决规则（当策略矛盾时按此执行）：');
+  lines.push('1. 短轨和长轨是两个独立系统，混用必败');
+  lines.push('2. Phase 4 是用户选择分叉点，不能替用户决定');
+  lines.push('3. 感觉是结果不是方法，用阶段/信号/数据决策');
+  lines.push('4. 不善良的人消耗远大于产出，先验证善良度');
+  lines.push('5. 阶段不可跳步，必须先完成前置阶段的核心任务');
+
+  return lines.join('\n');
 }
 
 module.exports = {
