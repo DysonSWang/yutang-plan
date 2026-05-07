@@ -746,6 +746,12 @@ export default function ClientProfile() {
                       {memberStatus?.points || 0}
                     </Badge>
                   </HStack>
+                  {memberStatus?.invitedBy && (
+                    <HStack justify="space-between">
+                      <Text color="rgba(245,240,232,0.4)" fontSize="xs">邀请人</Text>
+                      <Text color="teal.300" fontSize="xs">{memberStatus.invitedBy}</Text>
+                    </HStack>
+                  )}
                   <HStack spacing={2} pt={1}>
                     <Button size="xs" colorScheme="gold" onClick={onRenewalOpen}>续费</Button>
                     <Button size="xs" variant="link" color="teal.400" onClick={onPricingOpen}>定价</Button>
@@ -763,6 +769,12 @@ export default function ClientProfile() {
                       {memberStatus?.points || 0}
                     </Badge>
                   </HStack>
+                  {memberStatus?.invitedBy && (
+                    <HStack justify="space-between">
+                      <Text color="rgba(245,240,232,0.4)" fontSize="xs">邀请人</Text>
+                      <Text color="teal.300" fontSize="xs">{memberStatus.invitedBy}</Text>
+                    </HStack>
+                  )}
                   <HStack spacing={2} pt={1}>
                     <Button size="xs" colorScheme="gold" variant="outline" leftIcon={<Icon as={CrownIcon} />} onClick={onRenewalOpen}>开通</Button>
                     <Button size="xs" variant="link" color="teal.400" onClick={onPricingOpen}>定价</Button>
@@ -1315,7 +1327,15 @@ export default function ClientProfile() {
                     <VStack spacing={2} mb={4}>
                       <Text color="white" fontWeight="bold" fontSize="lg">{plan.label}</Text>
                       <HStack spacing={1} align="baseline">
-                        <Text color="gold.400" fontSize="3xl" fontWeight="bold">¥{plan.price}</Text>
+                        {plan.type === 'monthly' && memberStatus?.isFirstPurchase ? (
+                          <>
+                            <Text color="rgba(245,240,232,0.4)" fontSize="xl" fontWeight="bold" textDecoration="line-through">¥999</Text>
+                            <Text color="gold.400" fontSize="3xl" fontWeight="bold">¥799</Text>
+                            <Badge colorScheme="green" fontSize="xs">首单8折</Badge>
+                          </>
+                        ) : (
+                          <Text color="gold.400" fontSize="3xl" fontWeight="bold">¥{plan.price}</Text>
+                        )}
                         <Text color="rgba(245,240,232,0.4)" fontSize="sm">/{plan.period}</Text>
                       </HStack>
                       <Text color="rgba(245,240,232,0.55)" fontSize="xs">约¥{plan.perMonth}/月</Text>

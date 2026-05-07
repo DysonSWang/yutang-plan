@@ -504,6 +504,7 @@ router.post('/situation', authMiddleware, async (req, res) => {
     logger.info(`[AICoach] Prompt 大小: ${promptChars} chars ≈ ${estimatedTokens} tokens | 路由: ${routingMeta.routedType} | 教练数: ${routingMeta.coachCount} | 历史轮次: ${turnCount} | 剩余预算: ${contextBudget} chars`);
 
     const aiConfig = getAIConfig(mode); // 根据 mode 选择 deepseek-chat (flash) 或 deepseek-v4-pro (pro)
+    logger.info(`[AICoach] mode=${mode} → 使用模型: ${aiConfig?.model}`);
 
     // ---- 输入 Guardrail 检查（仅深度模式） ----
     let guardrailPassed = true;

@@ -10,13 +10,14 @@ const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../config');
 const prisma = require('../prisma');
 const activityService = require('../services/activityService');
+const membershipService = require('../services/membershipService');
 const AppError = require('../errors/AppError');
 const { ErrorCodes } = require('../errors/errorCodes');
 const asyncHandler = require('../middleware/asyncHandler');
 
 // 注册
 router.post('/register', asyncHandler(async (req, res) => {
-  const { username, password, nickname, phone } = req.body;
+  const { username, password, nickname, phone, inviteCode } = req.body;
 
   if (!username || !password) {
     throw new AppError(ErrorCodes.VALIDATION_ERROR, { userMessage: '用户名和密码是必需的' });
@@ -42,6 +43,11 @@ router.post('/register', asyncHandler(async (req, res) => {
       phone
     }
   });
+
+  // 注册成功后绑定邀请关系（积分在购买会员时发放）
+  if (inviteCode) {
+    membershipService.bindInvitation(user.id, inviteCode).catch(() => {});
+  }
 
   const token = jwt.sign(
     { id: user.id, username: user.username, role: user.role },

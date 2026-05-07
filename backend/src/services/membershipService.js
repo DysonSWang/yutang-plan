@@ -50,6 +50,13 @@ async function getMembershipStatus(userId) {
 
   const points = await getPointsBalance(userId);
 
+  const invitation = await prisma.invitation.findFirst({
+    where: { inviteeId: userId },
+    include: { inviter: { select: { nickname: true } } }
+  });
+
+  const isFirstPurchase = !membership;
+
   return {
     membership: membership ? {
       id: membership.id,
@@ -67,7 +74,10 @@ async function getMembershipStatus(userId) {
       monthly: PRICE_MONTHLY,
       yearly: PRICE_YEARLY,
       premium: PRICE_PREMIUM
-    }
+    },
+    isFirstPurchase,
+    invitedBy: invitation?.inviter?.nickname || null,
+    inviteCode: invitation?.inviteCode || null,
   };
 }
 
@@ -320,6 +330,29 @@ async function purchaseMembership(userId, type, pointsToUse = 0) {
         endDate
       }
     });
+  }).then(async (membership) => {
+    // 新购成功后，给邀请人发积分
+    if (isFirstPurchase) {
+      const inv = await prisma.invitation.findFirst({
+        where: { inviteeId: userId, activated: true, rewardPaid: false }
+      });
+      if (inv) {
+        const pointsEarned = POINTS_PER_PURCHASE[type] || POINTS_PER_PURCHASE.monthly;
+        const inviterBalance = await getPointsBalance(inv.inviterId);
+        await prisma.pointsLedger.create({
+          data: {
+            userId: inv.inviterId,
+            amount: pointsEarned,
+            balanceAfter: inviterBalance + pointsEarned,
+            type: 'invite_reward',
+            refId: inv.id,
+            note: `邀请奖励：被邀请人购买${type}套餐`
+          }
+        });
+        await prisma.invitation.update({ where: { id: inv.id }, data: { rewardPaid: true } });
+      }
+    }
+    return membership;
   });
 }
 
