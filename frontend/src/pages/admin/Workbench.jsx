@@ -54,6 +54,8 @@ export default function AdminWorkbench() {
   const messagesEndRef = useRef(null);
   const analysisRef = useRef(null);
   const momentRef = useRef(null);
+  const reasoningRef = useRef(null);
+  const reasoningContentRef = useRef('');
 
   // 实战聊天模式：和客户聊天 / 和女生聊天
   const [workbenchChatMode, setWorkbenchChatMode] = useState('girl');
@@ -501,6 +503,8 @@ export default function AdminWorkbench() {
       // 深度模式（useTools）走非流式，触发 coach-engine 工具调用
       // 快速模式走流式，无工具调用
       const doStream = !deepMode;
+      reasoningContentRef.current = ''; // 重置思考过程
+      if (reasoningRef.current) reasoningRef.current.textContent = '';
 
       const res = await fetch(`${apiUrl}/api/ai-coach/situation`, {
         method: 'POST',
@@ -546,6 +550,15 @@ export default function AdminWorkbench() {
               if (!jsonStr.startsWith('{')) continue;
               try {
                 const parsed = JSON.parse(jsonStr);
+                if (parsed.reasoning) {
+                  // 思考过程显示
+                  if (reasoningContentRef.current !== undefined) {
+                    reasoningContentRef.current += parsed.reasoning;
+                    if (reasoningRef.current) {
+                      reasoningRef.current.textContent = reasoningContentRef.current;
+                    }
+                  }
+                }
                 if (parsed.content) {
                   analysis += parsed.content;
                   if (analysisRef.current) {
@@ -1289,6 +1302,17 @@ export default function AdminWorkbench() {
                           </Text>
                           {deepMode && <Badge colorScheme="purple" fontSize="xs">工具已启用</Badge>}
                         </HStack>
+                        {reasoningContentRef.current && (
+                          <Box mb={2} p={2} bg="purple.900" borderRadius="sm" border="1px solid" borderColor="purple.700">
+                            <Text color="purple.300" fontSize="xs" mb={1}>思考过程...</Text>
+                            <Box
+                              ref={reasoningRef}
+                              color="purple.200"
+                              fontSize="xs"
+                              style={{ whiteSpace: 'pre-wrap', maxHeight: '100px', overflow: 'auto' }}
+                            />
+                          </Box>
+                        )}
                         <Box
                           ref={analysisRef}
                           color="gray.300"
