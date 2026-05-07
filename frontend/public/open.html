@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>打开追AI</title>
+<style>
+  :root { --bg: #080810; --text: #f5f0e8; --accent: #d4b05a; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .card { background: #12121f; border: 1px solid rgba(212,176,90,0.25); border-radius: 24px; padding: 48px 36px; max-width: 400px; text-align: center; }
+  .icon { font-size: 56px; margin-bottom: 20px; }
+  h1 { font-size: 24px; font-weight: 700; margin-bottom: 12px; color: var(--text); }
+  p { font-size: 14px; color: #9890a0; margin-bottom: 28px; line-height: 1.6; }
+  .btn { display: inline-block; background: linear-gradient(135deg, var(--accent), #9a7f3a); color: #080810; font-size: 16px; font-weight: 700; padding: 14px 32px; border-radius: 12px; text-decoration: none; }
+  .btn:hover { opacity: 0.9; }
+  .fallback { display: none; margin-top: 24px; }
+  .fallback.show { display: block; }
+  .fallback-desc { font-size: 13px; color: #9890a0; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<div class="card" id="loading-card">
+  <div class="icon">🚀</div>
+  <h1>正在打开追AI...</h1>
+  <p>如果应用没有自动打开，<br>可能是尚未安装，请先下载安装。</p>
+  <a href="/apk-guide" class="btn">下载安装</a>
+</div>
+
+<div class="card fallback" id="fallback-card">
+  <div class="icon">📱</div>
+  <h1>无法自动打开 App</h1>
+  <p class="fallback-desc">请下载安装后，<br>在桌面找到「追AI」图标打开</p>
+  <a href="/apk-guide" class="btn">下载安装</a>
+</div>
+
+<script>
+(function() {
+  var appLinkTimeout = null;
+  var fallbackShown = false;
+
+  // 尝试打开 App（通过 App Link）
+  function tryOpenApp() {
+    // 如果已显示 fallback，不再尝试
+    if (fallbackShown) return;
+
+    window.location.href = 'https://zhuiai.club/open';
+  }
+
+  // 显示备用 UI（App 未安装或打开失败）
+  function showFallback() {
+    if (fallbackShown) return;
+    fallbackShown = true;
+
+    clearTimeout(appLinkTimeout);
+    document.getElementById('loading-card').style.display = 'none';
+    var fallback = document.getElementById('fallback-card');
+    fallback.classList.add('show');
+  }
+
+  // 页面加载完成后尝试打开 App
+  window.addEventListener('load', function() {
+    // 首次尝试
+    tryOpenApp();
+
+    // 800ms 后如果 App 没有被拉起，显示备用 UI
+    appLinkTimeout = setTimeout(function() {
+      // 检查是否页面仍然可见（如果 App 被拉起，页面会不可见）
+      if (document.visibilityState === 'visible') {
+        showFallback();
+      }
+    }, 800);
+  });
+
+  // 如果页面从隐藏状态恢复（比如用户从 App 返回），显示 fallback
+  document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'visible' && !fallbackShown) {
+      // 用户返回了浏览器但还没显示 fallback，说明 App 没有成功拉起
+      showFallback();
+    }
+  });
+})();
+</script>
+</body>
+</html>

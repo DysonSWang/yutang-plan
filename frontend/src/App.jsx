@@ -40,6 +40,7 @@ const AdminLogs = lazy(() => import('./pages/admin/Logs'));
 const ActivityBoard = lazy(() => import('./pages/admin/ActivityBoard'));
 const ChapterManagement = lazy(() => import('./pages/admin/ChapterManagement'));
 const ChapterEditor = lazy(() => import('./pages/admin/ChapterEditor'));
+const ContentImport = lazy(() => import('./pages/admin/ContentImport'));
 
 function PageLoader() {
   return (
@@ -91,6 +92,50 @@ function OnboardingRoute() {
 function AppRoutes() {
   const { user, loading } = useAuth();
   const location = useLocation();
+  const toast = useToast();
+
+  // ─── 监听 App Link 唤起事件 ───
+  useEffect(() => {
+    function handleDeepLink(e) {
+      window.__DEEP_LINK_URL__ = e.detail;
+    }
+
+    window.addEventListener('deep-link', handleDeepLink);
+
+    return () => {
+      window.removeEventListener('deep-link', handleDeepLink);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!window.__DEEP_LINK_URL__) return;
+
+    // 解析 URL 参数
+    try {
+      const url = new URL(window.__DEEP_LINK_URL__);
+      const from = url.searchParams.get('from');
+      const v = url.searchParams.get('v');
+
+      if (from === 'upgrade' && v) {
+        // App 被升级流程唤起，显示升级成功 toast
+        setTimeout(() => {
+          toast({
+            title: '已是最新版本',
+            description: `追AI ${v} 已准备就绪，开始聊天吧`,
+            status: 'success',
+            duration: 4000,
+            isClosable: true,
+            position: 'top',
+          });
+        }, 800);
+      }
+    } catch (e) {
+      // URL 解析失败，忽略
+    }
+
+    // 清除标记
+    window.__DEEP_LINK_URL__ = null;
+  }, [toast]);
 
   // 认证加载完成后隐藏启动屏，避免 splash→黑屏→内容的闪烁
   useEffect(() => {
@@ -167,6 +212,7 @@ function AppRoutes() {
             <Route path="chapters/new" element={<ChapterEditor />} />
             <Route path="chapters/:chapterId/edit" element={<ChapterEditor />} />
             <Route path="chapters" element={<ChapterManagement />} />
+            <Route path="content-import" element={<ContentImport />} />
           </Route>
         </Routes>
         </Suspense>

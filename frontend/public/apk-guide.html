@@ -336,6 +336,143 @@
     color: #81c784;
   }
 
+  /* 安装后回流引导浮层 */
+  .return-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: rgba(8,8,16,0.88);
+    backdrop-filter: blur(6px);
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .return-overlay.active { display: flex; }
+
+  .return-modal {
+    background: var(--surface);
+    border: 1px solid rgba(76,175,80,0.4);
+    border-radius: 28px;
+    padding: 44px 36px;
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.6), 0 0 60px rgba(76,175,80,0.15);
+    position: relative;
+    animation: popIn 0.3s ease;
+  }
+
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .return-icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(145deg, rgba(76,175,80,0.15), rgba(76,175,80,0.05));
+    border: 2px solid rgba(76,175,80,0.4);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 28px;
+    font-size: 40px;
+  }
+
+  .return-title {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 26px;
+    font-weight: 900;
+    color: var(--text);
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+  }
+
+  .return-desc {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin-bottom: 32px;
+    line-height: 1.6;
+  }
+
+  .return-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    background: linear-gradient(135deg, #4caf50, #2e7d32);
+    color: #fff;
+    font-size: 17px;
+    font-weight: 700;
+    padding: 16px 24px;
+    border-radius: 14px;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 20px rgba(76,175,80,0.25);
+    cursor: pointer;
+    border: none;
+  }
+
+  .return-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(76,175,80,0.35);
+  }
+
+  .return-fallback {
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+
+  .return-fallback:hover { color: var(--accent); }
+
+  .return-faq {
+    display: none;
+    background: var(--card);
+    border-radius: 18px;
+    padding: 24px 20px;
+    margin-top: 20px;
+    text-align: left;
+  }
+
+  .return-faq.show { display: block; }
+
+  .return-faq-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-mid);
+    margin-bottom: 16px;
+  }
+
+  .return-step {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    font-size: 14px;
+    color: var(--text-dim);
+  }
+
+  .return-step-icon {
+    width: 24px;
+    height: 24px;
+    background: rgba(76,175,80,0.1);
+    border: 1px solid rgba(76,175,80,0.3);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #4caf50;
+    flex-shrink: 0;
+  }
+
   /* iOS 提示 */
   .ios-tip {
     display: none;
@@ -351,6 +488,24 @@
   }
 
   .ios-tip.show { display: block; }
+
+  /* 安装后引导 */
+  .install-guide {
+    background: rgba(76,175,80,0.06);
+    border: 1px solid rgba(76,175,80,0.2);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-top: 14px;
+    font-size: 13px;
+    color: #81c784;
+    line-height: 1.6;
+    text-align: left;
+  }
+
+  .install-guide strong {
+    color: #a5d6a7;
+    font-weight: 600;
+  }
 
   @media (max-width: 480px) {
     .main-content { padding: 32px 20px 48px; }
@@ -375,7 +530,7 @@
   <p class="hero-sub">AI 智能恋爱助手 · 免登录 · 直链下载</p>
 
   <div class="dl-card">
-    <div class="dl-size">v1.1.0 · 约 4.2 MB · Android 5.0+</div>
+    <div class="dl-size" id="version-info">检测中...</div>
 
     <a class="dl-btn" href="/apk/app-release.apk" id="dl-btn">
       <span class="icon">⬇️</span>
@@ -388,6 +543,11 @@
 
     <div class="ios-tip" id="ios-tip">
       💡 iOS Safari 用户：长按上方按钮，选择「存储到文件」下载
+    </div>
+
+    <div class="install-guide" id="install-guide" style="display:none">
+      ✅ <strong>安装完成？</strong><br>
+      打开 App 后会自动跳转应用。如未跳转，手动从桌面图标打开即可。
     </div>
   </div>
 </div>
@@ -423,6 +583,39 @@
   </div>
 </div>
 
+<!-- 安装完成后回流引导浮层 -->
+<div class="return-overlay" id="return-overlay">
+  <div class="return-modal">
+    <div class="return-icon">✅</div>
+    <h2 class="return-title">安装完成！</h2>
+    <p class="return-desc">恭喜，新版追AI已安装到您的设备<br>点击下方按钮打开 App</p>
+
+    <button class="return-btn" id="return-btn">
+      🚀 打开追AI
+    </button>
+
+    <div class="return-fallback" id="return-faq-toggle">
+      遇到问题？点击查看解决方案 ▾
+    </div>
+
+    <div class="return-faq" id="return-faq">
+      <div class="return-faq-title">找不到 App？试试这 3 种方法：</div>
+      <div class="return-step">
+        <div class="return-step-icon">1</div>
+        <span>回到桌面，找到「追AI」图标，点击打开</span>
+      </div>
+      <div class="return-step">
+        <div class="return-step-icon">2</div>
+        <span>从应用商店搜索「追AI」，找到后点击打开</span>
+      </div>
+      <div class="return-step">
+        <div class="return-step-icon">3</div>
+        <span>重新访问 <a href="/open" style="color:var(--accent)">https://zhuiai.club/open</a>，点击「打开追AI」</span>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 (function() {
   var ua = navigator.userAgent.toLowerCase();
@@ -431,6 +624,32 @@
   var isIOS = /iphone|ipad|ipod/.test(ua);
 
   var $ = function(id) { return document.getElementById(id); };
+
+  // ─── 动态加载版本信息 ───
+  var latestVersion = '';
+  var downloadUrl = 'https://zhuiai.club/apk/app-release.apk';
+  var apkSize = '约 4.2 MB';
+
+  fetch('/api/version/check')
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (data.data && data.data.latestVersion) {
+        latestVersion = data.data.latestVersion;
+        downloadUrl = data.data.downloadUrl || downloadUrl;
+        apkSize = data.data.apkSize || apkSize;
+        $('version-info').textContent = 'v' + latestVersion + ' · ' + apkSize + ' · Android 5.0+';
+        $('dl-btn').href = downloadUrl;
+      } else {
+        $('version-info').textContent = 'v1.2.4 · ' + apkSize + ' · Android 5.0+';
+      }
+    })
+    .catch(function() {
+      $('version-info').textContent = 'v1.2.4 · ' + apkSize + ' · Android 5.0+';
+    });
+
+  // ─── 标记：下载已开始（用于检测用户是否从安装界面返回）───
+  var downloadStartedKey = 'zhuiai_apk_download_started';
+  var downloadStartedTime = sessionStorage.getItem(downloadStartedKey);
 
   // ─── 微信：显示引导浮层 ───
   if (isWechat) {
@@ -459,9 +678,62 @@
   iframe.src = '/apk/app-release.apk';
   document.body.appendChild(iframe);
 
+  // 标记下载开始时间
+  sessionStorage.setItem(downloadStartedKey, Date.now().toString());
+
   if (isIOS && isSafari) {
     $('ios-tip').classList.add('show');
   }
+
+  // ─── 安装完成后回流引导 ───
+  var returnOverlay = $('return-overlay');
+  var returnBtn = $('return-btn');
+  var returnFaqToggle = $('return-faq-toggle');
+  var returnFaq = $('return-faq');
+
+  // 从页面读取最新版本号（用于 App Link）
+  var latestVersion = document.querySelector('#version-info').textContent.match(/v([\d.]+)/) ? document.querySelector('#version-info').textContent.match(/v([\d.]+)/)[1] : '';
+
+  // 检测用户从后台返回（从安装界面返回浏览器）
+  function checkReturnFromInstall() {
+    if (!downloadStartedTime) return;
+
+    // 如果用户离开页面超过 5 秒且现在回来了，显示引导
+    var elapsed = Date.now() - parseInt(downloadStartedTime, 10);
+    if (elapsed > 5000) {
+      showReturnGuide();
+    }
+  }
+
+  function showReturnGuide() {
+    returnOverlay.classList.add('active');
+
+    // 点击「打开 App」按钮 - 带上版本参数
+    returnBtn.addEventListener('click', function() {
+      // 尝试通过 App Link 打开 App，带上升级标识
+      var appLinkUrl = 'https://zhuiai.club/open';
+      if (latestVersion) {
+        appLinkUrl += '?from=upgrade&v=' + encodeURIComponent(latestVersion);
+      }
+      window.location.href = appLinkUrl;
+    });
+  }
+
+  // FAQ 折叠展开
+  returnFaqToggle.addEventListener('click', function() {
+    returnFaq.classList.toggle('show');
+    this.textContent = returnFaq.classList.contains('show')
+      ? '收起解决方案 ▲'
+      : '遇到问题？点击查看解决方案 ▾';
+  });
+
+  // 监听页面可见性变化（用户从安装界面返回浏览器）
+  document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'visible') {
+      // 用延迟确保安装界面已关闭
+      setTimeout(checkReturnFromInstall, 1000);
+    }
+  });
 
   // ─── 复制链接 ───
   var toast = $('toast');
@@ -498,6 +770,8 @@
     var that = this;
     setTimeout(function() {
       that.innerHTML = '<span class="icon">⏳</span> 正在下载...';
+      // 显示安装引导
+      $('install-guide').style.display = 'block';
     }, 80);
   });
 })();

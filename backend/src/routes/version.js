@@ -8,11 +8,12 @@ const router = express.Router();
 // 版本配置（每次发版时更新）
 // upgradeType: 'force' | 'suggest' | 'none'
 const VERSION_CONFIG = {
-  latestVersion: '1.2.4',
-  minVersion: '1.2.4',
+  latestVersion: '1.2.5',
+  minVersion: '1.2.5',
   downloadUrl: 'https://zhuiai.club/apk/app-release.apk',
-  updateDescription: '聊天功能优化',
-  buildNumber: 34
+  updateDescription: 'AI能力升级',
+  buildNumber: 35,
+  apkSize: '约 4.2 MB'
 };
 
 router.get('/check', (req, res) => {
@@ -71,7 +72,8 @@ router.get('/check', (req, res) => {
       minVersion: VERSION_CONFIG.minVersion,
       downloadUrl: VERSION_CONFIG.downloadUrl,
       updateDescription: VERSION_CONFIG.updateDescription,
-      buildNumber: VERSION_CONFIG.buildNumber
+      buildNumber: VERSION_CONFIG.buildNumber,
+      apkSize: VERSION_CONFIG.apkSize
     }
   });
 });

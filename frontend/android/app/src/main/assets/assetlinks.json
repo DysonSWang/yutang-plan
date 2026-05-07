@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.zhuiai.app",
+      "sha256_cert_fingerprints": [
+        "7F:62:B9:DE:C7:9D:87:6F:C0:BA:24:2D:99:05:84:B9:05:22:B0:71:9F:8F:47:64:66:64:C5:AA:69:F7:71:CA"
+      ]
+    }
+  }
+]
