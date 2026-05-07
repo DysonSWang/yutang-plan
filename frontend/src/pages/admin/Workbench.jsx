@@ -1137,11 +1137,17 @@ export default function AdminWorkbench() {
     return text
       .replace(/#{1,6}\s?/g, '')           // 去掉 # 标题
       .replace(/\*\*(.+?)\*\*/g, '$1')    // 去掉 **bold**
+      .replace(/(\w)\*\*(.+?)\*\*(\w)/g, '$1$2$3') // 修复 **粘连文字**边界
+      .replace(/\*\*(.+?)\*\*\*(.+?)\*\*/g, '$1$2') // 修复 ***嵌套bold***
       .replace(/\*(.+?)\*/g, '$1')        // 去掉 *italic*
       .replace(/`(.+?)`/g, '$1')          // 去掉 `code`
+      .replace(/`{3,}.*?`{3,}/gs, '')    // 去掉代码块
       .replace(/^[-*+]\s+/gm, '')          // 去掉列表前缀
       .replace(/^\d+\.\s+/gm, '')          // 去掉数字列表
       .replace(/^>\s?/gm, '')              // 去掉引用符号
+      .replace(/^---+$/gm, '')             // 去掉分隔线
+      .replace(/\[(.+?)\]\(.+?\)/g, '$1') // 去掉链接，保留文字
+      .replace(/!\[.*?\]/g, '')            // 去掉图片
       .replace(/\n{3,}/g, '\n\n');         // 压缩多余空行
   };
 
