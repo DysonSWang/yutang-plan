@@ -6,9 +6,8 @@ const isProduction = process.env.NODE_ENV === 'production'
 const isCapacitor = process.env.CAPACITOR_BUILD === 'true'
 
 export default defineConfig({
-  // 开发环境用 /（npm run dev 时直接访问 localhost:5181/）
-  // 生产环境用 /（部署在根路径，由 nginx 处理）
-  base: '/',
+  // 生产环境用 /app/（SPA 部署在子路径），开发环境用 /
+  base: process.env.NODE_ENV === 'production' ? '/app/' : '/',
   plugins: [
     react(),
     // PWA 在生产环境启用（已临时禁用以便调试构建问题）

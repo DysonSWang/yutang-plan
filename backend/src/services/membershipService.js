@@ -72,6 +72,20 @@ async function getMembershipStatus(userId) {
 }
 
 /**
+ * 检查用户是否有有效会员
+ */
+async function hasActiveMembership(userId) {
+  const membership = await prisma.membership.findFirst({
+    where: {
+      userId,
+      status: 'active',
+      endDate: { gte: new Date() }
+    }
+  });
+  return !!membership;
+}
+
+/**
  * 开通试用会员
  */
 async function activateTrial(userId) {
@@ -623,6 +637,7 @@ module.exports = {
   POINTS_PER_PURCHASE,
   // membership
   getMembershipStatus,
+  hasActiveMembership,
   purchaseMembership,
   activateTrial,
   checkTrialLimit,

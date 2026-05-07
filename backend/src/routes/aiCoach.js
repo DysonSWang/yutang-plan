@@ -671,6 +671,9 @@ router.post('/new-session', authMiddleware, async (req, res) => {
     if (!['admin', 'client'].includes(req.user.role)) {
       return res.status(403).json({ error: '无权限' });
     }
+    if (req.user.role === 'client') {
+      await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
+    }
 
     const { girlId } = req.body;
     const unifiedCoachId = 'unified';
@@ -817,6 +820,9 @@ router.post('/reply-suggestions', authMiddleware, async (req, res) => {
   try {
     if (!['admin', 'client'].includes(req.user.role)) {
       return res.status(403).json({ error: '无权限' });
+    }
+    if (req.user.role === 'client') {
+      await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
     }
 
     const { girlId, lastMessage, context, style, hiddenContext } = req.body;
@@ -1046,6 +1052,9 @@ router.post('/optimize-reply', authMiddleware, async (req, res) => {
   try {
     if (!['admin', 'client'].includes(req.user.role)) {
       return res.status(403).json({ error: '无权限' });
+    }
+    if (req.user.role === 'client') {
+      await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
     }
 
     const { originalReply, girlId, goal, hiddenContext } = req.body;
@@ -1764,6 +1773,9 @@ router.post('/moment', authMiddleware, async (req, res) => {
     if (!['admin', 'client'].includes(req.user.role)) {
       return res.status(403).json({ error: '无权限' });
     }
+    if (req.user.role === 'client') {
+      await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
+    }
 
     const { girlId, momentText, momentImage, stream = true } = req.body;
 
@@ -2076,6 +2088,9 @@ router.post('/feedback', authMiddleware, async (req, res) => {
     if (!['admin', 'client'].includes(req.user.role)) {
       return res.status(403).json({ error: '无权限' });
     }
+    if (req.user.role === 'client') {
+      await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
+    }
 
     const { memoryId, type, reason, routedType, coachesUsed, coachId, questionType } = req.body;
 
@@ -2147,6 +2162,9 @@ router.get('/coach-profile', authMiddleware, async (req, res) => {
     if (!['admin', 'client'].includes(req.user.role)) {
       return res.status(403).json({ error: '无权限' });
     }
+    if (req.user.role === 'client') {
+      await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
+    }
 
     const summary = await getProfileSummary(req.user.id);
     const preferences = await getClientCoachPreferences(req.user.id);
@@ -2178,6 +2196,9 @@ router.get('/history', authMiddleware, async (req, res) => {
   try {
     if (!['admin', 'client'].includes(req.user.role)) {
       return res.status(403).json({ error: '无权限' });
+    }
+    if (req.user.role === 'client') {
+      await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
     }
 
     const { girlId, activeOnly } = req.query;

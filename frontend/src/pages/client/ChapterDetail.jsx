@@ -1,9 +1,10 @@
-import { Box, Text, VStack, HStack, Button, Badge, Spinner, Center, IconButton, useToast } from '@chakra-ui/react';
+import { Box, Text, VStack, HStack, Button, Badge, Spinner, Center, IconButton, useToast, Link } from '@chakra-ui/react';
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { membership as membershipApi } from '../../utils/api';
 import useKeepAliveData from '../../hooks/useKeepAliveData';
 import { ArrowLeftIcon, CheckIcon, BookIcon } from '../../components/Icons';
+import { CrownIcon } from '../../components/Icons';
 
 // 解析 Markdown 粗体 **text**
 function parseBold(text) {
@@ -68,6 +69,15 @@ export default function ChapterDetail() {
       updateProgress('in_progress');
     }
   }, [chapter, progress]);
+
+  const [memberStatus, setMemberStatus] = useState(null);
+
+  // 获取会员状态
+  useEffect(() => {
+    membershipApi.status().then(res => {
+      if (res.success) setMemberStatus(res);
+    }).catch(() => {});
+  }, []);
 
   const { isInitialLoad } = useKeepAliveData(async () => {
     const [chRes, progRes, perRes] = await Promise.all([
@@ -384,6 +394,34 @@ export default function ChapterDetail() {
 
                 return elements;
               })()}
+
+              {/* 非会员解锁提示 */}
+              {!memberStatus?.membership && (
+                <Box
+                  mt={8}
+                  p={6}
+                  bg="rgba(212,168,83,0.1)"
+                  border="1px solid"
+                  borderColor="gold.600"
+                  borderRadius="xl"
+                  textAlign="center"
+                >
+                  <Icon as={CrownIcon} w={8} h={8} color="gold.400" mb={3} />
+                  <Text color="gold.300" fontWeight="bold" fontSize="lg" mb={2}>
+                    开通会员解锁完整内容
+                  </Text>
+                  <Text color="rgba(245,240,232,0.6)" fontSize="sm" mb={4}>
+                    完整章节内容仅对会员开放
+                  </Text>
+                  <Button
+                    colorScheme="gold"
+                    size="md"
+                    onClick={() => navigate('/profile')}
+                  >
+                    立即开通会员
+                  </Button>
+                </Box>
+              )}
             </Box>
           </Box>
         ) : (

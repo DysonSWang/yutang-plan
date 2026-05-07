@@ -564,7 +564,19 @@ router.get('/learning/:chapterId', authMiddleware, async (req, res) => {
         },
       }).catch(() => {});
 
-      return res.json({ success: true, chapter });
+      // 检查会员状态，非会员只返回前300字预览
+      const isMember = await membershipService.hasActiveMembership(req.user.id);
+      if (!isMember && chapter.content) {
+        const previewContent = chapter.content.slice(0, 300) + '\n\n...（完整内容需开通会员）';
+        return res.json({
+          success: true,
+          chapter: { ...chapter, content: previewContent },
+          isPreview: true,
+          isMember: false
+        });
+      }
+
+      return res.json({ success: true, chapter, isPreview: false, isMember: true });
     }
 
     // 个性化版本
