@@ -93,7 +93,7 @@ ${buildClientProfileSection(clientProfile)}
 ${buildGirlProfileSection(girlProfile)}
 ${learningsSection}
 ${supplementaryContext ? `\n【补充上下文】\n${supplementaryContext}` : ''}
-${context.wikiContext ? `\n${context.wikiContext}` : ''}
+${context.wikiContext ? `\n【知识库素材】（仅供参考，不要直接复制）\n${context.wikiContext}\n\n（以上是知识库中的实战素材，包括话术示例、案例参考、场景细节等。请用你自己的语言和逻辑组织回答，不要用知识库的内容作为回答框架。回答框架请使用【恋爱操作系统】的阶段模型。）` : ''}
 
 【历史对话】
 ${historySection}
@@ -106,6 +106,7 @@ ${question}
 - 诊断问题：分析根因，为什么会出现这个情况，结合女生心理和两性关系规律讲清楚
 - 给出方案：具体可执行的建议，每一步都说清楚怎么做、为什么这样做，至少给出2-3步
 - 预判结果：每个建议后面附上可能的反应和应对方式
+- **重要**：使用【恋爱操作系统】的阶段框架（Phase 0/1/2/3/4/5）来组织回答结构，而不是自由发挥。知识库中的素材（话术、案例、场景细节）可以填充到框架中使用，但回答的整体框架必须遵循恋爱OS的阶段模型
 - 如果信息不够，说清楚还缺什么，但不要因为缺信息就不分析——基于现有信息给出最可能的判断
 - 可以使用 markdown 格式增强可读性，但必须严格遵守以下 markdown 语法规范：
   - 加粗：**关键词**（两星紧贴文字，正确闭合，仅加粗关键词而非整段）

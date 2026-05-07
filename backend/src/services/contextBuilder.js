@@ -344,7 +344,7 @@ async function buildAICoachContext(clientId, girlId, userMessage, opts = {}) {
 
   // ---- Wiki 知识库注入 ----
   let wikiContext = '';
-  if (girlId && userMessage) {
+  if (userMessage) {
     try {
       const wikiRag = getWikiRagInstance();
       await wikiRag.ready;
@@ -357,9 +357,16 @@ async function buildAICoachContext(clientId, girlId, userMessage, opts = {}) {
       });
 
       if (wikiResults.concepts.length > 0 || wikiResults.entities.length > 0) {
-        const wikiContextText = formatWikiContext(wikiResults);
+        // 限制 Wiki 内容数量，避免干扰 AI 判断
+        const limitedResults = {
+          ...wikiResults,
+          concepts: wikiResults.concepts.slice(0, 3),  // 最多 3 个 concepts
+          entities: wikiResults.entities.slice(0, 2),  // 最多 2 个 entities
+          summaries: wikiResults.summaries.slice(0, 5),  // 最多 5 个 summaries
+        };
+        const wikiContextText = formatWikiContext(limitedResults);
         const wikiTokens = estimateTokens(wikiContextText);
-        const MAX_WIKI_TOKENS = 30000;
+        const MAX_WIKI_TOKENS = 10000; // 限制在 10K，避免过长干扰
 
         wikiContext = wikiTokens > MAX_WIKI_TOKENS
           ? wikiRag.truncateToTokenBudget(wikiContextText, MAX_WIKI_TOKENS)

@@ -61,9 +61,9 @@ const { getCache, setCache, getOverviewCache, setOverviewCache } = require('../s
 const logger = require('../utils/logger');
 
 // ---- Token Budget Config ----
-const AI_RESPONSE_RESERVE = 1200; // tokens reserved for AI response
+const AI_RESPONSE_RESERVE = 2000; // tokens reserved for AI response (提升以支持更长输出)
 const SYSTEM_PROMPT_BASE = 800;  // rough overhead for coach persona + formatting
-const MAX_PROMPT_TOKENS = 28000; // leave headroom below model context limit
+const MAX_PROMPT_TOKENS = 100000; // 充分利用 DeepSeek 128K 上下文
 // streamRetry: 指数退避 (ms)
 const RETRY_DELAYS = [100, 300, 900];
 const MAX_RETRIES = 3;
@@ -464,13 +464,25 @@ router.post('/situation', authMiddleware, async (req, res) => {
     });
 
     // 将路由元数据传入 contextBuilder（用于 Wiki 检索）
-    const context = await buildAICoachContext(req.user.id, girlId, situation, {
+    const updatedContext = await buildAICoachContext(req.user.id, girlId, situation, {
       maxContextChars: contextBudget,
       turnCount,
       compactionCount,
       clientProfile,
       routingMeta
     });
+    // 合并 routingMeta 到 context
+    Object.assign(context, updatedContext);
+
+    // 构建 basePrompt
+    const basePrompt = await buildMasterPrompt(situation, context, {
+      girlInfo: context.girlInfo,
+      conversationHistory: history,
+      turnCount,
+      clientProfile,
+      clientId: req.user.id
+    });
+
     // M007 S06: 追加人格适配区块
     const personaSection = await buildFullPersona({ clientProfile, clientId: req.user.id, girlId });
     const systemPrompt = basePrompt + buildPersonaSection(personaSection);

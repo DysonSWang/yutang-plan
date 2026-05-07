@@ -35,6 +35,7 @@ const { getOrCreateSession, getConversationHistory, addMessage } = require('../s
 const { streamGuardrails, createChunkDeduplicator, stripMarkdown } = require('../services/guardrails');
 const { buildDynamicPersona, buildPersonaSection } = require('../services/coachPersona');
 const { addStageContext } = require('../services/stageGuard');
+const { buildAICoachContext } = require('../services/contextBuilder');
 
 // Auth middleware
 const authMiddleware = async (req, res, next) => {
@@ -145,9 +146,25 @@ async function processStream(response, opts) {
 async function handleSituation(input, ctx, res) {
   const aiConfig = getAIConfig();
 
-  // 构建 system prompt
-  const basePrompt = await buildMasterPrompt(input, ctx.toPromptContext(), {
-    girlInfo: ctx.girlProfile,
+  // 构建上下文（包含 Wiki 知识注入）
+  const context = await buildAICoachContext(
+    ctx.userId,
+    ctx.girlId,
+    input,
+    {
+      maxContextChars: 5000,
+      turnCount: ctx.turnCount,
+      compactionCount: ctx.compactionCount,
+      clientProfile: ctx.clientProfile,
+      routingMeta: ctx.eventLog.length > 0
+        ? { routedType: ctx.currentRouteType, coachesUsed: [] }
+        : { routedType: 'situation', coachesUsed: [] }
+    }
+  );
+
+  // 构建 system prompt（注入 wikiContext）
+  const basePrompt = await buildMasterPrompt(input, context, {
+    girlInfo: context.girlInfo,
     conversationHistory: ctx.conversationHistory,
     turnCount: ctx.turnCount,
     clientProfile: ctx.clientProfile,
@@ -188,12 +205,17 @@ async function handleSituation(input, ctx, res) {
   const deduplicator = createChunkDeduplicator();
   let fullResponse = '';
 
+  // 调试：打印 Wiki 上下文长度
+  if (context.wikiContext) {
+    console.log(`[handleSituation] Wiki上下文: ${context.wikiContext.length} 字符`);
+  }
+
   await streamAI(
     aiConfig,
     {
       messages: [{ role: 'user', content: systemPrompt }],
       temperature: 0.7,
-      max_tokens: 500,
+      max_tokens: 15000,  // 与 aiCoach.js 保持一致，充分利用 100K prompt budget
       stream: true
     },
     {

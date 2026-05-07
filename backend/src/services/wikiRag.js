@@ -97,10 +97,8 @@ class WikiRag {
         if (dirName !== title) byTitle[dirName] = { path: fullPath, fm: parsed.data, type: 'concept' };
         if (parsed.data.synonyms) {
           synonyms[title] = Array.isArray(parsed.data.synonyms) ? parsed.data.synonyms : [parsed.data.synonyms];
-          // synonym 也建索引
-          for (const syn of synonyms[title]) {
-            byTitle[syn] = { path: fullPath, fm: parsed.data, type: 'concept' };
-          }
+          // NOTE: synonyms are used only in fallbackQueryMatch(), NOT added to byTitle
+          // Adding synonyms to byTitle caused byTitle['搭讪'] to overwrite 搭讪 concept with 资源获取
         }
       } catch (e) { /* 跳过解析失败的文件 */ }
     }
@@ -160,6 +158,7 @@ class WikiRag {
     const results = { concepts: [], entities: [], summaries: [], cases: [] };
     const seenTitles = new Set();
 
+    // 1. 按问题类型加载 concepts
     const conceptNames = this.mapProblemTypeToConcepts(problemType);
     for (const name of conceptNames) {
       if (this._index.byTitle[name] && !seenTitles.has(name)) {
@@ -179,23 +178,62 @@ class WikiRag {
     }
 
     const coaches = girlContext?.coachesUsed || [];
-    for (const coach of coaches) {
-      const mentorData = this._index.byMentor[coach.name];
-      if (!mentorData) continue;
 
-      if (mentorData.entity && !seenTitles.has(mentorData.entity.title)) {
-        seenTitles.add(mentorData.entity.title);
-        results.entities.push(this.loadEntity(mentorData.entity));
+    // 2. 如果有 coachesUsed，按 coach 加载 entities/summaries/cases
+    if (coaches.length > 0) {
+      for (const coach of coaches) {
+        const mentorData = this._index.byMentor[coach.name];
+        if (!mentorData) continue;
+
+        if (mentorData.entity && !seenTitles.has(mentorData.entity.title)) {
+          seenTitles.add(mentorData.entity.title);
+          results.entities.push(this.loadEntity(mentorData.entity));
+        }
+
+        const summaries = this.findSummariesByMentorAndType(coach.name, problemType);
+        for (const s of summaries.slice(0, 5)) {
+          results.summaries.push(s);
+        }
       }
 
-      const summaries = this.findSummariesByMentorAndType(coach.name, problemType);
-      for (const s of summaries.slice(0, 5)) {
-        results.summaries.push(s);
+      const cases = this.findCasesByMentorAndType(coaches.map(c => c.name), problemType);
+      results.cases = cases.slice(0, 3);
+    } else {
+      // 3. 如果没有 coachesUsed，按问题类型加载 entities/summaries（通用方案）
+      const typeKeywords = this.getTypeKeywords(problemType);
+
+      // 加载相关 entities（按类型关键词 + tags 匹配）
+      for (const [title, entry] of Object.entries(this._index.byTitle)) {
+        if (entry.type === 'entity' && !seenTitles.has(title)) {
+          const fm = entry.fm || {};
+          // 匹配：tags、keywords、场景、problemType
+          const entityKeywords = [
+            ...(fm.tags || []),
+            ...(fm.keywords || []),
+            fm.场景,
+            fm.problemType
+          ].filter(Boolean);
+
+          if (typeKeywords.some(kw => entityKeywords.some(ek => ek.includes(kw) || kw.includes(ek)))) {
+            seenTitles.add(title);
+            results.entities.push(this.loadEntity(entry));
+            if (results.entities.length >= 5) break; // 限制数量
+          }
+        }
+      }
+
+      // 加载相关 summaries（按类型关键词匹配）
+      for (const [mentor, data] of Object.entries(this._index.byMentor)) {
+        if (data.summaries) {
+          const matched = data.summaries.filter(s =>
+            typeKeywords.some(kw => s.filename.includes(kw))
+          );
+          for (const s of matched.slice(0, 3)) {
+            results.summaries.push(s);
+          }
+        }
       }
     }
-
-    const cases = this.findCasesByMentorAndType(coaches.map(c => c.name), problemType);
-    results.cases = cases.slice(0, 3);
 
     for (const concept of results.concepts) {
       const related = concept.fm?.related?.concepts || [];
@@ -221,9 +259,9 @@ class WikiRag {
       let body = parsed.content;
 
       if (compress) {
-        body = this.extractKeyContent(body, 1500);
+        body = this.extractKeyContent(body, 8000);
       } else {
-        body = this.extractKeyContent(body, 3000);
+        body = this.extractKeyContent(body, 15000);
       }
 
       const result = {
@@ -250,7 +288,7 @@ class WikiRag {
       const result = {
         title: parsed.data.title || entry.title,
         fm: parsed.data,
-        body: this.extractKeyContent(parsed.content, 2500),
+        body: this.extractKeyContent(parsed.content, 12000),
         insights: this.extractKeyInsights(parsed.content, parsed.data)
       };
       this.contentCache.set(entry.path, result);
@@ -260,7 +298,7 @@ class WikiRag {
     }
   }
 
-  extractKeyContent(content, maxChars = 2000) {
+  extractKeyContent(content, maxChars = 5000) {
     const lines = content.split('\n');
     const keyLines = [];
     let currentChars = 0;
@@ -355,8 +393,17 @@ class WikiRag {
 
   _asyncSaveIndex() {
     const tempPath = this.indexCachePath + '.tmp';
-    fs.writeFile(tempPath, JSON.stringify(this._index), () => {
-      fs.rename(tempPath, this.indexCachePath, () => {});
+    const data = JSON.stringify(this._index);
+    fs.writeFile(tempPath, data, 'utf8', (err) => {
+      if (err) {
+        console.error('[WikiRag] Index write failed:', err.message);
+        return;
+      }
+      fs.rename(tempPath, this.indexCachePath, (renameErr) => {
+        if (renameErr) {
+          console.error('[WikiRag] Index rename failed:', renameErr.message);
+        }
+      });
     });
   }
 }
