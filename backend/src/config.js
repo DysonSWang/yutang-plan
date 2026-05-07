@@ -66,6 +66,15 @@ function getTextModelConfig() {
   return getAIConfig('flash');
 }
 
+/**
+ * 获取超时配置（毫秒）
+ * @param {'pro'|'flash'} mode
+ */
+function getTimeoutConfig(mode = 'pro') {
+  // flash 模式超时短一些，pro 模式可以更长
+  return mode === 'flash' ? 60000 : 120000;
+}
+
 module.exports = {
   JWT_SECRET,
   DEEPSEEK_API_KEY,
@@ -76,5 +85,6 @@ module.exports = {
   BASE_URL,
   getAIConfig,
   getTextModelConfig,
-  getVLModelConfig
+  getVLModelConfig,
+  getTimeoutConfig
 };

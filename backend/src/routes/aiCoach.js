@@ -67,6 +67,8 @@ const MAX_PROMPT_TOKENS = 100000; // 充分利用 DeepSeek 128K 上下文
 // streamRetry: 指数退避 (ms)
 const RETRY_DELAYS = [100, 300, 900];
 const MAX_RETRIES = 3;
+// 流式超时配置（毫秒）
+const STREAM_TIMEOUT = 180000; // 180 秒超时
 
 // ---- Internal Meta Sanitization ----
 // 过滤敏感路由信息，仅保留调试用的非敏感字段
@@ -170,6 +172,8 @@ function calcContextBudget(coachSystemPrompt, situation, historyText) {
  */
 async function callAIStream(aiConfig, params, opts = {}) {
   const { onChunk, onMeta, onDone, onError, onReasoning, deduplicator } = opts;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), STREAM_TIMEOUT);
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     if (attempt > 0) {
@@ -185,8 +189,11 @@ async function callAIStream(aiConfig, params, opts = {}) {
           'Authorization': `Bearer ${aiConfig.key}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ model: aiConfig.model, ...params })
+        body: JSON.stringify({ model: aiConfig.model, ...params }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -199,6 +206,10 @@ async function callAIStream(aiConfig, params, opts = {}) {
       await processStreamResponse(response, { deduplicator, onChunk, onReasoning, onDone, onError });
       return;
     } catch (err) {
+      if (err.name === 'AbortError') {
+        onError?.(`请求超时（${STREAM_TIMEOUT / 1000}秒）`);
+        return;
+      }
       logger.error(`[AICoach] 流式调用异常 (attempt ${attempt + 1}): ${err.message}`, { attempt, error: err.message });
       if (attempt === MAX_RETRIES) { onError?.('网络异常，请稍后重试'); return; }
     }
@@ -372,7 +383,7 @@ router.post('/situation', authMiddleware, async (req, res) => {
     }
 
     // 统一教练：无需选择教练ID，根据问题动态路由到多位大师
-    const { girlId, situation, stream = true } = req.body;
+    const { girlId, situation, stream = true, mode = 'pro' } = req.body;
 
     if (!situation) {
       return res.status(400).json({ error: '情况描述是必需的' });
@@ -492,7 +503,7 @@ router.post('/situation', authMiddleware, async (req, res) => {
     const estimatedTokens = Math.round(promptChars / 2.5); // 中英混合估算
     logger.info(`[AICoach] Prompt 大小: ${promptChars} chars ≈ ${estimatedTokens} tokens | 路由: ${routingMeta.routedType} | 教练数: ${routingMeta.coachCount} | 历史轮次: ${turnCount} | 剩余预算: ${contextBudget} chars`);
 
-    const aiConfig = getAIConfig('pro'); // 默认使用深度模式（deepseek-v4-pro + thinking）
+    const aiConfig = getAIConfig(mode); // 根据 mode 选择 deepseek-chat (flash) 或 deepseek-v4-pro (pro)
 
     // ---- 输入 Guardrail 检查（仅深度模式） ----
     let guardrailPassed = true;

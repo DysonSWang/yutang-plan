@@ -511,7 +511,8 @@ export default function AdminWorkbench() {
         body: JSON.stringify({
           situation,
           girlId: selectedGirl?.id,
-          stream: doStream
+          stream: doStream,
+          mode: deepMode ? 'pro' : 'flash'  // 深度模式用 pro，快速模式用 flash
         })
       });
 

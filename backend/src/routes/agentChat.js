@@ -52,10 +52,12 @@ const authMiddleware = async (req, res, next) => {
 // ---- 流式响应工具 ----
 
 /**
- * 通用流式 fetch（带重试）
+ * 通用流式 fetch（带重试和超时控制）
  */
+const DEFAULT_TIMEOUT = 120000; // 默认 120 秒超时
+
 async function streamAI(aiConfig, params, opts = {}) {
-  const { deduplicator, onChunk, onMeta, onDone, onError } = opts;
+  const { deduplicator, onChunk, onMeta, onDone, onError, timeout = DEFAULT_TIMEOUT } = opts;
   const RETRY_DELAYS = [100, 300, 900];
   const MAX_RETRIES = 3;
 
@@ -65,14 +67,20 @@ async function streamAI(aiConfig, params, opts = {}) {
     }
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+
       const response = await fetch(aiConfig.url, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${aiConfig.key}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ model: aiConfig.model, ...params })
+        body: JSON.stringify({ model: aiConfig.model, ...params }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         if (attempt === MAX_RETRIES) { onError?.(`AI服务请求失败 (${response.status})`); return; }
@@ -82,6 +90,10 @@ async function streamAI(aiConfig, params, opts = {}) {
       await processStream(response, { deduplicator, onChunk, onDone, onError });
       return;
     } catch (err) {
+      if (err.name === 'AbortError') {
+        onError?.(`请求超时（${timeout / 1000}秒）`);
+        return;
+      }
       if (attempt === MAX_RETRIES) { onError?.(`网络异常: ${err.message}`); return; }
     }
   }
@@ -144,7 +156,11 @@ async function processStream(response, opts) {
  * 情况咨询：分析当前情况，给出行动建议
  */
 async function handleSituation(input, ctx, res) {
-  const aiConfig = getAIConfig();
+  const mode = ctx.mode || 'pro';
+  const aiConfig = getAIConfig(mode);
+
+  // max_tokens 根据模式调整
+  const maxTokens = mode === 'flash' ? 20000 : 50000;
 
   // 构建上下文（包含 Wiki 知识注入）
   const context = await buildAICoachContext(
@@ -215,7 +231,7 @@ async function handleSituation(input, ctx, res) {
     {
       messages: [{ role: 'user', content: systemPrompt }],
       temperature: 0.7,
-      max_tokens: 50000,  // 与 aiCoach.js 保持一致，充分利用 100K prompt budget
+      max_tokens: maxTokens,
       stream: true
     },
     {
@@ -245,7 +261,7 @@ async function handleSituation(input, ctx, res) {
  * 聊天分析：分析聊天记录，识别意图和情绪
  */
 async function handleChatAnalysis(input, ctx, res) {
-  const aiConfig = getAIConfig();
+  const aiConfig = getAIConfig(ctx.mode || 'pro');
 
   // 从 input 中提取 chatHistory（格式: "##CHAT##\n<聊天内容>"）
   let chatHistory = '';
@@ -384,7 +400,7 @@ ${personaSection}
  * 回复建议 / 话术优化
  */
 async function handleReply(input, ctx, res, mode = 'suggest') {
-  const aiConfig = getAIConfig();
+  const aiConfig = getAIConfig(ctx.mode || 'flash');  // 回复建议默认 flash
 
   // 解析输入：是否有原始回复文本（话术优化模式）
   let originalReply = null;
@@ -664,20 +680,22 @@ router.post('/chat', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: '无权限' });
     }
 
-    const { message, girlId, chatHistory } = req.body;
+    const { message, girlId, chatHistory, mode } = req.body;
 
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
       return res.status(400).json({ error: 'message 是必需的' });
     }
 
     const userId = req.user.id;
-    const aiConfig = getAIConfig();
+    // 根据 mode 参数选择 AI 配置（默认 pro）
+    const aiConfig = getAIConfig(mode || 'pro');
 
     // ---- 1. 构建 UnifiedContext ----
     const ctx = await createUnifiedContext(userId, {
       girlId,
       clientId: userId,
       originalInput: message,
+      mode: mode || 'pro',  // 传递 mode 到 handlers
     });
 
     // 如果有女生，获取 memory session
