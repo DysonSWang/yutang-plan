@@ -734,9 +734,11 @@ router.post('/new-session', authMiddleware, async (req, res) => {
     });
 
     if (currentSession) {
-      // 生成摘要并结束会话
-      await endSession(currentSession.id);
-      logger.info(`[AICoach] 结束会话 ${currentSession.id}，开始新的对话上下文`, { sessionId: currentSession.id });
+      // 生成摘要并结束会话（异步，不阻塞主流程）
+      endSession(currentSession.id).catch(err => {
+        logger.error(`[AICoach] 异步结束会话失败: ${err.message}`, { error: err.message });
+      });
+      logger.info(`[AICoach] 已开始新对话，上一个会话 ${currentSession.id} 摘要异步生成中`);
     }
 
     res.json({ success: true, message: '已开始新对话' });
