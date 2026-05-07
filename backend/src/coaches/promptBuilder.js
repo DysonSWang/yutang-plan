@@ -93,6 +93,7 @@ ${buildClientProfileSection(clientProfile)}
 ${buildGirlProfileSection(girlProfile)}
 ${learningsSection}
 ${supplementaryContext ? `\n【补充上下文】\n${supplementaryContext}` : ''}
+${context.wikiContext ? `\n${context.wikiContext}` : ''}
 
 【历史对话】
 ${historySection}

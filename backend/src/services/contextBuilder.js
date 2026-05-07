@@ -4,6 +4,7 @@
  */
 
 const prisma = require('../prisma');
+const path = require('path');
 
 // ---- 新鲜度保护 ----
 
@@ -33,6 +34,64 @@ function getProfileFreshnessInfo(girlInfo) {
   }
 
   return { hasStaleField: warnings.length > 0, warnings };
+}
+
+// ---- WikiRag 单例 ----
+
+let _wikiRagInstance = null;
+
+function getWikiRagInstance() {
+  if (!_wikiRagInstance) {
+    const wikiPath = path.join(__dirname, '../../../../vault/wiki');
+    const WikiRag = require('./wikiRag');
+    _wikiRagInstance = new WikiRag(wikiPath);
+  }
+  return _wikiRagInstance;
+}
+
+function formatWikiContext(results) {
+  const parts = ['【知识库参考】'];
+
+  for (const concept of results.concepts) {
+    parts.push(`\n## 核心概念：${concept.title}`);
+    if (concept.insights?.length > 0) {
+      parts.push(`\n关键洞察：${concept.insights.join('；')}`);
+    }
+    parts.push(`\n${concept.body}`);
+  }
+
+  for (const entity of results.entities) {
+    parts.push(`\n## 导师方法论：${entity.title}`);
+    if (entity.insights?.length > 0) {
+      parts.push(`\n关键洞察：${entity.insights.join('；')}`);
+    }
+    parts.push(`\n${entity.body}`);
+  }
+
+  if (results.summaries.length > 0) {
+    parts.push('\n## 实战案例');
+    for (const summary of results.summaries) {
+      parts.push(`\n- 【${summary.filename}】`);
+    }
+  }
+
+  if (results.cases.length > 0) {
+    parts.push('\n## 案例库');
+    for (const c of results.cases) {
+      parts.push(`\n- 【${c.filename}】${c.title}`);
+    }
+  }
+
+  return parts.join('\n');
+}
+
+function estimateTokens(text) {
+  try {
+    const tokenizer = require('gpt-tokenizer');
+    return tokenizer.tokenize(text).length;
+  } catch (e) {
+    return Math.ceil(text.length / 2);
+  }
 }
 
 // ---- Relevance Filtering ----
@@ -283,6 +342,34 @@ async function buildAICoachContext(clientId, girlId, userMessage, opts = {}) {
   // 按优先级填充预算
   const contextInfo = sections.map(s => buildContextSection(s.label, s.content, maxContextChars / sections.length)).join('');
 
+  // ---- Wiki 知识库注入 ----
+  let wikiContext = '';
+  if (girlId && userMessage) {
+    try {
+      const wikiRag = getWikiRagInstance();
+      await wikiRag.ready;
+
+      // 从 contextBuilder 的调用方获取 routingMeta（通过 opts 传入）
+      const routingMeta = opts.routingMeta || {};
+      const wikiResults = wikiRag.retrieve(userMessage, routingMeta.routedType, {
+        coachesUsed: routingMeta.coachesUsed,
+        scene: girlInfo?.preferredScene
+      });
+
+      if (wikiResults.concepts.length > 0 || wikiResults.entities.length > 0) {
+        const wikiContextText = formatWikiContext(wikiResults);
+        const wikiTokens = estimateTokens(wikiContextText);
+        const MAX_WIKI_TOKENS = 30000;
+
+        wikiContext = wikiTokens > MAX_WIKI_TOKENS
+          ? wikiRag.truncateToTokenBudget(wikiContextText, MAX_WIKI_TOKENS)
+          : wikiContextText;
+      }
+    } catch (e) {
+      console.warn('[contextBuilder] WikiRag 加载失败:', e.message);
+    }
+  }
+
   return {
     client,
     clientProfile, // 客户画像，用于路由权重和语气调整
@@ -306,7 +393,9 @@ async function buildAICoachContext(clientId, girlId, userMessage, opts = {}) {
       maxContextChars,
       keywordCount: keywords.length,
       sectionCount: sections.length
-    }
+    },
+    // Wiki 知识上下文
+    wikiContext
   };
 }
 

@@ -463,15 +463,13 @@ router.post('/situation', authMiddleware, async (req, res) => {
       girlProfile
     });
 
-    // 使用 promptBuilder 构建统一教练 prompt（question已正确插入，传入客户画像和女生画像用于语气调整）
-    // 传入 clientId 以加载个性化教练权重（反馈闭环驱动）
-    const basePrompt = await buildMasterPrompt(situation, context, {
-      girlInfo: context.girlInfo,
-      conversationHistory: history,
+    // 将路由元数据传入 contextBuilder（用于 Wiki 检索）
+    const context = await buildAICoachContext(req.user.id, girlId, situation, {
+      maxContextChars: contextBudget,
       turnCount,
+      compactionCount,
       clientProfile,
-      girlProfile,
-      clientId: req.user.id
+      routingMeta
     });
     // M007 S06: 追加人格适配区块
     const personaSection = await buildFullPersona({ clientProfile, clientId: req.user.id, girlId });

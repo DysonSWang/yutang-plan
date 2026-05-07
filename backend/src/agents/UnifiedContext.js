@@ -24,7 +24,7 @@ const ROUTE_TYPES = {
 };
 
 // ---- Token 预算配置 ----
-const MAX_CONTEXT_TOKENS = 28000;
+const MAX_CONTEXT_TOKENS = 64000;
 const GUARDRAIL_RESERVE = 200;  // guardrail 输出预留
 const RESPONSE_RESERVE = 600;    // AI 响应预留
 const SYSTEM_PROMPT_BASE = 800;  // system prompt 开销
