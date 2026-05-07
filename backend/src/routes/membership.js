@@ -424,6 +424,15 @@ router.get('/learning/personalized-status', authMiddleware, async (req, res) => 
 // 触发全量批量生成
 router.post('/learning/generate-all', authMiddleware, async (req, res) => {
   try {
+    // 试用限制检查（仅限 client）
+    if (req.user.role === 'client') {
+      try {
+        await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
+      } catch (e) {
+        return res.status(403).json({ error: e.message });
+      }
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
       select: { ...personalizationEngine.USER_PROFILE_SELECT, personalizationEnabled: true },
@@ -476,6 +485,15 @@ router.get('/learning/generate-status/:batchId', authMiddleware, async (req, res
 // 画像更新后触发全量重新生成
 router.post('/learning/regenerate', authMiddleware, async (req, res) => {
   try {
+    // 试用限制检查（仅限 client）
+    if (req.user.role === 'client') {
+      try {
+        await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
+      } catch (e) {
+        return res.status(403).json({ error: e.message });
+      }
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
       select: { ...personalizationEngine.USER_PROFILE_SELECT, personalizationEnabled: true },
@@ -511,6 +529,15 @@ router.post('/learning/regenerate', authMiddleware, async (req, res) => {
 router.post('/learning/regenerate/:chapterId', authMiddleware, async (req, res) => {
   try {
     const { chapterId } = req.params;
+
+    // 试用限制检查（仅限 client，admin 不限制）
+    if (req.user.role === 'client') {
+      try {
+        await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
+      } catch (e) {
+        return res.status(403).json({ error: e.message });
+      }
+    }
 
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },

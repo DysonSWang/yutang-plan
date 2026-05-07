@@ -674,7 +674,11 @@ router.post('/new-session', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: '无权限' });
     }
     if (req.user.role === 'client') {
-      await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
+      try {
+        await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
+      } catch (e) {
+        return res.status(403).json({ error: e.message });
+      }
     }
 
     const { girlId } = req.body;
@@ -827,7 +831,11 @@ router.post('/reply-suggestions', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: '无权限' });
     }
     if (req.user.role === 'client') {
-      await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
+      try {
+        await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
+      } catch (e) {
+        return res.status(403).json({ error: e.message });
+      }
     }
 
     const { girlId, lastMessage, context, style, hiddenContext } = req.body;
@@ -1062,7 +1070,11 @@ router.post('/optimize-reply', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: '无权限' });
     }
     if (req.user.role === 'client') {
-      await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
+      try {
+        await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
+      } catch (e) {
+        return res.status(403).json({ error: e.message });
+      }
     }
 
     const { originalReply, girlId, goal, hiddenContext } = req.body;
@@ -1785,7 +1797,11 @@ router.post('/moment', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: '无权限' });
     }
     if (req.user.role === 'client') {
-      await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
+      try {
+        await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
+      } catch (e) {
+        return res.status(403).json({ error: e.message });
+      }
     }
 
     const { girlId, momentText, momentImage, stream = true } = req.body;
@@ -2103,7 +2119,11 @@ router.post('/feedback', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: '无权限' });
     }
     if (req.user.role === 'client') {
-      await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
+      try {
+        await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
+      } catch (e) {
+        return res.status(403).json({ error: e.message });
+      }
     }
 
     const { memoryId, type, reason, routedType, coachesUsed, coachId, questionType } = req.body;
@@ -2177,7 +2197,11 @@ router.get('/coach-profile', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: '无权限' });
     }
     if (req.user.role === 'client') {
-      await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
+      try {
+        await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
+      } catch (e) {
+        return res.status(403).json({ error: e.message });
+      }
     }
 
     const summary = await getProfileSummary(req.user.id);
@@ -2215,7 +2239,11 @@ router.get('/history', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: '无权限' });
     }
     if (req.user.role === 'client') {
-      await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
+      try {
+        await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
+      } catch (e) {
+        return res.status(403).json({ error: e.message });
+      }
     }
 
     const { girlId, activeOnly } = req.query;
