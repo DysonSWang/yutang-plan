@@ -713,6 +713,9 @@ router.post('/new-session', authMiddleware, async (req, res) => {
 
     res.json({ success: true, message: '已开始新对话' });
   } catch (error) {
+    if (error.message && error.message.includes('无会员权限')) {
+      return res.status(403).json({ error: error.message });
+    }
     logger.error(`[AICoach] 新建对话失败: ${error.message}`, { error: error.message });
     res.status(500).json({ error: '新建对话失败' });
   }
@@ -1039,6 +1042,9 @@ ${styleOptions}
       ).match(/\[⚠️.*?\]/g) || [] : []
     });
   } catch (error) {
+    if (error.message && error.message.includes('无会员权限')) {
+      return res.status(403).json({ error: error.message });
+    }
     logger.error(`[AICoach] 回复建议失败: ${error.message}`, { error: error.message });
     res.status(500).json({ error: '生成失败' });
   }
@@ -1269,6 +1275,9 @@ ${goal ? `用户指定了优化方向「${goal}」，请按该方向给出3个�
       ).match(/\[⚠️.*?\]/g) || [] : []
     });
   } catch (error) {
+    if (error.message && error.message.includes('无会员权限')) {
+      return res.status(403).json({ error: error.message });
+    }
     logger.error(`[AICoach] 话术优化失败: ${error.message}`, { error: error.message });
     res.status(500).json({ error: '优化失败' });
   }
@@ -2070,6 +2079,9 @@ ${stageContext}
       }
     }
   } catch (error) {
+    if (error.message && error.message.includes('无会员权限')) {
+      return res.status(403).json({ error: error.message });
+    }
     logger.error(`[AICoach] 朋友圈分析失败: ${error.message}`, { error: error.message });
     res.status(500).json({ error: '分析失败' });
   }
@@ -2183,6 +2195,9 @@ router.get('/coach-profile', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
+    if (error.message && error.message.includes('无会员权限')) {
+      return res.status(403).json({ error: error.message });
+    }
     logger.error(`[AICoach] 获取教练偏好失败: ${error.message}`, { error: error.message });
     res.status(500).json({ error: '获取教练偏好失败' });
   }
@@ -2238,6 +2253,9 @@ router.get('/history', authMiddleware, async (req, res) => {
 
     res.json({ success: true, sessions: sessionsWithMessages });
   } catch (error) {
+    if (error.message && error.message.includes('无会员权限')) {
+      return res.status(403).json({ error: error.message });
+    }
     logger.error(`[AICoach] 获取聊天历史失败: ${error.message}`, { error: error.message });
     res.status(500).json({ error: '获取聊天历史失败' });
   }
