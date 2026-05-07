@@ -40,12 +40,28 @@
   var appLinkTimeout = null;
   var fallbackShown = false;
 
-  // 尝试打开 App（通过 App Link）
+  // 从 URL 解析参数
+  var params = new URLSearchParams(window.location.search);
+  var fromParam = params.get('from');
+  var vParam = params.get('v');
+
+  // 构造 Android App Link intent URL
+  function buildIntentUrl() {
+    var intentUrl = 'intent://open';
+    var hasParams = fromParam && vParam;
+    if (hasParams) {
+      intentUrl += '?from=' + encodeURIComponent(fromParam) + '&v=' + encodeURIComponent(vParam);
+    }
+    intentUrl += '#Intent;scheme=https;package=com.zhuiai.app;end';
+    return intentUrl;
+  }
+
+  // 尝试打开 App（通过 App Link intent）
   function tryOpenApp() {
-    // 如果已显示 fallback，不再尝试
     if (fallbackShown) return;
 
-    window.location.href = 'https://zhuiai.club/open';
+    var intentUrl = buildIntentUrl();
+    window.location.href = intentUrl;
   }
 
   // 显示备用 UI（App 未安装或打开失败）
@@ -61,12 +77,10 @@
 
   // 页面加载完成后尝试打开 App
   window.addEventListener('load', function() {
-    // 首次尝试
     tryOpenApp();
 
     // 800ms 后如果 App 没有被拉起，显示备用 UI
     appLinkTimeout = setTimeout(function() {
-      // 检查是否页面仍然可见（如果 App 被拉起，页面会不可见）
       if (document.visibilityState === 'visible') {
         showFallback();
       }
@@ -76,7 +90,6 @@
   // 如果页面从隐藏状态恢复（比如用户从 App 返回），显示 fallback
   document.addEventListener('visibilitychange', function() {
     if (document.visibilityState === 'visible' && !fallbackShown) {
-      // 用户返回了浏览器但还没显示 fallback，说明 App 没有成功拉起
       showFallback();
     }
   });

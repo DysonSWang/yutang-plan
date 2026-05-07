@@ -656,10 +656,9 @@
     $('guide-overlay').classList.add('active');
 
     $('guide-copy-btn').addEventListener('click', function() {
-      var url = 'https://zhuiai.club/apk/app-release.apk';
       var btn = this;
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(url).then(function() {
+        navigator.clipboard.writeText(downloadUrl).then(function() {
           btn.textContent = '✅ 已复制！打开浏览器粘贴访问';
           btn.classList.add('copied');
         }).catch(function() {
@@ -762,7 +761,7 @@
   }
 
   $('copy-btn').addEventListener('click', function() {
-    copyUrl('https://zhuiai.club/apk/app-release.apk');
+    copyUrl(downloadUrl);
   });
 
   // 下载按钮点击反馈
