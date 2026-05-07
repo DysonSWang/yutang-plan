@@ -32,7 +32,7 @@ export async function checkVersion() {
     // 降级使用硬编码值
   }
 
-  const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3005';
+  const apiBase = '';
   let res;
   try {
     res = await fetch(`${apiBase}/api/version/check?version=${appVersion}&build=${appBuild}`);

@@ -8,6 +8,7 @@ import { useSocket } from '../../contexts/SocketContext';
 import ProfileSuggestModal from './ProfileSuggestModal';
 import FlashImageViewer from '../../components/FlashImageViewer';
 import EmojiPanel from '../../components/EmojiPanel';
+import AudioPlayer from '../../components/AudioPlayer';
 
 export default function AdminChat() {
   const location = useLocation();
@@ -48,15 +49,12 @@ export default function AdminChat() {
   const mediaRecorderRef = useRef();
   const audioChunksRef = useRef([]);
   const recordTimerRef = useRef();
-  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3005';
+  const API_BASE = '';
 
   const getMediaUrl = (msg) => {
-    if (msg.mediaUrl?.startsWith('/encrypted/')) {
-      const token = api.getToken();
-      return `${API_BASE}/api/chat/media/${msg.id}?token=${token}`;
-    }
-    if (msg.mediaUrl?.startsWith('http')) return msg.mediaUrl;
-    return `${API_BASE}${msg.mediaUrl}`;
+    // 统一通过媒体端点获取，确保后端处理 Range 请求和权限验证
+    const token = api.getToken();
+    return `${API_BASE}/api/chat/media/${msg.id}?token=${token}`;
   };
 
   // 生成视频缩略图
@@ -236,21 +234,35 @@ export default function AdminChat() {
 
   // 阅后即焚蒙层点击查看
   const startBurnTimer = useCallback((msg) => {
-    if (!msg.burnAfterSeconds || msg.burnedAt) return;
-    if (burnTimersRef.current[msg.id]) return;
+    console.log('[DEBUG] startBurnTimer called', { id: msg.id, burnAfterSeconds: msg.burnAfterSeconds, burnedAt: msg.burnedAt, isBurnAfterRead: msg.isBurnAfterRead, burnTrigger: msg.burnTrigger, type: msg.type });
+    if (!msg.burnAfterSeconds || msg.burnedAt) {
+      console.log('[DEBUG] startBurnTimer early return - missing burnAfterSeconds or already burned', { id: msg.id });
+      return;
+    }
+    if (burnTimersRef.current[msg.id]) {
+      console.log('[DEBUG] startBurnTimer early return - timer already exists', { id: msg.id });
+      return;
+    }
 
     const elapsed = (Date.now() - new Date(msg.createdAt).getTime()) / 1000;
     let remaining = Math.ceil(msg.burnAfterSeconds - elapsed);
+    console.log('[DEBUG] startBurnTimer tick values', { elapsed, remaining });
 
     if (remaining <= 0) {
+      console.log('[DEBUG] startBurnTimer immediate burn', { id: msg.id });
       handleBurnMessage(msg);
       return;
     }
 
-    setCountdowns(prev => ({ ...prev, [msg.id]: remaining }));
+    console.log('[DEBUG] startBurnTimer setting countdown', { id: msg.id, remaining });
+    setCountdowns(prev => {
+      console.log('[DEBUG] setCountdowns called with', { id: msg.id, remaining });
+      return { ...prev, [msg.id]: remaining };
+    });
 
     const tick = () => {
       remaining -= 1;
+      console.log('[DEBUG] tick', { id: msg.id, remaining });
       if (remaining <= 0) {
         delete burnTimersRef.current[msg.id];
         setCountdowns(prev => {
@@ -258,6 +270,7 @@ export default function AdminChat() {
           delete next[msg.id];
           return next;
         });
+        console.log('[DEBUG] tick: calling handleBurnMessage', { id: msg.id });
         handleBurnMessage(msg);
       } else {
         setCountdowns(prev => ({ ...prev, [msg.id]: remaining }));
@@ -332,12 +345,14 @@ export default function AdminChat() {
 
   useEffect(() => {
     const handler = (message) => {
+      console.log('[DEBUG] Socket message:new received', { id: message.id, isBurnAfterRead: message.isBurnAfterRead, burnAfterSeconds: message.burnAfterSeconds, burnTrigger: message.burnTrigger, sessionId: message.sessionId, currentSessionId: currentSession?.id });
       if (message.senderRole === 'operator' || message.senderRole === 'admin') return;
       if (currentSession && message.sessionId === currentSession.id) {
         // 当前会话，直接添加消息
         setMessages(prev => [...prev, message]);
         // 阅后即焚自动倒计时（仅阅后模式，即时模式由服务端处理）
         if (message.isBurnAfterRead && !message.burnedAt && message.burnAfterSeconds && message.burnTrigger === 'onView') {
+          console.log('[DEBUG] Calling startBurnTimer for received message', { id: message.id });
           startBurnTimer(message);
         }
         // 清空当前会话未读
@@ -813,9 +828,11 @@ export default function AdminChat() {
         <HStack
           bg={isBurnMask ? 'rgba(255,140,0,0.15)' : (msg.isBurnAfterRead ? 'rgba(255,140,0,0.1)' : 'blackAlpha.300')}
           px={3} py={2} borderRadius="md" spacing={2}
-          cursor={isBurnMask ? 'pointer' : 'default'}
+          cursor="pointer"
           position="relative"
-          onClick={() => {
+          onClick={(e) => {
+            // 点击的是音频控件本身则忽略，避免干扰播放操作
+            if (e.target.tagName === 'AUDIO') return;
             if (isBurnMask) {
               openFlashViewer({ imageUrl: getMediaUrl(msg), messageId: msg.id, senderRole: msg.senderRole, isBurnAfterRead: true, burnAfterSeconds: msg.burnAfterSeconds, mediaType: 'audio' });
             }
@@ -840,7 +857,7 @@ export default function AdminChat() {
           )}
           <Text fontSize="lg" flexShrink={0}>🔊</Text>
           <Box flex={1} minW={0} maxW="200px">
-            <audio src={`${API_BASE}${msg.mediaUrl}`} style={{ width: '100%', height: '24px' }} controls={!isBurnMask || msg.burnedAt} />
+            <AudioPlayer src={getMediaUrl(msg)} duration={msg.duration} />
           </Box>
           {msg.duration && (
             <Text fontSize="xs" color="rgba(245,240,232,0.5)" flexShrink={0}>{msg.duration}"</Text>
@@ -1098,7 +1115,11 @@ export default function AdminChat() {
                               <HStack mt={2} spacing={1} justify="flex-end">
                                 <Text fontSize="xs" color="orange.300">🔥</Text>
                                 <Text fontSize="sm" fontWeight="bold" color="orange.300">
-                                  {countdowns[msg.id] != null ? (countdowns[msg.id] > 0 ? `${countdowns[msg.id]}s` : '已销毁') : (msg.burnAfterSeconds ? `${msg.burnAfterSeconds}s` : '手动')}
+                                  {(() => {
+                                    const countdown = countdowns[msg.id];
+                                    console.log('[DEBUG] countdown display', { id: msg.id, countdown, burnAfterSeconds: msg.burnAfterSeconds, key: msg.id });
+                                    return countdown != null ? (countdown > 0 ? `${countdown}s` : '已销毁') : (msg.burnAfterSeconds ? `${msg.burnAfterSeconds}s` : '手动');
+                                  })()}
                                 </Text>
                               </HStack>
                             )}

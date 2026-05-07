@@ -7,6 +7,7 @@ import { useSocket } from '../../contexts/SocketContext';
 import { useRouteActivated } from '../../hooks/useRouteLifecycle';
 import FlashImageViewer from '../../components/FlashImageViewer';
 import EmojiPanel from '../../components/EmojiPanel';
+import AudioPlayer from '../../components/AudioPlayer';
 import { CameraIcon, MicIcon, StopIcon, FireIcon, SpeakerIcon, UserIcon, ArrowLeftIcon } from '../../components/Icons';
 
 export default function ClientChat() {
@@ -39,7 +40,7 @@ export default function ClientChat() {
   }, []);
   const [loading, setLoading] = useState(true);
   const toast = useToast();
-  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3005';
+  const API_BASE = '';
 
   const virtualizer = useVirtualizer({
     count: messages.length,
@@ -50,12 +51,9 @@ export default function ClientChat() {
   });
 
   const getMediaUrl = (msg) => {
-    if (msg.mediaUrl?.startsWith('/encrypted/')) {
-      const token = api.getToken();
-      return `${API_BASE}/api/chat/media/${msg.id}?token=${token}`;
-    }
-    if (msg.mediaUrl?.startsWith('http')) return msg.mediaUrl;
-    return `${API_BASE}${msg.mediaUrl}`;
+    // 统一通过媒体端点获取，确保后端处理 Range 请求和权限验证
+    const token = api.getToken();
+    return `${API_BASE}/api/chat/media/${msg.id}?token=${token}`;
   };
 
   const handleEmojiSelect = useCallback((emoji) => {
@@ -768,10 +766,11 @@ export default function ClientChat() {
         <HStack
           bg={isBurnMask ? 'rgba(255,140,0,0.15)' : (msg.isBurnAfterRead && !msg.burnedAt ? 'rgba(255,140,0,0.1)' : 'blackAlpha.300')}
           px={3} py={2} borderRadius="md" spacing={2}
-          cursor={msg.isBurnAfterRead && msg.senderRole !== 'client' ? 'pointer' : 'default'}
+          cursor={isBurnMask ? 'pointer' : 'pointer'}
           position="relative"
-          onClick={() => {
-            if (msg.isBurnAfterRead && msg.senderRole !== 'client' && !msg.burnedAt) {
+          onClick={(e) => {
+            if (e.target.tagName === 'AUDIO') return;
+            if (isBurnMask) {
               openFlashViewer({ imageUrl: getMediaUrl(msg), messageId: msg.id, senderRole: msg.senderRole, isBurnAfterRead: true, burnAfterSeconds: msg.burnAfterSeconds, mediaType: 'audio' });
             }
           }}
@@ -795,13 +794,7 @@ export default function ClientChat() {
           )}
           <Icon as={SpeakerIcon} boxSize={5} flexShrink={0} />
           <Box flex={1} minW={0} maxW="200px">
-            <audio
-              src={getMediaUrl(msg)}
-              style={{ width: '100%', height: '24px' }}
-              controls={true}
-              controlsList="nodownload"
-              preload="metadata"
-            />
+            <AudioPlayer src={getMediaUrl(msg)} duration={msg.duration} />
           </Box>
           {msg.duration && <Text fontSize="xs" color="gray.300" flexShrink={0}>{msg.duration}"</Text>}
         </HStack>

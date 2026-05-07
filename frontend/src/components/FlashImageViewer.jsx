@@ -95,14 +95,14 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
     onCloseRef.current();
   }, []);
 
-  // 视频加载元数据：根据视频时长设置倒计时（最低3秒）
+  // 视频加载元数据：根据视频时长设置倒计时
   const handleVideoMeta = useCallback((e) => {
     const hasPending = getBurnEntry(messageIdRef.current) !== null;
-    const actualDuration = Math.max(3, Math.ceil(e.target.duration));
+    const actualDuration = Math.ceil(e.target.duration);
 
     if (!hasPending) {
       // 自适应模式：使用视频实际时长
-      const duration = burnAfterSeconds === actualDuration ? actualDuration : burnAfterSeconds;
+      const duration = Math.max(actualDuration, 5);
       setTotalDuration(duration);
       setRemaining(duration);
     }
@@ -110,7 +110,7 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
     if (videoRef.current) {
       videoRef.current.play().catch(() => {});
     }
-  }, [burnAfterSeconds]);
+  }, []);
 
   // 媒体加载完成后开始倒计时
   useEffect(() => {

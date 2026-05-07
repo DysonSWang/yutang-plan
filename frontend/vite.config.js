@@ -15,9 +15,6 @@ export default defineConfig({
   ],
   define: {
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
-    'import.meta.env.VITE_API_URL': JSON.stringify(
-      isProduction ? 'https://zhuiai.club' : ''
-    ),
   },
   optimizeDeps: {
     include: ['@chakra-ui/react', '@chakra-ui/hooks'],

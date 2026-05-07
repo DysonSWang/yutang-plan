@@ -616,12 +616,27 @@ module.exports = function(io) {
         if (message.mediaUrl.startsWith('/uploads/')) {
           return res.redirect(message.mediaUrl);
         }
-        // public OSS 文件走重定向（需生成签名URL，暂用重定向）
+        // public OSS 文件：下载后直接返回（支持 Range 请求）
         if (message.mediaUrl.startsWith('/public/')) {
-          const { client } = require('../services/ossClient');
           const ossPath = message.mediaUrl.replace(/^\//, '');
-          const url = await client.signatureUrl(ossPath, { expires: 3600 });
-          return res.redirect(url);
+          const buffer = await downloadBuffer(ossPath);
+          if (!buffer) return res.status(404).send('文件不存在');
+          const mime = message.type === 'audio' ? 'audio/mpeg' : message.type === 'video' ? 'video/mp4' : 'image/jpeg';
+          const totalSize = buffer.length;
+          res.set('Content-Type', mime);
+          res.set('Accept-Ranges', 'bytes');
+          const rangeHeader = req.headers.range;
+          if (rangeHeader) {
+            const parts = rangeHeader.replace(/bytes=/, '').split('-');
+            const start = parseInt(parts[0], 10);
+            const end = parts[1] ? parseInt(parts[1], 10) : totalSize - 1;
+            const chunkSize = end - start + 1;
+            res.set('Content-Range', `bytes ${start}-${end}/${totalSize}`);
+            res.set('Content-Length', chunkSize);
+            return res.status(206).send(buffer.slice(start, end + 1));
+          }
+          res.set('Content-Length', buffer.length);
+          return res.send(buffer);
         }
         return res.status(400).json({ error: '无法处理此媒体类型' });
       }

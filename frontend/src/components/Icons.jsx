@@ -365,6 +365,25 @@ export const ClockIcon = createIcon({
   ]
 });
 
+// Play 图标
+export const PlayIcon = createIcon({
+  displayName: 'PlayIcon',
+  viewBox: '0 0 24 24',
+  path: [
+    <polygon key="1" points="5 3 19 12 5 21 5 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+  ]
+});
+
+// Pause 图标
+export const PauseIcon = createIcon({
+  displayName: 'PauseIcon',
+  viewBox: '0 0 24 24',
+  path: [
+    <rect key="1" x="6" y="4" width="4" height="16" rx="1" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>,
+    <rect key="2" x="14" y="4" width="4" height="16" rx="1" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+  ]
+});
+
 // Stars 图标
 export const StarsIcon = createIcon({
   displayName: 'StarsIcon',

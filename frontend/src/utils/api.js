@@ -4,7 +4,7 @@
 import imageCompression from 'browser-image-compression';
 import { parseErrorResponse, ErrorType } from './errorHandler';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3005';
+const API_BASE = '';
 
 /**
  * 将 OSS 相对路径转为完整 URL
