@@ -215,7 +215,7 @@ async function handleSituation(input, ctx, res) {
     {
       messages: [{ role: 'user', content: systemPrompt }],
       temperature: 0.7,
-      max_tokens: 15000,  // 与 aiCoach.js 保持一致，充分利用 100K prompt budget
+      max_tokens: 50000,  // 与 aiCoach.js 保持一致，充分利用 100K prompt budget
       stream: true
     },
     {
