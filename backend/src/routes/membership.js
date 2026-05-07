@@ -336,6 +336,10 @@ router.put('/learning/progress/:chapterId', authMiddleware, async (req, res) => 
       where: { userId_chapterId: { userId: req.user.id, chapterId } }
     });
 
+    // 获取章节当前版本号
+    const chapter = await prisma.learningChapter.findUnique({ where: { chapterId } });
+    const chapterVersion = chapter?.contentVersion || 0;
+
     let record;
     if (existing) {
       record = await prisma.learningProgress.update({
@@ -343,7 +347,8 @@ router.put('/learning/progress/:chapterId', authMiddleware, async (req, res) => 
         data: {
           status,
           completedAt: status === 'completed' ? new Date() : existing.completedAt,
-          lastVisitedAt: new Date()
+          lastVisitedAt: new Date(),
+          contentVersion: chapterVersion
         }
       });
     } else {
@@ -353,7 +358,8 @@ router.put('/learning/progress/:chapterId', authMiddleware, async (req, res) => 
           chapterId,
           status,
           completedAt: status === 'completed' ? new Date() : null,
-          lastVisitedAt: new Date()
+          lastVisitedAt: new Date(),
+          contentVersion: chapterVersion
         }
       });
     }
@@ -845,6 +851,500 @@ router.delete('/admin/learning/chapters/:chapterId', authMiddleware, operatorOnl
       prisma.learningProgress.deleteMany({ where: { chapterId } }),
       prisma.learningChapter.delete({ where: { chapterId } })
     ]);
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==========================================
+// 管理员 - 内容版本管理与批量导入
+// ==========================================
+
+const DEFAULT_CONTENT_DIR = path.resolve(__dirname, '../../../../mo-ge-core/正式版');
+
+// 文件名解析 chapterId
+function parseChapterId(filename) {
+  const base = filename.replace('.md', '');
+  if (base === '写在前面') return '00';
+  const chapterMatch = base.match(/^第(\d+)章/);
+  if (chapterMatch) return String(parseInt(chapterMatch[1])).padStart(2, '0');
+  const appendixMatch = base.match(/^附录([A-Z])/);
+  if (appendixMatch) {
+    const num = appendixMatch[1].charCodeAt(0) - 64;
+    return `A${String(num).padStart(2, '0')}`;
+  }
+  return base.slice(0, 8);
+}
+
+// 提取章节标题（从 md 文件第一行 # 标题）
+function extractTitle(content) {
+  const match = content.match(/^#\s+(.+)/m);
+  return match ? match[1].trim() : null;
+}
+
+// 生成 diff 摘要
+function generateDiffSummary(oldContent, newContent) {
+  const oldLines = (oldContent || '').split('\n');
+  const newLines = (newContent || '').split('\n');
+  const added = newLines.length - oldLines.length;
+  if (added > 0) return `+${added}行`;
+  if (added < 0) return `${added}行`;
+  // 行数相同但内容可能不同，逐行比对
+  let changed = 0;
+  for (let i = 0; i < newLines.length; i++) {
+    if (oldLines[i] !== newLines[i]) changed++;
+  }
+  return changed > 0 ? `~${changed}行` : '无变化';
+}
+
+// 标题归一化：去掉序号前缀、符号、括号内容，保留核心关键词
+function normalizeTitle(title) {
+  if (!title) return null;
+  return title
+    .replace(/^第[一二三四五六七八九十百\d]+章[\s：:、]*/i, '') // 去掉"第X章"前缀
+    .replace(/^#+\s*/, '')                                     // 去掉 markdown 标题标记
+    .replace(/【[^】]*】/g, '')                                // 去掉【】包裹的内容
+    .replace(/[（(][^）)]*[）)]\s*/g, '')                       // 去掉括号内容
+    .replace(/[-_—\s]+/g, '')                                  // 去掉分隔符
+    .replace(/附录[A-Z]?[\s：:、]*/i, '')                       // 去掉"附录X"前缀
+    .trim()
+    .toLowerCase();
+}
+
+// 1. 扫描文件并生成草稿批次（支持本地目录或上传 ZIP/md 文件）
+router.post('/admin/learning/scan',
+  multer({ memoryStorage: true, limits: { fileSize: 100 * 1024 * 1024 } }).single('file'),
+  authMiddleware,
+  operatorOnly,
+  async (req, res) => {
+    try {
+      const { sourceDir, notes } = req.body;
+      let dir = sourceDir || DEFAULT_CONTENT_DIR;
+      let tempDir = null;
+
+      // 文件上传模式
+      if (req.file) {
+        const unzipper = require('unzipper');
+        const ext = path.extname(req.file.originalname || '').toLowerCase();
+        tempDir = path.join('/tmp', 'content-import-' + crypto.randomUUID().slice(0, 8));
+        fs.mkdirSync(tempDir, { recursive: true });
+
+        if (ext === '.zip') {
+          // 解压 ZIP
+          await new Promise((resolve, reject) => {
+            const buffer = req.file.buffer;
+            const stream = require('stream').Readable.from(buffer);
+            stream
+              .pipe(unzipper.Parse())
+              .on('entry', entry => {
+                const fileName = entry.path;
+                if (fileName.endsWith('.md') && !fileName.includes('完整版')) {
+                  const chunks = [];
+                  entry.on('data', chunk => chunks.push(chunk));
+                  entry.on('end', () => {
+                    const content = Buffer.concat(chunks).toString('utf-8');
+                    // 去掉 ZIP 内嵌的目录前缀（如 "test_content/第1章.md" → "第1章.md"）
+                    const baseName = path.basename(fileName);
+                    const outPath = path.join(tempDir, baseName);
+                    fs.writeFileSync(outPath, content);
+                  });
+                } else {
+                  entry.autodrain();
+                }
+              })
+              .on('close', resolve)
+              .on('error', reject);
+          });
+        } else if (ext === '.md') {
+          // 单个 md 文件
+          fs.writeFileSync(path.join(tempDir, req.file.originalname || 'content.md'), req.file.buffer);
+        } else {
+          return res.status(400).json({ error: '只支持 .md 或 .zip 文件' });
+        }
+        dir = tempDir;
+      }
+
+    if (!fs.existsSync(dir)) {
+      return res.status(400).json({ error: `目录不存在: ${dir}` });
+    }
+
+    const allFiles = fs.readdirSync(dir).filter(f => f.endsWith('.md') && !f.includes('完整版'));
+
+    // 增强匹配逻辑：先按 chapterId，再按 title 模糊匹配
+    // 建立 title → chapter 映射（用于 chapterId 匹配失败时兜底）
+    const dbChapters = await prisma.learningChapter.findMany({
+      select: { chapterId: true, content: true, title: true, subtitle: true, contentVersion: true }
+    });
+    const dbMap = {};
+    dbChapters.forEach(ch => { dbMap[ch.chapterId] = ch; });
+
+    // title 模糊映射：去掉常见前缀后缀后匹配
+    const titleMap = {};
+    dbChapters.forEach(ch => {
+      const normalizedTitle = normalizeTitle(ch.title);
+      if (normalizedTitle) titleMap[normalizedTitle] = ch;
+    });
+
+    const drafts = [];
+    let unchangedCount = 0;
+    const usedTitles = new Set();
+
+    for (const file of allFiles) {
+      const content = fs.readFileSync(path.join(dir, file), 'utf-8');
+      let chId = parseChapterId(file);
+      let title = extractTitle(content) || file.replace('.md', '');
+      const normalizedFileTitle = normalizeTitle(title);
+      let existing = dbMap[chId];
+
+      // chapterId 没命中？尝试 title 匹配
+      if (!existing && normalizedFileTitle && titleMap[normalizedFileTitle]) {
+        existing = titleMap[normalizedFileTitle];
+        chId = existing.chapterId; // 用 DB 里的 chapterId
+        usedTitles.add(normalizedFileTitle);
+      }
+
+      if (!existing) {
+        // 全新章节：自动分配新 chapterId
+        const allIds = dbChapters.map(c => c.chapterId).filter(id => id.match(/^\d+$/));
+        const maxNum = allIds.length > 0 ? Math.max(...allIds.map(id => parseInt(id))) : 0;
+        chId = String(maxNum + 1).padStart(2, '0');
+        drafts.push({ chapterId: chId, title, content, isNew: true, diffSummary: '新章节' });
+      } else if (existing.content !== content) {
+        const diff = generateDiffSummary(existing.content, content);
+        if (diff === '无变化') {
+          unchangedCount++;
+          continue;
+        }
+        const subtitle = existing.subtitle || null;
+        drafts.push({ chapterId: chId, title: title || existing.title, subtitle, content, isNew: false, diffSummary: diff });
+      } else {
+        unchangedCount++;
+      }
+    }
+
+    if (drafts.length === 0) {
+      return res.json({ success: true, batch: null, drafts: [], message: '所有文件均无变化' });
+    }
+
+    // 创建批次
+    const batchNumber = `IMP-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(Math.floor(Math.random() * 999)).padStart(3, '0')}`;
+    const newCount = drafts.filter(d => d.isNew).length;
+    const updateCount = drafts.filter(d => !d.isNew).length;
+
+    const batch = await prisma.importBatch.create({
+      data: {
+        batchNumber,
+        sourceDir: dir,
+        totalFiles: allFiles.length,
+        newChapters: newCount,
+        updatedChapters: updateCount,
+        unchangedChapters: unchangedCount,
+        operatorId: req.user.id,
+        notes: notes || null,
+      }
+    });
+
+    // 创建草稿
+    await Promise.all(drafts.map(d =>
+      prisma.learningChapterDraft.create({
+        data: { ...d, batchId: batch.id }
+      })
+    ));
+
+    res.json({ success: true, batch, drafts });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 2. 获取批次草稿详情
+router.get('/admin/learning/drafts/:batchId', authMiddleware, operatorOnly, async (req, res) => {
+  try {
+    const batch = await prisma.importBatch.findUnique({ where: { id: req.params.batchId } });
+    if (!batch) return res.status(404).json({ error: '批次不存在' });
+
+    const drafts = await prisma.learningChapterDraft.findMany({
+      where: { batchId: batch.id },
+      orderBy: { chapterId: 'asc' }
+    });
+
+    res.json({ success: true, batch, drafts });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 3. 获取单章 diff
+router.get('/admin/learning/drafts/:batchId/:chapterId/diff', authMiddleware, operatorOnly, async (req, res) => {
+  try {
+    const draft = await prisma.learningChapterDraft.findUnique({
+      where: { batchId_chapterId: { batchId: req.params.batchId, chapterId: req.params.chapterId } }
+    });
+    if (!draft) return res.status(404).json({ error: '草稿不存在' });
+
+    let oldContent = null;
+    if (!draft.isNew) {
+      const existing = await prisma.learningChapter.findUnique({ where: { chapterId: draft.chapterId } });
+      oldContent = existing?.content || null;
+    }
+
+    res.json({ success: true, draft, oldContent });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 4. 确认/取消某些章节
+router.post('/admin/learning/drafts/:batchId/confirm', authMiddleware, operatorOnly, async (req, res) => {
+  try {
+    const { chapterIds, confirmed } = req.body;
+    if (!Array.isArray(chapterIds) || typeof confirmed !== 'boolean') {
+      return res.status(400).json({ error: '参数错误' });
+    }
+
+    await prisma.learningChapterDraft.updateMany({
+      where: { batchId: req.params.batchId, chapterId: { in: chapterIds } },
+      data: { confirmed }
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 5. 影响面分析
+router.post('/admin/learning/batches/:batchId/impact', authMiddleware, operatorOnly, async (req, res) => {
+  try {
+    const drafts = await prisma.learningChapterDraft.findMany({
+      where: { batchId: req.params.batchId },
+      select: { chapterId: true, isNew: true }
+    });
+
+    const changedChapterIds = drafts.filter(d => !d.isNew).map(d => d.chapterId);
+
+    // 查找受影响的个性化章节
+    const affectedChapters = await prisma.personalizedChapter.findMany({
+      where: { chapterId: { in: changedChapterIds }, status: 'completed' },
+      select: { userId: true, chapterId: true },
+    });
+
+    // 按用户分组
+    const userMap = {};
+    affectedChapters.forEach(ac => {
+      if (!userMap[ac.userId]) userMap[ac.userId] = [];
+      userMap[ac.userId].push(ac.chapterId);
+    });
+
+    const users = await prisma.user.findMany({
+      where: { id: { in: Object.keys(userMap) } },
+      select: { id: true, nickname: true, username: true }
+    });
+
+    const userImpact = users.map(u => ({
+      userId: u.id,
+      nickname: u.nickname || u.username,
+      affectedChapters: userMap[u.id],
+    }));
+
+    res.json({
+      success: true,
+      totalAffected: Object.keys(userMap).length,
+      totalAffectedChapters: affectedChapters.length,
+      userImpact,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 6. 发布批次
+router.post('/admin/learning/batches/:batchId/publish', authMiddleware, operatorOnly, async (req, res) => {
+  try {
+    const { autoRegeneratePersonalized } = req.body;
+
+    const result = await prisma.$transaction(async (tx) => {
+      // 获取已确认的草稿
+      const drafts = await tx.learningChapterDraft.findMany({
+        where: { batchId: req.params.batchId, confirmed: true },
+        orderBy: { chapterId: 'asc' }
+      });
+
+      if (drafts.length === 0) {
+        throw new Error('没有已确认的章节可发布');
+      }
+
+      const maxOrder = await tx.learningChapter.aggregate({ _max: { orderIndex: true } });
+      let nextOrder = (maxOrder._max.orderIndex || 0) + 1;
+
+      const chapterChanges = [];
+      let affectedUserIds = new Set();
+
+      for (const draft of drafts) {
+        const existing = await tx.learningChapter.findUnique({ where: { chapterId: draft.chapterId } });
+        if (existing) {
+          // 更新现有章节
+          await tx.learningChapter.update({
+            where: { chapterId: draft.chapterId },
+            data: {
+              title: draft.title,
+              subtitle: draft.subtitle,
+              content: draft.content,
+              contentVersion: { increment: 1 },
+              lastPublishedAt: new Date(),
+              status: 'published',
+            }
+          });
+          chapterChanges.push({
+            chapterId: draft.chapterId,
+            title: draft.title,
+            changeType: 'update',
+            diffSummary: draft.diffSummary,
+          });
+
+          // 查找有个性化版本的受影响用户
+          const affectedUsers = await tx.personalizedChapter.findMany({
+            where: { chapterId: draft.chapterId, status: 'completed' },
+            distinct: ['userId'],
+            select: { userId: true }
+          });
+          affectedUsers.forEach(u => affectedUserIds.add(u.userId));
+        } else {
+          // 新增章节
+          await tx.learningChapter.create({
+            data: {
+              chapterId: draft.chapterId,
+              title: draft.title,
+              subtitle: draft.subtitle,
+              content: draft.content,
+              orderIndex: nextOrder++,
+              status: 'published',
+              contentVersion: 1,
+              lastPublishedAt: new Date(),
+            }
+          });
+          chapterChanges.push({
+            chapterId: draft.chapterId,
+            title: draft.title,
+            changeType: 'new',
+            diffSummary: draft.diffSummary,
+          });
+        }
+      }
+
+      // 创建版本记录
+      const versionCount = await tx.contentVersion.aggregate({ _count: true });
+      await tx.contentVersion.create({
+        data: {
+          version: versionCount._count + 1,
+          importBatchId: req.params.batchId,
+          chapterChanges: JSON.stringify(chapterChanges),
+          publishedBy: req.user.id,
+          notes: null,
+        }
+      });
+
+      // 更新批次状态
+      await tx.importBatch.update({
+        where: { id: req.params.batchId },
+        data: {
+          status: 'published',
+          publishedAt: new Date(),
+          affectedPersonalizedCount: affectedUserIds.size,
+        }
+      });
+
+      return { chapterCount: drafts.length, affectedUserIds: [...affectedUserIds] };
+    });
+
+    // 发布成功后，可选触发自动重新生成（限制并发数避免压垮服务）
+    if (autoRegeneratePersonalized && result.affectedUserIds.length > 0) {
+      const { generateAllChapters } = require('../services/personalizationEngine');
+      const io = req.app.get('io');
+      const CONCURRENCY = 3;
+      const queue = [...result.affectedUserIds];
+      let index = 0;
+
+      const worker = async () => {
+        while (index < queue.length) {
+          const userId = queue[index++];
+          try {
+            const user = await prisma.user.findUnique({
+              where: { id: userId },
+              select: personalizationEngine.USER_PROFILE_SELECT,
+            });
+            if (user && user.personalizationEnabled) {
+              const chapters = await prisma.learningChapter.findMany({
+                where: { status: 'published' },
+                select: { chapterId: true },
+              });
+              await generateAllChapters(userId, user, chapters, prisma, io);
+            }
+          } catch (err) {
+            console.error(`[Personalization] 自动重新生成失败 for ${userId}:`, err.message);
+          }
+        }
+      };
+
+      // 启动 CONCURRENCY 个 worker 并行执行
+      Array.from({ length: Math.min(CONCURRENCY, queue.length) }, worker);
+    }
+
+    res.json({
+      success: true,
+      chapterCount: result.chapterCount,
+      affectedUserCount: result.affectedUserIds.length,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 7. 获取历史版本列表
+router.get('/admin/learning/versions', authMiddleware, operatorOnly, async (req, res) => {
+  try {
+    const versions = await prisma.contentVersion.findMany({
+      orderBy: { publishedAt: 'desc' }
+    });
+    res.json({ success: true, versions });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 8. 获取版本详情
+router.get('/admin/learning/versions/:id', authMiddleware, operatorOnly, async (req, res) => {
+  try {
+    const version = await prisma.contentVersion.findUnique({
+      where: { id: req.params.id }
+    });
+    if (!version) return res.status(404).json({ error: '版本不存在' });
+    res.json({ success: true, version });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 9. 标记用户已通知内容更新（用户端）
+router.post('/learning/acknowledge-update', authMiddleware, async (req, res) => {
+  try {
+    const { chapterId } = req.body;
+    if (!chapterId) return res.status(400).json({ error: 'chapterId 必填' });
+
+    const progress = await prisma.learningProgress.findUnique({
+      where: { userId_chapterId: { userId: req.user.id, chapterId } }
+    });
+
+    if (!progress) {
+      return res.status(404).json({ error: '该章节无学习记录，无法标记已读' });
+    }
+
+    await prisma.learningProgress.update({
+      where: { userId_chapterId: { userId: req.user.id, chapterId } },
+      data: { notifiedUpdate: true }
+    });
 
     res.json({ success: true });
   } catch (err) {

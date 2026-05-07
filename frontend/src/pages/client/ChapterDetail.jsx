@@ -70,6 +70,14 @@ export default function ChapterDetail() {
     }
   }, [chapter, progress]);
 
+  // 进入章节时确认更新通知（清除「更新」角标）
+  useEffect(() => {
+    if (chapter && progress?.notifiedUpdate === false
+        && chapter.contentVersion > (progress.contentVersion || 0)) {
+      membershipApi.acknowledgeUpdate(chapterId).catch(() => {});
+    }
+  }, [chapter, progress, chapterId]);
+
   const [memberStatus, setMemberStatus] = useState(null);
 
   // 获取会员状态

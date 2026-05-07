@@ -137,6 +137,18 @@ class Api {
   post(path, data, timeoutMs) { return this.request('POST', path, data, timeoutMs); }
   put(path, data, timeoutMs) { return this.request('PUT', path, data, timeoutMs); }
   delete(path) { return this.request('DELETE', path); }
+
+  // 上传文件（跳过 JSON Content-Type）
+  upload(path, formData, timeoutMs = 60000) {
+    const token = this.getToken();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return fetch(`${this.baseUrl}${path}`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    }).then(r => r.json());
+  }
 }
 
 export const api = new Api();
@@ -782,6 +794,22 @@ export const membership = {
   adminDeleteChapter: (chapterId) => api.delete(`/api/membership/admin/learning/chapters/${chapterId}`),
   adminPublishChapter: (chapterId, status) => api.put(`/api/membership/admin/learning/chapters/${chapterId}/publish`, { status }),
   adminReorderChapters: (orderedIds) => api.put('/api/membership/admin/learning/chapters/reorder', { orderedIds }),
+  // 管理员 - 内容版本管理
+  adminScanContent: (data) => {
+    if (data instanceof FormData) {
+      return api.upload('/api/membership/admin/learning/scan', data, 60000);
+    }
+    return api.post('/api/membership/admin/learning/scan', data, 60000);
+  },
+  adminGetDraftBatch: (batchId) => api.get(`/api/membership/admin/learning/drafts/${batchId}`),
+  adminGetChapterDiff: (batchId, chapterId) => api.get(`/api/membership/admin/learning/drafts/${batchId}/${chapterId}/diff`),
+  adminConfirmDrafts: (batchId, chapterIds, confirmed) => api.post(`/api/membership/admin/learning/drafts/${batchId}/confirm`, { chapterIds, confirmed }),
+  adminGetBatchImpact: (batchId) => api.post(`/api/membership/admin/learning/batches/${batchId}/impact`),
+  adminPublishBatch: (batchId, autoRegenerate = false) => api.post(`/api/membership/admin/learning/batches/${batchId}/publish`, { autoRegeneratePersonalized: autoRegenerate }, 120000),
+  adminListContentVersions: () => api.get('/api/membership/admin/learning/versions'),
+  adminGetContentVersion: (id) => api.get(`/api/membership/admin/learning/versions/${id}`),
+  // 用户端 - 确认内容更新通知
+  acknowledgeUpdate: (chapterId) => api.post('/api/membership/learning/acknowledge-update', { chapterId }),
   // 管理员 - 个性化管理
   adminListPersonalizationUsers: () => api.get('/api/membership/admin/personalization/users'),
   adminTogglePersonalization: (userId, enabled) => api.post('/api/membership/admin/personalization/toggle', { userId, enabled }),

@@ -21,6 +21,11 @@ function ChapterCard({ chapter, progress, personalizationStatus, onUpdate }) {
   const perBadge = perCh?.status === 'completed' ? { label: '已定制', color: 'purple' }
     : perCh?.status === 'generating' ? { label: '生成中', color: 'blue' } : null;
 
+  // 内容更新检测：已学习 + 内容有更新版本 + 未通知过
+  const hasUpdate = isStudied
+    && p?.notifiedUpdate === false
+    && chapter.contentVersion > (p.contentVersion || 0);
+
   return (
     <Box
       p={5}
@@ -57,6 +62,9 @@ function ChapterCard({ chapter, progress, personalizationStatus, onUpdate }) {
           </Box>
         </HStack>
         <HStack gap={1}>
+          {hasUpdate && (
+            <Badge colorScheme="orange" variant="subtle" fontSize="xs">更新</Badge>
+          )}
           {perBadge && (
             <Badge colorScheme={perBadge.color} variant="subtle">{perBadge.label}</Badge>
           )}
@@ -81,12 +89,24 @@ function ChapterCard({ chapter, progress, personalizationStatus, onUpdate }) {
             size="sm"
             variant="ghost"
             colorScheme="gray"
-            onClick={(e) => { e.stopPropagation(); onUpdate(chapter.chapterId, 'not_started'); }}
+            onClick={async (e) => {
+              e.stopPropagation();
+              if (hasUpdate) {
+                membershipApi.acknowledgeUpdate(chapter.chapterId).catch(() => {});
+              }
+              onUpdate(chapter.chapterId, 'not_started');
+            }}
           >
             重新学习
           </Button>
         )}
       </HStack>
+
+      {hasUpdate && (
+        <Text color="orange.300" fontSize="xs" mt={3}>
+          内容已更新，建议重新学习
+        </Text>
+      )}
     </Box>
   );
 }

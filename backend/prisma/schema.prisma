@@ -1120,8 +1120,12 @@ model LearningChapter {
   // 章节内容（从教材提取，也可以是Markdown格式的摘要）
   content   String?
 
-  // 上架状态：draft=下架(不可见), published=上架(客户可见)
-  status    String  @default("draft")
+  // 上架状态：draft=下架(不可见), published=上架(客户可见), archived=已归档(软删除)
+  status    String  @default("published")
+
+  // 版本管理
+  contentVersion  Int      @default(1)  // 内容版本号，每次发布+1
+  lastPublishedAt DateTime?             // 最后发布时间
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1142,6 +1146,10 @@ model LearningProgress {
   completedAt DateTime?
   // 最后访问时间（用于排序"继续学习"）
   lastVisitedAt DateTime?
+  // 内容更新通知状态（用户已学习但内容有更新时显示角标）
+  notifiedUpdate Boolean @default(false)
+  // 用户学习该章节时的内容版本号（用于检测内容是否更新）
+  contentVersion Int @default(0)
 
   updatedAt DateTime @updatedAt
 
@@ -1330,4 +1338,58 @@ model UserActivity {
   @@index([date])
   @@index([userId, date])
   @@map("user_activities")
+}
+
+// ========== 学习版块 - 导入批次 ==========
+model ImportBatch {
+  id                    String   @id @default(uuid())
+  batchNumber           String   @unique  // 如 "IMP-20260507-001"
+  sourceDir             String              // 源文件目录路径
+  totalFiles            Int                 // 扫描到的文件数
+  newChapters           Int      @default(0) // 新增章节数
+  updatedChapters       Int      @default(0) // 更新章节数
+  unchangedChapters     Int      @default(0) // 未变化章节数
+  status                String   @default("pending") // pending | confirmed | published | cancelled
+  operatorId            String
+  notes                 String?  // 备注（如"v35更新"）
+  affectedPersonalizedCount Int @default(0)  // 受影响的个性化章节数
+  createdAt             DateTime @default(now())
+  confirmedAt           DateTime?
+  publishedAt           DateTime?
+
+  drafts                LearningChapterDraft[]
+
+  @@map("import_batches")
+}
+
+// ========== 学习版块 - 章节草稿 ==========
+model LearningChapterDraft {
+  id              String   @id @default(uuid())
+  batchId         String
+  batch           ImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  chapterId       String   // e.g. "01"，与 LearningChapter.chapterId 对应
+  title           String
+  subtitle        String?
+  content         String   // 完整的 md 文件内容
+  isNew           Boolean  @default(false)  // true=新增章节，false=更新现有
+  diffSummary     String?  // 变更摘要（如"+120行 -30行"）
+  confirmed       Boolean  @default(false)  // 是否确认发布
+  createdAt       DateTime @default(now())
+
+  @@unique([batchId, chapterId])
+  @@index([batchId])
+  @@map("learning_chapter_drafts")
+}
+
+// ========== 学习版块 - 内容版本记录 ==========
+model ContentVersion {
+  id              String   @id @default(uuid())
+  version         Int      // 版本号，从1开始递增
+  importBatchId   String?  // 关联的导入批次（可为空，手动编辑也记录）
+  chapterChanges  String   // JSON: [{chapterId, title, changeType: "new"|"update"|"unchanged", diffSummary}]
+  publishedBy     String   // operatorId
+  publishedAt     DateTime @default(now())
+  notes           String?  // 发布备注
+
+  @@map("content_versions")
 }

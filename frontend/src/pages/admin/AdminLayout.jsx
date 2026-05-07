@@ -19,6 +19,7 @@ const navItems = [
   { path: '/admin/workbench', label: '军师', icon: BrainIcon },
   { path: '/admin/progress', label: '进度', icon: ChartIcon },
   { path: '/admin/chapters', label: '学习版块', icon: BookIcon },
+  { path: '/admin/content-import', label: '内容导入', icon: BookIcon },
   { path: '/admin/activity', label: '分析看板', icon: FiActivity },
   { path: '/admin/membership', label: '会员管理', icon: MembershipIcon },
   { path: '/admin/logs', label: '日志监控', icon: FiActivity },
