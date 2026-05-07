@@ -361,12 +361,14 @@ router.post('/situation', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: '无权限' });
     }
 
-    // 试用限制检查
-    try {
-      await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
-      await membershipService.useTrialCount(req.user.id);
-    } catch (e) {
-      return res.status(403).json({ error: e.message });
+    // 试用限制检查（仅限 client）
+    if (req.user.role === 'client') {
+      try {
+        await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
+        await membershipService.useTrialCount(req.user.id);
+      } catch (e) {
+        return res.status(403).json({ error: e.message });
+      }
     }
 
     // 统一教练：无需选择教练ID，根据问题动态路由到多位大师
