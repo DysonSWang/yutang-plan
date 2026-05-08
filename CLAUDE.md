@@ -15,6 +15,10 @@ cd /home/admin/zhuiai
 ## GSD
 使用 `.gsd/` 目录追踪项目进度，`.planning/` 是旧版规划（仅供参考）。
 
+## 双端部署
+
+Web 和 APK 共用同一套前端代码，配置差异见 [双端部署 SOP](file:///home/admin/.claude/projects/-home-admin/memory/dual_platform_deploy.md)。
+
 ## 铁律
 - **一律使用中文回复**，无论用户使用何种语言提问
 

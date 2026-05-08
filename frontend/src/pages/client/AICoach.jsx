@@ -13,56 +13,70 @@ import { FireIcon, SnowIcon, SparklesIcon, BrainIcon } from '../../components/Ic
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+// 共享 Markdown 渲染组件 — 全部使用原生 HTML 元素，让 CSS 控制排版
+const markdownComponents = {
+  h1: ({ node, ...props }) => <h1 {...props} />,
+  h2: ({ node, ...props }) => <h2 {...props} />,
+  h3: ({ node, ...props }) => <h3 {...props} />,
+  h4: ({ node, ...props }) => <h4 {...props} />,
+  p: ({ node, ...props }) => <p {...props} />,
+  ul: ({ node, ...props }) => <ul {...props} />,
+  ol: ({ node, ...props }) => <ol {...props} />,
+  li: ({ node, ...props }) => <li {...props} />,
+  blockquote: ({ node, ...props }) => <blockquote {...props} />,
+  hr: ({ node, ...props }) => <hr {...props} />,
+  pre: ({ node, ...props }) => <pre {...props} />,
+  code: ({ node, inline, ...props }) =>
+    inline ? <code {...props} /> : <code {...props} />,
+  table: ({ node, ...props }) => <table {...props} />,
+  thead: ({ node, ...props }) => <thead {...props} />,
+  tbody: ({ node, ...props }) => <tbody {...props} />,
+  tr: ({ node, ...props }) => <tr {...props} />,
+  th: ({ node, ...props }) => <th {...props} />,
+  td: ({ node, ...props }) => <td {...props} />,
+  a: ({ node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" />,
+  strong: ({ node, ...props }) => <strong {...props} />,
+  em: ({ node, ...props }) => <em {...props} />,
+};
+
+// 思考过程的组件 — 微调字号颜色
+const reasoningMarkdownComponents = {
+  ...markdownComponents,
+  h1: ({ node, ...props }) => <h1 {...props} style={{ fontSize: '1.05em', color: 'rgba(245,240,232,0.75)' }} />,
+  h2: ({ node, ...props }) => <h2 {...props} style={{ fontSize: '1em', color: 'rgba(245,240,232,0.75)' }} />,
+  h3: ({ node, ...props }) => <h3 {...props} style={{ fontSize: '0.95em', color: 'rgba(245,240,232,0.7)' }} />,
+  strong: ({ node, ...props }) => <strong {...props} style={{ color: 'rgba(226,176,68,0.8)' }} />,
+};
+
 /**
  * 修正 AI 产出的不规范 Markdown 格式
- * DeepSeek 经常输出缺少空格的 markdown 语法，这里统一规范化
+ * 只处理行首格式问题，避免破坏正常文本内容
  */
 function fixMarkdown(text) {
   if (!text || typeof text !== 'string') return text;
   let fixed = text;
 
-  // ---- 第一步：修复行首格式（#####text → ##### text 等）----
-  // 标题：###text → ### text（保留原有 # 数量）
+  // ---- 行首格式修复（只有行首才修，安全可靠）----
+  // 标题：###text → ### text
   fixed = fixed.replace(/^(#{1,4})([^\s#\n])/gm, '$1 $2');
 
   // 引用：>text → > text
   fixed = fixed.replace(/^(>{1,2})([^\s>\n])/gm, '$1 $2');
 
-  // 无序列表：-text → - text（但不匹配分隔线 ---）
+  // 无序列表：-text → - text（不匹配 --- 分隔线）
   fixed = fixed.replace(/^-(?=[^\s-])([^\s\n])/gm, '- $1');
 
   // 有序列表：1.text → 1. text
   fixed = fixed.replace(/^(\d+\.)([^\s\n])/gm, '$1 $2');
 
-  // ---- 第二步：修复行内 Markdown（非行首的 >/###/--- 需要加换行）----
-  // 行内 > 引用：text>回复 → text\n\n> 回复（DeepSeek 常见问题）
-  // 排除 ->、=> 等箭头符号，只匹配 > 后跟中文/字母（真正的引用内容）
-  fixed = fixed.replace(/([^\n>\-=>])(>)([一-鿿㐀-䶿a-zA-Z])/gm, '$1\n\n$2 $3');
-
-  // 行内 ###：text###heading → text\n\n### heading
-  fixed = fixed.replace(/([^\n#])(#{1,3})([^\s#\n])/gm, '$1\n\n$2 $3');
-
-  // 行内 ---（分隔线）：text---text → text\n\n---\n\ntext
-  // 但 --- 后跟 ## 或 ** 时只加换行不加额外空行（避免破坏标题/粗体格式）
-  fixed = fixed.replace(/(---)(#{1,3})([^\s#\n])/g, '$1\n\n$2 $3');
-  fixed = fixed.replace(/(---)(\*\*[^*]+\*\*)/g, '$1\n\n$2');
-  fixed = fixed.replace(/([^\n-])(---)([^\n#*\-])/g, '$1\n\n$2\n\n$3');
-  fixed = fixed.replace(/([^\n-])(---)$/gm, '$1\n\n$2');
-
-  // 清理多余空行（最多保留两个连续换行）
-  fixed = fixed.replace(/\n{3,}/g, '\n\n');
-
-  // ---- 第三步：修复粗体格式 ----
-  // **粗体** 两侧多余空格：** text ** → **text**
+  // ---- 粗体格式修复 ----
+  // ** text ** → **text**
   fixed = fixed.replace(/\*\*\s+([^*]+?)\s+\*\*/g, '**$1**');
-
-  // __粗体__ 两侧多余空格
+  // __ text __ → __text__
   fixed = fixed.replace(/__\s+([^_]+?)\s+__/g, '__$1__');
 
-  // ---- 第四步：确保块级元素前后有空行 ----
-  // 标题前后
-  fixed = fixed.replace(/([^\n])\n(#{1,4}\s)/g, '$1\n\n$2');
-  fixed = fixed.replace(/(#{1,4}\s[^\n]+)\n([^\n#])/g, '$1\n\n$2');
+  // ---- 清理多余空行 ----
+  fixed = fixed.replace(/\n{3,}/g, '\n\n');
 
   return fixed;
 }
@@ -84,7 +98,7 @@ function getHeatLevel(score) {
 
 
 // 独立的输入区域组件 - 使用完全独立的本地状态
-const InputArea = memo(({ onSubmit, onImageSubmit, loading, deepMode, onDeepModeToggle, onNewConversation, placeholder, showNewConvBtn = true }) => {
+const InputArea = memo(({ onSubmit, onImageSubmit, onStop, loading, deepMode, onDeepModeToggle, onNewConversation, placeholder, showNewConvBtn = true }) => {
   const [input, setInput] = useState('');
   const [attachedImage, setAttachedImage] = useState(null); // { file, preview }
   const textareaRef = useRef(null);
@@ -129,15 +143,22 @@ const InputArea = memo(({ onSubmit, onImageSubmit, loading, deepMode, onDeepMode
     }
   }, []);
 
+  // 清空输入后重置 textarea 高度
+  useEffect(() => {
+    if (!input && textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
+  }, [input]);
+
   const handleSubmitClick = useCallback(() => {
     if (attachedImage) {
       // 有图片时调用 onImageSubmit
       if (input.trim()) {
-        // 同时提交文字和图片
         onImageSubmit(attachedImage.file, input.trim());
       } else {
         onImageSubmit(attachedImage.file, '');
       }
+      setInput('');
       if (attachedImage.preview) {
         URL.revokeObjectURL(attachedImage.preview);
       }
@@ -209,13 +230,12 @@ const InputArea = memo(({ onSubmit, onImageSubmit, loading, deepMode, onDeepMode
         />
         <Button
           type="button"
-          colorScheme="gold"
-          isLoading={loading}
-          disabled={!input.trim() && !attachedImage}
-          onClick={handleSubmitClick}
+          colorScheme={loading ? 'red' : 'gold'}
+          onClick={loading ? onStop : handleSubmitClick}
+          disabled={!loading && !input.trim() && !attachedImage}
           px={4}
         >
-          发送
+          {loading ? '停止' : '发送'}
         </Button>
               </Flex>
       {/* 图片预览 */}
@@ -687,19 +707,7 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
                 <Box className="ai-coach-markdown" fontSize="13px" lineHeight="1.8" color="rgba(245,240,232,0.6)">
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
-                    components={{
-                      h1: ({ children }) => <Text as="h1" color="white" fontWeight="bold" fontSize="sm" mt={2} mb={1}>{children}</Text>,
-                      h2: ({ children }) => <Text as="h2" color="white" fontWeight="bold" fontSize="sm" mt={2} mb={1}>{children}</Text>,
-                      h3: ({ children }) => <Text as="h3" color="white" fontWeight="bold" fontSize="sm" mt={2} mb={1}>{children}</Text>,
-                      p: ({ children }) => <Text mb={2}>{children}</Text>,
-                      strong: ({ children }) => <Text as="strong" color="gold.200" fontWeight="bold">{children}</Text>,
-                      ul: ({ children }) => <Text as="ul" pl={4} mb={2}>{children}</Text>,
-                      ol: ({ children }) => <Text as="ol" pl={4} mb={2}>{children}</Text>,
-                      li: ({ children }) => <li style={{ marginBottom: '4px', paddingLeft: '8px', listStylePosition: 'inside' }}>{children}</li>,
-                      blockquote: ({ children }) => <Box borderLeft="3px solid" borderColor="whiteAlpha.400" pl={3} py={1} color="rgba(245,240,232,0.6)">{children}</Box>,
-                      hr: () => <Box borderTop="1px solid" borderColor="whiteAlpha.300" my={2} />,
-                      code: ({ children }) => <Text as="code" bg="whiteAlpha.200" px={1} py={0.5} borderRadius="sm" fontSize="0.9em">{children}</Text>,
-                    }}
+                    components={reasoningMarkdownComponents}
                   >
                     {filterReasoning(reasoning)}
                   </ReactMarkdown>
@@ -712,19 +720,7 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
                 <Box className="ai-coach-markdown" fontSize="14px" lineHeight="1.8" color="warm.50">
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
-                    components={{
-                      h1: ({ children }) => <Text as="h1" color="white" fontWeight="bold" fontSize="md" mt={3} mb={1}>{children}</Text>,
-                      h2: ({ children }) => <Text as="h2" color="white" fontWeight="bold" fontSize="md" mt={3} mb={1}>{children}</Text>,
-                      h3: ({ children }) => <Text as="h3" color="white" fontWeight="bold" fontSize="md" mt={3} mb={1}>{children}</Text>,
-                      p: ({ children }) => <Text mb={2}>{children}</Text>,
-                      strong: ({ children }) => <Text as="strong" color="gold.200" fontWeight="bold">{children}</Text>,
-                      ul: ({ children }) => <Text as="ul" pl={4} mb={2}>{children}</Text>,
-                      ol: ({ children }) => <Text as="ol" pl={4} mb={2}>{children}</Text>,
-                      li: ({ children }) => <li style={{ marginBottom: '4px', paddingLeft: '8px', listStylePosition: 'inside' }}>{children}</li>,
-                      blockquote: ({ children }) => <Box borderLeft="3px solid" borderColor="whiteAlpha.400" pl={3} py={1} color="rgba(245,240,232,0.6)">{children}</Box>,
-                      hr: () => <Box borderTop="1px solid" borderColor="whiteAlpha.300" my={2} />,
-                      code: ({ children }) => <Text as="code" bg="whiteAlpha.200" px={1} py={0.5} borderRadius="sm" fontSize="0.9em">{children}</Text>,
-                    }}
+                    components={markdownComponents}
                   >
                     {fixMarkdown(message.content)}
                   </ReactMarkdown>
@@ -768,19 +764,7 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
               <Box className="ai-coach-markdown" fontSize="14px" lineHeight="1.8" color="warm.50">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
-                  components={{
-                    h1: ({ children }) => <Text as="h1" color="white" fontWeight="bold" fontSize="md" mt={3} mb={1}>{children}</Text>,
-                    h2: ({ children }) => <Text as="h2" color="white" fontWeight="bold" fontSize="md" mt={3} mb={1}>{children}</Text>,
-                    h3: ({ children }) => <Text as="h3" color="white" fontWeight="bold" fontSize="md" mt={3} mb={1}>{children}</Text>,
-                    p: ({ children }) => <Text mb={2}>{children}</Text>,
-                    strong: ({ children }) => <Text as="strong" color="gold.200" fontWeight="bold">{children}</Text>,
-                    ul: ({ children }) => <Text as="ul" pl={4} mb={2}>{children}</Text>,
-                    ol: ({ children }) => <Text as="ol" pl={4} mb={2}>{children}</Text>,
-                    li: ({ children }) => <Text as="li" mb={1}>{children}</Text>,
-                    blockquote: ({ children }) => <Box borderLeft="3px solid" borderColor="whiteAlpha.400" pl={3} py={1} color="rgba(245,240,232,0.6)">{children}</Box>,
-                    hr: () => <Box borderTop="1px solid" borderColor="whiteAlpha.300" my={2} />,
-                    code: ({ children }) => <Text as="code" bg="whiteAlpha.200" px={1} py={0.5} borderRadius="sm" fontSize="0.9em">{children}</Text>,
-                  }}
+                  components={markdownComponents}
                 >
                   {fixMarkdown(message.content)}
                 </ReactMarkdown>
@@ -1739,6 +1723,8 @@ export default function AICoach() {
   const reasoningContentRef = useRef('');
   const streamingContentRef = useRef('');
   const isStreamingRef = useRef(false);
+  const abortControllerRef = useRef(null); // 用于停止生成
+  const streamingCancelledRef = useRef(false); // 标记是否被用户手动停止
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
   const scrollContainerRef = useRef(null);
@@ -2749,6 +2735,11 @@ export default function AICoach() {
     reasoningContentRef.current = '';
     streamingContentRef.current = '';
     isStreamingRef.current = true;
+    streamingCancelledRef.current = false;
+
+    // 创建 AbortController，用于停止生成
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     // 添加一条空的助手消息
     const assistantId = `asst-${Date.now()}`;
@@ -2779,7 +2770,8 @@ export default function AICoach() {
         headers: {
           'Authorization': `Bearer ${token}`
         },
-        body: formData
+        body: formData,
+        signal: controller.signal
       });
 
       if (!res.ok) {
@@ -2798,14 +2790,17 @@ export default function AICoach() {
       );
       scrollToBottom();
     } catch (e) {
-      captureError(e);
-      setError(e.message || '网络错误，请重试');
-      // 移除失败的消息
-      setMessages(prev => prev.filter(m => m.id !== tempId && m.id !== assistantId));
+      if (e.name === 'AbortError') {
+        streamingCancelledRef.current = true;
+      } else {
+        captureError(e);
+        setError(e.message || '网络错误，请重试');
+        setMessages(prev => prev.filter(m => m.id !== tempId && m.id !== assistantId));
+      }
     } finally {
       setLoading(false);
       isStreamingRef.current = false;
-      // 确保最终滚动到底部
+      abortControllerRef.current = null;
       scrollToBottom();
     }
   }, [loading, selectedGirlId, apiUrl, scrollToBottom]);
@@ -2838,6 +2833,11 @@ export default function AICoach() {
     reasoningContentRef.current = '';
     streamingContentRef.current = '';
     isStreamingRef.current = true;
+    streamingCancelledRef.current = false;
+
+    // 创建 AbortController，用于停止生成
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     // 添加一条空的助手消息
     const assistantId = `asst-${Date.now()}`;
@@ -2864,9 +2864,10 @@ export default function AICoach() {
         body: JSON.stringify({
           situation: userMessage,
           stream: true,
-          mode: deepMode ? 'pro' : 'flash', // 传递模式给后端
+          mode: deepMode ? 'pro' : 'flash',
           girlId: selectedGirlId
-        })
+        }),
+        signal: controller.signal
       });
 
       if (!res.ok) {
@@ -2968,13 +2969,19 @@ export default function AICoach() {
         );
       }
     } catch (e) {
-      captureError(e);
-      setError(e.message || '网络错误，请重试');
-      // 移除失败的消息
-      setMessages(prev => prev.filter(m => m.id !== tempId && m.id !== assistantId));
+      if (e.name === 'AbortError') {
+        // 用户主动停止，保留已生成的内容
+        streamingCancelledRef.current = true;
+      } else {
+        captureError(e);
+        setError(e.message || '网络错误，请重试');
+        // 移除失败的消息
+        setMessages(prev => prev.filter(m => m.id !== tempId && m.id !== assistantId));
+      }
     } finally {
       setLoading(false);
       isStreamingRef.current = false;
+      abortControllerRef.current = null;
       // 确保最终滚动到底部
       scrollToBottom();
     }
@@ -2984,8 +2991,14 @@ export default function AICoach() {
     e?.preventDefault();
     await handleSubmitInternal(input);
     setInput('');
-    // 不再手动重置高度，让 textarea 自然重置
   };
+
+  // 停止生成
+  const handleStop = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+  }, []);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -3118,12 +3131,7 @@ export default function AICoach() {
                       <Box fontSize="13px" lineHeight="1.7" color="warm.50">
                         <ReactMarkdown
                           remarkPlugins={[remarkGfm]}
-                          components={{
-                            strong: ({ children }) => <Text as="strong" color="gold.300" fontWeight="bold">{children}</Text>,
-                            p: ({ children }) => <Text mb={2}>{children}</Text>,
-                            ul: ({ children }) => <Text as="ul" pl={4} mb={2}>{children}</Text>,
-                            li: ({ children }) => <li style={{ marginBottom: '4px', paddingLeft: '8px', listStylePosition: 'inside' }}>{children}</li>,
-                          }}
+                          components={markdownComponents}
                         >{fixMarkdown(girlAnalysisContent)}</ReactMarkdown>
                       </Box>
                       {girlAnalysisLoading && (
@@ -3149,6 +3157,7 @@ export default function AICoach() {
         <InputArea
           onSubmit={handleSubmitInternal}
           onImageSubmit={handleImageSubmit}
+          onStop={handleStop}
           loading={loading}
           deepMode={deepMode}
           onDeepModeToggle={handleDeepModeToggle}
@@ -3338,6 +3347,7 @@ export default function AICoach() {
       <InputArea
         onSubmit={handleSubmitInternal}
         onImageSubmit={handleImageSubmit}
+        onStop={handleStop}
         loading={loading}
         deepMode={deepMode}
         onDeepModeToggle={handleDeepModeToggle}

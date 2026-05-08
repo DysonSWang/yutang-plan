@@ -341,3 +341,121 @@ body::after {
 .react-datepicker__triangle {
   display: none !important;
 }
+
+/* ============================================
+   AI 教练 Markdown 输出排版
+   ============================================ */
+.ai-coach-markdown {
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+/* 块级元素 — 确保独立成行 */
+.ai-coach-markdown h1,
+.ai-coach-markdown h2,
+.ai-coach-markdown h3,
+.ai-coach-markdown h4,
+.ai-coach-markdown p,
+.ai-coach-markdown ul,
+.ai-coach-markdown ol,
+.ai-coach-markdown blockquote,
+.ai-coach-markdown pre,
+.ai-coach-markdown hr,
+.ai-coach-markdown table {
+  display: block;
+  width: 100%;
+}
+
+.ai-coach-markdown h1 { font-size: 1.2em; font-weight: 700; margin: 20px 0 8px; color: var(--warm-white); line-height: 1.4; }
+.ai-coach-markdown h2 { font-size: 1.1em; font-weight: 700; margin: 18px 0 6px; color: var(--warm-white); line-height: 1.4; }
+.ai-coach-markdown h3 { font-size: 1.05em; font-weight: 600; margin: 14px 0 4px; color: rgba(245,240,232,0.92); line-height: 1.4; }
+.ai-coach-markdown h4 { font-size: 1em; font-weight: 600; margin: 12px 0 4px; color: rgba(245,240,232,0.85); line-height: 1.4; }
+
+.ai-coach-markdown p {
+  margin: 0 0 12px;
+  line-height: 1.75;
+}
+.ai-coach-markdown p:last-child { margin-bottom: 0; }
+
+/* 加粗 — 金色强调 */
+.ai-coach-markdown strong { color: var(--gold); font-weight: 600; }
+
+/* 列表 */
+.ai-coach-markdown ul,
+.ai-coach-markdown ol { margin: 0 0 12px; padding-left: 20px; }
+.ai-coach-markdown li { margin-bottom: 4px; line-height: 1.65; }
+.ai-coach-markdown li:last-child { margin-bottom: 0; }
+
+/* 引用块 */
+.ai-coach-markdown blockquote {
+  margin: 8px 0 12px;
+  padding: 8px 14px;
+  border-left: 3px solid rgba(226,176,68,0.35);
+  background: rgba(255,255,255,0.03);
+  border-radius: 0 6px 6px 0;
+  color: rgba(245,240,232,0.55);
+  font-style: italic;
+}
+
+/* 水平线 */
+.ai-coach-markdown hr {
+  margin: 16px 0;
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+/* 行内代码 */
+.ai-coach-markdown code {
+  background: rgba(255,255,255,0.08);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  color: rgba(245,240,232,0.8);
+}
+
+/* 代码块 */
+.ai-coach-markdown pre {
+  margin: 10px 0 14px;
+  padding: 12px 16px;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px;
+  overflow-x: auto;
+  font-size: 0.88em;
+  line-height: 1.55;
+}
+.ai-coach-markdown pre code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* 表格 */
+.ai-coach-markdown table {
+  margin: 10px 0 14px;
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92em;
+}
+.ai-coach-markdown th,
+.ai-coach-markdown td {
+  border: 1px solid rgba(255,255,255,0.1);
+  padding: 8px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+.ai-coach-markdown th {
+  background: rgba(255,255,255,0.04);
+  font-weight: 600;
+  color: var(--warm-white);
+}
+.ai-coach-markdown tr:nth-child(even) td { background: rgba(255,255,255,0.015); }
+
+/* 链接 */
+.ai-coach-markdown a {
+  color: var(--gold);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.ai-coach-markdown a:hover { color: var(--gold-hover); }

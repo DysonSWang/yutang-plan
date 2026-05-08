@@ -1669,7 +1669,10 @@ router.post('/analyze-image', authMiddleware, chatImportUpload.single('image'), 
       try { fs.unlinkSync(filePath); } catch (_) {}
     }
     console.error('[AI Coach] analyze-image error:', err);
-    res.status(500).json({ error: '图片分析失败' });
+    const message = err.message === '图片分析超时（90秒），请尝试压缩图片后重试'
+      ? err.message
+      : '图片分析失败，请稍后重试';
+    res.status(500).json({ error: message });
   }
 });
 

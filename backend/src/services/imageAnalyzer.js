@@ -3,6 +3,8 @@
  */
 const { getVLModelConfig } = require('../config');
 
+const IMAGE_ANALYSIS_TIMEOUT = 90000; // 图片分析 90 秒超时
+
 /**
  * 分析图片内容，识别类型并给出建议
  * @param {string} imageBase64 - base64编码的图片（data:image/jpeg;base64,xxx）
@@ -46,34 +48,48 @@ async function analyzeImage(imageBase64, userMessage = '') {
     }
   ];
 
-  const response = await fetch(config.url, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${config.key}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model: config.model,
-      messages,
-      max_tokens: 2000,
-      temperature: 0.7
-    })
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), IMAGE_ANALYSIS_TIMEOUT);
 
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`AI分析失败: ${response.status} - ${err}`);
+  try {
+    const response = await fetch(config.url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${config.key}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: config.model,
+        messages,
+        max_tokens: 20000,
+        temperature: 0.7
+      }),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(`AI分析失败: ${response.status} - ${err}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || '';
+
+    // 简单解析类型
+    let type = '其他';
+    if (content.includes('聊天记录')) type = '聊天记录';
+    else if (content.includes('朋友圈')) type = '朋友圈';
+
+    return { type, content };
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (err.name === 'AbortError') {
+      throw new Error('图片分析超时（90秒），请尝试压缩图片后重试');
+    }
+    throw err;
   }
-
-  const data = await response.json();
-  const content = data.choices?.[0]?.message?.content || '';
-
-  // 简单解析类型
-  let type = '其他';
-  if (content.includes('聊天记录')) type = '聊天记录';
-  else if (content.includes('朋友圈')) type = '朋友圈';
-
-  return { type, content };
 }
 
 module.exports = { analyzeImage };

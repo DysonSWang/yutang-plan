@@ -223,8 +223,9 @@ function AppRoutes() {
 }
 
 // 生产环境（Capacitor App 除外）用 /app/，其他用 /
-// 注意：window.Capacitor 在 bundle 中始终存在，改用路径判断
-const BASENAME = import.meta.env.PROD ? '/app/' : '/';
+// 注意：window.Capacitor 在 bundle 中始终存在，改用构建时环境变量判断
+// eslint-disable-next-line no-undef
+const BASENAME = typeof __CAPACITOR_BUILD__ !== 'undefined' && __CAPACITOR_BUILD__ ? '/' : (import.meta.env.PROD ? '/app/' : '/');
 
 export default function App() {
   const toast = useToast();

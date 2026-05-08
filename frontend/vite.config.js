@@ -6,14 +6,15 @@ const isProduction = process.env.NODE_ENV === 'production'
 const isCapacitor = process.env.CAPACITOR_BUILD === 'true'
 
 export default defineConfig({
-  // 生产环境用 /app/（SPA 部署在子路径），开发环境用 /
-  base: process.env.NODE_ENV === 'production' ? '/app/' : '/',
+  // Capacitor 构建用 /（Android assets 根路径），其他生产环境用 /app/
+  base: isCapacitor ? '/' : (process.env.NODE_ENV === 'production' ? '/app/' : '/'),
   plugins: [
     react(),
     // PWA 在生产环境启用（已临时禁用以便调试构建问题）
   ],
   define: {
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+    '__CAPACITOR_BUILD__': JSON.stringify(isCapacitor),
   },
   optimizeDeps: {
     include: ['@chakra-ui/react', '@chakra-ui/hooks'],
