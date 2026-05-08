@@ -6,27 +6,27 @@
  */
 
 const prisma = require('../prisma');
+const osConfig = require('./os-config');
 
-// 7 阶段统一模型
-const PHASES = {
+// 扩展 PHASES：保留原有 keywords 用于诊断，新增 deadEnd/prerequisites/masterTools
+const _originalPhases = {
   0: { name: '资源池', keywords: ['资源', '展示面', '社交软件', '搭讪'] },
   1: { name: '入场', keywords: ['刚认识', '刚加微信', '第一次聊天', '开场', '破冰', '打招呼', 'hello', '你好', '刚加'] },
-  2: { name: '探测', keywords: ['聊天', '了解', '价值展示', '评估', '筛选', '意愿', '试探'] },
-  3: { name: '升温', keywords: ['暧昧', '情绪', '推拉', '信任', '升温', '约会邀请', '模糊邀约'] },
+  2: { name: '聊天', keywords: ['聊天', '了解', '价值展示', '评估', '筛选', '意愿', '试探'] },
+  3: { name: '暧昧', keywords: ['暧昧', '情绪', '推拉', '信任', '升温', '约会邀请', '模糊邀约'] },
   4: { name: '确认', keywords: ['确认关系', '表白', '确定关系', '要不要在一起', '选择', '长期', '短期'] },
   5: { name: '确立', keywords: ['女朋友', '在一起', '确定关系', '恋爱', '确立'] },
   6: { name: '经营', keywords: ['长期', '经营', '矛盾', '分手', '挽回', '维护', '结婚', '婚姻'] }
 };
 
-// DB stage 字符串 → Phase 数字映射
-const DB_STAGE_MAP = {
-  '陌生': 0,
-  '搭讪': 0,
-  '聊天': 2,
-  '暧昧': 3,
-  '约会': 4,
-  '长期': 5
-};
+// 合并：os-config 的完整数据 + 原有 keywords
+const PHASES = {};
+for (const [key, data] of Object.entries(osConfig.PHASES)) {
+  PHASES[key] = { ...data, keywords: _originalPhases[key]?.keywords || [] };
+}
+
+// 保留 DB_STAGE_MAP 来自 os-config
+const { DB_STAGE_MAP } = osConfig;
 
 /**
  * 诊断女生所处阶段
@@ -181,33 +181,14 @@ function detectSkipRisk(currentPhase, girl) {
  * 返回当前阶段可以执行的操作和必须完成的前置条件
  */
 function enforceNoSkip(currentPhase) {
-  const prerequisites = {
-    0: [],
-    1: ['完成资源池建设'],
-    2: ['完成破冰', '解决对方防备心理'],
-    3: ['完成价值展示', '确认对方有意愿继续'],
-    4: ['建立情绪连接', '信任感初步建立'],
-    5: ['双方明确关系意愿'],
-    6: ['关系已确立']
-  };
-
-  const actions = {
-    0: { core: '收集资源、建设展示面', masters: ['梵公子', '表哥'], warning: '不要急于出击' },
-    1: { core: '破冰、意图表达、解决阻力', masters: ['Leon', '凯哥'], warning: '不要暴露需求感' },
-    2: { core: '评估筛选、价值展示、意愿锁定', masters: ['Leon', '乌哥'], warning: '不要急于推进关系' },
-    3: { core: '情绪推拉、叙事建立信任', masters: ['表哥', '林老头', '童锦程'], warning: '不要跳过信任建立' },
-    4: { core: '选择轨道：短轨(速约)或长轨(长期)', masters: ['OS路由'], warning: '短轨长轨不能混用' },
-    5: { core: '短轨=速约收尾 / 长轨=关系锁定', masters: ['表哥(短)', '梵公子(长)'], warning: '不要回头' },
-    6: { core: '短轨=撤退策略 / 长轨=长期维护', masters: ['熊哥(短)', 'Leon+许诺(长)'], warning: '不要回到上一阶段' }
-  };
-
+  const phaseInfo = PHASES[currentPhase] || {};
   return {
     currentPhase,
-    phaseName: PHASES[currentPhase].name,
-    prerequisites: prerequisites[currentPhase] || [],
-    coreAction: actions[currentPhase]?.core || '',
-    availableMasters: actions[currentPhase]?.masters || [],
-    warning: actions[currentPhase]?.warning || ''
+    phaseName: phaseInfo.name || '',
+    prerequisites: phaseInfo.prerequisites || [],
+    coreAction: phaseInfo.coreTask || '',
+    availableMasters: Array.isArray(phaseInfo.masterTools) ? phaseInfo.masterTools : [],
+    warning: phaseInfo.deadEnd || ''
   };
 }
 
@@ -216,17 +197,17 @@ function enforceNoSkip(currentPhase) {
  * 返回每个 Phase 对应的大师列表
  */
 function routeByPhase(phase) {
-  const routing = {
-    0: { masters: ['fan-gongzi', 'biao-ge', 'shege'], reason: '资源池建设阶段' },
-    1: { masters: ['leon', 'kaige', 'ma-ke'], reason: '入场破冰阶段' },
-    2: { masters: ['leon', 'wu-jia', 'dadi', 'linlaotou'], reason: '探测评估阶段' },
-    3: { masters: ['biao-ge', 'linlaotou', 'tong', 'haoge'], reason: '升温阶段' },
-    4: { masters: ['os-router'], reason: '分叉点：选择短轨或长轨', trackDecision: true },
-    5: { shortTrack: ['biao-ge', 'xiong-ge'], longTrack: ['fan-gongzi', 'leon', 'tong'], reason: '确立阶段' },
-    6: { shortTrack: ['xiong-ge', 'bg'], longTrack: ['fan-gongzi', 'leon', 'xunuo', 'tuobuhua'], reason: '经营阶段' }
+  const phaseInfo = PHASES[phase] || {};
+  const result = {
+    masters: Array.isArray(phaseInfo.masterTools) ? phaseInfo.masterTools : [],
+    reason: `${phaseInfo.name || '通用'}阶段核心任务`
   };
-
-  return routing[phase] || { masters: ['leon'], reason: '通用路由' };
+  if (phaseInfo.trackDecision) {
+    result.trackDecision = true;
+    result.shortTrack = phaseInfo.masterTools?.short || [];
+    result.longTrack = phaseInfo.masterTools?.long || [];
+  }
+  return result;
 }
 
 /**

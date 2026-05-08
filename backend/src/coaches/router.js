@@ -80,6 +80,16 @@ const KEYWORD_WEIGHTS = [
   { keyword: '调动情绪', weight: 0.8, type: '情绪调动' },
   { keyword: '情绪波动', weight: 0.7, type: '情绪调动' },
   { keyword: '没感觉', weight: 0.7, type: '情绪调动' },
+
+  // OS 专属关键词
+  { keyword: '我现在在哪个阶段', weight: 0.95, type: '阶段诊断' },
+  { keyword: '现在是什么阶段', weight: 0.9, type: '阶段诊断' },
+  { keyword: '阶段', weight: 0.6, type: '阶段诊断' },
+  { keyword: '选短轨还是长轨', weight: 0.95, type: '轨道判断' },
+  { keyword: '短期还是长期怎么选', weight: 0.95, type: '轨道判断' },
+  { keyword: '短轨长轨区别', weight: 0.9, type: '轨道判断' },
+  { keyword: '轨道决策', weight: 0.85, type: 'OS战略' },
+  { keyword: '死胡同', weight: 0.8, type: '阶段诊断' },
 ];
 
 /**

@@ -2,12 +2,13 @@
  * Prompt Builder - 构建AI教练prompt
  */
 
+const osConfig = require('./os-config');
 const { getMultiDimensionalSkillsWithMeta } = require('./router');
 const { buildStructuredFusion, OS_CONFLICT_RULES } = require('./fusion');
 const { getAllLearnings, formatLearningsForPrompt } = require('../services/learning');
 const { buildDynamicPersona, buildPersonaSection } = require('../services/coachPersona');
 const { STAGE_LABELS } = require('../services/relationshipStage');
-const { PHASES, enforceNoSkip } = require('./stage-diagnosis');
+const { enforceNoSkip } = require('./stage-diagnosis');
 
 /**
  * 构建综合教练prompt
@@ -445,43 +446,69 @@ ${skills.map(s => {
  */
 function buildOSMetaSection(context) {
   const { girlProfile = null, clientProfile = null } = context;
-  let lines = [];
+  const lines = [];
 
+  const { CORE_PRINCIPLES, PHASES, SIGNAL_IOI, TRACK_DECISION, DB_STAGE_MAP } = osConfig;
+
+  // 计算当前阶段（函数顶部统一计算，避免作用域问题）
+  const currentPhase = girlProfile?.stage
+    ? (DB_STAGE_MAP[girlProfile.stage] ?? 1)
+    : null;
+  const currentPhaseInfo = currentPhase != null ? PHASES[currentPhase] : null;
+
+  // ===== 原有的【恋爱操作系统 · 内部规则】头部 =====
   lines.push('【恋爱操作系统 · 内部规则】');
   lines.push('所有分析基于以下统一框架：');
 
-  // 1. 7 阶段简述
+  // ===== 1. 增强：7阶段简述（使用 PHASES 数据） =====
   lines.push('');
   lines.push('阶段模型：');
-  lines.push('- Phase 0 资源池：收集资源、展示面建设');
-  lines.push('- Phase 1 入场：破冰、意图表达、解决阻力');
-  lines.push('- Phase 2 探测：评估筛选、价值展示、意愿锁定');
-  lines.push('- Phase 3 升温：情绪推拉、叙事建立信任');
-  lines.push('- Phase 4 确认：【分叉点】用户必须选择短轨(速约)或长轨(长期)，不可混合');
-  lines.push('- Phase 5 确立：短轨=速约收尾 / 长轨=关系锁定');
-  lines.push('- Phase 6 经营：短轨=撤退策略 / 长轨=长期维护');
+  for (const [phase, info] of Object.entries(PHASES)) {
+    const leonInfo = info.leonScore ? `（Leon评分${info.leonScore}）` : '';
+    lines.push(`- Phase ${phase} ${info.name}${leonInfo}：${info.coreTask}`);
+  }
 
-  // 2. 当前阶段约束
-  if (girlProfile?.stage) {
-    const stagePhaseMap = { '陌生': 0, '搭讪': 0, '聊天': 2, '暧昧': 3, '约会': 4, '长期': 5 };
-    const currentPhase = stagePhaseMap[girlProfile.stage] ?? 1;
-    const enforcement = enforceNoSkip(currentPhase);
+  // ===== 2. 增强：当前阶段约束（带死胡同警告） =====
+  if (currentPhaseInfo) {
     lines.push('');
-    lines.push(`当前阶段：Phase ${currentPhase}（${enforcement.phaseName}）`);
-    lines.push(`核心任务：${enforcement.coreAction}`);
-    if (enforcement.warning) {
-      lines.push(`⚠️ 注意：${enforcement.warning}`);
+    lines.push(`当前阶段：Phase ${currentPhase}（${currentPhaseInfo.name}）`);
+    lines.push(`核心任务：${currentPhaseInfo.coreTask}`);
+    if (currentPhaseInfo.deadEnd) {
+      lines.push(`⚠️ 死胡同：${currentPhaseInfo.deadEnd}`);
     }
   }
 
-  // 3. 轨道判断
+  // ===== 3. 增强：轨道判断（使用 TRACK_DECISION） =====
   if (girlProfile?.track) {
     lines.push('');
     lines.push(`用户轨道：${girlProfile.track === 'short' ? '短轨(速约)' : '长轨(长期)'}`);
     lines.push(girlProfile.track === 'short' ? '策略：效率优先、快速筛选' : '策略：真诚优先、长期经营');
+  } else {
+    lines.push('');
+    lines.push('【轨道决策树】');
+    lines.push(`短轨条件：${TRACK_DECISION.short_keywords.join('/')}`);
+    lines.push(`长轨条件：${TRACK_DECISION.long_keywords.join('/')}`);
+    lines.push(`规则：${TRACK_DECISION.rule}`);
   }
 
-  // 4. 核心裁决规则（选 5 条最关键的）
+  // ===== 4. 新增：核心原则（使用 CORE_PRINCIPLES） =====
+  lines.push('');
+  lines.push('核心原则（当策略矛盾时按此优先级执行）：');
+  for (const p of CORE_PRINCIPLES) {
+    lines.push(`- ${p.name}：${p.diagnostic}`);
+  }
+
+  // ===== 5. 新增：IOI/IoD信号（使用 SIGNAL_IOI） =====
+  if (girlProfile) {
+    lines.push('');
+    lines.push('信号识别（判断是否该推进）：');
+    for (const s of SIGNAL_IOI) {
+      lines.push(`  ${s.type}：正面=${s.positive} / 负面=${s.negative}`);
+    }
+    lines.push('判断规则：3个以上正面信号=推进；3个以上负面信号=后退/价值建设');
+  }
+
+  // ===== 6. 增强：冲突裁决（保留原有5条，新增死胡同警告） =====
   lines.push('');
   lines.push('冲突裁决规则（当策略矛盾时按此执行）：');
   lines.push('1. 短轨和长轨是两个独立系统，混用必败');
@@ -489,11 +516,15 @@ function buildOSMetaSection(context) {
   lines.push('3. 感觉是结果不是方法，用阶段/信号/数据决策');
   lines.push('4. 不善良的人消耗远大于产出，先验证善良度');
   lines.push('5. 阶段不可跳步，必须先完成前置阶段的核心任务');
+  if (currentPhaseInfo?.deadEnd) {
+    lines.push(`⚠️ 当前阶段死胡同：${currentPhaseInfo.deadEnd}`);
+  }
 
   return lines.join('\n');
 }
 
 module.exports = {
   buildMasterPrompt,
-  buildChatAnalysisPrompt
+  buildChatAnalysisPrompt,
+  buildOSMetaSection
 };
