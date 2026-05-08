@@ -438,13 +438,23 @@ export default function ChapterManagement() {
     <Box>
       <HStack justify="space-between" mb={6}>
         <Heading size="lg" color="white">学习版块管理</Heading>
-        <Button
-          leftIcon={<FiPlus />}
-          colorScheme="gold"
-          onClick={handleCreate}
-        >
-          新建章节
-        </Button>
+        <HStack spacing={3}>
+          <Button
+            leftIcon={<FiFileText />}
+            colorScheme="teal"
+            variant="outline"
+            onClick={() => window.location.href = '/admin/content-import'}
+          >
+            内容导入
+          </Button>
+          <Button
+            leftIcon={<FiPlus />}
+            colorScheme="gold"
+            onClick={handleCreate}
+          >
+            新建章节
+          </Button>
+        </HStack>
       </HStack>
 
       {chapters.length === 0 ? (
