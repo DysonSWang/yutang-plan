@@ -170,7 +170,8 @@ function AppRoutes() {
     return () => { clearTimeout(minDisplay); clearTimeout(maxDisplay); };
   }, [loading]);
 
-  if (loading) return null;
+  // loading 时显示 PageLoader，不 return null（否则会卡在白屏）
+  if (loading) return <PageLoader />;
 
   return (
     <AnimatePresence mode="wait">
