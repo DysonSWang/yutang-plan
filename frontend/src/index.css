@@ -348,6 +348,7 @@ body::after {
 .ai-coach-markdown {
   word-break: break-word;
   overflow-wrap: break-word;
+  white-space: pre-wrap;
 }
 
 /* 块级元素 — 确保独立成行 */
