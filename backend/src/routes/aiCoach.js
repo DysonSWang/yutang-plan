@@ -561,6 +561,9 @@ router.post('/situation', authMiddleware, async (req, res) => {
       // deepseek-v4-pro 启用思考过程（deepseek-chat 不支持）
       if (aiConfig.model === 'deepseek-v4-pro') {
         streamParams.thinking = { type: 'enabled' };
+        logger.info(`[AICoach] 深度模式已启用 thinking，模型: ${aiConfig.model}`);
+      } else {
+        logger.info(`[AICoach] 快速模式无 thinking，模型: ${aiConfig.model}`);
       }
 
       await callAIStream(

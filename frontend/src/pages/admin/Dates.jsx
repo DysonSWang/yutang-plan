@@ -258,7 +258,7 @@ export default function AdminDates() {
     try {
       const res = await eventsApi.create({
         clientId: selectedDate.clientId,
-        girlId: selectedDate.girlId || undefined,
+        girlId: selectedDate.girlId || null,
         title: title.trim(),
         type: 'manual',
         eventTime: selectedDate.dateTime || new Date().toISOString(),

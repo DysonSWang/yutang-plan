@@ -276,7 +276,7 @@ async function buildAICoachContext(clientId, girlId, userMessage, opts = {}) {
   const rawLearnings = await prisma.clientLearning.findMany({
     where: {
       clientId,
-      OR: [{ girlId: null }, { girlId: girlId || undefined }]
+      OR: girlId ? [{ girlId }] : [{ girlId: null }]
     },
     orderBy: { createdAt: 'desc' },
     take: 20

@@ -500,9 +500,8 @@ export default function AdminWorkbench() {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3005';
 
     try {
-      // 深度模式（useTools）走非流式，触发 coach-engine 工具调用
-      // 快速模式走流式，无工具调用
-      const doStream = !deepMode;
+      // 深度模式走流式（thinking + reasoning 实时显示），工具调用暂不在流式中使用
+      const doStream = true; // 始终流式，deepMode 控制 thinking 参数
       reasoningContentRef.current = ''; // 重置思考过程
       if (reasoningRef.current) reasoningRef.current.textContent = '';
 

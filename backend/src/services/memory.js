@@ -517,7 +517,13 @@ async function listSessions({ clientId, girlId, coachId, activeOnly, compressedO
   const where = {};
 
   if (clientId) where.clientId = clientId;
-  if (girlId) where.girlId = girlId;
+  // 空字符串 → 查询"无女生"的通用会话（girlId = null）
+  // 空字符串转为 null，让 Prisma 匹配 girlId 字段为 null 的记录
+  if (girlId !== undefined && girlId !== null && girlId !== '') {
+    where.girlId = girlId;
+  } else if (girlId === null || girlId === '') {
+    where.girlId = null;
+  }
   if (coachId) where.coachId = coachId;
   if (activeOnly) where.summary = null;
   if (compressedOnly) where.summary = { not: null };

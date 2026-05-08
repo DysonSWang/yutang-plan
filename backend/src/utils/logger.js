@@ -114,8 +114,8 @@ function triggerAlert(entry, type = 'error') {
       notifyAdmins('slow', `🐌 慢请求频繁：${slowPath} 出现 3 次慢请求`);
     }
 
-    // 单次超级慢 > 10秒 → 立即告警
-    if (entry.duration > 10000) {
+    // 单次超级慢 > 60秒 → 立即告警（流式响应自然较慢）
+    if (entry.duration > 60000) {
       notifyAdmins('critical', `⚠️ 超级慢请求：${entry.method} ${entry.path} 耗时 ${entry.duration}ms`);
     }
   }

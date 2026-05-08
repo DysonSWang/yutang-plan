@@ -368,7 +368,7 @@ const ReplySuggestionsPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
       const res = await fetch(`${apiUrl}/api/ai-coach/reply-suggestions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ girlId: selectedGirlId || undefined, lastMessage: replyInput, style: style || undefined })
+        body: JSON.stringify({ girlId: selectedGirlId, lastMessage: replyInput, style: style || undefined })
       });
       if (!res.ok) throw new Error(`回复建议请求失败 (${res.status})`);
       const data = await res.json();
@@ -496,7 +496,7 @@ const OptimizeReplyPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
       const res = await fetch(`${apiUrl}/api/ai-coach/optimize-reply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ originalReply: optimizeInput, girlId: selectedGirlId || undefined, goal: goal || undefined })
+        body: JSON.stringify({ originalReply: optimizeInput, girlId: selectedGirlId, goal: goal || undefined })
       });
       if (!res.ok) throw new Error(`话术优化请求失败 (${res.status})`);
       const data = await res.json();
@@ -598,18 +598,9 @@ const OptimizeReplyPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
 // 过滤思考过程中的元信息（开头的约束理解 + 结尾的结构规划），只保留中间实际分析
 function filterReasoning(text) {
   if (!text) return '';
-  const paragraphs = text.split(/\n\n+/);
-  if (paragraphs.length <= 2) return text;
-  let start = 0;
-  let end = paragraphs.length;
-  // 从开头跳过"理解约束/格式要求"相关的元思考
-  const beginMeta = /用户要求|前提|限制|格式|不能用|约束|注意事项|角色名|专业术语|加粗|斜体|绕弯子|说教|口语化/;
-  while (start < end && beginMeta.test(paragraphs[start])) start++;
-  // 从结尾跳过"回复结构规划"相关的元思考
-  const endMeta = /整体回复|回复结构|按用户列出|几点.*组织|语气.*朋友|避免.*说教|最后.*回复|结构可以|组织方式|回复格式/;
-  while (end > start && endMeta.test(paragraphs[end - 1])) end--;
-  if (start >= end) return text; // 全被过滤了，返回原文
-  return paragraphs.slice(start, end).join('\n\n');
+  // 不要分割文本，保持 Markdown 结构完整
+  // 直接返回原文，由 ReactMarkdown 负责渲染
+  return text;
 }
 
 // 分析思考过程组件 — 内嵌在女生分析气泡顶部，可折叠
@@ -693,7 +684,26 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
             </Flex>
             {reasoningOpen && (
               <Box px={4} py={3} maxH="260px" overflowY="auto" borderBottom="1px solid" borderColor="whiteAlpha.200">
-                <Text fontSize="13px" color="rgba(245,240,232,0.6)" lineHeight="1.8" whiteSpace="pre-wrap">{filterReasoning(reasoning)}</Text>
+                <Box className="ai-coach-markdown" fontSize="13px" lineHeight="1.8" color="rgba(245,240,232,0.6)">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      h1: ({ children }) => <Text as="h1" color="white" fontWeight="bold" fontSize="sm" mt={2} mb={1}>{children}</Text>,
+                      h2: ({ children }) => <Text as="h2" color="white" fontWeight="bold" fontSize="sm" mt={2} mb={1}>{children}</Text>,
+                      h3: ({ children }) => <Text as="h3" color="white" fontWeight="bold" fontSize="sm" mt={2} mb={1}>{children}</Text>,
+                      p: ({ children }) => <Text mb={2}>{children}</Text>,
+                      strong: ({ children }) => <Text as="strong" color="gold.200" fontWeight="bold">{children}</Text>,
+                      ul: ({ children }) => <Text as="ul" pl={4} mb={2}>{children}</Text>,
+                      ol: ({ children }) => <Text as="ol" pl={4} mb={2}>{children}</Text>,
+                      li: ({ children }) => <li style={{ marginBottom: '4px', paddingLeft: '8px', listStylePosition: 'inside' }}>{children}</li>,
+                      blockquote: ({ children }) => <Box borderLeft="3px solid" borderColor="whiteAlpha.400" pl={3} py={1} color="rgba(245,240,232,0.6)">{children}</Box>,
+                      hr: () => <Box borderTop="1px solid" borderColor="whiteAlpha.300" my={2} />,
+                      code: ({ children }) => <Text as="code" bg="whiteAlpha.200" px={1} py={0.5} borderRadius="sm" fontSize="0.9em">{children}</Text>,
+                    }}
+                  >
+                    {filterReasoning(reasoning)}
+                  </ReactMarkdown>
+                </Box>
               </Box>
             )}
             {/* 正式回复内容 */}
@@ -710,7 +720,7 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
                       strong: ({ children }) => <Text as="strong" color="gold.200" fontWeight="bold">{children}</Text>,
                       ul: ({ children }) => <Text as="ul" pl={4} mb={2}>{children}</Text>,
                       ol: ({ children }) => <Text as="ol" pl={4} mb={2}>{children}</Text>,
-                      li: ({ children }) => <Text as="li" mb={1}>{children}</Text>,
+                      li: ({ children }) => <li style={{ marginBottom: '4px', paddingLeft: '8px', listStylePosition: 'inside' }}>{children}</li>,
                       blockquote: ({ children }) => <Box borderLeft="3px solid" borderColor="whiteAlpha.400" pl={3} py={1} color="rgba(245,240,232,0.6)">{children}</Box>,
                       hr: () => <Box borderTop="1px solid" borderColor="whiteAlpha.300" my={2} />,
                       code: ({ children }) => <Text as="code" bg="whiteAlpha.200" px={1} py={0.5} borderRadius="sm" fontSize="0.9em">{children}</Text>,
@@ -1842,7 +1852,8 @@ export default function AICoach() {
 
   useEffect(() => {
     loadGirls();
-    loadHistory();
+    // 显式传空字符串确保加载"无女生"的通用会话
+    loadHistory(selectedGirlId ? selectedGirlId : '');
     loadCombatHistory('__general__');
   }, []);
 
@@ -2105,10 +2116,10 @@ export default function AICoach() {
       });
     });
 
-    setLoading(true);
-    setError('');
-    setThinkingLabel(null);
-    setReasoningContent('');
+        setLoading(true);
+        setError('');
+        setThinkingLabel(null);
+        setReasoningContent('');
     reasoningContentRef.current = '';
     streamingContentRef.current = '';
     isStreamingRef.current = true;
@@ -2123,7 +2134,8 @@ export default function AICoach() {
         body: JSON.stringify({
           situation: userMessage,
           stream: true,
-          girlId: selectedGirlId || undefined,
+          mode: deepMode ? 'pro' : 'flash', // 传递模式给后端
+          girlId: selectedGirlId,
           regenerate: true
         })
       });
@@ -2200,13 +2212,17 @@ export default function AICoach() {
 
         if (buffer.trim()) {
           try {
-            const parsed = JSON.parse(buffer.trim());
-            if (parsed.reasoning) {
-              reasoningContentRef.current += parsed.reasoning;
-              setReasoningContent(reasoningContentRef.current);
-            }
-            if (parsed.content) {
-              streamingContentRef.current += parsed.content;
+            // 去掉 SSE 的 "data: " 前缀再解析
+            const bufferContent = buffer.trim().replace(/^data: /, '');
+            if (bufferContent.startsWith('{')) {
+              const parsed = JSON.parse(bufferContent);
+              if (parsed.reasoning) {
+                reasoningContentRef.current += parsed.reasoning;
+                setReasoningContent(reasoningContentRef.current);
+              }
+              if (parsed.content) {
+                streamingContentRef.current += parsed.content;
+              }
             }
           } catch { /* ignore */ }
         }
@@ -2269,7 +2285,7 @@ export default function AICoach() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ girlId: selectedGirlId || undefined })
+        body: JSON.stringify({ girlId: selectedGirlId })
       });
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
@@ -2284,8 +2300,9 @@ export default function AICoach() {
       reasoningContentRef.current = '';
       streamingContentRef.current = '';
       // 刷新会话列表（旧会话标记为已归档，新会话在发送消息时自动创建）
-      await loadHistory();
-      // 再次确保清空（loadHistory 可能设回旧会话数据）
+      // 显式传空字符串，确保加载"无女生"的通用会话（避免把其他女生历史带进来）
+      await loadHistory(selectedGirlId ? selectedGirlId : '');
+      // 再次确保清空（loadHistory 可能把其他女生会话内容设回来）
       setMessages([]);
       setActiveSessionId(null);
       toast({
@@ -2357,7 +2374,11 @@ export default function AICoach() {
           if (!trimmed || trimmed === 'data: [DONE]') continue;
           if (trimmed.startsWith('data: ')) {
             try {
-              const parsed = JSON.parse(trimmed.substring(6));
+              let jsonStr = trimmed.substring(6);
+              // 去掉可能的前缀
+              jsonStr = jsonStr.replace(/^data: /, '');
+              if (!jsonStr.startsWith('{')) continue;
+              const parsed = JSON.parse(jsonStr);
               // 处理 meta 帧（第一帧：cached / changeReason / staleAlert）
               if (!metaReceived && parsed.cached !== undefined) {
                 metaReceived = true;
@@ -2456,7 +2477,7 @@ export default function AICoach() {
         const res = await fetch(`${apiUrl}/api/ai-coach/reply-suggestions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ girlId: selectedGirlId || undefined, lastMessage: text, hiddenContext })
+          body: JSON.stringify({ girlId: selectedGirlId, lastMessage: text, hiddenContext })
         });
         if (!res.ok) throw new Error(`回复建议请求失败 (${res.status})`);
         const data = await res.json();
@@ -2482,7 +2503,7 @@ export default function AICoach() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({
-            girlId: selectedGirlId || undefined,
+            girlId: selectedGirlId,
             originalReply: text,
             hiddenContext: combatContextRef.current || null
           })
@@ -2583,7 +2604,7 @@ export default function AICoach() {
       const token = localStorage.getItem('zhuiai_token');
       const key = combatHistoryKey;
       const history = combatHistories[key] || [];
-      const girlIdParam = selectedGirlId || undefined;
+      const girlIdParam = selectedGirlId;
       if (combatMode === 'suggest') {
         const lastGirlMsg = [...history].reverse().find(m => m.role === 'girl');
         if (!lastGirlMsg) { setCombatLoading(false); return; }
@@ -2689,7 +2710,7 @@ export default function AICoach() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
-          girlId: selectedGirlId || undefined,
+          girlId: selectedGirlId,
           lastMessage: lastGirlMsg.content,
           hiddenContext: combatContextRef.current || null
         })
@@ -2843,7 +2864,8 @@ export default function AICoach() {
         body: JSON.stringify({
           situation: userMessage,
           stream: true,
-          girlId: selectedGirlId || undefined
+          mode: deepMode ? 'pro' : 'flash', // 传递模式给后端
+          girlId: selectedGirlId
         })
       });
 
@@ -2852,16 +2874,99 @@ export default function AICoach() {
         throw new Error(errData.error || `HTTP ${res.status}`);
       }
 
-      // analyze-image 返回简单 JSON（非流式）
-      const data = await res.json();
-      // 根据类型添加前缀提示
-      const typeLabel = data.type === '聊天记录' ? '【聊天记录分析】\n'
-        : data.type === '朋友圈' ? '【朋友圈分析】\n'
-        : '【图片分析】\n';
-      setMessages(prev =>
-        prev.map(m => m.id === assistantId ? { ...m, content: typeLabel + (data.content || '') } : m)
-      );
-      scrollToBottom();
+      // 始终使用流式模式
+      if (false) {
+        // 非流式分支（图片分析等场景）
+        const data = await res.json();
+        const typeLabel = data.type === '聊天记录' ? '【聊天记录分析】\n'
+          : data.type === '朋友圈' ? '【朋友圈分析】\n'
+          : '【图片分析】\n';
+        setMessages(prev =>
+          prev.map(m => m.id === assistantId ? { ...m, content: typeLabel + (data.content || '') } : m)
+        );
+        scrollToBottom();
+      } else {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let lastUpdate = 0;
+        let rafId = null;
+        const SENTENCE_ENDINGS = /[。！？\n]/;
+
+        const flushUpdate = (content) => {
+          const now = Date.now();
+          const shouldFlush = now - lastUpdate >= 150 || SENTENCE_ENDINGS.test(content.slice(-1));
+          if (shouldFlush) {
+            lastUpdate = now;
+            if (rafId) cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(() => {
+              rafId = null;
+              setMessages(prev =>
+                prev.map(m => m.id === assistantId ? { ...m, content } : m)
+              );
+              if (isStreamingRef.current) scrollToBottom();
+            });
+          } else {
+            streamingContentRef.current = content;
+          }
+        };
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            break;
+          }
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed === 'data: [DONE]') continue;
+            if (trimmed.startsWith('data: ')) {
+              const jsonStr = trimmed.substring(6);
+              if (!jsonStr.startsWith('{')) continue;
+              try {
+                const parsed = JSON.parse(jsonStr);
+                if (parsed.meta?.routedType) {
+                  setThinkingLabel(`正在从「${parsed.meta.routedType}」视角分析...`);
+                }
+                if (parsed.reasoning) {
+                  reasoningContentRef.current += parsed.reasoning;
+                  setReasoningContent(reasoningContentRef.current);
+                }
+                if (parsed.content) {
+                  setThinkingLabel(null);
+                  streamingContentRef.current += parsed.content;
+                  flushUpdate(streamingContentRef.current);
+                }
+              } catch { /* ignore */ }
+            }
+          }
+        }
+
+        if (buffer.trim()) {
+          try {
+            const bufferContent = buffer.trim().replace(/^data: /, '');
+            if (bufferContent.startsWith('{')) {
+              const parsed = JSON.parse(bufferContent);
+              if (parsed.reasoning) {
+                reasoningContentRef.current += parsed.reasoning;
+                setReasoningContent(reasoningContentRef.current);
+              }
+              if (parsed.content) {
+                streamingContentRef.current += parsed.content;
+              }
+            }
+          } catch { /* ignore */ }
+        }
+
+        isStreamingRef.current = false;
+        setMessages(prev =>
+          prev.map(m => m.id === assistantId ? { ...m, content: streamingContentRef.current } : m)
+        );
+      }
     } catch (e) {
       captureError(e);
       setError(e.message || '网络错误，请重试');
@@ -3017,7 +3122,7 @@ export default function AICoach() {
                             strong: ({ children }) => <Text as="strong" color="gold.300" fontWeight="bold">{children}</Text>,
                             p: ({ children }) => <Text mb={2}>{children}</Text>,
                             ul: ({ children }) => <Text as="ul" pl={4} mb={2}>{children}</Text>,
-                            li: ({ children }) => <Text as="li" mb={1}>{children}</Text>,
+                            li: ({ children }) => <li style={{ marginBottom: '4px', paddingLeft: '8px', listStylePosition: 'inside' }}>{children}</li>,
                           }}
                         >{fixMarkdown(girlAnalysisContent)}</ReactMarkdown>
                       </Box>
