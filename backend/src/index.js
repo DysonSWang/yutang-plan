@@ -4,7 +4,9 @@
 
 require('dotenv').config();
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const cors = require('cors');
+const helmet = require('helmet');
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
@@ -49,23 +51,126 @@ const server = http.createServer(app);
 // Socket.io
 const io = new Server(server, {
   cors: {
-    origin: '*',
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      const whitelist = (process.env.CORS_WHITELIST || 'http://localhost:3000,http://localhost:5173,http://localhost:5181')
+        .split(',')
+        .map(item => item.trim());
+      if (whitelist.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.warn(`[Socket.IO CORS] 拒绝非白名单域名: ${origin}`);
+        callback(new Error('不允许的域名'));
+      }
+    },
+    credentials: true,
     methods: ['GET', 'POST']
   }
+});
+
+// Socket.io 限流（防止 WebSocket 洪水攻击）
+const socketConnections = new Map(); // ip -> { count, resetTime }
+const SOCKET_RATE_LIMIT = 100; // 最多100个连接/IP
+const SOCKET_RATE_WINDOW = 60 * 1000; // 1分钟窗口
+
+io.use((socket, next) => {
+  const ip = socket.handshake.ip || socket.conn.remoteAddress;
+  const now = Date.now();
+  const connectionInfo = socketConnections.get(ip);
+
+  if (!connectionInfo) {
+    socketConnections.set(ip, { count: 1, resetTime: now + SOCKET_RATE_WINDOW });
+    return next();
+  }
+
+  // 重置计数器
+  if (now > connectionInfo.resetTime) {
+    connectionInfo.count = 1;
+    connectionInfo.resetTime = now + SOCKET_RATE_WINDOW;
+    return next();
+  }
+
+  if (connectionInfo.count >= SOCKET_RATE_LIMIT) {
+    console.warn(`[Socket.IO RateLimit] 拒绝过多连接: ${ip}`);
+    return next(new Error('连接过于频繁'));
+  }
+
+  connectionInfo.count++;
+  next();
 });
 
 // 让路由可通过 req.app.get('io') 访问
 app.set('io', io);
 
 // Middleware
-app.use(cors());
+// CORS 配置 - 支持白名单
+const corsOptions = {
+  origin: function (origin, callback) {
+    // 允许没有 origin 的请求（如移动端、Postman）
+    if (!origin) return callback(null, true);
+
+    // 从环境变量读取白名单，默认允许 localhost 开发
+    const whitelist = (process.env.CORS_WHITELIST || 'http://localhost:3000,http://localhost:5173,http://localhost:5181')
+      .split(',')
+      .map(item => item.trim());
+
+    if (whitelist.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`[CORS] 拒绝非白名单域名: ${origin}`);
+      callback(new Error('不允许的域名'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+};
+app.use(cors(corsOptions));
+
+// 安全响应头
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "https://api.deepseek.com", "https://dashscope.aliyuncs.com"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"]
+    }
+  },
+  crossOriginEmbedderPolicy: false
+}));
+
+// 全局速率限制 - 防止暴力攻击
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15分钟窗口
+  max: 1000, // 限制每个IP 15分钟内最多1000请求
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: '请求过于频繁，请稍后再试' }
+});
+app.use(globalLimiter);
+
+// 认证相关接口更严格限制
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15分钟
+  max: 30, // 登录/注册等操作每IP最多30次
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: '认证请求过于频繁，请15分钟后再试' }
+});
+
 app.use(requestIdMiddleware);
 app.use(requestLogger);
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: process.env.MAX_BODY_SIZE || '2mb' }));
 app.use(errorCollector);
 
 // 路由
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/chat', chatRoutes(io));
 app.use('/api/chat-logs', chatLogRoutes);
 app.use('/api/girls', girlsRoutes);

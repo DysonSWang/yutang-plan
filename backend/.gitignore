@@ -1,1 +1,10 @@
 encryption.key
+
+# 环境变量
+.env
+.env.*
+!.env.example
+
+# 上传文件
+/uploads/
+/uploads/*

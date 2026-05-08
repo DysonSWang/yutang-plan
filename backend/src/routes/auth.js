@@ -14,6 +14,57 @@ const membershipService = require('../services/membershipService');
 const AppError = require('../errors/AppError');
 const { ErrorCodes } = require('../errors/errorCodes');
 const asyncHandler = require('../middleware/asyncHandler');
+const { revokeToken } = require('../middleware/auth');
+
+// 登录尝试追踪（内存存储，生产环境建议用Redis）
+const loginAttempts = new Map();
+// 格式: { username: { count: 5, firstAttempt: timestamp, lockedUntil: timestamp } }
+
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOGIN_LOCKOUT_MINUTES = 15;
+
+function checkLoginAttempts(username) {
+  const attempts = loginAttempts.get(username);
+  if (!attempts) return { allowed: true };
+
+  // 超过锁定时间，解锁
+  if (attempts.lockedUntil && Date.now() > attempts.lockedUntil) {
+    loginAttempts.delete(username);
+    return { allowed: true };
+  }
+
+  if (attempts.lockedUntil) {
+    const remainingMinutes = Math.ceil((attempts.lockedUntil - Date.now()) / 60000);
+    return { allowed: false, remainingMinutes };
+  }
+
+  // 检查时间窗口（15分钟）
+  if (Date.now() - attempts.firstAttempt > 15 * 60 * 1000) {
+    loginAttempts.delete(username);
+    return { allowed: true };
+  }
+
+  if (attempts.count >= MAX_LOGIN_ATTEMPTS) {
+    attempts.lockedUntil = Date.now() + LOGIN_LOCKOUT_MINUTES * 60 * 1000;
+    const remainingMinutes = Math.ceil((attempts.lockedUntil - Date.now()) / 60000);
+    return { allowed: false, remainingMinutes };
+  }
+
+  return { allowed: true };
+}
+
+function recordFailedLogin(username) {
+  let attempts = loginAttempts.get(username);
+  if (!attempts) {
+    attempts = { count: 0, firstAttempt: Date.now() };
+  }
+  attempts.count++;
+  loginAttempts.set(username, attempts);
+}
+
+function recordSuccessfulLogin(username) {
+  loginAttempts.delete(username);
+}
 
 // 注册
 router.post('/register', asyncHandler(async (req, res) => {
@@ -70,15 +121,28 @@ router.post('/login', asyncHandler(async (req, res) => {
     throw new AppError(ErrorCodes.VALIDATION_ERROR, { userMessage: '用户名和密码是必需的' });
   }
 
+  // 检查登录尝试次数
+  const loginCheck = checkLoginAttempts(username);
+  if (!loginCheck.allowed) {
+    throw new AppError(ErrorCodes.VALIDATION_ERROR, {
+      userMessage: `登录次数过多，请 ${loginCheck.remainingMinutes} 分钟后再试`
+    });
+  }
+
   const user = await prisma.user.findUnique({ where: { username } });
   if (!user) {
+    recordFailedLogin(username);
     throw new AppError(ErrorCodes.AUTH_CREDENTIALS_INVALID);
   }
 
   const validPassword = await bcrypt.compare(password, user.password);
   if (!validPassword) {
+    recordFailedLogin(username);
     throw new AppError(ErrorCodes.AUTH_CREDENTIALS_INVALID);
   }
+
+  // 登录成功，清除尝试记录
+  recordSuccessfulLogin(username);
 
   const token = jwt.sign(
     { id: user.id, username: user.username, role: user.role },
@@ -205,6 +269,18 @@ router.post('/change-password', asyncHandler(async (req, res) => {
   });
 
   res.json({ success: true, message: '密码修改成功' });
+}));
+
+// 登出（撤销 Token）
+router.post('/logout', asyncHandler(async (req, res) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.split(' ')[1];
+
+  if (token) {
+    revokeToken(token);
+  }
+
+  res.json({ success: true, message: '已安全退出' });
 }));
 
 module.exports = router;

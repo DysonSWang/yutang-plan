@@ -8,7 +8,10 @@ require('dotenv').config();
 // JWT 密钥（生产环境必须设置）
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
-  console.warn('[Config] JWT_SECRET 未设置，使用临时密钥（仅开发环境）');
+  throw new Error('[Config] JWT_SECRET 未设置！生产环境必须设置真正的密钥。');
+}
+if (JWT_SECRET === 'your-secret-key-change-in-production' || JWT_SECRET.length < 32) {
+  throw new Error('[Config] JWT_SECRET 使用了占位符或长度不足32字符！');
 }
 
 // DeepSeek（文本 AI 唯一提供商）

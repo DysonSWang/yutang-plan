@@ -14,6 +14,31 @@ const LOG_LEVELS = {
   debug: 3,
 };
 
+// 敏感字段列表（日志中这些字段的值会被遮蔽）
+const SENSITIVE_FIELDS = [
+  'password', 'token', 'Authorization', 'cookie', 'secret',
+  'apiKey', 'api_key', 'accessToken', 'refreshToken', 'sessionId',
+  'phone', 'idCard', 'creditCard', 'bankCard'
+];
+
+// 脱敏处理
+function sanitizeMeta(meta = {}) {
+  const sanitized = {};
+  for (const [key, value] of Object.entries(meta)) {
+    const lowerKey = key.toLowerCase();
+    if (SENSITIVE_FIELDS.some(field => lowerKey.includes(field))) {
+      sanitized[key] = typeof value === 'string' && value.length > 4
+        ? value.slice(0, 3) + '***' + value.slice(-3)
+        : '***';
+    } else if (typeof value === 'object' && value !== null) {
+      sanitized[key] = sanitizeMeta(value);
+    } else {
+      sanitized[key] = value;
+    }
+  }
+  return sanitized;
+}
+
 const currentLevel = process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug');
 const SLOW_THRESHOLD = parseInt(process.env.SLOW_THRESHOLD) || 3000; // 慢请求阈值 ms
 
@@ -138,8 +163,9 @@ function notifyAdmins(type, message) {
 const logger = {
   error(message, meta = {}) {
     if (shouldLog('error')) {
-      const entry = { time: new Date().toISOString(), level: 'error', message, ...meta };
-      console.error(formatMessage('error', message, meta));
+      const safeMeta = sanitizeMeta(meta);
+      const entry = { time: new Date().toISOString(), level: 'error', message, ...safeMeta };
+      console.error(formatMessage('error', message, safeMeta));
       writeLog(entry);
       triggerAlert(entry, 'error');
     }
@@ -147,32 +173,36 @@ const logger = {
 
   warn(message, meta = {}) {
     if (shouldLog('warn')) {
-      const entry = { time: new Date().toISOString(), level: 'warn', message, ...meta };
-      console.warn(formatMessage('warn', message, meta));
+      const safeMeta = sanitizeMeta(meta);
+      const entry = { time: new Date().toISOString(), level: 'warn', message, ...safeMeta };
+      console.warn(formatMessage('warn', message, safeMeta));
       writeLog(entry);
     }
   },
 
   info(message, meta = {}) {
     if (shouldLog('info')) {
-      const entry = { time: new Date().toISOString(), level: 'info', message, ...meta };
-      console.log(formatMessage('info', message, meta));
+      const safeMeta = sanitizeMeta(meta);
+      const entry = { time: new Date().toISOString(), level: 'info', message, ...safeMeta };
+      console.log(formatMessage('info', message, safeMeta));
       writeLog(entry);
     }
   },
 
   debug(message, meta = {}) {
     if (shouldLog('debug')) {
-      const entry = { time: new Date().toISOString(), level: 'debug', message, ...meta };
-      console.log(formatMessage('debug', message, meta));
+      const safeMeta = sanitizeMeta(meta);
+      const entry = { time: new Date().toISOString(), level: 'debug', message, ...safeMeta };
+      console.log(formatMessage('debug', message, safeMeta));
       writeLog(entry);
     }
   },
 
   // 慢请求专用方法
   slow(message, meta = {}) {
-    const entry = { time: new Date().toISOString(), level: 'slow', message, ...meta };
-    console.warn(formatMessage('warn', `[SLOW] ${message}`, meta));
+    const safeMeta = sanitizeMeta(meta);
+    const entry = { time: new Date().toISOString(), level: 'slow', message, ...safeMeta };
+    console.warn(formatMessage('warn', `[SLOW] ${message}`, safeMeta));
     writeLog(entry);
     triggerAlert(entry, 'slow');
   },

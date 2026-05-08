@@ -91,15 +91,17 @@ router.get('/', authMiddleware, async (req, res) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    // 获取每个客户的女生数量
-    const clientsWithGirls = await Promise.all(
-      clients.map(async (client) => {
-        const girlCount = await prisma.girl.count({
-          where: { clientId: client.id }
-        });
-        return { ...client, girlCount };
-      })
-    );
+    // 获取每个客户的女生数量（批量查询解决 N+1 问题）
+    const girlCounts = await prisma.girl.groupBy({
+      by: ['clientId'],
+      _count: { id: true },
+      where: { clientId: { in: clients.map(c => c.id) } }
+    });
+    const girlCountMap = new Map(girlCounts.map(g => [g.clientId, g._count.id]));
+    const clientsWithGirls = clients.map(client => ({
+      ...client,
+      girlCount: girlCountMap.get(client.id) || 0
+    }));
 
     res.json({ success: true, clients: clientsWithGirls });
   } catch (error) {
