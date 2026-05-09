@@ -8,11 +8,11 @@ const router = express.Router();
 // 版本配置（每次发版时更新）
 // upgradeType: 'force' | 'suggest' | 'none'
 const VERSION_CONFIG = {
-  latestVersion: '1.2.7',
+  latestVersion: '1.2.8',
   minVersion: '1.2.6',
   downloadUrl: 'https://zhuiai.club/apk/app-release.apk',
-  updateDescription: '模型能力加强',
-  buildNumber: 37,
+  updateDescription: '模型优化',
+  buildNumber: 38,
   apkSize: '约 4.2 MB'
 };
 
