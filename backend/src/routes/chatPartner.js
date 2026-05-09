@@ -1579,8 +1579,8 @@ router.post('/client-profile/confirm', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: '参数不完整' });
     }
 
-    // 安全：操盘手只能操作自己负责的客户的数据
-    if (req.user.role === 'admin') {
+    // 安全：操盘手只能操作自己负责的客户的数据，admin 可以操作所有客户数据
+    if (req.user.role === 'operator') {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId }
       });
@@ -1616,8 +1616,8 @@ router.post('/client-profile/reject', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: '参数不完整' });
     }
 
-    // 安全：操盘手只能操作自己负责的客户的数据
-    if (req.user.role === 'admin') {
+    // 安全：操盘手只能操作自己负责的客户的数据，admin 可以操作所有客户数据
+    if (req.user.role === 'operator') {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId }
       });

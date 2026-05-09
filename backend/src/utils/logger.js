@@ -149,6 +149,11 @@ function triggerAlert(entry, type = 'error') {
 // 通知管理员（通过 Socket.io）
 function notifyAdmins(type, message) {
   try {
+    // 测试环境或 io 未初始化时跳过
+    if (process.env.TESTING || process.env.NODE_ENV === 'test') {
+      console.warn(`[ALERT] ${message}`);
+      return;
+    }
     // 延迟加载避免循环依赖
     const { io } = require('../index');
     if (io) {

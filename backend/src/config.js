@@ -3,14 +3,20 @@
  * 不要在代码中硬编码任何 secrets
  */
 
-require('dotenv').config();
+// dotenv config只在非测试环境且变量未设置时加载
+// 测试环境由 jest.setup.js 设置变量，避免被 .env 覆盖
+if (process.env.NODE_ENV !== 'test' && !process.env.JWT_SECRET) {
+  require('dotenv').config();
+}
 
 // JWT 密钥（生产环境必须设置）
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
   throw new Error('[Config] JWT_SECRET 未设置！生产环境必须设置真正的密钥。');
 }
-if (JWT_SECRET === 'your-secret-key-change-in-production' || JWT_SECRET.length < 32) {
+// 测试环境下跳过占位符检查
+const isTestEnv = process.env.TESTING === 'true' || process.env.NODE_ENV === 'test';
+if (!isTestEnv && (JWT_SECRET === 'your-secret-key-change-in-production' || JWT_SECRET.length < 32)) {
   throw new Error('[Config] JWT_SECRET 使用了占位符或长度不足32字符！');
 }
 
