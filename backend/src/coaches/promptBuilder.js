@@ -444,81 +444,190 @@ ${skills.map(s => {
  * 构建 OS 元规则区块（注入系统 prompt 顶部）
  * 包含：7 阶段模型简述 + 当前阶段约束 + 核心冲突裁决规则
  */
+/**
+ * 术语白名单配置
+ * - ALLOWED: 对任何用户都可用
+ * - RESTRICTED: 仅对进阶用户可用
+ * - HIDDEN: 对普通用户隐藏
+ */
+const ALLOWED_TERMS = ['入场', '升温', '确认', '推进', '拉伸', '暧昧', '破冰', '收尾'];
+const RESTRICTED_TERMS = ['Phase 0', 'Phase 1', 'Phase 2', 'Phase 3', 'Phase 4', 'Phase 5', 'Phase 6', '资源池', '私域', '轨道', '短轨', '长轨'];
+
+/**
+ * 判断用户是否为进阶用户
+ * 根据情绪成熟度、抗压等级等判断
+ */
+function isAdvancedUser(clientProfile) {
+  if (!clientProfile) return false;
+  const maturityLevel = clientProfile.emotionalMaturityLevel || 2;
+  const antiFrustration = clientProfile.antiFrustrationLevel || 5;
+  // 情绪成熟度高 + 抗压能力强 = 进阶用户
+  return maturityLevel >= 3 && antiFrustration >= 7;
+}
+
+/**
+ * 根据用户类型生成输出风格指令
+ */
+function buildOutputStyleInstruction(context) {
+  const { clientProfile } = context;
+  const isAdvanced = isAdvancedUser(clientProfile);
+
+  const lines = [];
+  lines.push('');
+  lines.push('【输出风格指令】（必须遵守）');
+
+  if (isAdvanced) {
+    // 进阶用户：可以使用更多专业术语
+    lines.push('允许使用的专业术语：入场、升温、确认、推进、拉伸、暧昧、破冰、收尾、Phase 0-6、资源池、私域、轨道决策');
+    lines.push('可以使用"Phase X"的表述方式');
+  } else {
+    // 普通用户：完全隐藏专业术语
+    lines.push('禁止在回答中出现的术语：Phase 0、Phase 1、Phase 2、Phase 3、Phase 4、Phase 5、Phase 6、资源池、私域、短轨、长轨');
+    lines.push('禁止使用"Phase X"等编号形式');
+    lines.push('阶段名称只允许：入场、升温、确认、推进、拉伸、暧昧');
+    lines.push('用通俗易懂的语言表达，禁止"黑话连篇"');
+  }
+
+  // 所有用户都适用
+  lines.push('');
+  lines.push('通用输出要求：');
+  lines.push('- 像朋友在耳边叮嘱一样说话，口语化，避免机械感');
+  lines.push('- 用具体的场景和例子解释，不要干巴巴讲道理');
+  lines.push('- 逻辑清晰：先说结论，再说原因');
+  lines.push('- 控制长度，有话则长，无话则短');
+
+  return lines.join('\n');
+}
+
 function buildOSMetaSection(context) {
   const { girlProfile = null, clientProfile = null } = context;
   const lines = [];
 
   const { CORE_PRINCIPLES, PHASES, SIGNAL_IOI, TRACK_DECISION, DB_STAGE_MAP } = osConfig;
 
-  // 计算当前阶段（函数顶部统一计算，避免作用域问题）
+  // 计算当前阶段
   const currentPhase = girlProfile?.stage
     ? (DB_STAGE_MAP[girlProfile.stage] ?? 1)
     : null;
   const currentPhaseInfo = currentPhase != null ? PHASES[currentPhase] : null;
+  const isAdvanced = isAdvancedUser(clientProfile);
 
-  // ===== 原有的【恋爱操作系统 · 内部规则】头部 =====
-  lines.push('【恋爱操作系统 · 内部规则】');
-  lines.push('所有分析基于以下统一框架：');
+  // ===== 1. 输出风格指令（最重要，放在最前面）=====
+  lines.push('【恋爱操作系统 · 内部决策框架】');
+  lines.push('以下框架仅供内部决策用，最终输出必须符合输出风格指令：');
 
-  // ===== 1. 增强：7阶段简述（使用 PHASES 数据） =====
+  // ===== 2. 阶段模型（内部用，外部通过输出风格指令控制）=====
   lines.push('');
-  lines.push('阶段模型：');
+  lines.push('【阶段模型】（内部参考）');
   for (const [phase, info] of Object.entries(PHASES)) {
-    const leonInfo = info.leonScore ? `（Leon评分${info.leonScore}）` : '';
-    lines.push(`- Phase ${phase} ${info.name}${leonInfo}：${info.coreTask}`);
+    const leonInfo = info.leonScore ? `（评分${info.leonScore}）` : '';
+    lines.push(`Phase ${phase} ${info.name}${leonInfo}：${info.coreTask}`);
+    if (info.deadEnd) {
+      lines.push(`  ⚠️ 死胡同：${info.deadEnd}`);
+    }
   }
 
-  // ===== 2. 增强：当前阶段约束（带死胡同警告） =====
+  // ===== 3. 当前阶段约束 =====
   if (currentPhaseInfo) {
     lines.push('');
-    lines.push(`当前阶段：Phase ${currentPhase}（${currentPhaseInfo.name}）`);
+    lines.push('【当前阶段】');
+    lines.push(`Phase ${currentPhase}（${currentPhaseInfo.name}）`);
     lines.push(`核心任务：${currentPhaseInfo.coreTask}`);
+    lines.push(`执行要点：${currentPhaseInfo.prerequisites.join(' → ')}`);
     if (currentPhaseInfo.deadEnd) {
-      lines.push(`⚠️ 死胡同：${currentPhaseInfo.deadEnd}`);
+      lines.push(`⚠️ 避坑：${currentPhaseInfo.deadEnd}`);
     }
   }
 
-  // ===== 3. 增强：轨道判断（使用 TRACK_DECISION） =====
+  // ===== 4. 轨道判断 =====
   if (girlProfile?.track) {
     lines.push('');
-    lines.push(`用户轨道：${girlProfile.track === 'short' ? '短轨(速约)' : '长轨(长期)'}`);
-    lines.push(girlProfile.track === 'short' ? '策略：效率优先、快速筛选' : '策略：真诚优先、长期经营');
+    lines.push('【用户轨道】');
+    lines.push(girlProfile.track === 'short' ? '快节奏模式：效率优先、快速筛选' : '慢节奏模式：真诚优先、长期经营');
   } else {
     lines.push('');
-    lines.push('【轨道决策树】');
-    lines.push(`短轨条件：${TRACK_DECISION.short_keywords.join('/')}`);
-    lines.push(`长轨条件：${TRACK_DECISION.long_keywords.join('/')}`);
-    lines.push(`规则：${TRACK_DECISION.rule}`);
+    lines.push('【轨道决策参考】');
+    lines.push(`目标型关键词：${TRACK_DECISION.short_keywords.join('/')}`);
+    lines.push(`认真型关键词：${TRACK_DECISION.long_keywords.join('/')}`);
+    lines.push(`注意：两个轨道策略不同，混用必败`);
   }
 
-  // ===== 4. 新增：核心原则（使用 CORE_PRINCIPLES） =====
+  // ===== 5. 核心原则（内部决策用）=====
   lines.push('');
-  lines.push('核心原则（当策略矛盾时按此优先级执行）：');
+  lines.push('【核心原则】（内部决策参考）');
   for (const p of CORE_PRINCIPLES) {
-    lines.push(`- ${p.name}：${p.diagnostic}`);
+    lines.push(`- ${p.name}：${p.diagnostic} | 禁区：${p.warning}`);
   }
 
-  // ===== 5. 新增：IOI/IoD信号（使用 SIGNAL_IOI） =====
+  // ===== 6. 信号识别 =====
   if (girlProfile) {
     lines.push('');
-    lines.push('信号识别（判断是否该推进）：');
+    lines.push('【信号识别】');
     for (const s of SIGNAL_IOI) {
-      lines.push(`  ${s.type}：正面=${s.positive} / 负面=${s.negative}`);
+      lines.push(`  ${s.type}：✅=${s.positive} | ❌=${s.negative}`);
     }
-    lines.push('判断规则：3个以上正面信号=推进；3个以上负面信号=后退/价值建设');
+    lines.push('判断：3个以上✅=可以推进 | 3个以上❌=暂停/调整');
   }
 
-  // ===== 6. 增强：冲突裁决（保留原有5条，新增死胡同警告） =====
+  // ===== 7. 冲突裁决 =====
   lines.push('');
-  lines.push('冲突裁决规则（当策略矛盾时按此执行）：');
-  lines.push('1. 短轨和长轨是两个独立系统，混用必败');
-  lines.push('2. Phase 4 是用户选择分叉点，不能替用户决定');
-  lines.push('3. 感觉是结果不是方法，用阶段/信号/数据决策');
-  lines.push('4. 不善良的人消耗远大于产出，先验证善良度');
-  lines.push('5. 阶段不可跳步，必须先完成前置阶段的核心任务');
-  if (currentPhaseInfo?.deadEnd) {
-    lines.push(`⚠️ 当前阶段死胡同：${currentPhaseInfo.deadEnd}`);
-  }
+  lines.push('【冲突裁决】');
+  lines.push('1. 阶段不可跳步，必须先完成当前阶段的核心任务');
+  lines.push('2. 快节奏和慢节奏是两个独立系统，策略不能混用');
+  lines.push('3. 感觉是结果不是方法，用阶段/信号/数据判断下一步');
+  lines.push('4. 对方态度冷淡时，先退后建设价值，不要硬冲');
+
+  // ===== 8. 输出风格指令（最严格，必须100%遵守）=====
+  lines.push('');
+  lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  lines.push('【强制输出规则 - 任何违规直接失败】');
+  lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  lines.push('');
+  lines.push('⚠️ 【绝对禁止】以下任何术语出现在最终回答中：');
+  lines.push('');
+  lines.push('#禁用列表 START');
+  lines.push('Phase 0');
+  lines.push('Phase 1');
+  lines.push('Phase 2');
+  lines.push('Phase 3');
+  lines.push('Phase 4');
+  lines.push('Phase 5');
+  lines.push('Phase 6');
+  lines.push('资源池');
+  lines.push('资源池建设');
+  lines.push('私域');
+  lines.push('私域聊天');
+  lines.push('私域联系');
+  lines.push('短轨');
+  lines.push('长轨');
+  lines.push('轨道');
+  lines.push('建立资源池');
+  lines.push('资源积累');
+  lines.push('#禁用列表 END');
+  lines.push('');
+  lines.push('⚠️ 【必须替换】以下是正确的替代词：');
+  lines.push('');
+  lines.push('| 禁用词 | 必须替换为 |');
+  lines.push('|--------|--------------|');
+  lines.push('| Phase X | 用"入场"、"升温"、"确认"等中文词 |');
+  lines.push('| 资源池 | "认识新人"、"加微信"、"收集联系方式" |');
+  lines.push('| 私域 | "私下聊天"、"后续联系"、"微信上聊" |');
+  lines.push('| 短轨/长轨 | "快速模式"、"认真模式" |');
+  lines.push('| 轨道决策 | "目标选择"、"关系定位" |');
+  lines.push('');
+  lines.push('⚠️ 【表达风格】必须遵守：');
+  lines.push('   1. 像朋友在你耳边叮嘱，语气亲切自然');
+  lines.push('   2. 用"兄弟"、"咱们"、"你啊"等人称');
+  lines.push('   3. 有具体场景和例子，不干巴巴讲理论');
+  lines.push('   4. 逻辑清晰：先给结论，再说原因');
+  lines.push('   5. 有话则长，无话则短，不要凑字数');
+  lines.push('');
+  lines.push('⚠️ 【输出前检查】：');
+  lines.push('   1. 搜索回答中是否有"资源池"→ 替换为"加微信"');
+  lines.push('   2. 搜索回答中是否有"私域"→ 替换为"私下聊"');
+  lines.push('   3. 搜索回答中是否有"Phase"→ 删除整句重写');
+  lines.push('   4. 搜索回答中是否有"短轨/长轨"→ 替换为"快速/认真模式"');
+  lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
   return lines.join('\n');
 }

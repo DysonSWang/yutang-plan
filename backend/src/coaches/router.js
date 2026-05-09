@@ -67,7 +67,7 @@ const KEYWORD_WEIGHTS = [
   { keyword: '怎么说', weight: 0.7, type: '沟通问题' },
   { keyword: '不会聊', weight: 0.7, type: '沟通问题' },
 
-  // 社交软件
+  // 社交软件 + 搭讪
   { keyword: '微信聊天', weight: 0.8, type: '社交软件' },
   { keyword: '怎么聊', weight: 0.75, type: '社交软件' },
   { keyword: '聊天方法', weight: 0.75, type: '社交软件' },
@@ -75,6 +75,9 @@ const KEYWORD_WEIGHTS = [
   { keyword: '陌陌', weight: 0.7, type: '社交软件' },
   { keyword: '探探', weight: 0.7, type: '社交软件' },
   { keyword: 'soul', weight: 0.6, type: '社交软件' },
+  { keyword: '搭讪', weight: 0.85, type: '社交软件' },
+  { keyword: '夜店', weight: 0.8, type: '社交软件' },
+  { keyword: '酒吧', weight: 0.7, type: '社交软件' },
 
   // 情绪调动
   { keyword: '调动情绪', weight: 0.8, type: '情绪调动' },
@@ -137,44 +140,51 @@ function routeQuestion(question, context = {}) {
     }
   }
 
+  // ---- 计算语义匹配强度（用于保护语义不被女生状态覆盖） ----
+  const semanticTotal = matchDetails.reduce((sum, m) => sum + m.weight, 0);
+  const hasStrongSemantic = semanticTotal >= 1.5; // 语义匹配足够强时，减少状态干扰
+
   // ---- 女生热度权重调整 ----
   if (girlProfile) {
-    const tension = girlProfile.tensionScore || 5;
+    const tension = girlProfile.tensionScore ?? 5;
     const recentSignals = girlProfile.recentSignals || [];
     const hasPositiveSignal = recentSignals.some(s => s.type === 'positive');
     const hasNegativeSignal = recentSignals.some(s => s.type === 'negative');
 
-    if (tension <= 5) {
-      // 冷女生：惩罚激进拉伸，奖励聊天卡壳
+    // 语义保护：强语义匹配时，大幅降低女生状态权重
+    const stateBoost = hasStrongSemantic ? 0.15 : 0.4;
+    const statePenalty = hasStrongSemantic ? 0.1 : 0.3;
+
+    if (tension < 5) {
+      // 冷女生（严格小于5）：惩罚激进拉伸，奖励聊天卡壳
       if (typeScores['关系拉伸']) {
-        typeScores['关系拉伸'] -= 0.3;
-        matchDetails.push({ keyword: 'girl_cold_penalize_stretch', weight: -0.3, type: '关系拉伸' });
+        typeScores['关系拉伸'] -= statePenalty;
+        matchDetails.push({ keyword: 'girl_cold_penalize_stretch', weight: -statePenalty, type: '关系拉伸' });
       }
-      typeScores['聊天卡壳'] = (typeScores['聊天卡壳'] || 0) + 0.4;
-      matchDetails.push({ keyword: 'girl_cold_boost_chat', weight: 0.4, type: '聊天卡壳' });
+      typeScores['聊天卡壳'] = (typeScores['聊天卡壳'] || 0) + stateBoost;
+      matchDetails.push({ keyword: 'girl_cold_boost_chat', weight: stateBoost, type: '聊天卡壳' });
       if (hasNegativeSignal) {
-        typeScores['心态问题'] = (typeScores['心态问题'] || 0) + 0.3;
-        matchDetails.push({ keyword: 'girl_cold_negative_signal', weight: 0.3, type: '心态问题' });
+        typeScores['心态问题'] = (typeScores['心态问题'] || 0) + (hasStrongSemantic ? 0.1 : 0.3);
       }
     } else if (tension >= 7) {
       // 热女生：奖励拉伸，惩罚价值判断
-      typeScores['关系拉伸'] = (typeScores['关系拉伸'] || 0) + 0.35;
+      typeScores['关系拉伸'] = (typeScores['关系拉伸'] || 0) + stateBoost;
       typeScores['性张力不足'] = (typeScores['性张力不足'] || 0) + 0.2;
       typeScores['价值判断'] = Math.max(0, (typeScores['价值判断'] || 0) - 0.2);
-      matchDetails.push({ keyword: 'girl_hot_boost_stretch', weight: 0.35, type: '关系拉伸' });
+      matchDetails.push({ keyword: 'girl_hot_boost_stretch', weight: stateBoost, type: '关系拉伸' });
       if (hasPositiveSignal) {
         typeScores['长期关系'] = (typeScores['长期关系'] || 0) + 0.2;
-        matchDetails.push({ keyword: 'girl_hot_positive_signal', weight: 0.2, type: '长期关系' });
       }
     }
 
-    // 亲密度权重
-    const intimacy = girlProfile.intimacyLevel || 1;
+    // 亲密度权重（同样受语义保护）
+    const intimacy = girlProfile.intimacyLevel ?? 1;
+    const intimacyBoost = hasStrongSemantic ? 0.05 : 0.2;
     if (intimacy >= 4) {
       typeScores['长期关系'] = (typeScores['长期关系'] || 0) + 0.25;
       typeScores['性张力不足'] = (typeScores['性张力不足'] || 0) + 0.2;
     } else if (intimacy <= 2) {
-      typeScores['聊天卡壳'] = (typeScores['聊天卡壳'] || 0) + 0.2;
+      typeScores['聊天卡壳'] = (typeScores['聊天卡壳'] || 0) + intimacyBoost;
       typeScores['关系拉伸'] = Math.max(0, (typeScores['关系拉伸'] || 0) - 0.15);
     }
   }
