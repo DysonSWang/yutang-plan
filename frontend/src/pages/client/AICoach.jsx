@@ -7,6 +7,7 @@ import {
   Image
 } from '@chakra-ui/react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSocket } from '../../contexts/SocketContext';
 import { girls as girlsApi, analyzeChatHistory, deleteCombatMessage } from '../../utils/api';
 import { captureError } from '../../utils/frontendErrorCapture';
 import { FireIcon, SnowIcon, SparklesIcon, BrainIcon } from '../../components/Icons';
@@ -1704,6 +1705,7 @@ const CombatChatPanel = memo(({
 
 export default function AICoach() {
   const { user } = useAuth();
+  const { socketRef } = useSocket();
   const [girls, setGirls] = useState([]);
   const [selectedGirlId, setSelectedGirlId] = useState('');
   const [selectedGirl, setSelectedGirl] = useState(null);
@@ -1725,6 +1727,7 @@ export default function AICoach() {
   const isStreamingRef = useRef(false);
   const abortControllerRef = useRef(null); // 用于停止生成
   const streamingCancelledRef = useRef(false); // 标记是否被用户手动停止
+  const analysisTaskRef = useRef({}); // taskId -> assistantId 映射
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
   const scrollContainerRef = useRef(null);
@@ -1851,6 +1854,48 @@ export default function AICoach() {
       setSelectedGirl(null);
     }
   }, [selectedGirlId, girls]);
+
+  // 监听图片分析结果（异步 Socket.io 通知 + 轮询 fallback）
+  useEffect(() => {
+    if (!socketRef?.current) return;
+
+    const handleAnalysisCompleted = ({ taskId, type, content, imageUrl }) => {
+      const assistantId = analysisTaskRef.current[taskId];
+      if (!assistantId) return;
+      const typeLabel = type === '聊天记录' ? '【聊天记录分析】\n'
+        : type === '朋友圈' ? '【朋友圈分析】\n'
+        : '【图片分析】\n';
+      setMessages(prev =>
+        prev.map(m => m.id === assistantId ? { ...m, content: typeLabel + (content || '') } : m)
+      );
+      setLoading(false);
+      isStreamingRef.current = false;
+      abortControllerRef.current = null;
+      scrollToBottom();
+      delete analysisTaskRef.current[taskId];
+    };
+
+    const handleAnalysisFailed = ({ taskId, error }) => {
+      const assistantId = analysisTaskRef.current[taskId];
+      if (!assistantId) return;
+      captureError(new Error(error), { context: 'analysis:failed' });
+      setError(error || '图片分析失败，请稍后重试');
+      setMessages(prev => prev.filter(m => m.id !== assistantId));
+      setLoading(false);
+      isStreamingRef.current = false;
+      abortControllerRef.current = null;
+      scrollToBottom();
+      delete analysisTaskRef.current[taskId];
+    };
+
+    socketRef.current.on('analysis:completed', handleAnalysisCompleted);
+    socketRef.current.on('analysis:failed', handleAnalysisFailed);
+
+    return () => {
+      socketRef.current?.off('analysis:completed', handleAnalysisCompleted);
+      socketRef.current?.off('analysis:failed', handleAnalysisFailed);
+    };
+  }, [socketRef, scrollToBottom]);
 
   // 监听 deepMode 变化 - 保存和恢复滚动位置
   useEffect(() => {
@@ -2708,7 +2753,7 @@ export default function AICoach() {
     }
   }, [combatHistoryKey, selectedGirlId, apiUrl, persistCombatMessages, analyzeChatHistory]);
 
-  // 处理图片提交
+  // 处理图片提交（异步模式：立即返回，后台分析，Socket.io/轮询通知结果）
   const handleImageSubmit = useCallback(async (imageFile, textInput) => {
     if (loading) return;
 
@@ -2741,14 +2786,14 @@ export default function AICoach() {
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
-    // 添加一条空的助手消息
+    // 添加一条空的助手消息（显示"分析中..."）
     const assistantId = `asst-${Date.now()}`;
     setMessages(prev => [
       ...prev,
       {
         id: assistantId,
         role: 'assistant',
-        content: '',
+        content: '图片分析中...',
         createdAt: new Date().toISOString()
       }
     ]);
@@ -2765,6 +2810,7 @@ export default function AICoach() {
         formData.append('girlId', selectedGirlId);
       }
 
+      // 异步模式：立即获得 taskId，后台处理
       const res = await fetch(`${apiUrl}/api/ai-coach/analyze-image`, {
         method: 'POST',
         headers: {
@@ -2779,16 +2825,70 @@ export default function AICoach() {
         throw new Error(errData.error || `HTTP ${res.status}`);
       }
 
-      // analyze-image 返回简单 JSON（非流式）
       const data = await res.json();
-      // 根据类型添加前缀提示
-      const typeLabel = data.type === '聊天记录' ? '【聊天记录分析】\n'
-        : data.type === '朋友圈' ? '【朋友圈分析】\n'
-        : '【图片分析】\n';
-      setMessages(prev =>
-        prev.map(m => m.id === assistantId ? { ...m, content: typeLabel + (data.content || '') } : m)
-      );
-      scrollToBottom();
+      const { taskId } = data;
+
+      if (taskId) {
+        // 存储 taskId -> assistantId 映射，等待 Socket.io 事件
+        analysisTaskRef.current[taskId] = assistantId;
+
+        // 启动轮询 fallback（60秒内每3秒轮询一次）
+        let pollCount = 0;
+        const maxPolls = 20;
+        const pollInterval = setInterval(async () => {
+          pollCount++;
+          if (pollCount > maxPolls || isStreamingRef.current === false) {
+            clearInterval(pollInterval);
+            return;
+          }
+          try {
+            const statusRes = await fetch(`${apiUrl}/api/ai-coach/analysis-status/${taskId}`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (statusRes.ok) {
+              const statusData = await statusRes.json();
+              if (statusData.status === 'completed') {
+                clearInterval(pollInterval);
+                const typeLabel = statusData.type === '聊天记录' ? '【聊天记录分析】\n'
+                  : statusData.type === '朋友圈' ? '【朋友圈分析】\n'
+                  : '【图片分析】\n';
+                setMessages(prev =>
+                  prev.map(m => m.id === assistantId ? { ...m, content: typeLabel + (statusData.content || '') } : m)
+                );
+                setLoading(false);
+                isStreamingRef.current = false;
+                abortControllerRef.current = null;
+                scrollToBottom();
+                delete analysisTaskRef.current[taskId];
+              } else if (statusData.status === 'failed') {
+                clearInterval(pollInterval);
+                captureError(new Error(statusData.error), { context: 'analysis:poll_failed' });
+                setError(statusData.error || '图片分析失败，请稍后重试');
+                setMessages(prev => prev.filter(m => m.id !== assistantId));
+                setLoading(false);
+                isStreamingRef.current = false;
+                abortControllerRef.current = null;
+                scrollToBottom();
+                delete analysisTaskRef.current[taskId];
+              }
+            }
+          } catch (e) {
+            // 忽略轮询错误，等待 Socket.io 事件
+          }
+        }, 3000);
+      } else {
+        // 兼容旧版本：直接返回分析结果
+        const typeLabel = data.type === '聊天记录' ? '【聊天记录分析】\n'
+          : data.type === '朋友圈' ? '【朋友圈分析】\n'
+          : '【图片分析】\n';
+        setMessages(prev =>
+          prev.map(m => m.id === assistantId ? { ...m, content: typeLabel + (data.content || '') } : m)
+        );
+        setLoading(false);
+        isStreamingRef.current = false;
+        abortControllerRef.current = null;
+        scrollToBottom();
+      }
     } catch (e) {
       if (e.name === 'AbortError') {
         streamingCancelledRef.current = true;
@@ -2797,7 +2897,6 @@ export default function AICoach() {
         setError(e.message || '网络错误，请重试');
         setMessages(prev => prev.filter(m => m.id !== tempId && m.id !== assistantId));
       }
-    } finally {
       setLoading(false);
       isStreamingRef.current = false;
       abortControllerRef.current = null;

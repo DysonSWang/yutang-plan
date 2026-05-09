@@ -28,6 +28,9 @@ const { addStageContext, appendStageWarning, STAGE_LABELS } = require('../servic
 const { analyzeImage } = require('../services/imageAnalyzer');
 const { analyzeChatHistory } = require('../services/chatAnalyzer');
 
+// 内存任务表：追踪异步图片分析任务
+const analysisTasks = new Map();
+
 const multer = require('multer');
 const { JWT_SECRET, getAIConfig, getVLModelConfig } = require('../config');
 const prisma = require('../prisma');
@@ -1609,71 +1612,135 @@ router.post('/analyze-chat-history', authMiddleware, async (req, res) => {
 /**
  * POST /api/ai-coach/analyze-image
  * 分析图片（聊天记录/朋友圈截图）并给出建议
+ * 异步模式：立即返回taskId，后台分析，通过Socket.io通知结果
  */
 router.post('/analyze-image', authMiddleware, chatImportUpload.single('image'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: '请上传图片' });
-    }
-
-    // 转换为 base64（磁盘存储模式，需要从文件读取）
-    const mime = req.file.mimetype;
-    const filePath = path.join(chatImportUploadDir, req.file.filename);
-    const fileBuffer = fs.readFileSync(filePath);
-    const base64Image = `data:${mime};base64,${fileBuffer.toString('base64')}`;
-
-    const userMessage = req.body.message || '';
-    const sessionId = req.body.sessionId || null;
-
-    // 调用图片分析服务
-    const { type, content } = await analyzeImage(base64Image, userMessage);
-
-    // 保存到数据库（如果有sessionId）
-    if (sessionId) {
-      await prisma.message.create({
-        data: {
-          sessionId,
-          role: 'user',
-          content: userMessage || `[上传了图片]`,
-          imageUrl: `/uploads/chat-imports/${req.file.filename}`
-        }
-      });
-
-      const coachSession = await prisma.session.findFirst({
-        where: { id: sessionId, userId: req.user.id }
-      });
-
-      if (coachSession) {
-        await prisma.message.create({
-          data: {
-            sessionId,
-            role: 'assistant',
-            content: content
-          }
-        });
-      }
-    }
-
-    res.json({
-      success: true,
-      type,
-      content,
-      imageUrl: `/uploads/chat-imports/${req.file.filename}`
-    });
-
-    // 分析完成后删除临时文件
-    try { fs.unlinkSync(filePath); } catch (_) {}
-  } catch (err) {
-    // 分析失败时也清理临时文件
-    if (filePath) {
-      try { fs.unlinkSync(filePath); } catch (_) {}
-    }
-    console.error('[AI Coach] analyze-image error:', err);
-    const message = err.message === '图片分析超时（90秒），请尝试压缩图片后重试'
-      ? err.message
-      : '图片分析失败，请稍后重试';
-    res.status(500).json({ error: message });
+  if (!req.file) {
+    return res.status(400).json({ error: '请上传图片' });
   }
+
+  const mime = req.file.mimetype;
+  const filePath = path.join(chatImportUploadDir, req.file.filename);
+  const imageUrl = `/uploads/chat-imports/${req.file.filename}`;
+  const userMessage = req.body.message || '';
+  const sessionId = req.body.sessionId || null;
+  const userId = req.user.id;
+  const io = req.app.get('io');
+
+  // 生成任务ID，立即返回
+  const taskId = crypto.randomUUID();
+  analysisTasks.set(taskId, {
+    status: 'pending',
+    userId,
+    sessionId,
+    imageUrl,
+    userMessage,
+    filePath,
+    createdAt: Date.now()
+  });
+
+  // 立即返回，让前端开始轮询/Socket.io监听
+  res.json({
+    success: true,
+    taskId,
+    imageUrl
+  });
+
+  // 后台异步分析
+  setImmediate(async () => {
+    const task = analysisTasks.get(taskId);
+    if (!task) return;
+
+    task.status = 'processing';
+    let fileBuffer;
+    try {
+      fileBuffer = fs.readFileSync(filePath);
+      const base64Image = `data:${mime};base64,${fileBuffer.toString('base64')}`;
+
+      const { type, content } = await analyzeImage(base64Image, userMessage);
+
+      task.status = 'completed';
+      task.type = type;
+      task.content = content;
+      task.completedAt = Date.now();
+
+      // 通知前端
+      io.to(`client:${userId}`).emit('analysis:completed', {
+        taskId, type, content, imageUrl
+      });
+
+      // 如果有sessionId，保存到数据库
+      if (sessionId) {
+        try {
+          await prisma.message.create({
+            data: {
+              sessionId,
+              role: 'user',
+              content: userMessage || `[上传了图片]`,
+              imageUrl
+            }
+          });
+          const coachSession = await prisma.session.findFirst({
+            where: { id: sessionId, userId }
+          });
+          if (coachSession) {
+            await prisma.message.create({
+              data: {
+                sessionId,
+                role: 'assistant',
+                content
+              }
+            });
+          }
+        } catch (dbErr) {
+          console.error('[AI Coach] 保存消息失败:', dbErr);
+        }
+      }
+    } catch (err) {
+      task.status = 'failed';
+      task.error = err.message;
+      task.completedAt = Date.now();
+
+      const errorMsg = err.message === '图片分析超时（90秒），请尝试压缩图片后重试'
+        ? err.message
+        : '图片分析失败，请稍后重试';
+
+      // 通知前端错误
+      io.to(`client:${userId}`).emit('analysis:failed', { taskId, error: errorMsg });
+    } finally {
+      // 清理临时文件
+      try { fs.unlinkSync(filePath); } catch (_) {}
+      // 任务完成后从内存移除（保留10分钟防漏）
+      setTimeout(() => analysisTasks.delete(taskId), 10 * 60 * 1000);
+    }
+  });
+});
+
+/**
+ * GET /api/ai-coach/analysis-status/:taskId
+ * 轮询接口：查询图片分析任务状态
+ */
+router.get('/analysis-status/:taskId', authMiddleware, async (req, res) => {
+  const { taskId } = req.params;
+  const task = analysisTasks.get(taskId);
+
+  if (!task) {
+    return res.status(404).json({ error: '任务不存在或已过期' });
+  }
+
+  // 验证任务属于当前用户
+  if (task.userId !== req.user.id) {
+    return res.status(403).json({ error: '无权访问此任务' });
+  }
+
+  res.json({
+    taskId,
+    status: task.status,
+    type: task.type || null,
+    content: task.content || null,
+    error: task.error || null,
+    imageUrl: task.imageUrl
+  });
 });
 
 // ============================================================
