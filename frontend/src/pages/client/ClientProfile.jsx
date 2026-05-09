@@ -70,6 +70,13 @@ const CLIENT_EDITABLE_FIELDS = [
   { key: 'profileBio', label: '个人签名', type: 'textarea' },
 ];
 
+// 常用字段（默认显示）
+const COMMON_FIELD_KEYS = new Set([
+  'nickname', 'age', 'occupation', 'education', 'income',
+  'height', 'weight', 'residence', 'hometown',
+  'personality', 'communicationStyle', 'relationshipAttitude', 'emotionalGoal'
+]);
+
 // 不显示给客户的字段（操盘手内部使用）
 
 // 字段所属版块（用于编辑弹窗滚动定位）
@@ -260,6 +267,7 @@ export default function ClientProfile() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [changingPwd, setChangingPwd] = useState(false);
   const [editTab, setEditTab] = useState(null);
+  const [showAdvancedFields, setShowAdvancedFields] = useState(false);
   const editModalBodyRef = useRef(null);
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState('');
@@ -1269,17 +1277,49 @@ export default function ClientProfile() {
 
               {/* 手动填写表单 - 增加间距 */}
               <SimpleGrid columns={2} spacing={6} data-section-form>
-                {CLIENT_EDITABLE_FIELDS.map(field => (
-                  <div data-section={getSectionForField(field.key)} key={field.key}>
-                  <ProfileField
-                    key={field.key}
-                    field={field}
-                    value={editData[field.key]}
-                    onChange={handleFieldChange}
-                  />
-                  </div>
-                ))}
+                {CLIENT_EDITABLE_FIELDS
+                  .filter(f => COMMON_FIELD_KEYS.has(f.key))
+                  .map(field => (
+                    <div data-section={getSectionForField(field.key)} key={field.key}>
+                    <ProfileField
+                      key={field.key}
+                      field={field}
+                      value={editData[field.key]}
+                      onChange={handleFieldChange}
+                    />
+                    </div>
+                  ))}
               </SimpleGrid>
+
+              {/* 更多资料折叠按钮 */}
+              <Button
+                variant="ghost"
+                size="sm"
+                color="gold.400"
+                onClick={() => setShowAdvancedFields(!showAdvancedFields)}
+                _hover={{ bg: 'warm.700' }}
+              >
+                {showAdvancedFields ? '收起' : '更多资料'}
+                <Text as="span" ml={1}>{showAdvancedFields ? '▲' : '▼'}</Text>
+              </Button>
+
+              {/* 高级字段折叠区 */}
+              {showAdvancedFields && (
+                <SimpleGrid columns={2} spacing={6} data-section-form>
+                  {CLIENT_EDITABLE_FIELDS
+                    .filter(f => !COMMON_FIELD_KEYS.has(f.key))
+                    .map(field => (
+                      <div data-section={getSectionForField(field.key)} key={field.key}>
+                      <ProfileField
+                        key={field.key}
+                        field={field}
+                        value={editData[field.key]}
+                        onChange={handleFieldChange}
+                      />
+                      </div>
+                    ))}
+                </SimpleGrid>
+              )}
 
               {/* 底部按钮 */}
               <HStack justify="flex-end" spacing={3} pb={2}>

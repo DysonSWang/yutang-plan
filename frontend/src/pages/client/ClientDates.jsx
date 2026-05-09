@@ -714,66 +714,93 @@ export default function ClientDates() {
                   )}
                 </Flex>
 
-                {/* 顾问方案列表 - 新卡片设计  (AI Plan cards removed for MVP) */}
-                {filteredDates.map(d => {
-                  const plan = parseJSON(d.aiPlan);
-                  return (
-                    <Card
-                      key={d.id}
-                      bg="warm.800"
-                      border="1px solid"
-                      borderColor="purple.500"
-                      cursor="pointer"
-                      _hover={{ borderColor: 'purple.400', transform: 'translateY(-2px)' }}
-                      onClick={() => openDetail(d)}
-                      transition="all 0.2s"
-                    >
-                      <CardBody py={4} px={5}>
-                        <Flex gap={4} align="flex-start">
-                          <Avatar size="lg" name={d.girl?.name} src={d.girl?.avatar ? getMediaUrl(d.girl.avatar) : undefined} />
-                          <Box flex={1}>
-                            <Flex justify="space-between" align="flex-start" mb={2}>
-                              <Box>
-                                <HStack spacing={2} mb={1}>
-                                  <Heading size="md" color="white">{d.girl?.name}</Heading>
-                                </HStack>
-                                <Text color="gray.300" fontSize="sm">{d.title || '约会'}</Text>
-                              </Box>
-                              <Badge
-                                colorScheme={
-                                  d.status === 'completed' ? 'cyan' :
-                                  d.status === 'confirmed' || d.status === 'planned' ? 'green' :
-                                  'yellow'
-                                }
-                              >
-                                {d.status === 'completed' ? '已完成' :
-                                 d.status === 'confirmed' ? '已确认' :
-                                 d.status === 'planned' ? '已策划' : '待策划'}
-                              </Badge>
-                            </Flex>
-                            {/* 日期时间 */}
-                            <HStack spacing={4} color="gray.300" fontSize="sm" mb={3}>
-                              <HStack spacing={1}>
-                                <ClockIcon />
-                                <Text fontWeight="bold">
-                                  {d.dateTime
-                                    ? `${new Date(d.dateTime).getMonth() + 1}月${new Date(d.dateTime).getDate()}日 周${'日一二三四五六'[new Date(d.dateTime).getDay()]} ${new Date(d.dateTime).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`
-                                    : '-'}
-                                </Text>
-                              </HStack>
-                              {d.location && (
-                                <HStack spacing={1}>
-                                  <MapPinIcon />
-                                  <Text>{d.location}</Text>
-                                </HStack>
-                              )}
-                            </HStack>
-                          </Box>
-                        </Flex>
-                      </CardBody>
-                    </Card>
+                {/* 顾问方案列表 - 按时间分组 */}
+                {(() => {
+                  const now = new Date();
+                  const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+                  const in7DaysGroup = filteredDates.filter(d =>
+                    d.dateTime && new Date(d.dateTime) >= now &&
+                    new Date(d.dateTime) <= in7Days && d.status !== 'completed'
                   );
-                })}
+                  const laterGroup = filteredDates.filter(d =>
+                    d.dateTime && new Date(d.dateTime) > in7Days && d.status !== 'completed'
+                  );
+                  const completedGroup = filteredDates.filter(d => d.status === 'completed');
+
+                  const renderGroup = (dates, label, labelColor, dimmed = false) => {
+                    if (dates.length === 0) return null;
+                    return (
+                      <Box mb={4}>
+                        <Text fontSize="sm" color={labelColor} mb={2} fontWeight="bold">{label} ({dates.length})</Text>
+                        {dates.map(d => (
+                          <Card
+                            key={d.id}
+                            bg="warm.800"
+                            border="1px solid"
+                            borderColor={dimmed ? 'whiteAlpha.100' : 'purple.500'}
+                            cursor="pointer"
+                            opacity={dimmed ? 0.7 : 1}
+                            _hover={{ borderColor: 'purple.400', transform: dimmed ? 'none' : 'translateY(-2px)' }}
+                            onClick={() => openDetail(d)}
+                            transition="all 0.2s"
+                            mb={2}
+                          >
+                            <CardBody py={4} px={5}>
+                              <Flex gap={4} align="flex-start">
+                                <Avatar size="lg" name={d.girl?.name} src={d.girl?.avatar ? getMediaUrl(d.girl.avatar) : undefined} />
+                                <Box flex={1}>
+                                  <Flex justify="space-between" align="flex-start" mb={2}>
+                                    <Box>
+                                      <HStack spacing={2} mb={1}>
+                                        <Heading size="md" color="white">{d.girl?.name}</Heading>
+                                      </HStack>
+                                      <Text color="gray.300" fontSize="sm">{d.title || '约会'}</Text>
+                                    </Box>
+                                    <Badge
+                                      colorScheme={
+                                        d.status === 'completed' ? 'cyan' :
+                                        d.status === 'confirmed' || d.status === 'planned' ? 'green' :
+                                        'yellow'
+                                      }
+                                    >
+                                      {d.status === 'completed' ? '已完成' :
+                                       d.status === 'confirmed' ? '已确认' :
+                                       d.status === 'planned' ? '已策划' : '待策划'}
+                                    </Badge>
+                                  </Flex>
+                                  <HStack spacing={4} color="gray.300" fontSize="sm" mb={3}>
+                                    <HStack spacing={1}>
+                                      <ClockIcon />
+                                      <Text fontWeight="bold">
+                                        {d.dateTime
+                                          ? `${new Date(d.dateTime).getMonth() + 1}月${new Date(d.dateTime).getDate()}日 周${'日一二三四五六'[new Date(d.dateTime).getDay()]} ${new Date(d.dateTime).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`
+                                          : '-'}
+                                      </Text>
+                                    </HStack>
+                                    {d.location && (
+                                      <HStack spacing={1}>
+                                        <MapPinIcon />
+                                        <Text>{d.location}</Text>
+                                      </HStack>
+                                    )}
+                                  </HStack>
+                                </Box>
+                              </Flex>
+                            </CardBody>
+                          </Card>
+                        ))}
+                      </Box>
+                    );
+                  };
+
+                  return (
+                    <>
+                      {renderGroup(in7DaysGroup, '7天内', 'gold.400')}
+                      {renderGroup(laterGroup, '7天后', 'purple.400')}
+                      {renderGroup(completedGroup, '已完成', 'cyan.400', true)}
+                    </>
+                  );
+                })()}
               </VStack>
             )}
           </TabPanel>

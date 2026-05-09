@@ -1,4 +1,4 @@
-import { Box, Flex, VStack, Icon, Text, Badge, Popover, PopoverTrigger, PopoverContent, PopoverBody, PopoverHeader, Button, HStack, useToast } from '@chakra-ui/react';
+import { Box, Flex, VStack, Icon, Text, Badge, Popover, PopoverTrigger, PopoverContent, PopoverBody, PopoverHeader, Button, HStack, useToast, Drawer, DrawerOverlay, DrawerContent, DrawerHeader, DrawerBody, DrawerCloseButton, useDisclosure } from '@chakra-ui/react';
 import { NavLink, useLocation } from 'react-router-dom';
 import KeepAliveOutlet from '../../components/KeepAliveOutlet';
 import { useState, useEffect, useCallback } from 'react';
@@ -128,7 +128,7 @@ function DesktopSidebar({ chatUnread, unreadCount, notifications, showNotificati
 }
 
 // 移动端底部 Tab 导航
-function MobileBottomNav({ chatUnread, unreadCount }) {
+function MobileBottomNav({ chatUnread, unreadCount, onNotificationClick }) {
   const location = useLocation();
 
   return (
@@ -202,6 +202,40 @@ function MobileBottomNav({ chatUnread, unreadCount }) {
             </NavLink>
           );
         })}
+        {/* 通知入口 */}
+        <Flex
+          direction="column"
+          align="center"
+          py={2}
+          px={3}
+          cursor="pointer"
+          color="rgba(245,240,232,0.4)"
+          transition="all 0.15s ease"
+          _hover={{ color: 'gold.400' }}
+          minW="60px"
+          position="relative"
+          onClick={onNotificationClick}
+        >
+          <Icon as={BellIcon} boxSize={5} mb={1} />
+          <Text fontSize="xs">通知</Text>
+          {unreadCount > 0 && (
+            <Badge
+              position="absolute"
+              top="2px"
+              right="8px"
+              colorScheme="red"
+              borderRadius="full"
+              fontSize="xs"
+              minW="18px"
+              h="18px"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+            >
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </Badge>
+          )}
+        </Flex>
       </HStack>
     </Box>
   );
@@ -215,6 +249,7 @@ export default function ClientLayout() {
   const [chatUnread, setChatUnread] = useState(0);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const { isOpen: isNotifOpen, onOpen: onNotifOpen, onClose: onNotifClose } = useDisclosure();
 
   // 初始加载通知未读数和聊天未读数
   const loadInitialData = useCallback(async () => {
@@ -283,6 +318,13 @@ export default function ClientLayout() {
     }
   };
 
+  const handleNotificationClick = () => {
+    onNotifOpen();
+    if (unreadCount > 0) {
+      markAllAsRead();
+    }
+  };
+
   return (
     <Box minH="100vh" bg="warm.950">
       <DesktopSidebar
@@ -301,7 +343,38 @@ export default function ClientLayout() {
       >
         <KeepAliveOutlet />
       </Box>
-      <MobileBottomNav chatUnread={chatUnread} unreadCount={unreadCount} />
+      <MobileBottomNav chatUnread={chatUnread} unreadCount={unreadCount} onNotificationClick={handleNotificationClick} />
+
+      {/* 移动端通知抽屉 */}
+      <Drawer isOpen={isNotifOpen} placement="bottom" onClose={onNotifClose} size="md">
+        <DrawerOverlay />
+        <DrawerContent bg="warm.800" borderTopRadius="xl">
+          <DrawerCloseButton />
+          <DrawerHeader borderBottomWidth="1px" borderColor="warm.700" color="white">
+            通知
+          </DrawerHeader>
+          <DrawerBody py={4} px={4}>
+            {notifications.length === 0 ? (
+              <Flex direction="column" align="center" justify="center" py={8}>
+                <Icon as={BellIcon} color="rgba(245,240,232,0.3)" boxSize={12} mb={4} />
+                <Text color="rgba(245,240,232,0.4)">暂无通知</Text>
+              </Flex>
+            ) : (
+              <VStack spacing={3} align="stretch">
+                {notifications.slice(0, 10).map(n => (
+                  <Box key={n.id} p={4} bg="warm.700" borderRadius="md" border="1px solid" borderColor="warm.600">
+                    <Text color="white" fontWeight="bold" fontSize="sm">{n.title}</Text>
+                    <Text color="rgba(245,240,232,0.6)" fontSize="xs" mt={1}>{n.content}</Text>
+                    <Text color="rgba(245,240,232,0.4)" fontSize="xs" mt={1}>
+                      {new Date(n.createdAt).toLocaleString()}
+                    </Text>
+                  </Box>
+                ))}
+              </VStack>
+            )}
+          </DrawerBody>
+        </DrawerContent>
+      </Drawer>
     </Box>
   );
 }

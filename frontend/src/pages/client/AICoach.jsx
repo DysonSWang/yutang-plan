@@ -4,7 +4,7 @@ import {
   Heading, Select, Textarea, Spinner, Flex, Badge, Icon, Tooltip, useToast,
   Avatar, Wrap, WrapItem, useDisclosure, Modal, ModalOverlay, ModalContent,
   ModalHeader, ModalBody, ModalFooter, Tabs, TabList, TabPanels, Tab, TabPanel,
-  Image
+  Image, SimpleGrid
 } from '@chakra-ui/react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSocket } from '../../contexts/SocketContext';
@@ -3252,7 +3252,51 @@ export default function AICoach() {
             )}
             <div ref={messagesEndRef} style={{ height: 1 }} />
           </Box>
-        </Box>
+
+          {/* 场景快捷入口 — 仅在无消息时显示 */}
+          {messages.length === 0 && !loading && (
+            <Box px={1} pb={2} flexShrink={0}>
+              <Text color="rgba(245,240,232,0.4)" fontSize="xs" mb={2}>你可以问我：</Text>
+              <SimpleGrid columns={2} spacing={2}>
+                {[
+                  { icon: '💬', title: '聊天话术', desc: '怎么开场、怎么推进关系' },
+                  { icon: '🎯', title: '约会方案', desc: '去哪里、聊什么、穿什么' },
+                  { icon: '📸', title: '朋友圈分析', desc: '发什么能吸引她注意' },
+                  { icon: '💔', title: '关系困惑', desc: '她这句话是什么意思' },
+                ].map(item => (
+                  <Card
+                    key={item.title}
+                    bg="warm.700"
+                    cursor="pointer"
+                    border="1px solid"
+                    borderColor="whiteAlpha.100"
+                    _hover={{ borderColor: 'gold.500', bg: 'warm.600' }}
+                    onClick={() => {
+                      const textarea = document.querySelector('textarea[placeholder*="AI 教练"]');
+                      if (textarea) {
+                        textarea.value = item.desc;
+                        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                        textarea.focus();
+                      }
+                    }}
+                    transition="all 0.2s"
+                  >
+                    <CardBody py={2} px={3}>
+                      <HStack spacing={2}>
+                        <Text fontSize="lg">{item.icon}</Text>
+                        <Box>
+                          <Text color="white" fontSize="xs" fontWeight="bold">{item.title}</Text>
+                          <Text color="rgba(245,240,232,0.4)" fontSize="10px">{item.desc}</Text>
+                        </Box>
+                      </HStack>
+                    </CardBody>
+                  </Card>
+                ))}
+              </SimpleGrid>
+            </Box>
+          )}
+
+          </Box>
         <InputArea
           onSubmit={handleSubmitInternal}
           onImageSubmit={handleImageSubmit}
