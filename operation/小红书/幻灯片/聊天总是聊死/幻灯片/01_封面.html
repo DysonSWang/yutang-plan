@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>01_封面</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif; background: #1a1a2e; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+.cover { width: 540px; height: 720px; background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 40%, #16213e 100%); position: relative; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border-radius: 8px; }
+.top-warning { width: 100%; height: 60px; background: linear-gradient(135deg, #ff3b30 0%, #ff6b5b 100%); display: flex; align-items: center; justify-content: center; }
+.top-warning span { color: white; font-size: 14px; font-weight: 600; letter-spacing: 3px; }
+.main-content { position: absolute; top: 80px; left: 0; right: 0; text-align: center; padding: 0 30px; }
+.text-90 { font-size: 42px; font-weight: 800; color: #ffffff; margin-bottom: 5px; }
+.text-killer { font-size: 64px; font-weight: 800; color: #ff3b30; text-shadow: 0 4px 20px rgba(255,59,48,0.4); margin-bottom: 15px; letter-spacing: 4px; }
+.subtitle-box { display: inline-block; background: rgba(255,255,255,0.08); backdrop-filter: blur(10px); padding: 12px 28px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.15); }
+.subtitle-box span { font-size: 22px; font-weight: 600; color: #ffffff; }
+.divider { width: 160px; height: 3px; background: linear-gradient(90deg, transparent, #ff3b30, transparent); margin: 25px auto; }
+.dots { display: flex; justify-content: center; gap: 25px; margin-top: 20px; }
+.dot { width: 14px; height: 14px; background: #ff3b30; border-radius: 50%; box-shadow: 0 0 20px #ff3b30, 0 0 40px rgba(255,59,48,0.4); }
+.footer { position: absolute; bottom: 0; left: 0; right: 0; height: 120px; background: linear-gradient(to top, rgba(0,0,0,0.85), transparent); display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 30px; }
+.golden-rule { font-size: 24px; font-weight: 700; color: #30d158; letter-spacing: 2px; text-shadow: 0 0 15px rgba(48,209,88,0.5); margin-bottom: 8px; }
+.cta { font-size: 13px; color: #8e8e93; }
+.decoration { position: absolute; border-radius: 50%; }
+.decoration-1 { width: 150px; height: 150px; background: radial-gradient(circle, rgba(255,59,48,0.15) 0%, transparent 70%); top: 80px; right: -50px; }
+.decoration-2 { width: 200px; height: 200px; background: radial-gradient(circle, rgba(48,209,88,0.1) 0%, transparent 70%); bottom: 100px; left: -80px; }
+</style>
+</head>
+<body>
+<div class="cover">
+  <div class="decoration decoration-1"></div>
+  <div class="decoration decoration-2"></div>
+  <div class="top-warning"><span>⚠️ 社交红灯区</span></div>
+  <div class="main-content">
+    <div class="text-90">90%的人</div>
+    <div class="text-killer">聊天聊死</div>
+    <div class="subtitle-box"><span>因为这3句话</span></div>
+    <div class="divider"></div>
+    <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+  </div>
+  <div class="footer">
+    <div class="golden-rule">👑 王者从不这样回</div>
+    <div class="cta">收藏起来，聊天直接用</div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>小红书配图 - 聊天总是聊死（美化版）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif; background: #111; padding: 40px 20px; }
+.slide-label { color: #666; font-size: 14px; margin-bottom: 10px; text-align: center; font-family: monospace; }
+.cover { width: 540px; height: 720px; position: relative; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border-radius: 8px; margin: 40px auto; }
+
+/* ========== 设计系统 ========== */
+:root {
+  --bg-warm: #FFF8F3;
+  --coral: #E85A4F;
+  --coral-light: rgba(232, 90, 79, 0.1);
+  --coral-glow: rgba(232, 90, 79, 0.25);
+  --ink: #2D2D2D;
+  --ink-light: #6B6B6B;
+  --gold: #C9A227;
+  --gold-light: rgba(201, 162, 39, 0.12);
+  --green: #3D8C40;
+  --green-light: rgba(61, 140, 64, 0.1);
+}
+
+/* ========== 封面 ========== */
+.cover-01 { background: var(--bg-warm); }
+.deco { position: absolute; border-radius: 50%; pointer-events: none; }
+.deco-1 { width: 180px; height: 180px; background: radial-gradient(circle, rgba(232,90,79,0.12) 0%, transparent 70%); top: 60px; right: -60px; }
+.deco-2 { width: 220px; height: 220px; background: radial-gradient(circle, rgba(201,162,39,0.12) 0%, transparent 70%); bottom: 80px; left: -90px; }
+.top-bar { width: 100%; height: 56px; background: var(--coral); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px var(--coral-glow); }
+.top-bar span { color: white; font-size: 13px; font-weight: 600; letter-spacing: 4px; text-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+.main-content { position: absolute; top: 75px; left: 0; right: 0; text-align: center; padding: 0 35px; }
+.text-90 { font-family: 'Noto Serif SC', serif; font-size: 38px; font-weight: 700; color: var(--ink); margin-bottom: 6px; letter-spacing: 2px; }
+.text-killer { font-family: 'Noto Serif SC', serif; font-size: 58px; font-weight: 800; color: var(--coral); text-shadow: 0 4px 24px var(--coral-glow); margin-bottom: 16px; letter-spacing: 6px; }
+.subtitle-box { display: inline-block; background: white; padding: 14px 32px; border-radius: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid rgba(232,90,79,0.15); }
+.subtitle-box span { font-size: 20px; font-weight: 600; color: var(--ink); letter-spacing: 1px; }
+.divider { width: 120px; height: 2px; background: linear-gradient(90deg, transparent, var(--coral), transparent); margin: 28px auto; }
+.dots { display: flex; justify-content: center; gap: 20px; }
+.dot { width: 10px; height: 10px; background: var(--coral); border-radius: 50%; box-shadow: 0 0 12px var(--coral-glow); }
+.footer { position: absolute; bottom: 0; left: 0; right: 0; height: 110px; background: linear-gradient(to top, rgba(45,45,45,0.08), transparent); display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 28px; }
+.golden-rule { font-family: 'Noto Serif SC', serif; font-size: 22px; font-weight: 700; color: var(--gold); letter-spacing: 3px; margin-bottom: 6px; }
+.cta { font-size: 12px; color: var(--ink-light); letter-spacing: 1px; }
+
+/* ========== 场景钩子 ========== */
+.cover-02 { background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 40%, #16213e 100%); }
+.header { width: 100%; height: 64px; background: rgba(255,255,255,0.03); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(232,90,79,0.3); }
+.header span { color: white; font-size: 18px; font-weight: 600; letter-spacing: 2px; }
+.scenarios { position: absolute; top: 85px; left: 22px; right: 22px; }
+.card { background: rgba(255,255,255,0.04); border-radius: 16px; padding: 18px 20px; margin-bottom: 16px; border-left: 3px solid var(--coral); backdrop-filter: blur(10px); }
+.card-num { font-size: 12px; font-weight: 700; color: var(--coral); margin-bottom: 6px; letter-spacing: 1px; }
+.card-title { font-family: 'Noto Serif SC', serif; font-size: 22px; font-weight: 700; color: white; margin-bottom: 8px; }
+.card-desc { font-size: 14px; color: rgba(255,255,255,0.6); line-height: 1.5; }
+.footer-02 { position: absolute; bottom: 28px; left: 0; right: 0; text-align: center; }
+.footer-02 span { color: var(--coral); font-size: 18px; font-weight: 600; letter-spacing: 2px; }
+
+/* ========== 坑模板 ========== */
+.cover-light { background: var(--bg-warm); }
+.tag { width: 100%; height: 48px; background: var(--coral); display: flex; align-items: center; padding: 0 22px; box-shadow: 0 4px 16px rgba(232,90,79,0.2); }
+.tag span { color: white; font-size: 15px; font-weight: 600; letter-spacing: 2px; }
+.title { padding: 28px 25px 14px; text-align: center; }
+.title-text { font-family: 'Noto Serif SC', serif; font-size: 30px; font-weight: 800; color: var(--ink); }
+.title-divider { width: 80px; height: 3px; background: var(--coral); margin: 12px auto 0; border-radius: 2px; }
+.section { margin: 10px 20px; border-radius: 14px; padding: 16px 18px; }
+.bronze { background: var(--coral-light); border-left: 4px solid var(--coral); }
+.gold { background: var(--green-light); border-left: 4px solid var(--green); }
+.label { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+.bronze .label { color: var(--coral); }
+.gold .label { color: var(--green); }
+.content { font-size: 15px; color: var(--ink); line-height: 1.55; }
+.think { margin: 14px 20px; background: #2D2D2D; border-radius: 14px; padding: 16px 18px; }
+.think-title { font-size: 13px; font-weight: 700; color: var(--gold); margin-bottom: 10px; letter-spacing: 1px; }
+.think-bad, .think-good { font-size: 13px; margin-bottom: 6px; line-height: 1.4; }
+.think-bad { color: #ff8a8a; }
+.think-good { color: #7DD97D; }
+.footer-simple { position: absolute; bottom: 18px; left: 0; right: 0; text-align: center; }
+.footer-simple span { font-size: 12px; color: var(--ink-light); }
+
+/* ========== 推拉连招 ========== */
+.cover-dark { background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 40%, #16213e 100%); }
+.header-green { width: 100%; height: 52px; background: linear-gradient(135deg, var(--green) 0%, #4CAF50 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(61,140,64,0.3); }
+.header-green span { color: white; font-size: 16px; font-weight: 600; letter-spacing: 2px; }
+.c6-content { padding: 22px 20px; }
+.block { border-radius: 14px; padding: 20px; margin-bottom: 16px; }
+.push { background: var(--coral-light); border-left: 4px solid var(--coral); }
+.pull { background: var(--green-light); border-left: 4px solid var(--green); }
+.block-label { font-size: 28px; font-weight: 800; margin-bottom: 8px; font-family: 'Noto Serif SC', serif; }
+.push .block-label { color: var(--coral); }
+.pull .block-label { color: var(--green); }
+.block-desc { font-size: 16px; color: white; margin-bottom: 6px; }
+.block-example { font-size: 14px; color: rgba(255,255,255,0.55); font-style: italic; }
+.result { background: rgba(201,162,39,0.15); border-radius: 14px; padding: 20px; text-align: center; border-left: 4px solid var(--gold); }
+.result span { font-size: 17px; font-weight: 600; color: white; }
+.footer-green { position: absolute; bottom: 0; left: 0; right: 0; height: 70px; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); display: flex; align-items: center; justify-content: center; }
+.footer-green span { color: var(--green); font-size: 18px; font-weight: 700; letter-spacing: 2px; }
+
+/* ========== CTA ========== */
+.cover-dark { background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 40%, #16213e 100%); }
+.top-green { width: 100%; height: 60px; background: linear-gradient(135deg, var(--green) 0%, #4CAF50 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(61,140,64,0.3); }
+.top-green span { color: white; font-size: 19px; font-weight: 700; letter-spacing: 2px; }
+.formulas { padding: 22px 20px; }
+.formula { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 16px; margin-bottom: 14px; display: flex; align-items: center; gap: 14px; backdrop-filter: blur(10px); }
+.formula-num { width: 34px; height: 34px; background: var(--green); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.formula-num span { color: white; font-size: 13px; font-weight: 700; }
+.formula-text { font-size: 17px; font-weight: 600; color: white; }
+.question { margin: 10px 20px; background: rgba(255,255,255,0.04); border-radius: 12px; padding: 20px; text-align: center; backdrop-filter: blur(10px); }
+.question-main { font-family: 'Noto Serif SC', serif; font-size: 20px; font-weight: 700; color: white; margin-bottom: 6px; }
+.question-sub { font-size: 13px; color: rgba(255,255,255,0.5); }
+.footer-cta { position: absolute; bottom: 0; left: 0; right: 0; height: 140px; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 28px; }
+.collect { font-family: 'Noto Serif SC', serif; font-size: 18px; font-weight: 700; color: white; margin-bottom: 8px; }
+.action { font-size: 14px; font-weight: 600; color: var(--green); }
+</style>
+</head>
+<body>
+
+<!-- ========== 01 封面 ========== -->
+<div class="slide-label">01 封面</div>
+<div class="cover cover-01">
+  <div class="deco deco-1"></div>
+  <div class="deco deco-2"></div>
+  <div class="top-bar"><span>⚠️ 社交红灯区</span></div>
+  <div class="main-content">
+    <div class="text-90">90%的人</div>
+    <div class="text-killer">聊天聊死</div>
+    <div class="subtitle-box"><span>因为这3句话</span></div>
+    <div class="divider"></div>
+    <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+  </div>
+  <div class="footer">
+    <div class="golden-rule">👑 王者从不这样回</div>
+    <div class="cta">收藏起来，聊天直接用</div>
+  </div>
+</div>
+
+<!-- ========== 02 场景钩子 ========== -->
+<div class="slide-label">02 场景钩子</div>
+<div class="cover cover-02">
+  <div class="header"><span>你是不是也这样聊死过？</span></div>
+  <div class="scenarios">
+    <div class="card">
+      <div class="card-num">❌ 坑1</div>
+      <div class="card-title">查户口式提问</div>
+      <div class="card-desc">在干嘛？吃了吗？睡了吗？工作累吗？工资多少？</div>
+    </div>
+    <div class="card">
+      <div class="card-num">❌ 坑2</div>
+      <div class="card-title">秒回症晚期</div>
+      <div class="card-desc">对方回一句，你秒回十句</div>
+    </div>
+    <div class="card">
+      <div class="card-num">❌ 坑3</div>
+      <div class="card-title">假性聊天</div>
+      <div class="card-desc">每天早安晚安，规律但没推进</div>
+    </div>
+  </div>
+  <div class="footer-02"><span>想改变？往下看 ↓</span></div>
+</div>
+
+<!-- ========== 03 坑1 查户口 ========== -->
+<div class="slide-label">03 坑1 查户口</div>
+<div class="cover cover-light">
+  <div class="tag"><span>坑1</span></div>
+  <div class="title">
+    <div class="title-text">查户口式提问</div>
+    <div class="title-divider"></div>
+  </div>
+  <div class="section bronze">
+    <div class="label">❌ 青铜操作</div>
+    <div class="content">在干嘛？吃了吗？睡了吗？工作累吗？工资多少？</div>
+  </div>
+  <div class="section gold">
+    <div class="label">✅ 王者操作</div>
+    <div class="content">对最近的话题发表评论，不直接提问</div>
+  </div>
+  <div class="think">
+    <div class="think-title">💡 思维提炼</div>
+    <div class="think-bad">❌ 不断提问像审讯，压力大</div>
+    <div class="think-good">✅ 用评论代替提问，对方更愿回应</div>
+  </div>
+  <div class="footer-simple"><span>收藏起来，下次避免踩坑</span></div>
+</div>
+
+<!-- ========== 04 坑2 秒回症 ========== -->
+<div class="slide-label">04 坑2 秒回症</div>
+<div class="cover cover-light">
+  <div class="tag"><span>坑2</span></div>
+  <div class="title">
+    <div class="title-text">秒回症晚期</div>
+    <div class="title-divider"></div>
+  </div>
+  <div class="section bronze">
+    <div class="label">❌ 青铜操作</div>
+    <div class="content">对方回一句，立刻秒回，还回很多</div>
+  </div>
+  <div class="section gold">
+    <div class="label">✅ 王者操作</div>
+    <div class="content">等3-5分钟再回，控制回复节奏</div>
+  </div>
+  <div class="think">
+    <div class="think-title">💡 思维提炼</div>
+    <div class="think-bad">❌ 秒回显得太闲，暴露需求感</div>
+    <div class="think-good">✅ 适当延迟展现价值和选择权</div>
+  </div>
+  <div class="footer-simple"><span>收藏起来，下次避免踩坑</span></div>
+</div>
+
+<!-- ========== 05 坑3 假性聊天 ========== -->
+<div class="slide-label">05 坑3 假性聊天</div>
+<div class="cover cover-light">
+  <div class="tag"><span>坑3</span></div>
+  <div class="title">
+    <div class="title-text">假性聊天</div>
+    <div class="title-divider"></div>
+  </div>
+  <div class="section bronze">
+    <div class="label">❌ 青铜操作</div>
+    <div class="content">每天早安晚安，聊天规律但没推进关系</div>
+  </div>
+  <div class="section gold">
+    <div class="label">✅ 王者操作</div>
+    <div class="content">聊到高潮时主动结束，留下悬念</div>
+  </div>
+  <div class="think">
+    <div class="think-title">💡 思维提炼</div>
+    <div class="think-bad">❌ 聊天变习惯，但不产生暧昧</div>
+    <div class="think-good">✅ 在情绪高点结束，对方更期待</div>
+  </div>
+  <div class="footer-simple"><span>收藏起来，下次避免踩坑</span></div>
+</div>
+
+<!-- ========== 06 推拉连招 ========== -->
+<div class="slide-label">06 推拉连招</div>
+<div class="cover cover-dark">
+  <div class="header-green"><span>情绪波动神器：推拉连招</span></div>
+  <div class="c6-content">
+    <div class="block push">
+      <div class="block-label">推：</div>
+      <div class="block-desc">你先嫌弃她一下</div>
+      <div class="block-example">"你怎么这么笨"</div>
+    </div>
+    <div class="block pull">
+      <div class="block-label">拉：</div>
+      <div class="block-desc">再给她一个甜枣</div>
+      <div class="block-example">"但笨蛋很可爱啊"</div>
+    </div>
+    <div class="result"><span>效果：让她哭笑不得，越来越上头</span></div>
+  </div>
+  <div class="footer-green"><span>学会这招，聊天不再平淡</span></div>
+</div>
+
+<!-- ========== 07 CTA ========== -->
+<div class="slide-label">07 万能公式 CTA</div>
+<div class="cover cover-dark">
+  <div class="top-green"><span>📌 万能回复公式</span></div>
+  <div class="formulas">
+    <div class="formula">
+      <div class="formula-num"><span>1</span></div>
+      <div class="formula-text">状态 + 好奇 → 引发回复</div>
+    </div>
+    <div class="formula">
+      <div class="formula-num"><span>2</span></div>
+      <div class="formula-text">推拉 + 情绪 → 制造波动</div>
+    </div>
+    <div class="formula">
+      <div class="formula-num"><span>3</span></div>
+      <div class="formula-text">筛选 + 台阶 → 推进关系</div>
+    </div>
+  </div>
+  <div class="question">
+    <div class="question-main">你在聊天中踩过哪个坑？</div>
+    <div class="question-sub">评论区说说，帮你分析</div>
+  </div>
+  <div class="footer-cta">
+    <div class="collect">收藏起来，聊天时对照用</div>
+    <div class="action">👍 点赞 + 评论"思维" 领完整版</div>
+  </div>
+</div>
+
+</body>
+</html>

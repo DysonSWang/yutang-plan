@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>07 CTA 万能公式</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-warm: #FFF8F3;
+  --coral: #E85A4F;
+  --coral-light: rgba(232, 90, 79, 0.1);
+  --ink: #2D2D2D;
+  --ink-light: #6B6B6B;
+  --gold: #C9A227;
+  --gold-light: rgba(201, 162, 39, 0.15);
+  --green: #3D8C40;
+  --green-light: rgba(61, 140, 64, 0.1);
+}
+
+body {
+  font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #1a1a2e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.slide {
+  width: 540px;
+  height: 720px;
+  background: var(--bg-warm);
+  position: relative;
+  overflow: hidden;
+}
+
+.tag { width: 100%; height: 48px; background: var(--green); display: flex; align-items: center; padding: 0 22px; box-shadow: 0 4px 16px rgba(61,140,64,0.2); }
+.tag span { color: white; font-size: 15px; font-weight: 600; letter-spacing: 2px; }
+
+.title { padding: 20px 25px 10px; text-align: center; }
+.title-text { font-family: 'Noto Serif SC', serif; font-size: 34px; font-weight: 800; color: var(--ink); }
+.divider { width: 80px; height: 3px; background: var(--green); margin: 12px auto 0; border-radius: 2px; }
+
+.formulas { padding: 12px 20px 0; }
+.formula { background: white; border-radius: 14px; padding: 18px 20px; margin-bottom: 14px; display: flex; align-items: center; gap: 16px; box-shadow: 0 2px 16px rgba(0,0,0,0.05); border-left: 4px solid var(--green); }
+.num { width: 40px; height: 40px; background: var(--green); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.num span { color: white; font-size: 16px; font-weight: 700; }
+.text { font-size: 17px; font-weight: 600; color: var(--ink); }
+
+.question { margin: 12px 20px; background: var(--gold-light); border-radius: 16px; padding: 22px; text-align: center; border: 1px solid rgba(201,162,39,0.2); }
+.question-main { font-family: 'Noto Serif SC', serif; font-size: 22px; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
+.question-sub { font-size: 15px; color: var(--ink-light); }
+
+.cta-box { margin: 10px 20px; text-align: center; }
+.cta-collect { font-family: 'Noto Serif SC', serif; font-size: 20px; font-weight: 700; color: var(--coral); margin-bottom: 8px; }
+.cta-action { font-size: 16px; font-weight: 600; color: var(--green); }
+
+.footer { position: absolute; bottom: 0; left: 0; right: 0; }
+.footer-top { height: 180px; background: linear-gradient(to top, rgba(45,45,45,0.1), transparent); }
+.footer-bottom { height: 50px; background: rgba(45,45,45,0.05); display: flex; align-items: center; justify-content: center; }
+.footer-bottom span { font-size: 14px; color: var(--ink-light); font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="tag"><span>总结 · 万能回复公式</span></div>
+
+  <div class="title">
+    <div class="title-text">万能回复公式</div>
+    <div class="divider"></div>
+  </div>
+
+  <div class="formulas">
+    <div class="formula">
+      <div class="num"><span>1</span></div>
+      <div class="text">先分享自己 + 再问问题 = 不冷场</div>
+    </div>
+    <div class="formula">
+      <div class="num"><span>2</span></div>
+      <div class="text">推拉 + 情绪 = 制造波动</div>
+    </div>
+    <div class="formula">
+      <div class="num"><span>3</span></div>
+      <div class="text">低需求感 + 高价值 = 自然吸引</div>
+    </div>
+  </div>
+
+  <div class="question">
+    <div class="question-main">你在聊天中踩过哪个坑？</div>
+    <div class="question-sub">评论区说说，帮你分析</div>
+  </div>
+
+  <div class="cta-box">
+    <div class="cta-collect">收藏起来，聊天时对照用</div>
+    <div class="cta-action">点赞 + 评论"思维" 领完整版</div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-top"></div>
+    <div class="footer-bottom"><span>下期预告：你喜欢我什么怎么回</span></div>
+  </div>
+</div>
+</body>
+</html>

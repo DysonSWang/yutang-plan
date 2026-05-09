@@ -80,3 +80,9 @@ tmp/
 apk/
 dist/
 node_modules/
+
+# Database backups (sensitive)
+db-backups/
+
+# External symlinks
+backend/vault/

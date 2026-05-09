@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>聊天总是聊死 - 封面</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  background: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.cover {
+  width: 1080px;
+  height: 1440px;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+/* 顶部红色强调条 */
+.top-bar {
+  width: 100%;
+  height: 120px;
+  background: linear-gradient(135deg, #ff3b30 0%, #ff6b5b 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.top-bar span {
+  color: white;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: 4px;
+}
+
+/* 主内容区 */
+.content {
+  position: absolute;
+  top: 150px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  padding: 0 60px;
+}
+
+/* 90%的人 */
+.text-90 {
+  font-size: 88px;
+  font-weight: 800;
+  color: #ffffff;
+  text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  margin-bottom: 10px;
+}
+
+/* 聊天聊死 */
+.text-killer {
+  font-size: 130px;
+  font-weight: 800;
+  color: #ff3b30;
+  text-shadow: 0 4px 30px rgba(255,59,48,0.4);
+  margin-bottom: 20px;
+  letter-spacing: 8px;
+}
+
+/* 副标题 */
+.subtitle {
+  display: inline-block;
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(10px);
+  padding: 16px 40px;
+  border-radius: 50px;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+.subtitle span {
+  font-size: 48px;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: 2px;
+}
+
+/* 分隔装饰 */
+.divider {
+  width: 300px;
+  height: 4px;
+  background: linear-gradient(90deg, transparent, #ff3b30, transparent);
+  margin: 40px auto;
+  border-radius: 2px;
+}
+
+/* 中间装饰 - 3个发光圆点 */
+.dots {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin: 60px 0;
+}
+
+.dot {
+  width: 24px;
+  height: 24px;
+  background: #ff3b30;
+  border-radius: 50%;
+  box-shadow: 0 0 30px #ff3b30, 0 0 60px rgba(255,59,48,0.5);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.dot:nth-child(2) { animation-delay: 0.3s; }
+.dot:nth-child(3) { animation-delay: 0.6s; }
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.8; }
+}
+
+/* 底部金句区域 */
+.footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 200px;
+  background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.6), transparent);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: 50px;
+}
+
+.footer-line {
+  font-size: 46px;
+  font-weight: 700;
+  color: #30d158;
+  letter-spacing: 4px;
+  text-shadow: 0 0 20px rgba(48,209,88,0.5);
+  margin-bottom: 16px;
+}
+
+.footer-cta {
+  font-size: 26px;
+  color: #8e8e93;
+  letter-spacing: 1px;
+}
+
+/* 装饰性背景元素 */
+.bg-decoration {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,59,48,0.1) 0%, transparent 70%);
+  top: 200px;
+  right: -100px;
+}
+
+.bg-decoration-2 {
+  position: absolute;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(48,209,88,0.08) 0%, transparent 70%);
+  bottom: 150px;
+  left: -150px;
+}
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="top-bar">
+    <span>⚠️ 社交红灯区</span>
+  </div>
+
+  <div class="bg-decoration"></div>
+  <div class="bg-decoration-2"></div>
+
+  <div class="content">
+    <div class="text-90">90%的人</div>
+    <div class="text-killer">聊天聊死</div>
+
+    <div class="subtitle">
+      <span>因为这3句话</span>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="dots">
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-line">👑 王者从不这样回</div>
+    <div class="footer-cta">收藏起来，聊天直接用</div>
+  </div>
+</div>
+
+</body>
+</html>

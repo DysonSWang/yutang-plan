@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>04_坑2_秒回症</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #111; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+.cover { width: 540px; height: 720px; background: #f5f5f5; position: relative; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); border-radius: 8px; }
+.cx-header { width: 100%; height: 50px; background: #ff3b30; display: flex; align-items: center; padding: 0 20px; }
+.cx-header span { color: #fff; font-size: 16px; font-weight: 600; }
+.cx-title { padding: 30px 25px 15px; text-align: center; }
+.cx-title span { font-size: 32px; font-weight: 800; color: #1a1a2e; }
+.cx-divider { width: 100px; height: 3px; background: #ff3b30; margin: 10px auto; }
+.cx-section { margin: 10px 20px; border-radius: 12px; padding: 16px; }
+.cx-bronze { background: rgba(255,59,48,0.1); border-left: 4px solid #ff3b30; }
+.cx-gold { background: rgba(48,209,88,0.1); border-left: 4px solid #30d158; }
+.cx-label { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+.cx-bronze .cx-label { color: #ff3b30; }
+.cx-gold .cx-label { color: #30d158; }
+.cx-content { font-size: 16px; color: #333; line-height: 1.5; }
+.cx-think { margin: 15px 20px; background: #1e1e2e; border-radius: 12px; padding: 16px; }
+.cx-think-title { font-size: 14px; font-weight: 700; color: #ffcc00; margin-bottom: 10px; }
+.cx-think-bad { font-size: 14px; color: #ff6b6b; margin-bottom: 6px; }
+.cx-think-good { font-size: 14px; color: #30d158; }
+.cx-footer { position: absolute; bottom: 20px; left: 0; right: 0; text-align: center; }
+.cx-footer span { font-size: 13px; color: #888; }
+</style>
+</head>
+<body>
+<div class="cover">
+  <div class="cx-header"><span>坑2</span></div>
+  <div class="cx-title"><span>秒回症晚期</span><div class="cx-divider"></div></div>
+  <div class="cx-section cx-bronze">
+    <div class="cx-label">❌ 青铜操作</div>
+    <div class="cx-content">对方回一句，立刻秒回，还回很多</div>
+  </div>
+  <div class="cx-section cx-gold">
+    <div class="cx-label">✅ 王者操作</div>
+    <div class="cx-content">等3-5分钟再回，控制回复节奏</div>
+  </div>
+  <div class="cx-think">
+    <div class="cx-think-title">💡 思维提炼</div>
+    <div class="cx-think-bad">❌ 秒回显得太闲，暴露需求感</div>
+    <div class="cx-think-good">✅ 适当延迟展现价值和选择权</div>
+  </div>
+  <div class="cx-footer"><span>收藏起来，下次避免踩坑</span></div>
+</div>
+</body>
+</html>

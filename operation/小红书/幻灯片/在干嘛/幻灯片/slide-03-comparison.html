@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>03 青铜 vs 王者对比</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-warm: #FFF8F3;
+  --coral: #E85A4F;
+  --coral-light: rgba(232, 90, 79, 0.1);
+  --ink: #2D2D2D;
+  --ink-light: #6B6B6B;
+  --gold: #C9A227;
+  --green: #3D8C40;
+  --green-light: rgba(61, 140, 64, 0.1);
+}
+
+body {
+  font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #1a1a2e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.slide {
+  width: 540px;
+  height: 720px;
+  background: var(--bg-warm);
+  position: relative;
+  overflow: hidden;
+}
+
+.tag { width: 100%; height: 48px; background: var(--coral); display: flex; align-items: center; padding: 0 22px; box-shadow: 0 4px 16px rgba(232,90,79,0.2); }
+.tag span { color: white; font-size: 15px; font-weight: 600; letter-spacing: 2px; }
+
+.title { padding: 26px 25px 12px; text-align: center; }
+.title-text { font-family: 'Noto Serif SC', serif; font-size: 28px; font-weight: 800; color: var(--ink); }
+.divider { width: 80px; height: 3px; background: var(--coral); margin: 10px auto 0; border-radius: 2px; }
+
+.content { padding: 0 20px; }
+
+.section { margin: 10px 0; border-radius: 14px; padding: 16px 18px; }
+.bronze { background: var(--coral-light); border-left: 4px solid var(--coral); }
+.gold { background: var(--green-light); border-left: 4px solid var(--green); }
+
+.label { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+.bronze .label { color: var(--coral); }
+.gold .label { color: var(--green); }
+
+.flow { margin-bottom: 6px; }
+.flow:last-child { margin-bottom: 0; }
+.chat-row { display: flex; margin-bottom: 4px; }
+.chat-row.her { justify-content: flex-start; }
+.chat-row.his { justify-content: flex-end; }
+.bubble { max-width: 75%; padding: 6px 12px; border-radius: 10px; font-size: 13px; }
+.bronze .bubble.her { background: rgba(232,90,79,0.12); color: #c0392b; }
+.bronze .bubble.his { background: rgba(0,0,0,0.06); color: var(--ink-light); }
+.gold .bubble.her { background: rgba(61,140,64,0.12); color: #2d6a30; }
+.gold .bubble.his { background: rgba(0,0,0,0.06); color: var(--ink-light); }
+.result { font-size: 12px; font-weight: 700; margin-top: 6px; text-align: center; }
+.bronze .result { color: var(--coral); }
+.gold .result { color: var(--green); }
+
+.think { margin: 12px 20px; background: #2D2D2D; border-radius: 14px; padding: 16px 18px; }
+.think-title { font-size: 13px; font-weight: 700; color: var(--gold); margin-bottom: 10px; letter-spacing: 1px; }
+.think-bad, .think-good { font-size: 13px; margin-bottom: 6px; line-height: 1.4; }
+.think-bad { color: #ff8a8a; }
+.think-good { color: #7DD97D; }
+
+.footer { position: absolute; bottom: 18px; left: 0; right: 0; text-align: center; }
+.footer span { font-size: 13px; color: var(--ink-light); }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="tag"><span>对比分析</span></div>
+
+  <div class="title">
+    <div class="title-text">为什么不能直接回答？</div>
+    <div class="divider"></div>
+  </div>
+
+  <div class="content">
+    <div class="section bronze">
+      <div class="label">❌ 青铜操作</div>
+      <div class="flow">
+        <div class="chat-row her"><div class="bubble her">她：在干嘛？</div></div>
+        <div class="chat-row his"><div class="bubble his">你：在上班啊，你呢？</div></div>
+        <div class="chat-row her"><div class="bubble her">她：哦</div></div>
+      </div>
+      <div class="result">→ 话题结束</div>
+    </div>
+
+    <div class="section gold">
+      <div class="label">✅ 王者操作</div>
+      <div class="flow">
+        <div class="chat-row her"><div class="bubble her">她：在干嘛？</div></div>
+        <div class="chat-row his"><div class="bubble his">你：刚开完会，头都大了，你今天呢？</div></div>
+        <div class="chat-row her"><div class="bubble her">她：哈哈怎么了？</div></div>
+      </div>
+      <div class="result">→ 话题继续</div>
+    </div>
+  </div>
+
+  <div class="think">
+    <div class="think-title">💡 核心逻辑</div>
+    <div class="think-bad">❌ 直接回答 = 审问式聊天，她压力大</div>
+    <div class="think-good">✅ 状态+好奇 = 有来有往，她更愿回应</div>
+  </div>
+
+  <div class="footer"><span>收藏起来，下次避免踩坑</span></div>
+</div>
+</body>
+</html>

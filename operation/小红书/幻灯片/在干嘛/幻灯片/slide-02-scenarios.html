@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>02 场景钩子</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-warm: #FFF8F3;
+  --coral: #E85A4F;
+  --coral-light: rgba(232, 90, 79, 0.1);
+  --ink: #2D2D2D;
+  --ink-light: #6B6B6B;
+  --gold: #C9A227;
+  --green: #3D8C40;
+  --green-light: rgba(61, 140, 64, 0.1);
+}
+
+body {
+  font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #1a1a2e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.slide {
+  width: 540px;
+  height: 720px;
+  background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 40%, #16213e 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.header { width: 100%; height: 56px; background: rgba(255,255,255,0.03); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(232,90,79,0.3); }
+.header span { color: white; font-size: 17px; font-weight: 600; letter-spacing: 2px; }
+
+/* Chat bubble section */
+.chat-hook { margin: 16px 20px 8px; background: rgba(255,255,255,0.06); border-radius: 14px; padding: 16px 18px; backdrop-filter: blur(10px); }
+.chat-line { display: flex; margin-bottom: 8px; }
+.chat-line:last-child { margin-bottom: 0; }
+.chat-line.her { justify-content: flex-start; }
+.chat-line.his { justify-content: flex-end; }
+.bubble { max-width: 70%; padding: 8px 14px; border-radius: 12px; font-size: 14px; }
+.bubble.her { background: rgba(232,90,79,0.15); color: #ff8a80; border-bottom-left-radius: 4px; }
+.bubble.his { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); border-bottom-right-radius: 4px; }
+.chat-question { text-align: center; font-size: 13px; color: var(--gold); margin-top: 10px; font-weight: 600; }
+
+/* Tier blocks */
+.tiers { padding: 0 22px; }
+.tier { border-radius: 12px; padding: 12px 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+.tier.bronze { background: rgba(255,255,255,0.04); border-left: 3px solid #ff6b6b; }
+.tier.silver { background: rgba(255,255,255,0.04); border-left: 3px solid #aaa; }
+.tier.diamond { background: rgba(255,255,255,0.04); border-left: 3px solid var(--gold); }
+.tier.king { background: var(--green-light); border-left: 3px solid var(--green); }
+.tier-label { font-size: 13px; font-weight: 700; letter-spacing: 1px; flex-shrink: 0; width: 52px; }
+.tier.bronze .tier-label { color: #ff6b6b; }
+.tier.silver .tier-label { color: #aaa; }
+.tier.diamond .tier-label { color: var(--gold); }
+.tier.king .tier-label { color: var(--green); }
+.tier-text { font-size: 13px; color: rgba(255,255,255,0.85); }
+.tier.king .tier-text { color: white; font-weight: 600; }
+
+.footer { position: absolute; bottom: 18px; left: 0; right: 0; text-align: center; }
+.footer span { color: var(--gold); font-size: 16px; font-weight: 600; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="header"><span>她问"在干嘛"，你在哪种段位？</span></div>
+
+  <!-- Chat conversation hook -->
+  <div class="chat-hook">
+    <div class="chat-line her">
+      <div class="bubble her">她：在干嘛？</div>
+    </div>
+    <div class="chat-line his">
+      <div class="bubble his">你：在上班</div>
+    </div>
+    <div class="chat-line her">
+      <div class="bubble her">她：哦</div>
+    </div>
+    <div class="chat-question">这种对话你们是不是经历过？</div>
+  </div>
+
+  <!-- Tier comparison -->
+  <div class="tiers">
+    <div class="tier bronze">
+      <div class="tier-label">❌ 青铜</div>
+      <div class="tier-text">老老实实回答 → "在上班""在吃饭"</div>
+    </div>
+    <div class="tier silver">
+      <div class="tier-label">△ 白银</div>
+      <div class="tier-text">平淡互动 → "刚吃完，你呢？"</div>
+    </div>
+    <div class="tier diamond">
+      <div class="tier-label">❌ 钻石</div>
+      <div class="tier-text">连环追问 → "今天怎么样？周末呢？"</div>
+    </div>
+    <div class="tier king">
+      <div class="tier-label">✅ 王者</div>
+      <div class="tier-text">状态 + 好奇 → "刚忙完，正准备找你呢"</div>
+    </div>
+  </div>
+
+  <div class="footer"><span>往下看，避免踩坑 ↓</span></div>
+</div>
+</body>
+</html>

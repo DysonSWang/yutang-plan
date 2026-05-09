@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>06 进阶技巧</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-warm: #FFF8F3;
+  --coral: #E85A4F;
+  --coral-light: rgba(232, 90, 79, 0.1);
+  --ink: #2D2D2D;
+  --ink-light: #6B6B6B;
+  --gold: #C9A227;
+  --green: #3D8C40;
+  --green-light: rgba(61, 140, 64, 0.1);
+}
+
+body {
+  font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #1a1a2e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.slide {
+  width: 540px;
+  height: 720px;
+  background: var(--bg-warm);
+  position: relative;
+  overflow: hidden;
+}
+
+.tag { width: 100%; height: 48px; background: var(--green); display: flex; align-items: center; padding: 0 22px; box-shadow: 0 4px 16px rgba(61,140,64,0.2); }
+.tag span { color: white; font-size: 15px; font-weight: 600; letter-spacing: 2px; }
+
+.title { padding: 24px 25px 10px; text-align: center; }
+.title-text { font-family: 'Noto Serif SC', serif; font-size: 26px; font-weight: 800; color: var(--ink); }
+.subtitle { font-size: 14px; color: var(--ink-light); margin-top: 4px; }
+.divider { width: 80px; height: 3px; background: var(--green); margin: 10px auto 0; border-radius: 2px; }
+
+.block { margin: 10px 20px; border-radius: 14px; padding: 18px; background: white; box-shadow: 0 2px 12px rgba(0,0,0,0.04); border-left: 4px solid var(--green); }
+.block-label { font-size: 12px; font-weight: 700; color: var(--gold); margin-bottom: 6px; letter-spacing: 1px; }
+.block-title { font-family: 'Noto Serif SC', serif; font-size: 20px; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
+.block-example { font-size: 14px; color: var(--ink-light); font-style: italic; }
+
+.think { margin: 14px 20px; background: #2D2D2D; border-radius: 14px; padding: 14px 18px; text-align: center; }
+.think span { font-size: 13px; color: var(--gold); font-weight: 600; line-height: 1.4; }
+
+.footer { position: absolute; bottom: 0; left: 0; right: 0; height: 40px; display: flex; align-items: center; justify-content: center; }
+.footer span { font-size: 12px; color: var(--ink-light); }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="tag"><span>进阶 · 从回答到主导</span></div>
+
+  <div class="title">
+    <div class="title-text">从回答到主导</div>
+    <div class="subtitle">3个进阶技巧，让聊天节奏由你掌控</div>
+    <div class="divider"></div>
+  </div>
+
+  <div class="block">
+    <div class="block-label">💡 技巧1</div>
+    <div class="block-title">反客为主</div>
+    <div class="block-example">"你猜我在干嘛？" / "不告诉你"</div>
+  </div>
+
+  <div class="block">
+    <div class="block-label">💡 技巧2</div>
+    <div class="block-title">情绪引导</div>
+    <div class="block-example">"刚被一个问题难住了，帮我想想？"</div>
+  </div>
+
+  <div class="block">
+    <div class="block-label">💡 技巧3</div>
+    <div class="block-title">制造默契</div>
+    <div class="block-example">"正准备给你发消息，你就来了，太巧了吧"</div>
+  </div>
+
+  <div class="think">
+    <span>我的体会：太快的满足不真实，让她追逐真实的东西</span>
+  </div>
+
+  <div class="footer"><span>下期预告：聊天总是聊死怎么办</span></div>
+</div>
+</body>
+</html>
