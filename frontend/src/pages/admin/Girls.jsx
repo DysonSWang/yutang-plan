@@ -63,6 +63,7 @@ export default function AdminGirls() {
   const { isOpen: isDetailOpen, onOpen: onDetailOpen, onClose: onDetailClose } = useDisclosure();
   const { isOpen: isScreenshotOpen, onOpen: onScreenshotOpen, onClose: onScreenshotClose } = useDisclosure();
   const [formData, setFormData] = useState(getInitialFormData());
+  const [showAdvancedFields, setShowAdvancedFields] = useState(false);
 
   // 截图相关状态
   const [screenshots, setScreenshots] = useState([]);
@@ -1368,24 +1369,32 @@ export default function AdminGirls() {
                       </FormControl>
                     </SimpleGrid>
                     <FormControl>
-                      <FormLabel color="rgba(245,240,232,0.4)">情史摘要</FormLabel>
-                      <Textarea value={formData.pastRelationshipSummary} onChange={e => setFormData({...formData, pastRelationshipSummary: e.target.value})} bg="warm.700" rows={2} />
-                    </FormControl>
-                    <FormControl>
-                      <FormLabel color="rgba(245,240,232,0.4)">情伤记录</FormLabel>
-                      <Select value={formData.emotionalWounds} onChange={e => setFormData({...formData, emotionalWounds: e.target.value})} bg="warm.700" color="white">
-                          <option value="">选择</option>
-                          {EMOTIONAL_WOUNDS_OPTIONS.map(e => <option key={e} value={e}>{e}</option>)}
-                        </Select>
-                    </FormControl>
-                    <FormControl>
-                      <FormLabel color="rgba(245,240,232,0.4)">绝对雷区</FormLabel>
-                      <Textarea value={formData.dealbreakers} onChange={e => setFormData({...formData, dealbreakers: e.target.value})} bg="warm.700" rows={2} />
-                    </FormControl>
-                    <FormControl>
                       <FormLabel color="rgba(245,240,232,0.4)">择偶偏好</FormLabel>
                       <Textarea value={formData.matePreferences} onChange={e => setFormData({...formData, matePreferences: e.target.value})} placeholder="年龄范围/学历/地域/职业/收入/其他要求" bg="warm.700" rows={2} />
                     </FormControl>
+                    <Button variant="ghost" size="sm" color="gold.400" onClick={() => setShowAdvancedFields(!showAdvancedFields)} _hover={{ bg: 'warm.700' }}>
+                      {showAdvancedFields ? '收起' : '更多字段'}
+                      <Text as="span" ml={1}>{showAdvancedFields ? '▲' : '▼'}</Text>
+                    </Button>
+                    {showAdvancedFields && (
+                      <>
+                        <FormControl>
+                          <FormLabel color="rgba(245,240,232,0.4)">情史摘要</FormLabel>
+                          <Textarea value={formData.pastRelationshipSummary} onChange={e => setFormData({...formData, pastRelationshipSummary: e.target.value})} bg="warm.700" rows={2} />
+                        </FormControl>
+                        <FormControl>
+                          <FormLabel color="rgba(245,240,232,0.4)">情伤记录</FormLabel>
+                          <Select value={formData.emotionalWounds} onChange={e => setFormData({...formData, emotionalWounds: e.target.value})} bg="warm.700" color="white">
+                              <option value="">选择</option>
+                              {EMOTIONAL_WOUNDS_OPTIONS.map(e => <option key={e} value={e}>{e}</option>)}
+                            </Select>
+                        </FormControl>
+                        <FormControl>
+                          <FormLabel color="rgba(245,240,232,0.4)">绝对雷区</FormLabel>
+                          <Textarea value={formData.dealbreakers} onChange={e => setFormData({...formData, dealbreakers: e.target.value})} bg="warm.700" rows={2} />
+                        </FormControl>
+                      </>
+                    )}
                   </VStack>
                 </TabPanel>
 
@@ -1518,16 +1527,22 @@ export default function AdminGirls() {
                         </Select>
                       </FormControl>
                     </SimpleGrid>
-                    <SimpleGrid columns={2} spacing={4}>
-                      <FormControl>
-                        <FormLabel color="rgba(245,240,232,0.4)">风险因素</FormLabel>
-                        <Textarea value={formData.riskFactors} onChange={e => setFormData({...formData, riskFactors: e.target.value})} bg="warm.700" rows={2} />
-                      </FormControl>
-                      <FormControl>
-                        <FormLabel color="rgba(245,240,232,0.4)">战略备注</FormLabel>
-                        <Textarea value={formData.strategicNotes} onChange={e => setFormData({...formData, strategicNotes: e.target.value})} bg="warm.700" rows={2} />
-                      </FormControl>
-                    </SimpleGrid>
+                    <Button variant="ghost" size="sm" color="gold.400" onClick={() => setShowAdvancedFields(!showAdvancedFields)} _hover={{ bg: 'warm.700' }}>
+                      {showAdvancedFields ? '收起' : '更多字段'}
+                      <Text as="span" ml={1}>{showAdvancedFields ? '▲' : '▼'}</Text>
+                    </Button>
+                    {showAdvancedFields && (
+                      <SimpleGrid columns={2} spacing={4}>
+                        <FormControl>
+                          <FormLabel color="rgba(245,240,232,0.4)">风险因素</FormLabel>
+                          <Textarea value={formData.riskFactors} onChange={e => setFormData({...formData, riskFactors: e.target.value})} bg="warm.700" rows={2} />
+                        </FormControl>
+                        <FormControl>
+                          <FormLabel color="rgba(245,240,232,0.4)">战略备注</FormLabel>
+                          <Textarea value={formData.strategicNotes} onChange={e => setFormData({...formData, strategicNotes: e.target.value})} bg="warm.700" rows={2} />
+                        </FormControl>
+                      </SimpleGrid>
+                    )}
 
                     <Text color="white" fontWeight="bold" mt={2}>谙世画像（EQ维度）</Text>
                     <SimpleGrid columns={{ base: 1, sm: 2, md: 5 }} spacing={4}>
@@ -1686,21 +1701,29 @@ export default function AdminGirls() {
 
                     <Text color="white" fontWeight="bold" mt={2}>上下文记忆</Text>
                     <FormControl>
-                      <FormLabel color="rgba(245,240,232,0.4)">关键信号(JSON)</FormLabel>
-                      <Textarea value={formData.signals} onChange={e => setFormData({...formData, signals: e.target.value})} placeholder='[{"date":"2026-04-14","type":"positive","event":"主动发健身照片"}]' bg="warm.700" rows={3} />
-                    </FormControl>
-                    <FormControl>
                       <FormLabel color="rgba(245,240,232,0.4)">待推进事项(JSON)</FormLabel>
                       <Textarea value={formData.pendingActions} onChange={e => setFormData({...formData, pendingActions: e.target.value})} placeholder='["出差回来后约第二次见面"]' bg="warm.700" rows={2} />
                     </FormControl>
-                    <FormControl>
-                      <FormLabel color="rgba(245,240,232,0.4)">观察记录(JSON)</FormLabel>
-                      <Textarea value={formData.observations} onChange={e => setFormData({...formData, observations: e.target.value})} bg="warm.700" rows={2} />
-                    </FormControl>
-                    <FormControl>
-                      <FormLabel color="rgba(245,240,232,0.4)">对话摘要</FormLabel>
-                      <Textarea value={formData.conversationSummary} onChange={e => setFormData({...formData, conversationSummary: e.target.value})} bg="warm.700" rows={3} />
-                    </FormControl>
+                    <Button variant="ghost" size="sm" color="gold.400" onClick={() => setShowAdvancedFields(!showAdvancedFields)} _hover={{ bg: 'warm.700' }}>
+                      {showAdvancedFields ? '收起' : '更多字段'}
+                      <Text as="span" ml={1}>{showAdvancedFields ? '▲' : '▼'}</Text>
+                    </Button>
+                    {showAdvancedFields && (
+                      <>
+                        <FormControl>
+                          <FormLabel color="rgba(245,240,232,0.4)">关键信号(JSON)</FormLabel>
+                          <Textarea value={formData.signals} onChange={e => setFormData({...formData, signals: e.target.value})} placeholder='[{"date":"2026-04-14","type":"positive","event":"主动发健身照片"}]' bg="warm.700" rows={3} />
+                        </FormControl>
+                        <FormControl>
+                          <FormLabel color="rgba(245,240,232,0.4)">观察记录(JSON)</FormLabel>
+                          <Textarea value={formData.observations} onChange={e => setFormData({...formData, observations: e.target.value})} bg="warm.700" rows={2} />
+                        </FormControl>
+                        <FormControl>
+                          <FormLabel color="rgba(245,240,232,0.4)">对话摘要</FormLabel>
+                          <Textarea value={formData.conversationSummary} onChange={e => setFormData({...formData, conversationSummary: e.target.value})} bg="warm.700" rows={3} />
+                        </FormControl>
+                      </>
+                    )}
 
                     <Text color="white" fontWeight="bold" mt={2}>匹配相关</Text>
                     <SimpleGrid columns={2} spacing={4}>
