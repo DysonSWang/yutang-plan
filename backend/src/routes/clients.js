@@ -1019,7 +1019,7 @@ router.put('/:id/password', authMiddleware, async (req, res) => {
   }
 });
 
-// 客户上传截图 AI 提取档案字段（全量识别）
+// 客户上传截图 AI 提取档案字段（全量识别）— 异步版本
 router.post('/extract-from-screenshot', authMiddleware, screenshotUpload.single('image'), async (req, res) => {
   try {
     if (!['admin', 'client'].includes(req.user.role)) {
@@ -1033,111 +1033,41 @@ router.post('/extract-from-screenshot', authMiddleware, screenshotUpload.single(
     const imageUrl = `/uploads/chat-screenshots/${req.file.filename}`;
     const clientId = req.user.role === 'client' ? req.user.id : (req.body.clientId || null);
 
-    // 全量字段提取 Prompt（与文本提取保持一致）
-    const extractPrompt = `分析以下聊天截图，从对话内容中提取客户（发送消息的一方）的档案信息，直接输出JSON（不要markdown代码块，不要其他文字）。
-
-请仔细阅读截图中的聊天文字，识别客户的基本信息、性格特征、沟通风格等。
-
-【规则】
-1. 有选项的字段必须从可选值中选择，不要自己编
-2. 数字字段填数字字符串如"7"，不要文字
-3. 截图中未提及的字段填空字符串""
-4. 只输出实际看到的信息，不要猜测、推断或编造
-
-【字段与可选值】
-age: 数字（如果提到出生年份推算年龄，当前2026年）
-height: 数字(cm)
-weight: 数字(kg)
-residence: 城市名
-hometown: 城市名
-occupation: 企业主/企业高管/公务员/医生/律师/教师/工程师/程序员/销售/金融从业者/自由职业/退休/其他
-education: 小学/初中/中专/高中/大专/本科/硕士/博士
-income: 10万以下/10-30万/30-50万/50-100万/100-300万/300万以上
-personality: INTJ/INTP/ENTJ/ENTP/INFJ/INFP/ENFJ/ENFP/ISTJ/ISFJ/ESTJ/ESFJ/ISTP/ISFP/ESTP/ESFP/其他
-familyBackground: 农村/城市/经商/公务员/其他
-familyStructure: 双亲/单亲/离异/其他
-familyAtmosphere: 和睦/一般/冷淡/争吵/离异
-marriageHistory: 未婚/离异无子/离异有子/丧偶
-emotionalGoal: 认真找对象/随便玩玩/家里催婚/空虚寂寞
-relationshipGoal: 短期/长期/不确定
-relationshipAttitude: 认真/随便/急切
-communicationStyle: 直接/含蓄/话多/话少/幽默
-socialStyle: 主动/被动/社交达人
-emotionalStable: 1-10数字
-eqLevel: 1-10数字
-emotionalMaturity: 幼稚/一般/成熟
-emotionalMaturityLevel: 1-10数字
-learningAbility: 强/中/弱
-coachCooperation: 配合/一般/抵触
-coachCooperationLevel: 1-10数字
-attachmentStyle: 焦虑型/回避型/安全型
-loveStyle: 真诚型/陪伴型/言语型/身体型/浪漫型
-moneyDatingPattern: AA/请客/轮流/看情况
-humorStyle: 冷幽默/自嘲/调侃/正经
-selfEsteemLevel: 高/中/低
-pacePreference: 快节奏/稳健型/慢热型
-assetsLevel: A6/A7/A8/A9/A10/A10+
-clientType: 执行型/质疑型/自主型
-empathy: 1-10数字
-communication: 1-10数字
-conflictRes: 1-10数字
-appearance: 外貌描述文本
-appearanceSelfAssessment: 自我颜值评价文本
-appearanceSelfRequirement: 对对方颜值要求文本
-strengths: 优势/优点文本
-weaknesses: 缺点/不足文本
-dateTaboos: 约会禁忌文本
-notes: 其他值得记录的备注
-dressingStyle: 穿着风格
-profileBio: 个人签名/简介
-matchPreferences: 对目标对象的期望描述（年龄、身高、学历、性格、收入等要求）`;
-
-    const messages = [{
-      role: 'user',
-      content: [
-        { type: 'text', text: extractPrompt },
-        { type: 'image_url', image_url: { url: imageUrl } }
-      ]
-    }];
-
-    let pendingFields = {};
-    let aiErrorMessage = null;
-    try {
-      const raw = await callVisionModel(messages);
-      // 清理 markdown 代码块
-      let content = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
-
-      if (content) {
-        const extracted = JSON.parse(content);
-        // 只保留非空字段
-        for (const [key, value] of Object.entries(extracted)) {
-          if (value && value !== '' && value !== '空' && value !== '未知') {
-            pendingFields[key] = value;
-          }
-        }
-      }
-    } catch (aiError) {
-      console.warn('[Clients] AI分析截图失败:', aiError.message);
-      aiErrorMessage = aiError.message;
-    }
-
-    // 保存截图记录
-    await prisma.chatScreenshot.create({
+    // 先保存截图记录，状态设为 pending
+    const screenshot = await prisma.chatScreenshot.create({
       data: {
         clientId,
         operatorId: req.user.id,
         imageUrl,
-        notes: req.user.role === 'client' ? '客户自助截图提取' : '管理员截图提取'
+        notes: req.user.role === 'client' ? '客户自助截图提取' : '管理员截图提取',
+        analysisStatus: 'pending'
       }
-    }).catch(() => {});
+    }).catch(() => null);
 
-    const count = Object.keys(pendingFields).filter(k => pendingFields[k]).length;
+    if (!screenshot) {
+      return res.status(500).json({ error: '保存截图记录失败' });
+    }
+
+    // 后台异步分析
+    const io = req.app.get('io');
+    const { runAsyncAnalysis } = require('../services/asyncAnalysis');
+    setImmediate(() => {
+      runAsyncAnalysis({
+        screenshotId: screenshot.id,
+        girlId: 'client-extract', // 客户提取不关联女生，用特殊标记
+        imageUrl,
+        operatorId: req.user.id,
+        io,
+        baseUrl: null // 客户提取用自己的 prompt
+      }).catch(err => {
+        console.error('[Clients] 后台截图分析异常:', err);
+      });
+    });
+
     res.json({
       success: true,
-      pendingFields,
-      message: aiErrorMessage
-        ? `AI 分析失败：${aiErrorMessage}`
-        : (count > 0 ? `识别到 ${count} 个档案字段` : '未识别到档案信息，请尝试更清晰的截图')
+      screenshotId: screenshot.id,
+      message: '上传成功，AI 正在后台分析中...'
     });
   } catch (error) {
     console.error('[Clients] 截图提取失败:', error);

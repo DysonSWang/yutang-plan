@@ -16,7 +16,7 @@ const { buildAICoachContext } = require('../services/contextBuilder');
 const { executeTool } = require('../coaches/skills');
 const { extractFromChat: extractGirlFromChat } = require('../services/girlProfileExtractor');
 const { extractFromChat: extractClientFromChat } = require('../services/clientProfileExtractor');
-const { GIRL_FIELD_LABELS, CLIENT_FIELD_LABELS } = require('../services/profileEngine');
+const { GIRL_FIELD_LABELS, CLIENT_FIELD_LABELS, callVisionModel } = require('../services/profileEngine');
 
 const { JWT_SECRET, getAIConfig, getVLModelConfig } = require('../config');
 const prisma = require('../prisma');
@@ -35,37 +35,6 @@ const activityService = require('../services/activityService');
  * 异步执行反馈分析（不阻塞主流程）
  * 分析采纳的建议会对女生档案产生什么变化，写入数据库待审核队列
  */
-/**
- * 将本地图片路径转为 DashScope 可用的格式
- * 本地 /uploads/ 文件转为 base64；已经是 http URL 则直接返回
- */
-async function resolveImageForVL(imagePath) {
-  if (!imagePath) return null;
-
-  // 已经是完整 URL（公网可访问）
-  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-    return imagePath;
-  }
-
-  // 本地 /uploads/ 路径 → 转为 base64
-  if (imagePath.startsWith('/uploads/')) {
-    const uploadDir = path.join(__dirname, '..', '..', 'uploads');
-    const filePath = path.join(uploadDir, imagePath.replace('/uploads/', ''));
-
-    try {
-      const buffer = fs.readFileSync(filePath);
-      const ext = path.extname(filePath).toLowerCase().replace('.', '') || 'jpg';
-      const mimeType = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
-      return `data:${mimeType};base64,${buffer.toString('base64')}`;
-    } catch (err) {
-      console.error('[ChatPartner] 读取本地图片失败:', filePath, err.message);
-      return imagePath; // fallback：传原始路径，让 API 失败时返回有意义的错误
-    }
-  }
-
-  return imagePath;
-}
-
 async function runAsyncFeedbackAnalysis({ girlId, clientId, operatorId, logId, replyText, originalGirlMessage, style, intention }) {
   // 热度调整映射（和 /feedback 里一致）
   const tensionAdjustments = {
@@ -1778,12 +1747,8 @@ ${contentDescription}
 
     // 构建 AI 消息
     if (momentImage) {
-      // 视觉模型
+      // 视觉模型 — 使用 profileEngine 的 callVisionModel（带压缩+超时+重试）
       const vlConfig = getVLModelConfig() || getAIConfig();
-
-      const baseMessages = [
-        { role: 'user', content: systemPrompt + '\n\n【图片】见下方。' }
-      ];
 
       let analysisResult = {
         momentContent: '图片分析中...',
@@ -1792,38 +1757,29 @@ ${contentDescription}
       };
 
       try {
-        // 本地路径转为 base64（DashScope 无法访问 localhost）
-        const resolvedImage = await resolveImageForVL(momentImage);
+        // 处理 base64 或 URL
+        let imageUrl = momentImage;
+        if (momentImage.startsWith('data:')) {
+          // base64 直接传递
+          imageUrl = momentImage;
+        } else if (momentImage.startsWith('/')) {
+          // 本地路径
+          imageUrl = momentImage;
+        }
 
-        const vlResp = await fetch(vlConfig.url, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${vlConfig.key}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            model: vlConfig.model,
-            messages: [
-              ...baseMessages,
-              { role: 'user', content: [
-                { type: 'text', text: '以上是朋友圈内容，这是图片：' },
-                { type: 'image_url', image_url: { url: resolvedImage } }
-              ]}
-            ],
-            temperature: 0.7,
-            max_tokens: 1500
-          })
-        });
+        const messages = [
+          { role: 'user', content: [
+            { type: 'text', text: systemPrompt + '\n\n【图片】见下方。' },
+            { type: 'image_url', image_url: { url: imageUrl } }
+          ]}
+        ];
 
-        if (vlResp.ok) {
-          const vlData = await vlResp.json();
-          const aiContent = vlData.choices?.[0]?.message?.content || '';
-          try {
-            const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-              analysisResult = JSON.parse(jsonMatch[0]);
-            }
-          } catch (e) { console.warn('[ChatPartner] 视觉分析 JSON 解析失败:', e.message); }
+        const aiContent = await callVisionModel(messages, vlConfig);
+        if (aiContent) {
+          const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            analysisResult = JSON.parse(jsonMatch[0]);
+          }
         }
       } catch (err) {
         console.error('[ChatPartner] 视觉分析失败:', err.message);

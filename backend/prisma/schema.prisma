@@ -428,6 +428,7 @@ model Message {
   createdAt DateTime @default(now())
 
   @@index([sessionId])
+  @@index([sessionId, createdAt])
   @@map("messages")
 }
 
@@ -448,10 +449,10 @@ model FlashImageBurn {
 // ========== 聊天截图记录 ==========
 model ChatScreenshot {
   id     String @id @default(uuid())
-  girlId String
-  girl   Girl   @relation(fields: [girlId], references: [id])
+  girlId String?
+  girl   Girl?   @relation(fields: [girlId], references: [id])
 
-  clientId   String
+  clientId   String?
   operatorId String
 
   imageUrl  String
@@ -459,9 +460,19 @@ model ChatScreenshot {
   notes    String?
   platform String?
 
+  // AI 分析状态与结果（异步化）
+  analysisStatus String   @default("pending") // pending | processing | completed | failed
+  analysisResult String?  // JSON string: AI 分析结果
+  analysisError  String?
+  analyzedAt     DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([girlId])
+  @@index([girlId, createdAt])
+  @@index([clientId])
+  @@index([analysisStatus])
   @@map("chat_screenshots")
 }
 
@@ -490,6 +501,9 @@ model ChatLog {
 
   createdAt DateTime @default(now())
 
+  @@index([girlId])
+  @@index([girlId, createdAt])
+  @@index([clientId])
   @@map("chat_logs")
 }
 
@@ -725,6 +739,9 @@ model ClientLearning {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([clientId])
+  @@index([clientId, girlId])
+  @@index([clientId, createdAt])
   @@map("client_learnings")
 }
 
@@ -785,6 +802,8 @@ model ConversationMemory {
 
   feedbacks CoachFeedback[]
 
+  @@index([clientId, coachId, girlId])
+  @@index([clientId, coachId, girlId, updatedAt])
   @@map("conversation_memories")
 }
 

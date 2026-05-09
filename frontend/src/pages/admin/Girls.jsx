@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import useKeepAliveData from '../../hooks/useKeepAliveData';
 import {
   Box, Heading, Card, CardBody, Table, Thead, Tbody, Tr, Th, Td, Button, Badge, Modal, ModalOverlay, ModalContent,
@@ -10,6 +10,8 @@ import { FiX, FiArrowRight, FiAlertTriangle } from 'react-icons/fi';
 import { girls, clients, chatScreenshots, alerts as alertsApi } from '../../utils/api';
 import { captureError } from '../../utils/frontendErrorCapture';
 import { HeartIcon, FireIcon, SnowIcon, SparklesIcon } from '../../components/Icons';
+import { useSocket } from '../../contexts/SocketContext';
+import { compressImageFile } from '../../utils/imageCompression';
 
 const STAGES = ['陌生', '搭讪', '聊天', '暧昧', '约会', '长期'];
 const STATUS_OPTIONS = ['available', 'chatting', 'dating', 'locked', 'long_term'];
@@ -106,6 +108,35 @@ export default function AdminGirls() {
   const [reversalAnalyzing, setReversalAnalyzing] = useState(false);
 
   const toast = useToast();
+  const { on: socketOn } = useSocket();
+
+  // 监听 Socket.io 截图分析完成事件
+  useEffect(() => {
+    const cleanup = socketOn('screenshot:analyzed', async (data) => {
+      console.log('[Girls] 收到截图分析结果:', data);
+
+      if (data.status === 'completed') {
+        toast({ title: 'AI 分析完成', status: 'success', duration: 3000 });
+        // 刷新列表显示分析结果
+        if (selectedGirl) await loadScreenshots(selectedGirl.id);
+
+        // 如果有待确认字段，弹出确认框
+        if (data.result?.pendingFields && Object.keys(data.result.pendingFields).length > 0) {
+          setPendingFields(data.result.pendingFields);
+          const defaults = {};
+          Object.keys(data.result.pendingFields).forEach(k => { defaults[k] = true; });
+          setConfirmSelections(defaults);
+          onConfirmOpen();
+        }
+      } else if (data.status === 'failed') {
+        toast({ title: `AI 分析失败: ${data.error || '未知错误'}`, status: 'error', duration: 5000 });
+        // 也要刷新列表以更新状态
+        if (selectedGirl) await loadScreenshots(selectedGirl.id);
+      }
+    });
+
+    return cleanup;
+  }, [socketOn, selectedGirl, toast]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { refresh } = useKeepAliveData(async () => {
     const [girlsRes, clientsRes, alertsRes] = await Promise.allSettled([
@@ -452,7 +483,7 @@ export default function AdminGirls() {
     setReversalAnalyzing(false);
   };
 
-  // 截图上传
+  // 截图上传（压缩 + 异步分析）
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (file) setSelectedFile(file);
@@ -462,35 +493,73 @@ export default function AdminGirls() {
     if (!selectedFile || !selectedGirl) return;
     setUploading(true);
     try {
+      // 前端压缩图片
+      let fileToUpload = selectedFile;
+      if (selectedFile.size > 800 * 1024) {
+        fileToUpload = await compressImageFile(selectedFile);
+      }
+
       const fd = new FormData();
-      fd.append('image', selectedFile);
+      fd.append('image', fileToUpload);
       fd.append('girlId', selectedGirl.id);
       fd.append('clientId', selectedGirl.clientId);
       fd.append('notes', screenshotNotes);
       const res = await chatScreenshots.upload(fd);
       if (res.success) {
-        toast({ title: '上传成功', status: 'success', duration: 2000, duration: 2000 });
-        await loadScreenshots(selectedGirl.id);
+        toast({ title: res.message || '上传成功，AI 正在后台分析中...', status: 'success', duration: 3000 });
         setSelectedFile(null);
         setScreenshotNotes('');
         if (fileInputRef.current) fileInputRef.current.value = '';
-        // 如果有识别出的字段，弹出确认框
-        if (res.extractedFields && Object.keys(res.extractedFields).length > 0) {
-          setPendingFields(res.extractedFields);
-          // 默认全选
-          const defaults = {};
-          Object.keys(res.extractedFields).forEach(k => { defaults[k] = true; });
-          setConfirmSelections(defaults);
-          onConfirmOpen();
+
+        // 启动 polling fallback（防止 Socket 断开时无法收到结果）
+        if (res.screenshot?.id) {
+          pollAnalysisStatus(res.screenshot.id, 60);
         }
+
+        // 刷新列表（显示 pending 状态）
+        await loadScreenshots(selectedGirl.id);
       } else {
-        toast({ title: res.error || '上传失败', status: 'error', duration: 4000, duration: 2000 });
+        toast({ title: res.error || '上传失败', status: 'error', duration: 4000 });
       }
     } catch (e) {
       captureError(e);
-      toast({ title: '上传失败', status: 'error', duration: 4000, duration: 2000 });
+      toast({ title: '上传失败', status: 'error', duration: 4000 });
     } finally {
       setUploading(false);
+    }
+  };
+
+  // Polling fallback — 轮询分析状态，最多 maxAttempts 次，每次间隔 3 秒
+  const pollAnalysisStatus = async (screenshotId, maxAttempts = 60) => {
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise(r => setTimeout(r, 3000));
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/chat-screenshots/${screenshotId}/analysis-status`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        const data = await res.json();
+        if (data.success && data.screenshotId && data.analysisStatus !== 'pending' && data.analysisStatus !== 'processing') {
+          // 分析完成或失败，刷新列表
+          if (selectedGirl) await loadScreenshots(selectedGirl.id);
+
+          if (data.analysisStatus === 'completed') {
+            toast({ title: 'AI 分析完成', status: 'success', duration: 3000 });
+            // 如果有 pendingFields，弹出确认框
+            if (data.analysisResult?.pendingFields && Object.keys(data.analysisResult.pendingFields).length > 0) {
+              setPendingFields(data.analysisResult.pendingFields);
+              const defaults = {};
+              Object.keys(data.analysisResult.pendingFields).forEach(k => { defaults[k] = true; });
+              setConfirmSelections(defaults);
+              onConfirmOpen();
+            }
+          } else if (data.analysisStatus === 'failed') {
+            toast({ title: `AI 分析失败: ${data.analysisError || '未知错误'}`, status: 'error', duration: 5000 });
+          }
+          return;
+        }
+      } catch {
+        // 网络错误，继续轮询
+      }
     }
   };
 
@@ -2287,6 +2356,10 @@ export default function AdminGirls() {
                         <Box flex={1}>
                           <Flex gap={2} mb={1}>
                             {ss.platform && <Badge colorScheme="blue" fontSize="xs">{ss.platform}</Badge>}
+                            {ss.analysisStatus === 'pending' && <Badge colorScheme="yellow" fontSize="xs">分析中...</Badge>}
+                            {ss.analysisStatus === 'processing' && <Badge colorScheme="yellow" fontSize="xs">AI 分析中...</Badge>}
+                            {ss.analysisStatus === 'completed' && <Badge colorScheme="green" fontSize="xs">已分析</Badge>}
+                            {ss.analysisStatus === 'failed' && <Badge colorScheme="red" fontSize="xs">分析失败</Badge>}
                             <Text color="rgba(245,240,232,0.6)" fontSize="xs">
                               {new Date(ss.createdAt).toLocaleString()}
                             </Text>

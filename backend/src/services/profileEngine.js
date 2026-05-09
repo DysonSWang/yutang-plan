@@ -10,11 +10,43 @@ const { getAIConfig, getVLModelConfig, BASE_URL } = require('../config');
 const fs = require('fs');
 const path = require('path');
 
+// 超时配置
+const VISION_TIMEOUT = 45000;  // 45 秒
+const TEXT_TIMEOUT = 30000;    // 30 秒
+const MAX_RETRIES = 2;
+const RETRY_DELAYS = [1000, 3000]; // 1s, 3s 退避
+
+/**
+ * 压缩图片并转为 base64 data URI
+ * 目标：最长边 1920px、JPEG 80%、base64 < 1MB
+ */
+function compressImageToBase64(imagePath) {
+  try {
+    const sharp = require('sharp');
+    const buffer = fs.readFileSync(imagePath);
+
+    return sharp(buffer)
+      .resize(1920, 1920, { fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality: 80 })
+      .toBuffer()
+      .then(compressed => {
+        const base64 = compressed.toString('base64');
+        return `data:image/jpeg;base64,${base64}`;
+      });
+  } catch {
+    // sharp 不可用时回退到原始方法
+    const buffer = fs.readFileSync(imagePath);
+    const ext = path.extname(imagePath).toLowerCase().replace('.', '') || 'jpg';
+    const mimeType = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
+    return Promise.resolve(`data:${mimeType};base64,${buffer.toString('base64')}`);
+  }
+}
+
 /**
  * 将本地 /uploads/ 路径转为 data URI（base64）
  * DashScope VL 模型无法访问 localhost URL
  */
-function localImageToBase64(imageUrl) {
+async function localImageToBase64(imageUrl) {
   // 提取本地路径：支持 /uploads/xxx 和 http://localhost:PORT/uploads/xxx
   let localPath = imageUrl;
   if (imageUrl?.startsWith('/uploads/')) {
@@ -28,10 +60,7 @@ function localImageToBase64(imageUrl) {
   }
   const filePath = path.join(__dirname, '..', '..', 'uploads', localPath.replace('/uploads/', ''));
   try {
-    const buffer = fs.readFileSync(filePath);
-    const ext = path.extname(filePath).toLowerCase().replace('.', '') || 'jpg';
-    const mimeType = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
-    return `data:${mimeType};base64,${buffer.toString('base64')}`;
+    return await compressImageToBase64(filePath);
   } catch {
     return imageUrl;
   }
@@ -91,45 +120,65 @@ function repairJSON(raw) {
 // ============================================================================
 
 /**
- * 调用文本模型
+ * 调用文本模型（带重试）
  */
 async function callTextModel(prompt, modelConfig) {
   const config = modelConfig || getAIConfig();
   if (!config) throw new Error('AI 配置未设置');
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 180000);
-
-  try {
-    const response = await fetch(config.url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${config.key}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: config.model,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.7,
-        max_tokens: 1200
-      }),
-      signal: controller.signal
-    });
-
-    if (!response.ok) {
-      const errText = await response.text().catch(() => '');
-      throw new Error(`AI 调用失败: ${response.status} ${errText.substring(0, 200)}`);
+  let lastError;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      console.log(`[ProfileEngine] callTextModel 重试 ${attempt}/${MAX_RETRIES}，等待 ${RETRY_DELAYS[attempt - 1]}ms`);
+      await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt - 1]));
     }
 
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content || '';
-  } finally {
-    clearTimeout(timeoutId);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), TEXT_TIMEOUT);
+
+    try {
+      const response = await fetch(config.url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${config.key}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: config.model,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.7,
+          max_tokens: 1200
+        }),
+        signal: controller.signal
+      });
+
+      if (!response.ok) {
+        const errText = await response.text().catch(() => '');
+        const err = new Error(`AI 调用失败: ${response.status} ${errText.substring(0, 200)}`);
+        // 4xx 不重试
+        if (response.status >= 400 && response.status < 500) throw err;
+        lastError = err;
+        continue;
+      }
+
+      const data = await response.json();
+      return data.choices?.[0]?.message?.content || '';
+    } catch (err) {
+      lastError = err;
+      // AbortError（超时）和网络错误可重试
+      if (err.name === 'AbortError' || err.code === 'ECONNRESET' || err.code === 'ETIMEDOUT') {
+        continue;
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
+  throw lastError;
 }
 
 /**
- * 调用视觉模型（图片分析）
+ * 调用视觉模型（图片分析，带重试）
  */
 async function callVisionModel(messages, vlConfig) {
   const config = vlConfig || getVLModelConfig();
@@ -138,50 +187,69 @@ async function callVisionModel(messages, vlConfig) {
   }
 
   // 将 messages 中的本地图片路径转为 base64（DashScope 无法访问 localhost）
-  const resolvedMessages = messages.map(msg => {
+  const resolvedMessages = await Promise.all(messages.map(async msg => {
     if (msg.content && Array.isArray(msg.content)) {
-      return {
-        ...msg,
-        content: msg.content.map(item => {
-          if (item.type === 'image_url' && item.image_url?.url) {
-            return { type: 'image_url', image_url: { url: localImageToBase64(item.image_url.url) } };
-          }
-          return item;
-        })
-      };
+      const newContent = await Promise.all(msg.content.map(async item => {
+        if (item.type === 'image_url' && item.image_url?.url) {
+          const base64Uri = await localImageToBase64(item.image_url.url);
+          return { type: 'image_url', image_url: { url: base64Uri } };
+        }
+        return item;
+      }));
+      return { ...msg, content: newContent };
     }
     return msg;
-  });
+  }));
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 180000);
-
-  try {
-    const response = await fetch(config.url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${config.key}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: config.model,
-        messages: resolvedMessages,
-        temperature: 0.7,
-        max_tokens: 1500
-      }),
-      signal: controller.signal
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`VL 模型调用失败: ${response.status} ${errorText.substring(0, 300)}`);
+  let lastError;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      console.log(`[ProfileEngine] callVisionModel 重试 ${attempt}/${MAX_RETRIES}，等待 ${RETRY_DELAYS[attempt - 1]}ms`);
+      await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt - 1]));
     }
 
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content || '';
-  } finally {
-    clearTimeout(timeoutId);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), VISION_TIMEOUT);
+
+    try {
+      const response = await fetch(config.url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${config.key}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: config.model,
+          messages: resolvedMessages,
+          temperature: 0.7,
+          max_tokens: 1500
+        }),
+        signal: controller.signal
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        const err = new Error(`VL 模型调用失败: ${response.status} ${errorText.substring(0, 300)}`);
+        // 4xx 不重试
+        if (response.status >= 400 && response.status < 500) throw err;
+        lastError = err;
+        continue;
+      }
+
+      const data = await response.json();
+      return data.choices?.[0]?.message?.content || '';
+    } catch (err) {
+      lastError = err;
+      // AbortError（超时）和网络错误可重试
+      if (err.name === 'AbortError' || err.code === 'ECONNRESET' || err.code === 'ETIMEDOUT') {
+        continue;
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
+  throw lastError;
 }
 
 // ============================================================================

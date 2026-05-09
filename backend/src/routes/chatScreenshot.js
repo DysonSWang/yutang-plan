@@ -11,6 +11,7 @@ const jwt = require('jsonwebtoken');
 const { JWT_SECRET, BASE_URL } = require('../config');
 const prisma = require('../prisma');
 const { extractFromNotes, extractFromImage, confirmAnalysis } = require('../services/signalExtractor');
+const { runAsyncAnalysis } = require('../services/asyncAnalysis');
 
 // 上传目录
 const UPLOAD_DIR = path.join(__dirname, '../../uploads/chat-screenshots');
@@ -148,37 +149,27 @@ router.post('/', authMiddleware, async (req, res) => {
           operatorId: req.user.id,
           imageUrl,
           platform: girl.platform || null,
-          notes
+          notes,
+          analysisStatus: 'pending'
         }
       });
 
-      // AI 分析截图 + 备注提取（均返回待确认，不自动入库）
-      let pendingFields = {};
-      let pendingId = null;
-      let analysisData = null;
-
-      // 截图分析
-      try {
-        const imageResult = await extractFromImage(girlId, imageUrl, BASE_URL, req.user.id, isMomentScreenshot === 'true');
-        if (imageResult?.error) {
-          console.warn('[ChatScreenshot] AI分析失败:', imageResult.error);
-        } else if (imageResult?.analysis) {
-          analysisData = imageResult.analysis;
-          pendingFields = imageResult.pendingFields || {};
-          pendingId = imageResult.pendingId;
-
-          // 备注和对话文本保存到截图
-          await prisma.chatScreenshot.update({
-            where: { id: screenshot.id },
-            data: {
-              notes: imageResult.aiNotes,
-              chatText: imageResult.chatText || null
-            }
-          });
-        }
-      } catch (err) {
-        console.error('[ChatScreenshot] AI分析失败:', err);
-      }
+      // 异步 AI 分析截图（后台处理，不阻塞响应）
+      const io = req.app.get('io');
+      setImmediate(() => {
+        runAsyncAnalysis({
+          screenshotId: screenshot.id,
+          girlId,
+          imageUrl,
+          operatorId: req.user.id,
+          io,
+          notes,
+          isMomentScreenshot: isMomentScreenshot === 'true',
+          baseUrl: BASE_URL
+        }).catch(err => {
+          console.error('[ChatScreenshot] 后台分析异常:', err);
+        });
+      });
 
       // 备注分析（异步，不阻塞响应）
       if (notes) {
@@ -187,7 +178,12 @@ router.post('/', authMiddleware, async (req, res) => {
         });
       }
 
-      res.json({ success: true, screenshot, pendingFields, pendingId });
+      // 立即返回，前端显示"后台分析中"
+      res.json({
+        success: true,
+        screenshot: { ...screenshot, analysisStatus: 'pending' },
+        message: '上传成功，AI 正在后台分析中...'
+      });
     });
   } catch (error) {
     console.error('[ChatScreenshot] 上传截图失败:', error);
@@ -263,7 +259,7 @@ router.patch('/:id/notes', authMiddleware, async (req, res) => {
   }
 });
 
-// AI生成备注（基于截图分析）
+// AI生成备注（基于截图分析）— 异步版本
 router.post('/:id/ai-notes', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
@@ -296,31 +292,29 @@ router.post('/:id/ai-notes', authMiddleware, async (req, res) => {
       if (!session) return res.status(403).json({ error: '无权限操作此截图' });
     }
 
-    // 调用 AI 分析截图图片
-    const baseUrl = BASE_URL;
-    const result = await extractFromImage(screenshot.girlId, screenshot.imageUrl, baseUrl);
+    // 标记为 pending，后台分析
+    await prisma.chatScreenshot.update({
+      where: { id: screenshot.id },
+      data: { analysisStatus: 'pending' }
+    });
 
-    if (result.error) {
-      return res.status(400).json({ error: result.error });
-    }
-
-    // 更新截图备注和对话文本
-    const updated = await prisma.chatScreenshot.update({
-      where: { id: req.params.id },
-      data: {
-        notes: result.aiNotes,
-        chatText: result.chatText || null
-      }
+    const io = req.app.get('io');
+    setImmediate(() => {
+      runAsyncAnalysis({
+        screenshotId: screenshot.id,
+        girlId: screenshot.girlId,
+        imageUrl: screenshot.imageUrl,
+        operatorId: req.user.id,
+        io,
+        baseUrl: BASE_URL
+      }).catch(err => {
+        console.error('[ChatScreenshot] AI备注后台分析异常:', err);
+      });
     });
 
     res.json({
       success: true,
-      screenshot: updated,
-      pendingId: result.pendingId,
-      pendingFields: result.pendingFields,
-      aiNotes: result.aiNotes,
-      chatText: result.chatText,
-      analysis: result.analysis
+      message: 'AI 正在后台分析中...'
     });
   } catch (error) {
     console.error('[ChatScreenshot] AI生成备注失败:', error);
@@ -507,5 +501,30 @@ function getClientFieldLabel(field) {
   };
   return labels[field] || field;
 }
+
+// 查询截图分析状态（用于 polling fallback）
+router.get('/:id/analysis-status', authMiddleware, async (req, res) => {
+  try {
+    const screenshot = await prisma.chatScreenshot.findUnique({
+      where: { id: req.params.id }
+    });
+
+    if (!screenshot) {
+      return res.status(404).json({ error: '截图不存在' });
+    }
+
+    res.json({
+      success: true,
+      screenshotId: screenshot.id,
+      analysisStatus: screenshot.analysisStatus,
+      analysisResult: screenshot.analysisResult ? JSON.parse(screenshot.analysisResult) : null,
+      analysisError: screenshot.analysisError,
+      analyzedAt: screenshot.analyzedAt
+    });
+  } catch (error) {
+    console.error('[ChatScreenshot] 查询分析状态失败:', error);
+    res.status(500).json({ error: '查询失败' });
+  }
+});
 
 module.exports = router;

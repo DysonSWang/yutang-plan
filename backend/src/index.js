@@ -282,6 +282,10 @@ app.use(errorHandler);
 const { resumeAbandonedBatches } = require('./services/personalizationEngine');
 resumeAbandonedBatches(prisma, io);
 
+// 恢复 stuck 的截图分析任务
+const { recoverStuckJobs } = require('./services/asyncAnalysis');
+recoverStuckJobs(prisma);
+
 server.listen(PORT, () => {
   logger.info(`🐟 追爱计划后端启动: http://localhost:${PORT}`);
 });
