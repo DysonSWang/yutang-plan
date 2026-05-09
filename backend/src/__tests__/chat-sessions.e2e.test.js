@@ -17,7 +17,8 @@ beforeAll(async () => {
   ids = data;
   tokens = {
     operator: token(data.operator),
-    client: token(data.client)
+    client: token(data.client),
+    admin: token(data.admin)
   };
 
   const router = require('../routes/chat')(mockIo);
@@ -42,11 +43,11 @@ describe('权限控制', () => {
   });
 });
 
-describe('GET /api/chat/sessions（操盘手视角）', () => {
-  it('operator 获取会话列表应成功', async () => {
+describe('GET /api/chat/sessions（管理员视角）', () => {
+  it('admin 获取会话列表应成功', async () => {
     const res = await request(app)
       .get('/api/chat/sessions')
-      .set('Authorization', `Bearer ${tokens.operator}`);
+      .set('Authorization', `Bearer ${tokens.admin}`);
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);

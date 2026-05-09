@@ -12,6 +12,7 @@ const mockIo = { to: () => ({ emit: () => {} }) };
 
 let app;
 let operatorToken;
+let adminToken;
 let clientToken;
 let operatorId;
 let clientId;
@@ -21,6 +22,7 @@ beforeAll(async () => {
 
   let operator = await prisma.user.findFirst({ where: { role: 'operator' } });
   let client = await prisma.user.findFirst({ where: { role: 'client' } });
+  let admin = await prisma.user.findFirst({ where: { role: 'admin' } });
 
   if (!operator) {
     operator = await prisma.user.create({
@@ -32,11 +34,25 @@ beforeAll(async () => {
       data: { username: 'cl_notif', password: await bcrypt.hash('cl123', 10), role: 'client', nickname: '客户' }
     });
   }
+  if (!admin) {
+    admin = await prisma.user.create({
+      data: { username: 'admin_notif', password: await bcrypt.hash('admin123', 10), role: 'admin', nickname: '管理员' }
+    });
+  }
 
   operatorId = operator.id;
   clientId = client.id;
   operatorToken = jwt.sign({ id: operatorId, role: 'operator' }, JWT_SECRET);
+  adminToken = jwt.sign({ id: admin.id, role: 'admin' }, JWT_SECRET);
   clientToken = jwt.sign({ id: clientId, role: 'client' }, JWT_SECRET);
+
+  // Admin 需要关联到 client 才能发送通知
+  let adminSession = await prisma.chatSession.findUnique({
+    where: { operatorId_clientId: { operatorId: admin.id, clientId } }
+  });
+  if (!adminSession) {
+    await prisma.chatSession.create({ data: { operatorId: admin.id, clientId } });
+  }
 
   const router = require('../routes/notifications')(mockIo);
   app = express();
@@ -100,7 +116,7 @@ describe('POST /api/notifications 创建通知', () => {
   it('operator 创建通知应成功', async () => {
     const res = await request(app)
       .post('/api/notifications')
-      .set('Authorization', `Bearer ${operatorToken}`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ userId: clientId, type: 'test', title: '测试通知', content: '测试内容' });
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -111,7 +127,7 @@ describe('POST /api/notifications 创建通知', () => {
   it('缺少必需参数应返回 400', async () => {
     const res = await request(app)
       .post('/api/notifications')
-      .set('Authorization', `Bearer ${operatorToken}`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ userId: clientId });
     expect(res.status).toBe(400);
   });
@@ -120,7 +136,7 @@ describe('POST /api/notifications 创建通知', () => {
     const meta = { stage: 1, stageName: '背调' };
     const res = await request(app)
       .post('/api/notifications')
-      .set('Authorization', `Bearer ${operatorToken}`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ userId: clientId, type: 'progress', title: '进度更新', content: '测试', metadata: meta });
     expect(res.status).toBe(200);
     expect(res.body.notification.metadata).not.toBeNull();

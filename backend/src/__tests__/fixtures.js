@@ -23,6 +23,7 @@ async function createTestData() {
   let operator = await prisma.user.findFirst({ where: { username: 'op_e2e' } });
   let client = await prisma.user.findFirst({ where: { username: 'cl_e2e' } });
   let otherClient = await prisma.user.findFirst({ where: { username: 'cl_e2e_other' } });
+  let admin = await prisma.user.findFirst({ where: { username: 'ad_e2e' } });
 
   if (!operator) {
     operator = await prisma.user.create({
@@ -46,6 +47,19 @@ async function createTestData() {
         serviceStage: '建池'
       }
     });
+    // 为测试 client 创建会员记录（允许 AI coach 测试通过）
+    const futureDate = new Date();
+    futureDate.setFullYear(futureDate.getFullYear() + 1);
+    await prisma.membership.create({
+      data: {
+        userId: client.id,
+        type: 'PREMIUM',
+        status: 'active',
+        startDate: new Date(),
+        endDate: futureDate,
+        trialUsed: 0
+      }
+    });
   }
   if (!otherClient) {
     otherClient = await prisma.user.create({
@@ -55,6 +69,17 @@ async function createTestData() {
         role: 'client',
         nickname: '其他客户',
         phone: '13900000003'
+      }
+    });
+  }
+  if (!admin) {
+    admin = await prisma.user.create({
+      data: {
+        username: 'ad_e2e',
+        password: await bcrypt.hash('ad123456', 10),
+        role: 'admin',
+        nickname: 'E2E管理员',
+        phone: '13900000004'
       }
     });
   }
@@ -132,6 +157,7 @@ async function createTestData() {
     operator,
     client,
     otherClient,
+    admin,
     session,
     girl,
     otherGirl,
@@ -142,7 +168,7 @@ async function createTestData() {
 
 /** 清理测试数据（幂等，失败不影响测试） */
 async function cleanupData() {
-  const e2eUsers = ['op_e2e', 'cl_e2e', 'cl_e2e_other'];
+  const e2eUsers = ['op_e2e', 'cl_e2e', 'cl_e2e_other', 'ad_e2e'];
   try {
     const users = await prisma.user.findMany({ where: { username: { in: e2eUsers } } });
     const userIds = users.map(u => u.id);

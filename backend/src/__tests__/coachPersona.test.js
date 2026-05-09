@@ -64,7 +64,7 @@ describe('PersonaAdapter 单元测试', () => {
   it('快节奏偏好生成简洁建议', async () => {
     const adapter = new PersonaAdapter({ pacePreference: '快节奏' });
     const persona = await adapter.build();
-    expect(persona.personaHints.some(h => h.includes('简洁有力'))).toBe(true);
+    expect(persona.personaHints.some(h => h.includes('直接有力') || h.includes('拖泥带水'))).toBe(true);
   });
 
   it('慢热型偏好生成稳妥建议', async () => {

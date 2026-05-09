@@ -14,19 +14,20 @@ const JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
 const mockIo = { to: () => ({ emit: () => {} }) };
 
 let app;
-let operatorToken;
+let adminToken;
 let clientToken;
-let operatorId;
+let adminId;
 let clientId;
 let girlId;
 
 beforeAll(async () => {
-  let operator = await prisma.user.findUnique({ where: { username: 'op_stage_test' } });
+  // 注意：路由的 evaluate-stage 和 relationship-stage 端点需要 admin 角色
+  let admin = await prisma.user.findUnique({ where: { username: 'admin_stage_test' } });
   let client = await prisma.user.findUnique({ where: { username: 'cl_stage_test' } });
 
-  if (!operator) {
-    operator = await prisma.user.create({
-      data: { username: 'op_stage_test', password: await bcrypt.hash('op123', 10), role: 'operator', nickname: '阶段测试操盘手' }
+  if (!admin) {
+    admin = await prisma.user.create({
+      data: { username: 'admin_stage_test', password: await bcrypt.hash('admin123', 10), role: 'admin', nickname: '阶段测试管理员' }
     });
   }
   if (!client) {
@@ -35,16 +36,16 @@ beforeAll(async () => {
     });
   }
 
-  operatorId = operator.id;
+  adminId = admin.id;
   clientId = client.id;
-  operatorToken = jwt.sign({ id: operatorId, role: 'operator' }, JWT_SECRET);
+  adminToken = jwt.sign({ id: adminId, role: 'admin' }, JWT_SECRET);
   clientToken = jwt.sign({ id: clientId, role: 'client' }, JWT_SECRET);
 
   let session = await prisma.chatSession.findUnique({
-    where: { operatorId_clientId: { operatorId, clientId } }
+    where: { operatorId_clientId: { operatorId: adminId, clientId } }
   });
   if (!session) {
-    await prisma.chatSession.create({ data: { operatorId, clientId } });
+    await prisma.chatSession.create({ data: { operatorId: adminId, clientId } });
   }
 
   let girl = await prisma.girl.findFirst({ where: { clientId, name: '阶段测试女生' } });
@@ -77,8 +78,8 @@ afterAll(async () => {
     where: { girlId }
   });
   await prisma.girl.deleteMany({ where: { clientId } });
-  await prisma.chatSession.deleteMany({ where: { operatorId } });
-  await prisma.user.deleteMany({ where: { username: { in: ['op_stage_test', 'cl_stage_test'] } } });
+  await prisma.chatSession.deleteMany({ where: { operatorId: adminId } });
+  await prisma.user.deleteMany({ where: { username: { in: ['admin_stage_test', 'cl_stage_test'] } } });
   await prisma.$disconnect();
 });
 
@@ -290,18 +291,18 @@ describe('relationshipStage 单元测试', () => {
   });
 
   it('setRelationshipStage: 无效阶段值抛出错误', async () => {
-    await expect(setRelationshipStage(girlId, 'INVALID', 'test', operatorId))
+    await expect(setRelationshipStage(girlId, 'INVALID', 'test', adminId))
       .rejects.toThrow('无效阶段值');
   });
 
   it('setRelationshipStage: 不存在的女生抛出错误', async () => {
     const fakeId = '00000000-0000-0000-0000-000000000001';
-    await expect(setRelationshipStage(fakeId, 'EXPLORATION', 'test', operatorId))
+    await expect(setRelationshipStage(fakeId, 'EXPLORATION', 'test', adminId))
       .rejects.toThrow('女生不存在');
   });
 
   it('setRelationshipStage: 写入 DB 并记录历史', async () => {
-    const result = await setRelationshipStage(girlId, 'FLIRTING', '测试设置阶段', operatorId, 'manual');
+    const result = await setRelationshipStage(girlId, 'FLIRTING', '测试设置阶段', adminId, 'manual');
 
     expect(result).toHaveProperty('girl');
     expect(result.girl.relationshipStage).toBe('FLIRTING');
@@ -317,11 +318,11 @@ describe('relationshipStage 单元测试', () => {
     const latest = history.find(h => h.toStage === 'FLIRTING');
     expect(latest).toBeDefined();
     expect(latest.source).toBe('manual');
-    expect(latest.changedBy).toBe(operatorId);
+    expect(latest.changedBy).toBe(adminId);
   });
 
   it('setRelationshipStage: ai_evaluate 来源正确', async () => {
-    const result = await setRelationshipStage(girlId, 'ADVANCEMENT', 'AI评估建议', operatorId, 'ai_evaluate');
+    const result = await setRelationshipStage(girlId, 'ADVANCEMENT', 'AI评估建议', adminId, 'ai_evaluate');
     expect(result.girl.relationshipStage).toBe('ADVANCEMENT');
 
     const history = await prisma.relationshipStageHistory.findFirst({
@@ -411,7 +412,7 @@ describe('关系阶段路由端点集成测试', () => {
   it('GET /api/girls/:id/stage-history 返回历史记录', async () => {
     const res = await request(app)
       .get(`/api/girls/${girlId}/stage-history`)
-      .set('Authorization', `Bearer ${operatorToken}`);
+      .set('Authorization', `Bearer ${adminToken}`);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(Array.isArray(res.body.history)).toBe(true);
@@ -421,7 +422,7 @@ describe('关系阶段路由端点集成测试', () => {
   it('POST /api/girls/:id/evaluate-stage: AI 未配置时返回错误', async () => {
     const res = await request(app)
       .post(`/api/girls/${girlId}/evaluate-stage`)
-      .set('Authorization', `Bearer ${operatorToken}`);
+      .set('Authorization', `Bearer ${adminToken}`);
     // AI 未配置时应返回 500（无 API key）
     expect([200, 500]).toContain(res.status);
     if (res.status === 200) {
@@ -436,7 +437,7 @@ describe('关系阶段路由端点集成测试', () => {
   it('PUT /api/girls/:id/relationship-stage: 成功设置阶段', async () => {
     const res = await request(app)
       .put(`/api/girls/${girlId}/relationship-stage`)
-      .set('Authorization', `Bearer ${operatorToken}`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ stage: 'STABLE', reason: '关系确认', source: 'manual' });
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -447,7 +448,7 @@ describe('关系阶段路由端点集成测试', () => {
   it('PUT /api/girls/:id/relationship-stage: 无效阶段返回 400', async () => {
     const res = await request(app)
       .put(`/api/girls/${girlId}/relationship-stage`)
-      .set('Authorization', `Bearer ${operatorToken}`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ stage: 'INVALID_STAGE' });
     expect(res.status).toBe(400);
     expect(res.body.error).toContain('无效阶段值');
@@ -456,7 +457,7 @@ describe('关系阶段路由端点集成测试', () => {
   it('PUT /api/girls/:id/relationship-stage: 缺少 stage 参数返回 400', async () => {
     const res = await request(app)
       .put(`/api/girls/${girlId}/relationship-stage`)
-      .set('Authorization', `Bearer ${operatorToken}`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({});
     expect(res.status).toBe(400);
     expect(res.body.error).toContain('stage 是必需的');
@@ -473,7 +474,7 @@ describe('关系阶段路由端点集成测试', () => {
 
     const res = await request(app)
       .put(`/api/girls/${otherGirl.id}/relationship-stage`)
-      .set('Authorization', `Bearer ${operatorToken}`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ stage: 'FLIRTING' });
 
     await prisma.girl.delete({ where: { id: otherGirl.id } });
@@ -485,7 +486,7 @@ describe('关系阶段路由端点集成测试', () => {
   it('stageHistory 包含 fromStage 和 toStage 标签', async () => {
     const res = await request(app)
       .get(`/api/girls/${girlId}/stage-history`)
-      .set('Authorization', `Bearer ${operatorToken}`);
+      .set('Authorization', `Bearer ${adminToken}`);
     expect(res.status).toBe(200);
     const history = res.body.history;
     const latest = history[0];

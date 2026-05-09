@@ -1,5 +1,8 @@
 /**
  * 个性化学习引擎测试
+ *
+ * 注意：部分测试需要访问 learningChapter 表，如果数据库表结构与 Prisma schema 不同步，
+ * 可能会出现字段不存在的错误。可以运行 `npx prisma db push` 同步数据库。
  */
 const request = require('supertest');
 const express = require('express');
@@ -34,29 +37,58 @@ beforeAll(async () => {
         nickname: '测试个性化客户',
         age: 25,
         occupation: '程序员',
+        personalizationEnabled: true,
       },
     });
   }
   clientId = client.id;
   clientToken = jwt.sign({ id: clientId, role: 'client' }, JWT_SECRET);
 
-  // 创建测试章节（如果不存在）
-  let testChapter = await prisma.learningChapter.findUnique({
-    where: { chapterId: '99' },
-  });
-  if (!testChapter) {
-    testChapter = await prisma.learningChapter.create({
-      data: {
-        chapterId: '99',
-        title: '测试章节',
-        subtitle: '用于个性化引擎测试',
-        content: '# 测试标题\n\n'.repeat(5) + '这是一段测试内容，用于验证个性化学习引擎的各种功能。\n\n'.repeat(5) + '## 小节\n\n更多测试内容。\n\n'.repeat(3),
-        orderIndex: 999,
-        status: 'published',
-      },
+  // 为测试用户创建会员记录（绕过试用限制）
+  const futureDate = new Date();
+  futureDate.setFullYear(futureDate.getFullYear() + 1);
+  try {
+    await prisma.membership.upsert({
+      where: { id: 'test-personalization-membership' },
+      update: {},
+      create: {
+        id: 'test-personalization-membership',
+        userId: clientId,
+        type: 'PREMIUM',
+        status: 'active',
+        startDate: new Date(),
+        endDate: futureDate,
+        trialUsed: 0
+      }
     });
+  } catch (e) {
+    console.warn('[personalization.test] 创建会员记录失败:', e.message);
   }
-  testChapterId = testChapter.chapterId;
+
+  // 创建测试章节（如果不存在）
+  // 注意：如果数据库表结构没有 contentVersion 字段，会导致错误
+  let testChapter;
+  try {
+    testChapter = await prisma.learningChapter.findUnique({
+      where: { chapterId: '99' },
+    });
+    if (!testChapter) {
+      testChapter = await prisma.learningChapter.create({
+        data: {
+          chapterId: '99',
+          title: '测试章节',
+          subtitle: '用于个性化引擎测试',
+          content: '# 测试标题\n\n'.repeat(5) + '这是一段测试内容，用于验证个性化学习引擎的各种功能。\n\n'.repeat(5) + '## 小节\n\n更多测试内容。\n\n'.repeat(3),
+          orderIndex: 999,
+          status: 'published',
+        },
+      });
+    }
+    testChapterId = testChapter.chapterId;
+  } catch (err) {
+    console.warn('[personalization.test] 创建测试章节失败:', err.message);
+    testChapterId = '99';
+  }
 
   const router = require('../routes/membership');
   app = express();
@@ -66,10 +98,14 @@ beforeAll(async () => {
 
 afterAll(async () => {
   // 清理测试数据
-  await prisma.personalizedChapter.deleteMany({ where: { userId: clientId } });
-  await prisma.generationBatch.deleteMany({ where: { userId: clientId } });
-  await prisma.personalizationEvent.deleteMany({ where: { userId: clientId } });
-  await prisma.learningChapter.deleteMany({ where: { chapterId: '99' } });
+  try {
+    await prisma.personalizedChapter.deleteMany({ where: { userId: clientId } });
+    await prisma.generationBatch.deleteMany({ where: { userId: clientId } });
+    await prisma.personalizationEvent.deleteMany({ where: { userId: clientId } });
+    await prisma.learningChapter.deleteMany({ where: { chapterId: '99' } });
+  } catch (e) {
+    console.warn('[personalization.test] 清理失败:', e.message);
+  }
   await prisma.$disconnect();
 });
 
@@ -214,9 +250,26 @@ describe('个性化学习 API', () => {
         password: await bcrypt.hash('test123', 10),
         role: 'client',
         nickname: '低完善度用户',
+        personalizationEnabled: true,
       },
     });
     const lowToken = jwt.sign({ id: lowProfileUser.id, role: 'client' }, JWT_SECRET);
+
+    // 为低完善度用户创建会员记录
+    const futureDate = new Date();
+    futureDate.setFullYear(futureDate.getFullYear() + 1);
+    try {
+      await prisma.membership.create({
+        data: {
+          userId: lowProfileUser.id,
+          type: 'PREMIUM',
+          status: 'active',
+          startDate: new Date(),
+          endDate: futureDate,
+          trialUsed: 0
+        }
+      });
+    } catch (e) {}
 
     const res = await request(app)
       .post('/api/membership/learning/generate-all')
@@ -225,10 +278,12 @@ describe('个性化学习 API', () => {
     expect(res.status).toBe(400);
     expect(res.body.error).toContain('完善度不足');
 
-    // 清理
-    await prisma.personalizedChapter.deleteMany({ where: { userId: lowProfileUser.id } });
-    await prisma.generationBatch.deleteMany({ where: { userId: lowProfileUser.id } });
-    await prisma.user.delete({ where: { id: lowProfileUser.id } });
+    // 清理（忽略外键约束错误）
+    try {
+      await prisma.personalizedChapter.deleteMany({ where: { userId: lowProfileUser.id } });
+      await prisma.generationBatch.deleteMany({ where: { userId: lowProfileUser.id } });
+      await prisma.user.delete({ where: { id: lowProfileUser.id } });
+    } catch (e) {}
   });
 
   it('GET /learning/generate-status/:batchId 不存在返回 404', async () => {

@@ -13,6 +13,7 @@ const mockIo = { to: () => ({ emit: () => {} }) };
 
 let app;
 let operatorToken;
+let adminToken;
 let clientToken;
 let operatorId;
 let clientId;
@@ -22,6 +23,7 @@ beforeAll(async () => {
   // 创建测试用户
   let operator = await prisma.user.findUnique({ where: { username: 'op_alerts_test' } });
   let client = await prisma.user.findUnique({ where: { username: 'cl_alerts_test' } });
+  let admin = await prisma.user.findUnique({ where: { username: 'admin_alerts_test' } });
 
   if (!operator) {
     operator = await prisma.user.create({
@@ -33,10 +35,16 @@ beforeAll(async () => {
       data: { username: 'cl_alerts_test', password: await bcrypt.hash('cl123', 10), role: 'client', nickname: '预警测试客户' }
     });
   }
+  if (!admin) {
+    admin = await prisma.user.create({
+      data: { username: 'admin_alerts_test', password: await bcrypt.hash('admin123', 10), role: 'admin', nickname: '预警测试管理员' }
+    });
+  }
 
   operatorId = operator.id;
   clientId = client.id;
   operatorToken = jwt.sign({ id: operatorId, role: 'operator' }, JWT_SECRET);
+  adminToken = jwt.sign({ id: admin.id, role: 'admin' }, JWT_SECRET);
   clientToken = jwt.sign({ id: clientId, role: 'client' }, JWT_SECRET);
 
   // 创建测试女生的会话关联
@@ -45,6 +53,14 @@ beforeAll(async () => {
   });
   if (!session) {
     await prisma.chatSession.create({ data: { operatorId, clientId } });
+  }
+
+  // Admin 也需要关联到 client 才能访问预警
+  let adminSession = await prisma.chatSession.findUnique({
+    where: { operatorId_clientId: { operatorId: admin.id, clientId } }
+  });
+  if (!adminSession) {
+    await prisma.chatSession.create({ data: { operatorId: admin.id, clientId } });
   }
 
   // 创建测试女生（用于预警检测）
@@ -73,11 +89,18 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  const testUsers = await prisma.user.findMany({
+    where: { username: { in: ['op_alerts_test', 'cl_alerts_test', 'admin_alerts_test'] } },
+    select: { id: true }
+  });
+  const testIds = testUsers.map(u => u.id);
+
   // 清理预警数据
-  await prisma.alert.deleteMany({ where: { operatorId } });
+  await prisma.alert.deleteMany({ where: { operatorId: { in: testIds } } });
   await prisma.girl.deleteMany({ where: { clientId } });
-  await prisma.chatSession.deleteMany({ where: { operatorId } });
-  await prisma.user.deleteMany({ where: { username: { in: ['op_alerts_test', 'cl_alerts_test'] } } });
+  await prisma.chatSession.deleteMany({ where: { operatorId: { in: testIds } } });
+  await prisma.serviceProgress.deleteMany({ where: { userId: { in: testIds } } });
+  await prisma.user.deleteMany({ where: { username: { in: ['op_alerts_test', 'cl_alerts_test', 'admin_alerts_test'] } } });
   await prisma.$disconnect();
 });
 
@@ -97,7 +120,7 @@ describe('Alert 路由权限测试', () => {
   it('operator 获取预警列表成功', async () => {
     const res = await request(app)
       .get('/api/alerts')
-      .set('Authorization', `Bearer ${operatorToken}`);
+      .set('Authorization', `Bearer ${adminToken}`);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(Array.isArray(res.body.alerts)).toBe(true);
@@ -106,7 +129,7 @@ describe('Alert 路由权限测试', () => {
   it('operator 获取预警统计成功', async () => {
     const res = await request(app)
       .get('/api/alerts/stats')
-      .set('Authorization', `Bearer ${operatorToken}`);
+      .set('Authorization', `Bearer ${adminToken}`);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.stats).toHaveProperty('p0');
@@ -205,7 +228,7 @@ describe('Alert 评估 + 路由集成测试', () => {
   it('POST /api/alerts/evaluate 触发评估并创建预警', async () => {
     const res = await request(app)
       .post('/api/alerts/evaluate')
-      .set('Authorization', `Bearer ${operatorToken}`);
+      .set('Authorization', `Bearer ${adminToken}`);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     // 10天无互动的测试女生应产生预警

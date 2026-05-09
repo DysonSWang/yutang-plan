@@ -7,6 +7,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 
 const router = require('../routes/auth');
+const { errorHandler } = require('../middleware/errorHandler');
 const JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
 
 let app;
@@ -16,6 +17,7 @@ beforeAll(() => {
   app = express();
   app.use(express.json());
   app.use('/api/auth', router);
+  app.use(errorHandler);
 });
 
 describe('POST /api/auth/register', () => {
@@ -39,7 +41,7 @@ describe('POST /api/auth/register', () => {
       .send({ username: `user_short_${uniqueId}`, password: '1234567' });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe('密码至少8位');
+    expect(res.body.error.message).toBe('密码至少8位');
   });
 
   it('缺少用户名返回 400', async () => {
@@ -50,7 +52,7 @@ describe('POST /api/auth/register', () => {
     expect(res.status).toBe(400);
   });
 
-  it('用户名已存在返回 400', async () => {
+  it('用户名已存在返回 409', async () => {
     await request(app)
       .post('/api/auth/register')
       .send({ username: `dup_${uniqueId}`, password: '12345678' });
@@ -59,8 +61,8 @@ describe('POST /api/auth/register', () => {
       .post('/api/auth/register')
       .send({ username: `dup_${uniqueId}`, password: '12345678' });
 
-    expect(res.status).toBe(400);
-    expect(res.body.error).toBe('用户名已存在');
+    expect(res.status).toBe(409);
+    expect(res.body.error.message).toBe('用户名已存在');
   });
 });
 
@@ -92,7 +94,7 @@ describe('POST /api/auth/login', () => {
       .send({ username, password: 'wrongpassword' });
 
     expect(res.status).toBe(401);
-    expect(res.body.error).toBe('用户名或密码错误');
+    expect(res.body.error.message).toBe('用户名或密码错误');
   });
 
   it('用户不存在返回 401', async () => {

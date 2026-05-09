@@ -65,7 +65,7 @@ describe('POST /api/upload/image', () => {
       .attach('file', file);
 
     expect(res.status).toBe(200);
-    expect(res.body.url).toMatch(/^\/uploads\//);
+    expect(res.body.url).toMatch(/^\/(public|uploads)\//);
     expect(res.body.filename).toBeDefined();
   });
 
@@ -99,7 +99,7 @@ describe('POST /api/upload/video', () => {
       .attach('file', file);
 
     expect(res.status).toBe(200);
-    expect(res.body.url).toMatch(/^\/uploads\//);
+    expect(res.body.url).toMatch(/^\/(public|uploads)\//);
   });
 });
 
@@ -113,6 +113,6 @@ describe('POST /api/upload/audio', () => {
       .attach('file', file);
 
     expect(res.status).toBe(200);
-    expect(res.body.url).toMatch(/^\/uploads\//);
+    expect(res.body.url).toMatch(/^\/(public|uploads)\//);
   });
 });

@@ -12,6 +12,7 @@ const mockIo = { to: () => ({ emit: () => {} }) };
 
 let app;
 let operatorToken;
+let adminToken;
 let clientToken;
 let operatorId;
 let clientId;
@@ -21,6 +22,7 @@ beforeAll(async () => {
 
   let operator = await prisma.user.findFirst({ where: { role: 'operator' } });
   let client = await prisma.user.findFirst({ where: { role: 'client' } });
+  let admin = await prisma.user.findFirst({ where: { role: 'admin' } });
 
   if (!operator) {
     operator = await prisma.user.create({
@@ -32,11 +34,25 @@ beforeAll(async () => {
       data: { username: 'cl_pay', password: await bcrypt.hash('cl123', 10), role: 'client', nickname: '客户' }
     });
   }
+  if (!admin) {
+    admin = await prisma.user.create({
+      data: { username: 'admin_pay', password: await bcrypt.hash('admin123', 10), role: 'admin', nickname: '管理员' }
+    });
+  }
 
   operatorId = operator.id;
   clientId = client.id;
   operatorToken = jwt.sign({ id: operatorId, role: 'operator' }, JWT_SECRET);
+  adminToken = jwt.sign({ id: admin.id, role: 'admin' }, JWT_SECRET);
   clientToken = jwt.sign({ id: clientId, role: 'client' }, JWT_SECRET);
+
+  // Admin 需要关联到 client 才能创建付款记录
+  let adminSession = await prisma.chatSession.findUnique({
+    where: { operatorId_clientId: { operatorId: admin.id, clientId } }
+  });
+  if (!adminSession) {
+    await prisma.chatSession.create({ data: { operatorId: admin.id, clientId } });
+  }
 
   const router = require('../routes/payments');
   app = express();
@@ -89,7 +105,7 @@ describe('POST /api/payments 创建付款记录', () => {
   it('operator 创建付款记录应成功', async () => {
     const res = await request(app)
       .post('/api/payments')
-      .set('Authorization', `Bearer ${operatorToken}`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ clientId, stage: 1, amount: 5000 });
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -102,7 +118,7 @@ describe('POST /api/payments 创建付款记录', () => {
   it('缺少必需参数应返回 400', async () => {
     const res = await request(app)
       .post('/api/payments')
-      .set('Authorization', `Bearer ${operatorToken}`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ clientId });
     expect(res.status).toBe(400);
   });
@@ -111,7 +127,7 @@ describe('POST /api/payments 创建付款记录', () => {
     const userBefore = await prisma.user.findUnique({ where: { id: clientId } });
     await request(app)
       .post('/api/payments')
-      .set('Authorization', `Bearer ${operatorToken}`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ clientId, stage: 2, amount: 3000 });
     const userAfter = await prisma.user.findUnique({ where: { id: clientId } });
     expect(Number(userAfter.balance)).toBe(Number(userBefore.balance) + 3000);

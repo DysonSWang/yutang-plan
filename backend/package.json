@@ -10,7 +10,7 @@
     "db:studio": "prisma studio",
     "db:seed": "node seed-chapters.js",
     "db:seed-force": "node seed-chapters.js --force",
-    "test": "jest --testEnvironment=node"
+    "test": "jest --testEnvironment=node --runInBand"
   },
   "dependencies": {
     "@jimp/plugin-print": "^1.6.1",

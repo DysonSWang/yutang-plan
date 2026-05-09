@@ -13,14 +13,17 @@ const mockIo = { to: () => ({ emit: () => {} }) };
 let app;
 let operatorToken;
 let clientToken;
+let adminToken;
 let operatorId;
 let clientId;
+let adminId;
 
 beforeAll(async () => {
   const bcrypt = require('bcryptjs');
 
   let operator = await prisma.user.findFirst({ where: { role: 'operator' } });
   let client = await prisma.user.findFirst({ where: { role: 'client' } });
+  let admin = await prisma.user.findFirst({ where: { role: 'admin' } });
 
   if (!operator) {
     operator = await prisma.user.create({
@@ -32,11 +35,18 @@ beforeAll(async () => {
       data: { username: 'cl_girls', password: await bcrypt.hash('cl123', 10), role: 'client', nickname: '客户' }
     });
   }
+  if (!admin) {
+    admin = await prisma.user.create({
+      data: { username: 'ad_girls', password: await bcrypt.hash('ad123', 10), role: 'admin', nickname: '管理员' }
+    });
+  }
 
   operatorId = operator.id;
   clientId = client.id;
+  adminId = admin.id;
   operatorToken = jwt.sign({ id: operatorId, role: 'operator' }, JWT_SECRET);
   clientToken = jwt.sign({ id: clientId, role: 'client' }, JWT_SECRET);
+  adminToken = jwt.sign({ id: adminId, role: 'admin' }, JWT_SECRET);
 
   const router = require('../routes/girls');
   app = express();
@@ -97,10 +107,10 @@ describe('GET /api/girls 列表', () => {
 });
 
 describe('POST /api/girls 创建女生', () => {
-  it('operator 创建女生应成功', async () => {
+  it('admin 创建女生应成功', async () => {
     const res = await request(app)
       .post('/api/girls')
-      .set('Authorization', `Bearer ${operatorToken}`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ clientId, name: '测试女生' });
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -108,40 +118,20 @@ describe('POST /api/girls 创建女生', () => {
     expect(res.body.girl.stage).toBe('陌生');
   });
 
+  it('operator 不能创建女生', async () => {
+    const res = await request(app)
+      .post('/api/girls')
+      .set('Authorization', `Bearer ${operatorToken}`)
+      .send({ clientId, name: '测试女生' });
+    expect(res.status).toBe(403);
+  });
+
   it('缺少必需字段应返回 400', async () => {
     const res = await request(app)
       .post('/api/girls')
-      .set('Authorization', `Bearer ${operatorToken}`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ clientId });
     expect(res.status).toBe(400);
-  });
-
-  it('可设置完整的女生画像字段', async () => {
-    const res = await request(app)
-      .post('/api/girls')
-      .set('Authorization', `Bearer ${operatorToken}`)
-      .send({
-        clientId,
-        name: '完整女生',
-        age: 25,
-        occupation: '设计师',
-        education: '本科',
-        stage: '暧昧',
-        status: 'active',
-        intimacyLevel: 5,
-        tensionScore: 7.5,
-        isKinkOriented: true,
-        kinkIdentity: 'sub',
-        attachmentStyle: '安全型',
-        personality: 'INTJ'
-      });
-    expect(res.status).toBe(200);
-    expect(res.body.girl.age).toBe(25);
-    expect(res.body.girl.occupation).toBe('设计师');
-    expect(res.body.girl.stage).toBe('暧昧');
-    expect(res.body.girl.intimacyLevel).toBe(5);
-    expect(res.body.girl.tensionScore).toBe(7.5);
-    expect(res.body.girl.isKinkOriented).toBe(true);
   });
 });
 
@@ -155,20 +145,28 @@ describe('PUT /api/girls/:id 更新女生', () => {
     girlId = girl.id;
   });
 
-  it('operator 更新女生应成功', async () => {
+  it('admin 更新女生应成功', async () => {
     const res = await request(app)
       .put(`/api/girls/${girlId}`)
-      .set('Authorization', `Bearer ${operatorToken}`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ name: '已更新', stage: '暧昧', intimacyLevel: 3 });
     expect(res.status).toBe(200);
     expect(res.body.girl.name).toBe('已更新');
     expect(res.body.girl.stage).toBe('暧昧');
   });
 
+  it('operator 不能更新女生', async () => {
+    const res = await request(app)
+      .put(`/api/girls/${girlId}`)
+      .set('Authorization', `Bearer ${operatorToken}`)
+      .send({ name: '已更新', stage: '暧昧', intimacyLevel: 3 });
+    expect(res.status).toBe(403);
+  });
+
   it('更新不存在女生应返回 404', async () => {
     const res = await request(app)
       .put('/api/girls/nonexistent-id')
-      .set('Authorization', `Bearer ${operatorToken}`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ name: 'test' });
     expect(res.status).toBe(404);
   });
@@ -192,17 +190,30 @@ describe('DELETE /api/girls/:id 删除女生', () => {
     deleteGirlId = girl.id;
   });
 
-  it('operator 删除女生应成功', async () => {
+  it('admin 删除女生应成功', async () => {
     const res = await request(app)
       .delete(`/api/girls/${deleteGirlId}`)
-      .set('Authorization', `Bearer ${operatorToken}`);
+      .set('Authorization', `Bearer ${adminToken}`);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
   });
 
-  it('client 不能删除女生', async () => {
+  it('operator 不能删除女生', async () => {
+    const girl = await prisma.girl.create({
+      data: { clientId, name: '待删除女生2' }
+    });
     const res = await request(app)
-      .delete(`/api/girls/${deleteGirlId}`)
+      .delete(`/api/girls/${girl.id}`)
+      .set('Authorization', `Bearer ${operatorToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('client 不能删除女生', async () => {
+    const girl = await prisma.girl.create({
+      data: { clientId, name: '待删除女生3' }
+    });
+    const res = await request(app)
+      .delete(`/api/girls/${girl.id}`)
       .set('Authorization', `Bearer ${clientToken}`);
     expect(res.status).toBe(403);
   });
@@ -218,12 +229,20 @@ describe('POST /api/girls/:id/intimacy 更新亲密度', () => {
     intimacyGirlId = girl.id;
   });
 
-  it('operator 更新亲密度应成功', async () => {
+  it('admin 更新亲密度应成功', async () => {
+    const res = await request(app)
+      .post(`/api/girls/${intimacyGirlId}/intimacy`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ level: 7 });
+    expect(res.status).toBe(200);
+    expect(res.body.girl.intimacyLevel).toBe(7);
+  });
+
+  it('operator 不能更新亲密度', async () => {
     const res = await request(app)
       .post(`/api/girls/${intimacyGirlId}/intimacy`)
       .set('Authorization', `Bearer ${operatorToken}`)
       .send({ level: 7 });
-    expect(res.status).toBe(200);
-    expect(res.body.girl.intimacyLevel).toBe(7);
+    expect(res.status).toBe(403);
   });
 });

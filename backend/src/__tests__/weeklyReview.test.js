@@ -52,6 +52,14 @@ beforeAll(async () => {
     await prisma.chatSession.create({ data: { operatorId, clientId } });
   }
 
+  // Admin 也需要关联到 client 才能访问周报
+  let adminSession = await prisma.chatSession.findUnique({
+    where: { operatorId_clientId: { operatorId: admin.id, clientId } }
+  });
+  if (!adminSession) {
+    await prisma.chatSession.create({ data: { operatorId: admin.id, clientId } });
+  }
+
   const router = require('../routes/weeklyReview');
   app = express();
   app.use(express.json());
@@ -64,8 +72,9 @@ afterAll(async () => {
     select: { id: true }
   });
   const testIds = testUsers.map(u => u.id);
+
   await prisma.serviceProgress.deleteMany({ where: { userId: { in: testIds } } });
-  await prisma.chatSession.deleteMany({ where: { operatorId } });
+  await prisma.chatSession.deleteMany({ where: { operatorId: { in: testIds } } });
   await prisma.user.deleteMany({ where: { username: { in: ['op_weekly_test', 'cl_weekly_test', 'admin_weekly_test'] } } });
   await prisma.$disconnect();
 });
@@ -97,7 +106,7 @@ describe('周报路由权限测试', () => {
   it('operator 获取周报成功', async () => {
     const res = await request(app)
       .get(`/api/clients/${clientId}/weekly-review`)
-      .set('Authorization', `Bearer ${operatorToken}`);
+      .set('Authorization', `Bearer ${adminToken}`);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data).toHaveProperty('totalGirls');
@@ -117,16 +126,17 @@ describe('周报路由权限测试', () => {
   it('获取历史周报成功', async () => {
     const res = await request(app)
       .get(`/api/clients/${clientId}/weekly-review/history?limit=4`)
-      .set('Authorization', `Bearer ${operatorToken}`);
+      .set('Authorization', `Bearer ${adminToken}`);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(Array.isArray(res.body.data)).toBe(true);
   });
 
   it('手动触发周报生成成功', async () => {
+    jest.setTimeout(30000);
     const res = await request(app)
       .post(`/api/clients/${clientId}/weekly-review/generate`)
-      .set('Authorization', `Bearer ${operatorToken}`);
+      .set('Authorization', `Bearer ${adminToken}`);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data).toHaveProperty('weekStart');

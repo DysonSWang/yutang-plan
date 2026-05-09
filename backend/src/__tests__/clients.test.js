@@ -73,26 +73,28 @@ describe('Clients 路由权限测试', () => {
 });
 
 describe('GET /api/clients 客户列表', () => {
-  it('operator 应能看到客户列表', async () => {
-    const res = await request(app)
-      .get('/api/clients')
-      .set('Authorization', `Bearer ${operatorToken}`);
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(Array.isArray(res.body.clients)).toBe(true);
-  });
-
   it('admin 应能看到客户列表', async () => {
     const res = await request(app)
       .get('/api/clients')
       .set('Authorization', `Bearer ${adminToken}`);
     expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(Array.isArray(res.body.clients)).toBe(true);
   });
 
-  it('可按 serviceStage 过滤', async () => {
+  it('operator 不能访问客户列表', async () => {
+    const res = await request(app)
+      .get('/api/clients')
+      .set('Authorization', `Bearer ${operatorToken}`);
+    expect(res.status).toBe(403);
+  });
+});
+
+describe('GET /api/clients 客户列表 (admin)', () => {
+  it('admin 可按 serviceStage 过滤', async () => {
     const res = await request(app)
       .get('/api/clients?serviceStage=背调')
-      .set('Authorization', `Bearer ${operatorToken}`);
+      .set('Authorization', `Bearer ${adminToken}`);
     expect(res.status).toBe(200);
     for (const c of res.body.clients) {
       expect(c.serviceStage).toBe('背调');
@@ -109,7 +111,7 @@ describe('GET /api/clients/me', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.client.id).toBe(clientId);
     expect(res.body.client).not.toHaveProperty('password');
-    expect(res.body.client).toHaveProperty('girlCount');
+    expect(res.body.client).toHaveProperty('girls');
     expect(res.body.client).toHaveProperty('dateCount');
   });
 });
@@ -121,10 +123,10 @@ describe('POST /api/clients 创建客户', () => {
     testUsername = 'newclient_' + Date.now();
   });
 
-  it('operator 创建客户应成功', async () => {
+  it('admin 创建客户应成功', async () => {
     const res = await request(app)
       .post('/api/clients')
-      .set('Authorization', `Bearer ${operatorToken}`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         username: testUsername,
         password: 'password123',
@@ -143,9 +145,17 @@ describe('POST /api/clients 创建客户', () => {
   it('缺少必需字段应返回 400', async () => {
     const res = await request(app)
       .post('/api/clients')
-      .set('Authorization', `Bearer ${operatorToken}`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ username: 'test' });
     expect(res.status).toBe(400);
+  });
+
+  it('operator 不能创建客户', async () => {
+    const res = await request(app)
+      .post('/api/clients')
+      .set('Authorization', `Bearer ${operatorToken}`)
+      .send({ username: 'x', password: 'x' });
+    expect(res.status).toBe(403);
   });
 
   it('client 不能创建客户', async () => {
@@ -158,10 +168,10 @@ describe('POST /api/clients 创建客户', () => {
 });
 
 describe('PUT /api/clients/:id 更新客户', () => {
-  it('operator 更新客户应成功', async () => {
+  it('admin 更新客户应成功', async () => {
     const res = await request(app)
       .put(`/api/clients/${clientId}`)
-      .set('Authorization', `Bearer ${operatorToken}`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ nickname: '已更新昵称', occupation: '医生' });
     expect(res.status).toBe(200);
     expect(res.body.client.nickname).toBe('已更新昵称');
@@ -185,10 +195,18 @@ describe('PUT /api/clients/:id 更新客户', () => {
     expect(res.status).toBe(403);
   });
 
+  it('operator 不能更新客户', async () => {
+    const res = await request(app)
+      .put(`/api/clients/${clientId}`)
+      .set('Authorization', `Bearer ${operatorToken}`)
+      .send({ nickname: 'hack' });
+    expect(res.status).toBe(403);
+  });
+
   it('更新不存在客户应返回 404', async () => {
     const res = await request(app)
       .put('/api/clients/nonexistent-id')
-      .set('Authorization', `Bearer ${operatorToken}`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ nickname: 'test' });
     expect(res.status).toBe(404);
   });
@@ -223,10 +241,10 @@ describe('DELETE /api/clients/:id 删除客户', () => {
 });
 
 describe('POST /api/clients/:id/learnings 学习记录', () => {
-  it('operator 添加学习记录应成功', async () => {
+  it('admin 添加学习记录应成功', async () => {
     const res = await request(app)
       .post(`/api/clients/${clientId}/learnings`)
-      .set('Authorization', `Bearer ${operatorToken}`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ type: 'date_tips', scene: 'first_date', content: '第一次约会要轻松，不要给压力' });
     expect(res.status).toBe(200);
     expect(res.body.learning.type).toBe('date_tips');
@@ -236,9 +254,17 @@ describe('POST /api/clients/:id/learnings 学习记录', () => {
   it('缺少必需字段应返回 400', async () => {
     const res = await request(app)
       .post(`/api/clients/${clientId}/learnings`)
-      .set('Authorization', `Bearer ${operatorToken}`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ type: 'test' });
     expect(res.status).toBe(400);
+  });
+
+  it('operator 不能添加学习记录', async () => {
+    const res = await request(app)
+      .post(`/api/clients/${clientId}/learnings`)
+      .set('Authorization', `Bearer ${operatorToken}`)
+      .send({ type: 'test', scene: 'x', content: 'x' });
+    expect(res.status).toBe(403);
   });
 
   it('client 不能添加学习记录', async () => {
@@ -251,12 +277,19 @@ describe('POST /api/clients/:id/learnings 学习记录', () => {
 });
 
 describe('GET /api/clients/:id/learnings 获取学习记录', () => {
-  it('operator 获取学习记录应成功', async () => {
+  it('admin 获取学习记录应成功', async () => {
+    const res = await request(app)
+      .get(`/api/clients/${clientId}/learnings`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.learnings)).toBe(true);
+  });
+
+  it('operator 不能获取学习记录', async () => {
     const res = await request(app)
       .get(`/api/clients/${clientId}/learnings`)
       .set('Authorization', `Bearer ${operatorToken}`);
-    expect(res.status).toBe(200);
-    expect(Array.isArray(res.body.learnings)).toBe(true);
+    expect(res.status).toBe(403);
   });
 
   it('client 不能获取学习记录', async () => {
