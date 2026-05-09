@@ -1856,6 +1856,25 @@ export default function AICoach() {
   }, [selectedGirlId, girls]);
 
   // 监听图片分析结果（异步 Socket.io 通知 + 轮询 fallback）
+
+  // 滚动到底部 - 使用 document.getElementById 确保获取正确的容器
+  const scrollToBottom = useCallback(() => {
+    // 使用 requestAnimationFrame 确保在下一帧执行，此时 DOM 应该已更新
+    const doScroll = () => {
+      const container = document.getElementById('chat-scroll-container');
+      if (container) {
+        // 设置 scrollTop 到最大值
+        container.scrollTop = container.scrollHeight;
+      }
+    };
+    requestAnimationFrame(doScroll);
+    // 双重保障：等待一帧后再执行一次
+    requestAnimationFrame(() => {
+      requestAnimationFrame(doScroll);
+    });
+  }, []);
+
+  // 监听 Socket.io 分析结果事件
   useEffect(() => {
     if (!socketRef?.current) return;
 
@@ -1950,24 +1969,7 @@ export default function AICoach() {
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, []);
 
-  // 滚动到底部 - 使用 document.getElementById 确保获取正确的容器
-  const scrollToBottom = useCallback(() => {
-    // 使用 requestAnimationFrame 确保在下一帧执行，此时 DOM 应该已更新
-    const doScroll = () => {
-      const container = document.getElementById('chat-scroll-container');
-      if (container) {
-        // 设置 scrollTop 到最大值
-        container.scrollTop = container.scrollHeight;
-      }
-    };
-    requestAnimationFrame(doScroll);
-    // 双重保障：等待一帧后再执行一次
-    requestAnimationFrame(() => {
-      requestAnimationFrame(doScroll);
-    });
-  }, []);
-
-  // 自动调整 textarea 高度 - 暂时禁用以排查问题
+  // 自动调整 textarea 高度
   // useEffect(() => {
   //   if (textareaRef.current) {
   //     textareaRef.current.style.height = 'auto';
