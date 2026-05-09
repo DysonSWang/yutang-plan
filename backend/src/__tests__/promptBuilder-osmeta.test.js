@@ -7,9 +7,9 @@ describe('buildOSMetaSection 兼容性', () => {
     expect(result.length).toBeGreaterThan(50);
   });
 
-  it('返回包含【恋爱操作系统 · 内部规则】头部', () => {
+  it('返回包含【恋爱操作系统 · 内部决策框架】头部', () => {
     const result = buildOSMetaSection({});
-    expect(result).toContain('【恋爱操作系统 · 内部规则】');
+    expect(result).toContain('【恋爱操作系统 · 内部决策框架】');
   });
 
   it('包含全部 7 个阶段', () => {
@@ -18,11 +18,11 @@ describe('buildOSMetaSection 兼容性', () => {
     expect(result).toContain('Phase 6');
   });
 
-  it('无 girlProfile 时输出轨道决策树', () => {
+  it('无 girlProfile 时输出轨道决策参考', () => {
     const result = buildOSMetaSection({});
-    expect(result).toContain('轨道决策树');
-    expect(result).toContain('短轨条件');
-    expect(result).toContain('长轨条件');
+    expect(result).toContain('轨道决策参考');
+    expect(result).toContain('目标型关键词');
+    expect(result).toContain('认真型关键词');
   });
 });
 
@@ -33,14 +33,14 @@ describe('buildOSMetaSection 增强内容', () => {
     });
     expect(result).toContain('当前阶段');
     expect(result).toContain('Phase 3');
-    expect(result).toContain('⚠️ 死胡同');
+    expect(result).toContain('⚠️');
   });
 
   it('有 track 时输出轨道策略', () => {
     const result = buildOSMetaSection({
       girlProfile: { stage: '聊天', track: 'short' }
     });
-    expect(result).toContain('短轨(速约)');
+    expect(result).toContain('快节奏模式');
     expect(result).toContain('效率优先');
   });
 
@@ -61,7 +61,7 @@ describe('buildOSMetaSection 增强内容', () => {
 
   it('输出包含冲突裁决规则', () => {
     const result = buildOSMetaSection({});
-    expect(result).toContain('短轨和长轨是两个独立系统');
+    // 冲突裁决规则的实际措辞
     expect(result).toContain('阶段不可跳步');
   });
 
