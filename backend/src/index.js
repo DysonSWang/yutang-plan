@@ -110,9 +110,14 @@ const corsOptions = {
     if (!origin) return callback(null, true);
 
     // 从环境变量读取白名单，默认允许 localhost 开发
-    const whitelist = (process.env.CORS_WHITELIST || 'http://localhost:3000,http://localhost:5173,http://localhost:5181')
+    const whitelist = (process.env.CORS_WHITELIST || 'https://zhuiai.club,https://localhost,capacitor://localhost,capacitor://localhost:0,http://localhost:3000,http://localhost:5173,http://localhost:5181')
       .split(',')
       .map(item => item.trim());
+
+    // Capacitor App 的请求，无论 origin 都允许
+    if (origin?.startsWith('capacitor://') || origin?.startsWith('ionic://')) {
+      return callback(null, true);
+    }
 
     if (whitelist.includes(origin)) {
       callback(null, true);

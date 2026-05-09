@@ -47,8 +47,8 @@ export default function Login() {
         window.location.href = result.user?.role === 'admin' ? '/admin' : '/client';
       }
     } catch (err) {
+      // 错误已由全局 api.errorHandler 显示 toast，此处仅更新表单内错误提示
       setLoginError(err.message || '用户名或密码错误');
-      toast({ title: '登录失败', description: err.message || '用户名或密码错误', status: 'error', duration: 4000, duration: 3000 });
     } finally {
       setLoading(false);
     }
@@ -73,7 +73,7 @@ export default function Login() {
       }
     } catch (err) {
       setRegisterError(err.message || '注册失败');
-      toast({ title: '注册失败', description: err.message, status: 'error', duration: 4000, duration: 3000 });
+      // 注册失败不再弹 toast，由全局 api.errorHandler 处理
     } finally {
       setLoading(false);
     }

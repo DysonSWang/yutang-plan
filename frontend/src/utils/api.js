@@ -62,6 +62,15 @@ class Api {
   }
 
   async request(method, path, data = null, timeoutMs = 15000, retries = null) {
+    return this._request(method, path, data, timeoutMs, retries, false);
+  }
+
+  // silent: 不触发全局 errorHandler（用于登录等有局部错误处理的场景）
+  async silentRequest(method, path, data = null, timeoutMs = 15000, retries = null) {
+    return this._request(method, path, data, timeoutMs, retries, true);
+  }
+
+  async _request(method, path, data = null, timeoutMs = 15000, retries = null, silent = false) {
     const token = this.getToken();
     const headers = {
       'Content-Type': 'application/json'
@@ -98,7 +107,7 @@ class Api {
       // 网络错误，检查是否重试
       if (retryCount > 0 && (err.name === 'AbortError' || err.name === 'TypeError')) {
         console.log(`[API] 请求失败，重试剩余次数: ${retryCount - 1}, path: ${path}`);
-        return this.request(method, path, data, timeoutMs, retryCount - 1);
+        return this._request(method, path, data, timeoutMs, retryCount - 1, silent);
       }
       let errorMsg = '网络连接失败，请检查网络设置';
       if (err.name === 'AbortError') {
@@ -109,7 +118,7 @@ class Api {
         code: err.name === 'AbortError' ? 'TIMEOUT' : 'NETWORK_ERROR',
         message: errorMsg,
       };
-      if (this.errorHandler) this.errorHandler(error);
+      if (!silent && this.errorHandler) this.errorHandler(error);
       throw error;
     }
 
@@ -122,7 +131,7 @@ class Api {
         window.location.href = '/login';
       }
 
-      if (this.errorHandler) {
+      if (!silent && this.errorHandler) {
         this.errorHandler(error);
       }
 
@@ -155,8 +164,8 @@ export const api = new Api();
 
 // Auth
 export const auth = {
-  login: (username, password) => api.post('/api/auth/login', { username, password }),
-  register: (data) => api.post('/api/auth/register', data),
+  login: (username, password) => api.silentRequest('POST', '/api/auth/login', { username, password }),
+  register: (data) => api.silentRequest('POST', '/api/auth/register', data),
   verify: () => api.get('/api/auth/verify'),
   me: () => api.get('/api/auth/me'),
   logout: () => { api.removeToken(); },
