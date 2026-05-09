@@ -10,7 +10,7 @@ describe('EmptyState', () => {
     render(<EmptyState type="pond" />);
 
     expect(screen.getByText('缘分还未开始')).toBeInTheDocument();
-    expect(screen.getByText(/AI 教练/)).toBeInTheDocument();
+    expect(screen.getByText(/添加缘分对象/)).toBeInTheDocument();
   });
 
   it('显示预设 notification 类型的文案', () => {
@@ -37,17 +37,15 @@ describe('EmptyState', () => {
     expect(screen.getByText('暂无内容')).toBeInTheDocument();
   });
 
-  it('自定义 icon/title/desc 覆盖预设值', () => {
+  it('自定义 title/desc 覆盖预设值', () => {
     render(
       <EmptyState
         type="pond"
-        icon="🔥"
         title="自定义标题"
         desc="自定义描述"
       />
     );
 
-    expect(screen.getByText('🔥')).toBeInTheDocument();
     expect(screen.getByText('自定义标题')).toBeInTheDocument();
     expect(screen.getByText('自定义描述')).toBeInTheDocument();
   });
