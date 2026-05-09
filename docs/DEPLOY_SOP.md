@@ -169,20 +169,26 @@ ssh root@149.129.227.54 "cat /etc/nginx/nginx.conf"
 ```bash
 cd /home/admin/zhuiai/frontend
 
-# 构建前端
-npm run build
-
-# 同步 Capacitor
-npx cap sync android
-
-# 构建 APK
-cd android
-export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
-export ANDROID_HOME=/home/admin/android-sdk
-./gradlew assembleRelease
+# 构建前端（必须用 build:android，内置 CAPACITOR_BUILD=true）
+npm run build:android
 ```
 
-### 4.2 上传 APK 到托管
+> **注意**：`npm run build` 是 Web 版，构建出的路径是 `/app/assets/`，不适用于 APK。APK 必须用 `npm run build:android`。
+
+### 4.2 验证 APK 内置资源
+
+构建后必须验证 APK 内的资源路径正确：
+
+```bash
+# APK 版 index.html 路径应该是 /assets/（不含 /app/）
+unzip -p /home/admin/zhuiai/frontend/android/app/build/outputs/apk/release/app-release.apk \
+  assets/public/index.html | grep -o 'src="/[^"]*' | head -1
+
+# 应输出: src="/assets/index-*.js
+# 如果看到 src="/app/assets/，说明构建命令错误
+```
+
+### 4.3 上传 APK 到托管
 
 ```python
 import paramiko
@@ -199,27 +205,7 @@ print("APK 已托管到 https://zhuiai.club/apk/app-release.apk")
 client.close()
 ```
 
-### 4.3 蒲公英备份（可选）
-
-```bash
-APK_PATH="/home/admin/zhuiai/frontend/android/app/build/outputs/apk/release/app-release.apk"
-VERSION="1.x.x"
-BUILD_NO="xx"
-DESC="更新说明"
-
-curl -X POST \
-  -F "file=@${APK_PATH}" \
-  -F "uKey=3e311caa422730d4aab2619e9a879dc2" \
-  -F "_api_key=18f6e9b73043917c2c229951ade52ff7" \
-  -F "buildUpdateDescription=${DESC}" \
-  -F "buildVersion=${VERSION}" \
-  -F "buildVersionNo=${BUILD_NO}" \
-  "https://www.pgyer.com/apiv2/app/upload"
-```
-
----
-
-## 五、版本更新流程
+### 4.4 蒲公英备份（可选）
 
 ### 5.1 版本文件更新（三处必须同步）
 
