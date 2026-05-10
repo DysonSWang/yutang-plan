@@ -1046,10 +1046,16 @@ router.post('/admin/learning/scan',
       }
     });
 
-    // 创建草稿
-    await Promise.all(drafts.map(d =>
-      prisma.learningChapterDraft.create({
-        data: { ...d, batchId: batch.id }
+    // 创建草稿（同 chapterId 去重，保留最后一个）
+    const draftMap = {};
+    drafts.forEach(d => { draftMap[d.chapterId] = d; });
+    const uniqueDrafts = Object.values(draftMap);
+
+    await Promise.all(uniqueDrafts.map(d =>
+      prisma.learningChapterDraft.upsert({
+        where: { batchId_chapterId: { batchId: batch.id, chapterId: d.chapterId } },
+        create: { ...d, batchId: batch.id },
+        update: { ...d, batchId: batch.id }
       })
     ));
 
