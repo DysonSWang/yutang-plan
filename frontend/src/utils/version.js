@@ -16,22 +16,21 @@ export function isCapacitorApp() {
 }
 
 export async function checkVersion() {
-  // 仅在 Capacitor App 环境中检测版本
-  if (!isCapacitorApp()) {
-    return null;
-  }
-
-  // 从原生层获取实际 APK 版本（build.gradle versionName / versionCode）
   let appVersion = VERSION;
   let appBuild = BUILD;
-  try {
-    const info = await App.getInfo();
-    appVersion = info.version;
-    appBuild = info.build;
-  } catch {
-    // 降级使用硬编码值
+
+  // 优先从 Capacitor App 获取原生版本（APK 环境）
+  if (isCapacitorApp()) {
+    try {
+      const info = await App.getInfo();
+      appVersion = info.version;
+      appBuild = info.build;
+    } catch {
+      // 降级使用硬编码值
+    }
   }
 
+  // Web 环境也走 API 检测（用硬编码版本）
   const apiBase = '';
   let res;
   try {
