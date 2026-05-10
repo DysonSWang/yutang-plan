@@ -1,13 +1,10 @@
-import { Box, Flex, VStack, Icon, Text, Badge, Popover, PopoverTrigger, PopoverContent, PopoverBody, PopoverHeader, Button, HStack, useToast, Drawer, DrawerOverlay, DrawerContent, DrawerHeader, DrawerBody, DrawerCloseButton, useDisclosure } from '@chakra-ui/react';
+import { Box, Flex, VStack, Icon, Text, Badge, HStack, useToast } from '@chakra-ui/react';
 import { NavLink, useLocation } from 'react-router-dom';
 import KeepAliveOutlet from '../../components/KeepAliveOutlet';
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSocket } from '../../contexts/SocketContext';
-import { notifications as notifApi } from '../../utils/api';
-import { captureError } from '../../utils/frontendErrorCapture';
-import { FishIcon, ChatIcon, SparklesIcon, BellIcon, UserIcon, CalendarIcon, BookIcon, GiftIcon } from '../../components/Icons';
-import EmptyState from '../../components/EmptyState';
+import { FishIcon, ChatIcon, SparklesIcon, UserIcon, BookIcon } from '../../components/Icons';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3005';
 
@@ -20,8 +17,7 @@ const navItems = [
 ];
 
 // 桌面端侧边导航
-function DesktopSidebar({ chatUnread, unreadCount, notifications, showNotifications, setShowNotifications, markAllAsRead }) {
-  const { user } = useAuth();
+function DesktopSidebar({ chatUnread }) {
   const location = useLocation();
 
   return (
@@ -39,61 +35,9 @@ function DesktopSidebar({ chatUnread, unreadCount, notifications, showNotificati
       display={{ base: 'none', lg: 'block' }}
     >
       <VStack spacing={2} align="stretch">
-        <Flex justify="space-between" align="center" mb={4}>
-          <Flex align="center" gap={2}>
-            <Icon as={FishIcon} color="gold.500" />
-            <Text fontSize="lg" fontWeight="bold" color="gold.500" fontFamily="heading">追AI</Text>
-          </Flex>
-          <Popover isOpen={showNotifications} onClose={() => setShowNotifications(false)}>
-            <PopoverTrigger>
-              <Box
-                position="relative"
-                cursor="pointer"
-                onClick={() => setShowNotifications(!showNotifications)}
-              >
-                <Icon as={BellIcon} color="rgba(245,240,232,0.4)" />
-                {unreadCount > 0 && (
-                  <Badge
-                    position="absolute"
-                    top="-5px"
-                    right="-5px"
-                    colorScheme="red"
-                    borderRadius="full"
-                    fontSize="xs"
-                  >
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </Badge>
-                )}
-              </Box>
-            </PopoverTrigger>
-            <PopoverContent bg="warm.900" border="1px solid rgba(255,255,255,0.08)" w="300px">
-              <PopoverHeader borderColor="rgba(255,255,255,0.06)" display="flex" justifyContent="space-between" alignItems="center">
-                <Text color="white" fontWeight="bold">通知</Text>
-                {unreadCount > 0 && (
-                  <Button size="xs" variant="ghost" color="gold.500" onClick={markAllAsRead}>
-                    全部已读
-                  </Button>
-                )}
-              </PopoverHeader>
-              <PopoverBody maxH="300px" overflowY="auto">
-                {notifications.length === 0 ? (
-                  <EmptyState type="notification" size="sm" />
-                ) : (
-                  <VStack spacing={2} align="stretch">
-                    {notifications.slice(0, 10).map(n => (
-                      <Box key={n.id} p={3} bg="rgba(255,255,255,0.04)" borderRadius="md" border="1px solid rgba(255,255,255,0.06)">
-                        <Text color="white" fontSize="sm" fontWeight="bold">{n.title}</Text>
-                        <Text color="rgba(245,240,232,0.6)" fontSize="xs" mt={1}>{n.content}</Text>
-                        <Text color="rgba(245,240,232,0.55)" fontSize="xs" mt={1}>
-                          {new Date(n.createdAt).toLocaleString()}
-                        </Text>
-                      </Box>
-                    ))}
-                  </VStack>
-                )}
-              </PopoverBody>
-            </PopoverContent>
-          </Popover>
+        <Flex align="center" gap={2} mb={4}>
+          <Icon as={FishIcon} color="gold.500" />
+          <Text fontSize="lg" fontWeight="bold" color="gold.500" fontFamily="heading">追AI</Text>
         </Flex>
         {navItems.map(item => (
           <NavLink key={item.path} to={item.path}>
@@ -128,7 +72,7 @@ function DesktopSidebar({ chatUnread, unreadCount, notifications, showNotificati
 }
 
 // 移动端底部 Tab 导航
-function MobileBottomNav({ chatUnread, unreadCount, onNotificationClick }) {
+function MobileBottomNav({ chatUnread }) {
   const location = useLocation();
 
   return (
@@ -181,61 +125,10 @@ function MobileBottomNav({ chatUnread, unreadCount, onNotificationClick }) {
                     {chatUnread > 99 ? '99+' : chatUnread}
                   </Badge>
                 )}
-                {!isChat && unreadCount > 0 && (
-                  <Badge
-                    position="absolute"
-                    top="2px"
-                    right="8px"
-                    colorScheme="red"
-                    borderRadius="full"
-                    fontSize="xs"
-                    minW="18px"
-                    h="18px"
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="center"
-                  >
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </Badge>
-                )}
               </Flex>
             </NavLink>
           );
         })}
-        {/* 通知入口 */}
-        <Flex
-          direction="column"
-          align="center"
-          py={2}
-          px={3}
-          cursor="pointer"
-          color="rgba(245,240,232,0.4)"
-          transition="all 0.15s ease"
-          _hover={{ color: 'gold.400' }}
-          minW="60px"
-          position="relative"
-          onClick={onNotificationClick}
-        >
-          <Icon as={BellIcon} boxSize={5} mb={1} />
-          <Text fontSize="xs">通知</Text>
-          {unreadCount > 0 && (
-            <Badge
-              position="absolute"
-              top="2px"
-              right="8px"
-              colorScheme="red"
-              borderRadius="full"
-              fontSize="xs"
-              minW="18px"
-              h="18px"
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-            >
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </Badge>
-          )}
-        </Flex>
       </HStack>
     </Box>
   );
@@ -245,31 +138,20 @@ export default function ClientLayout() {
   const { on } = useSocket();
   const location = useLocation();
   const toast = useToast();
-  const [unreadCount, setUnreadCount] = useState(0);
   const [chatUnread, setChatUnread] = useState(0);
-  const [notifications, setNotifications] = useState([]);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const { isOpen: isNotifOpen, onOpen: onNotifOpen, onClose: onNotifClose } = useDisclosure();
 
-  // 初始加载通知未读数和聊天未读数
+  // 初始加载聊天未读数
   const loadInitialData = useCallback(async () => {
     try {
-      const [notifRes, chatRes] = await Promise.all([
-        notifApi.list(),
-        fetch(`${API_BASE}/api/chat/my-sessions`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('zhuiai_token')}` }
-        }).then(r => r.json()).catch(() => ({ success: false }))
-      ]);
-      if (notifRes.success) {
-        setUnreadCount(notifRes.unreadCount);
-        setNotifications(notifRes.notifications);
-      }
+      const chatRes = await fetch(`${API_BASE}/api/chat/my-sessions`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('zhuiai_token')}` }
+      }).then(r => r.json()).catch(() => ({ success: false }));
       if (chatRes.success && chatRes.sessions?.length > 0) {
         const totalUnread = chatRes.sessions.reduce((sum, s) => sum + (s.unreadCount || 0), 0);
         setChatUnread(totalUnread);
       }
     } catch (e) {
-      captureError(e);
+      console.error('加载数据失败', e);
     }
   }, []);
 
@@ -277,7 +159,7 @@ export default function ClientLayout() {
     loadInitialData();
   }, [loadInitialData]);
 
-  // socket 事件（仅在 ClientLayout 注册一次，避免 Desktop/Mobile 竞争）
+  // socket 事件
   useEffect(() => {
     const unsub1 = on('chat-log:new', (log) => {
       toast({
@@ -290,11 +172,7 @@ export default function ClientLayout() {
       });
     });
 
-    const unsub2 = on('notification:new', () => {
-      setUnreadCount(prev => prev + 1);
-    });
-
-    const unsub3 = on('message:new', (message) => {
+    const unsub2 = on('message:new', (message) => {
       if (message.senderRole === 'client') return;
       if (location.pathname !== '/chat') {
         setChatUnread(prev => prev + 1);
@@ -305,36 +183,13 @@ export default function ClientLayout() {
     window.addEventListener('chat-enter', handleChatEnter);
     return () => {
       window.removeEventListener('chat-enter', handleChatEnter);
-      unsub1(); unsub2(); unsub3();
+      unsub1(); unsub2();
     };
   }, [on, toast, location.pathname]);
 
-  const markAllAsRead = async () => {
-    try {
-      await notifApi.readAll();
-      setUnreadCount(0);
-    } catch (e) {
-      captureError(e);
-    }
-  };
-
-  const handleNotificationClick = () => {
-    onNotifOpen();
-    if (unreadCount > 0) {
-      markAllAsRead();
-    }
-  };
-
   return (
     <Box minH="100vh" bg="warm.950">
-      <DesktopSidebar
-        chatUnread={chatUnread}
-        unreadCount={unreadCount}
-        notifications={notifications}
-        showNotifications={showNotifications}
-        setShowNotifications={setShowNotifications}
-        markAllAsRead={markAllAsRead}
-      />
+      <DesktopSidebar chatUnread={chatUnread} />
       <Box
         ml={{ base: 0, lg: '200px' }}
         p={{ base: 4, md: 6 }}
@@ -343,38 +198,7 @@ export default function ClientLayout() {
       >
         <KeepAliveOutlet />
       </Box>
-      <MobileBottomNav chatUnread={chatUnread} unreadCount={unreadCount} onNotificationClick={handleNotificationClick} />
-
-      {/* 移动端通知抽屉 */}
-      <Drawer isOpen={isNotifOpen} placement="bottom" onClose={onNotifClose} size="md">
-        <DrawerOverlay />
-        <DrawerContent bg="warm.800" borderTopRadius="xl">
-          <DrawerCloseButton />
-          <DrawerHeader borderBottomWidth="1px" borderColor="warm.700" color="white">
-            通知
-          </DrawerHeader>
-          <DrawerBody py={4} px={4}>
-            {notifications.length === 0 ? (
-              <Flex direction="column" align="center" justify="center" py={8}>
-                <Icon as={BellIcon} color="rgba(245,240,232,0.3)" boxSize={12} mb={4} />
-                <Text color="rgba(245,240,232,0.4)">暂无通知</Text>
-              </Flex>
-            ) : (
-              <VStack spacing={3} align="stretch">
-                {notifications.slice(0, 10).map(n => (
-                  <Box key={n.id} p={4} bg="warm.700" borderRadius="md" border="1px solid" borderColor="warm.600">
-                    <Text color="white" fontWeight="bold" fontSize="sm">{n.title}</Text>
-                    <Text color="rgba(245,240,232,0.6)" fontSize="xs" mt={1}>{n.content}</Text>
-                    <Text color="rgba(245,240,232,0.4)" fontSize="xs" mt={1}>
-                      {new Date(n.createdAt).toLocaleString()}
-                    </Text>
-                  </Box>
-                ))}
-              </VStack>
-            )}
-          </DrawerBody>
-        </DrawerContent>
-      </Drawer>
+      <MobileBottomNav chatUnread={chatUnread} />
     </Box>
   );
 }
