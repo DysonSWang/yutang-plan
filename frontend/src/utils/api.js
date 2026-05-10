@@ -156,7 +156,11 @@ class Api {
       method: 'POST',
       headers,
       body: formData,
-    }).then(r => r.json());
+    }).then(async r => {
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || `请求失败 (${r.status})`);
+      return data;
+    });
   }
 }
 
