@@ -301,12 +301,26 @@ router.get('/invitation/my-stats', authMiddleware, async (req, res) => {
 // 学习版块
 // ==========================================
 
+// 获取学习内容版本号（极轻量，用于前端缓存失效检测）
+router.get('/learning/content-version', authMiddleware, async (req, res) => {
+  const latest = await prisma.contentVersion.findFirst({
+    orderBy: { publishedAt: 'desc' },
+    select: { version: true }
+  });
+  res.json({ success: true, version: latest?.version || 0 });
+});
+
 // 获取所有已上架章节（客户和操盘手都可用）
 router.get('/learning/chapters', authMiddleware, async (req, res) => {
   try {
     const chapters = await prisma.learningChapter.findMany({
       where: { status: 'published' },
-      orderBy: { orderIndex: 'asc' }
+      orderBy: { orderIndex: 'asc' },
+      select: {
+        id: true, chapterId: true, title: true, subtitle: true,
+        contentVersion: true, orderIndex: true, status: true,
+        publishedAt: true, createdAt: true, updatedAt: true,
+      }
     });
     res.json({ success: true, chapters });
   } catch (err) {

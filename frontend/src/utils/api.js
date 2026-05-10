@@ -147,6 +147,33 @@ class Api {
   put(path, data, timeoutMs) { return this.request('PUT', path, data, timeoutMs); }
   delete(path) { return this.request('DELETE', path); }
 
+  // 版本号缓存：首次请求正常缓存，再次请求时先检查版本号
+  // 缓存命中（TTL 内）→ 直接返回；缓存过期 → 检查版本号，没变则续期，变了则重新请求
+  async getCachedWithVersion(path, versionKey, ttlMs = 86400000) {
+    const cached = apiCache.get(path);
+    if (cached && Date.now() - cached.timestamp < ttlMs) {
+      return cached.data;
+    }
+    if (cached) {
+      try {
+        const verRes = await this.get(versionKey);
+        if (verRes.success && verRes.version === cached.version) {
+          apiCache.set(path, { ...cached, timestamp: Date.now() });
+          return cached.data;
+        }
+      } catch { /* 版本检查失败，当作版本变了，继续重新请求 */ }
+    }
+    // 无缓存或版本变了，重新请求
+    const data = await this.get(path);
+    try {
+      const verRes = await this.get(versionKey);
+      apiCache.set(path, { data, timestamp: Date.now(), version: verRes.version });
+    } catch {
+      apiCache.set(path, { data, timestamp: Date.now(), version: 0 });
+    }
+    return data;
+  }
+
   // 上传文件（跳过 JSON Content-Type）
   upload(path, formData, timeoutMs = 60000) {
     const token = this.getToken();
@@ -788,12 +815,12 @@ export const membership = {
   createInviteCode: () => api.post('/api/membership/invitation/create'),
   myInvitationStats: () => api.get('/api/membership/invitation/my-stats'),
   // 学习
-  chapters: () => api.get('/api/membership/learning/chapters'),
-  learningProgress: () => api.get('/api/membership/learning/progress'),
+  chapters: () => api.getCachedWithVersion('/api/membership/learning/chapters', '/api/membership/learning/content-version'),
+  learningProgress: () => api.getCachedWithVersion('/api/membership/learning/progress', '/api/membership/learning/content-version'),
   updateLearningProgress: (chapterId, status) => api.put(`/api/membership/learning/progress/${chapterId}`, { status }),
   // 个性化学习
   getPersonalizedChapter: (chapterId) => api.get(`/api/membership/learning/${chapterId}?version=personalized`),
-  personalizedStatus: () => api.get('/api/membership/learning/personalized-status'),
+  personalizedStatus: () => api.getCachedWithVersion('/api/membership/learning/personalized-status', '/api/membership/learning/content-version'),
   profileCompleteness: () => api.get('/api/membership/profile-completeness'),
   generateAll: () => api.post('/api/membership/learning/generate-all'),
   generateStatus: (batchId) => api.get(`/api/membership/learning/generate-status/${batchId}`),
