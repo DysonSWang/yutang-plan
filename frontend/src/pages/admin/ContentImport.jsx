@@ -5,7 +5,8 @@ import {
   ModalHeader, ModalBody, ModalCloseButton, Switch, Divider, IconButton, Tooltip,
   Alert, AlertIcon, AlertTitle, AlertDescription
 } from '@chakra-ui/react';
-import { FiUpload, FiEye, FiCheck, FiX, FiChevronDown, FiChevronUp, FiClock, FiUsers } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
+import { FiUpload, FiEye, FiCheck, FiX, FiChevronDown, FiChevronUp, FiClock, FiUsers, FiArrowLeft } from 'react-icons/fi';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { membership as membershipApi } from '../../utils/api';
@@ -212,6 +213,7 @@ function ImpactModal({ isOpen, onClose, batchId }) {
 
 export default function ContentImport() {
   const toast = useToast();
+  const navigate = useNavigate();
   const [scanning, setScanning] = useState(false);
   const [batch, setBatch] = useState(null);
   const [drafts, setDrafts] = useState([]);
@@ -356,7 +358,16 @@ export default function ContentImport() {
 
   return (
     <Box>
-      <Heading size="lg" color="white" mb={6}>内容导入与版本管理</Heading>
+      <HStack mb={6} spacing={4}>
+        <IconButton
+          icon={<FiArrowLeft />}
+          variant="ghost"
+          color="white"
+          aria-label="返回学习版块"
+          onClick={() => navigate('/admin/chapters')}
+        />
+        <Heading size="lg" color="white">内容导入与版本管理</Heading>
+      </HStack>
 
       {/* 扫描区 */}
       <Box mb={6} p={5} bg="rgba(255,255,255,0.03)" borderRadius="xl" border="1px solid rgba(255,255,255,0.06)">
