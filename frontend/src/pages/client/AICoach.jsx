@@ -4,8 +4,9 @@ import {
   Heading, Select, Textarea, Spinner, Flex, Badge, Icon, Tooltip, useToast,
   Avatar, Wrap, WrapItem, useDisclosure, Modal, ModalOverlay, ModalContent,
   ModalHeader, ModalBody, ModalFooter, Tabs, TabList, TabPanels, Tab, TabPanel,
-  Image, SimpleGrid
+  Image, SimpleGrid, Switch, IconButton
 } from '@chakra-ui/react';
+import { AddIcon } from '@chakra-ui/icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSocket } from '../../contexts/SocketContext';
 import { girls as girlsApi, analyzeChatHistory, deleteCombatMessage } from '../../utils/api';
@@ -307,56 +308,48 @@ const SessionBar = memo(({
   };
 
   return (
-    <Flex align="center" gap={2} mb={1} flexShrink={0} bg="warm.800" px={3} py={1.5} borderRadius="md" border="1px solid" borderColor="whiteAlpha.100">
-      <Text color="rgba(245,240,232,0.2)" fontSize="xs" flexShrink={0}>会话</Text>
+    <Flex align="center" gap={2} flexShrink={0} bg="warm.800" px={2} py={1.5} borderRadius="md" border="1px solid" borderColor="whiteAlpha.100">
       <Select
         value={activeSessionId || ''}
         onChange={e => {
           const val = e.target.value;
           if (val === '') {
-            // 切换到"新会话"状态（无活跃会话），仅在当前有选中会话时才执行
             if (activeSessionId) onNewSession();
           } else {
             onSelectSession(val);
           }
         }}
         bg="warm.700" border="none" color="white" size="xs"
-        flex={1} maxW="240px"
+        flex={1} maxW="200px"
         borderRadius="md"
         isDisabled={loading}
       >
         <option value="">🆕 新会话</option>
         {displaySessions.map(s => (
-          <option key={s.id} value={s.id}>{formatTime(s.createdAt)} · {(s.messages || []).length}条 · {s.active !== false ? '活跃' : '已归档'}</option>
+          <option key={s.id} value={s.id}>{formatTime(s.createdAt)} · {(s.messages || []).length}条</option>
         ))}
       </Select>
-      {activeSession && (
-        <Badge colorScheme="gold" variant="subtle" fontSize="xs" flexShrink={0}>
-          {(activeSession.messages || []).length}条
-        </Badge>
-      )}
-      <Button
-        size="xs" variant="ghost" colorScheme="gold"
-        onClick={onNewSession} isLoading={loading}
+      <IconButton
+        icon={<AddIcon />}
+        size="xs"
+        variant="ghost"
+        colorScheme="gold"
+        onClick={onNewSession}
+        isLoading={loading}
         isDisabled={!activeSessionId}
+        aria-label="新建会话"
         flexShrink={0}
-      >
-        + 新建
-      </Button>
+      />
       {onDeepModeToggle ? (
-        <Tooltip label={deepMode ? '深度分析：调用工具链，全面分析' : '快速分析：流式输出，快'}>
-          <button type="button" onClick={onDeepModeToggle}
-            style={{
-              background: deepMode ? 'var(--warm-rose)' : 'var(--warm-matte)',
-              border: deepMode ? '1px solid var(--warm-rose)' : '1px solid transparent',
-              borderRadius: '6px', padding: '4px 10px', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0,
-              color: deepMode ? 'var(--w80)' : 'rgba(245,240,232,0.4)', whiteSpace: 'nowrap'
-            }}>
-            <span style={{ fontSize: '12px' }}><SparklesIcon /></span>
-            <span style={{ fontSize: '11px', fontWeight: 'bold' }}>{deepMode ? '深度' : '快速'}</span>
-          </button>
-        </Tooltip>
+        <Flex align="center" gap={1} flexShrink={0} ml={1}>
+          <Text fontSize="10px" color={deepMode ? 'gold.300' : 'warm.300'}>{deepMode ? '🌙' : '⚡'}</Text>
+          <Switch
+            size="sm"
+            isChecked={deepMode}
+            onChange={onDeepModeToggle}
+            colorScheme="orange"
+          />
+        </Flex>
       ) : null}
     </Flex>
   );
@@ -3391,8 +3384,10 @@ export default function AICoach() {
             </Tabs>
           </Box>
 
-          {/* Right side: Context panel */}
-          <GirlContextSidebar girl={selectedGirl} contextData={girlContextData} />
+          {/* Right side: Context panel - 仅聊天实战Tab显示 */}
+          <Box display={{ base: 'none', lg: activeTabIndex === 1 ? 'flex' : 'none' }} w="320px" flexShrink={0}>
+            <GirlContextSidebar girl={selectedGirl} contextData={girlContextData} />
+          </Box>
         </Flex>
 
         {/* 聊天导入弹窗 */}
