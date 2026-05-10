@@ -3,6 +3,7 @@
  */
 import { App } from '@capacitor/app';
 import { captureError } from './frontendErrorCapture';
+import { api } from './api';
 
 // 降级版本号（浏览器环境用，实际 App 走 Capacitor 获取原生版本）
 const VERSION = '1.2.8';
@@ -31,10 +32,10 @@ export async function checkVersion() {
   }
 
   // Web 环境也走 API 检测（用硬编码版本）
-  const apiBase = '';
+  // 使用 api.js 的 baseUrl，确保 APK 和 Web 环境都用正确的 API 地址
   let res;
   try {
-    res = await fetch(`${apiBase}/api/version/check?version=${appVersion}&build=${appBuild}`);
+    res = await fetch(`${api.baseUrl}/api/version/check?version=${appVersion}&build=${appBuild}`);
   } catch (err) {
     captureError(err, { context: 'version_check_fetch', version: appVersion, build: appBuild });
     throw err;
