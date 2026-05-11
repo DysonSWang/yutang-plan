@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import {
   Box, Heading, Text, SimpleGrid, Card, CardBody, Badge, VStack, HStack, Flex, Avatar,
   Button, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter,
@@ -128,7 +128,7 @@ function EmptyValue({ value, children, ...props }) {
 }
 
 // ---- 子组件 ----
-function FieldRow({ label, value }) {
+const FieldRow = memo(function FieldRow({ label, value }) {
   if (!value && value !== 0) return null;
   return (
     <Box>
@@ -136,8 +136,9 @@ function FieldRow({ label, value }) {
       <Text color="gray.200" fontSize="sm">{String(value)}</Text>
     </Box>
   );
-}
-function TagRow({ label, value }) {
+});
+
+const TagRow = memo(function TagRow({ label, value }) {
   if (!value) return null;
   const tags = String(value).split(/[,，、/]/).map(t => t.trim()).filter(Boolean);
   return (
@@ -150,7 +151,7 @@ function TagRow({ label, value }) {
       </Wrap>
     </Box>
   );
-}
+});
 function EQBar({ label, value }) {
   if (!value && value !== 0) return null;
   const pct = Math.min(100, Math.max(0, (value / 10) * 100));
@@ -166,7 +167,7 @@ function EQBar({ label, value }) {
 }
 function SectionCard({ title, children, color }) {
   return (
-    <Box bg="warm.700" border="1px solid" borderColor="rgba(226,176,68,0.1)" borderRadius="md" p={4} mb={4} _hover={{ borderColor: "rgba(226,176,68,0.25)" }} transition="all 0.2s">
+    <Box className="hover-lift" bg="warm.700" border="1px solid" borderColor="rgba(226,176,68,0.1)" borderRadius="md" p={4} mb={4}>
       <Text color={color || 'teal.400'} fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">{title}</Text>
       {children}
     </Box>
@@ -665,15 +666,28 @@ export default function GirlDetail() {
   // ---- 加载态 ----
   if (isInitialLoad) {
     return (
-      <Flex flex={1} align="center" justify="center" minH="60vh">
-        <Spinner color="gold.400" />
-      </Flex>
+      <Box pb={8}>
+        <HStack mb={4}>
+          <Skeleton h="32px" w="80px" borderRadius="md" />
+        </HStack>
+        <Skeleton h="220px" borderRadius="lg" mb={6} />
+        <Skeleton h="300px" borderRadius="lg" mb={6} />
+        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+          <Skeleton h="200px" borderRadius="md" />
+          <Skeleton h="200px" borderRadius="md" />
+          <Skeleton h="200px" borderRadius="md" />
+          <Skeleton h="200px" borderRadius="md" />
+        </SimpleGrid>
+      </Box>
     );
   }
   if (!girl) {
     return (
       <Flex flex={1} align="center" justify="center" minH="60vh">
-        <Text color="rgba(245,240,232,0.55)">女生不存在</Text>
+        <VStack spacing={4}>
+          <Text color="rgba(245,240,232,0.55)">女生不存在</Text>
+          <Button colorScheme="gold" onClick={() => navigate('/my-pond')}>返回缘分</Button>
+        </VStack>
       </Flex>
     );
   }
@@ -700,7 +714,7 @@ export default function GirlDetail() {
       </HStack>
 
       {/* ---- Hero 身份卡片 ---- */}
-      <Box bg="warm.800" bgGradient="linear(to-b, warm.700, warm.800)" p={5} borderRadius="lg" mb={6}>
+      <Box className="hover-lift" bg="warm.800" bgGradient="linear(to-b, warm.700, warm.800)" p={5} borderRadius="lg" mb={6}>
         <Flex direction={{ base: 'column', md: 'row' }} align={{ base: 'start', md: 'center' }} gap={4}>
           {/* 头像 + 身份 */}
           <Box position="relative" flexShrink={0}>
@@ -764,7 +778,7 @@ export default function GirlDetail() {
       </Box>
 
       {/* ====== 快速记录 ====== */}
-      <Box bg="warm.800" bgGradient="linear(to-b, warm.700, warm.800)" borderRadius="lg" p={5} mb={6}>
+      <Box className="hover-lift" bg="warm.800" bgGradient="linear(to-b, warm.700, warm.800)" borderRadius="lg" p={5} mb={6}>
         <Heading color="white" size="sm" mb={3}>
           <Icon as={SparklesIcon} boxSize={4} mr={2} /> 快速记录
           <Text as="span" color="rgba(245,240,232,0.55)" fontWeight="normal" fontSize="sm" ml={2}>输入文字或粘贴图片，AI 自动学习完善档案</Text>
@@ -956,7 +970,7 @@ export default function GirlDetail() {
 
       <SimpleGrid columns={{ base: 1, md: 2 }} spacing={0} gap={4} mb={4}>
         {Object.entries(FIELD_GROUPS).map(([groupKey, group]) => (
-          <Box key={groupKey} bg="warm.700" border="1px solid" borderColor="rgba(226,176,68,0.1)" borderRadius="md" p={4} _hover={{ borderColor: "rgba(226,176,68,0.25)" }} transition="all 0.2s">
+          <Box key={groupKey} className="hover-lift" bg="warm.700" border="1px solid" borderColor="rgba(226,176,68,0.1)" borderRadius="md" p={4}>
             <Text color={group.color} fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">{group.title}</Text>
             <SimpleGrid columns={2} spacing={3}>
               {group.fields.map(fk => {
@@ -979,7 +993,7 @@ export default function GirlDetail() {
       <Box mt={0}>
         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
           {/* 主页与来源 */}
-          <Box bg="warm.700" border="1px solid" borderColor="rgba(226,176,68,0.1)" borderRadius="md" p={4} _hover={{ borderColor: "rgba(226,176,68,0.25)" }} transition="all 0.2s">
+          <Box className="hover-lift" bg="warm.700" border="1px solid" borderColor="rgba(226,176,68,0.1)" borderRadius="md" p={4}>
             <Text color="gold.400" fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">主页与来源</Text>
             <VStack spacing={3} align="stretch">
               <EmptyValue value={girl.homepageUrl}>
@@ -998,7 +1012,7 @@ export default function GirlDetail() {
           </Box>
 
           {/* 照片 */}
-          <Box bg="warm.700" border="1px solid" borderColor="rgba(226,176,68,0.1)" borderRadius="md" p={4} _hover={{ borderColor: "rgba(226,176,68,0.25)" }} transition="all 0.2s">
+          <Box className="hover-lift" bg="warm.700" border="1px solid" borderColor="rgba(226,176,68,0.1)" borderRadius="md" p={4}>
             <Text color="gold.400" fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">
               照片{photos?.length ? ` (${photos.length})` : ''}
             </Text>
@@ -1014,7 +1028,7 @@ export default function GirlDetail() {
           </Box>
 
           {/* 朋友圈截图 */}
-          <Box bg="warm.700" border="1px solid" borderColor="rgba(226,176,68,0.1)" borderRadius="md" p={4} _hover={{ borderColor: "rgba(226,176,68,0.25)" }} transition="all 0.2s">
+          <Box className="hover-lift" bg="warm.700" border="1px solid" borderColor="rgba(226,176,68,0.1)" borderRadius="md" p={4}>
             <Text color="purple.400" fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">
               朋友圈截图{momentPhotos?.length ? ` (${momentPhotos.length})` : ''}
             </Text>
@@ -1030,7 +1044,7 @@ export default function GirlDetail() {
           </Box>
 
           {/* 视频 */}
-          <Box bg="warm.700" border="1px solid" borderColor="rgba(226,176,68,0.1)" borderRadius="md" p={4} _hover={{ borderColor: "rgba(226,176,68,0.25)" }} transition="all 0.2s">
+          <Box className="hover-lift" bg="warm.700" border="1px solid" borderColor="rgba(226,176,68,0.1)" borderRadius="md" p={4}>
             <Text color="gold.400" fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">
               视频{videos?.length ? ` (${videos.length})` : ''}
             </Text>
@@ -1212,7 +1226,7 @@ export default function GirlDetail() {
       </SimpleGrid>
 
       {/* ---- 编辑 Modal ---- */}
-      <Modal isOpen={isEditOpen} onClose={onEditClose} size="4xl">
+      <Modal isOpen={isEditOpen} onClose={onEditClose} size={{ base: 'full', md: '4xl' }}>
         <ModalOverlay />
         <ModalContent bg="warm.800" maxH="85vh" overflowY="auto">
           <ModalHeader color="white">
@@ -1375,22 +1389,6 @@ export default function GirlDetail() {
         </ModalContent>
       </Modal>
     </Box>
-    
-  );
-}
 
-// 字段标签映射
-function getFieldLabel(key) {
-  const map = {
-    age: '年龄', occupation: '职业', education: '学历', major: '专业',
-    hometown: '籍贯', residence: '现居城市', workplace: '工作地点',
-    appearance: '外貌描述', height: '身高', weight: '体重', bodyType: '体型',
-    familyBackground: '家庭背景', familyAtmosphere: '家庭氛围',
-    familyBurden: '养老负担', familyComments: '家庭备注',
-    workSchedule: '作息规律', socialActivity: '社交活跃度', financialHabits: '消费习惯',
-    interests: '兴趣爱好', dietPreferences: '饮食偏好', dietRestrictions: '饮食禁忌', hobbiesDetail: '兴趣详情',
-    relationshipAttitude: '婚恋态度', pastRelationshipSummary: '情史摘要',
-    emotionalWounds: '情伤记录', attachmentStyle: '依恋类型', dealbreakers: '绝对雷区',
-  };
-  return map[key] || key;
+  );
 }
