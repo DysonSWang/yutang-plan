@@ -18,7 +18,9 @@ export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
+  const [showLogin, setShowLogin] = useState(
+    localStorage.getItem('zhuiai_disguise_calc') !== 'true'
+  );
   const [loginError, setLoginError] = useState('');
   const [disguiseCalc, setDisguiseCalc] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -34,7 +36,11 @@ export default function Login() {
   const toast = useToast();
 
   useEffect(() => {
-    setDisguiseCalc(localStorage.getItem('zhuiai_disguise_calc') === 'true');
+    const stored = localStorage.getItem('zhuiai_disguise_calc') === 'true';
+    setDisguiseCalc(stored);
+    // 伪装计算器开启时，每次进入 Login 页面都显示计算器（需要重新验证）
+    // 伪装计算器关闭时，直接显示登录页
+    setShowLogin(!stored);
   }, []);
 
   const toggleDisguiseCalc = (enabled) => {
