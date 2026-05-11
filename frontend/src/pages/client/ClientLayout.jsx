@@ -1,7 +1,7 @@
-import { Box, Flex, VStack, Icon, Text, Badge, HStack, useToast } from '@chakra-ui/react';
+import { Box, Flex, VStack, Icon, Text, Badge, HStack, useToast, Progress } from '@chakra-ui/react';
 import { NavLink, useLocation } from 'react-router-dom';
 import KeepAliveOutlet from '../../components/KeepAliveOutlet';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSocket } from '../../contexts/SocketContext';
 import { FishIcon, ChatIcon, SparklesIcon, UserIcon, BookIcon } from '../../components/Icons';
@@ -139,6 +139,30 @@ export default function ClientLayout() {
   const location = useLocation();
   const toast = useToast();
   const [chatUnread, setChatUnread] = useState(0);
+  const [isNavigating, setIsNavigating] = useState(false);
+  const navigateTimeoutRef = useRef(null);
+  const prevPathRef = useRef(location.pathname);
+
+  // 监听路由变化，显示加载进度条
+  useEffect(() => {
+    if (location.pathname !== prevPathRef.current) {
+      prevPathRef.current = location.pathname;
+      setIsNavigating(true);
+      // 清除之前的定时器
+      if (navigateTimeoutRef.current) {
+        clearTimeout(navigateTimeoutRef.current);
+      }
+      // 延迟隐藏，让页面有时间渲染
+      navigateTimeoutRef.current = setTimeout(() => {
+        setIsNavigating(false);
+      }, 300);
+    }
+    return () => {
+      if (navigateTimeoutRef.current) {
+        clearTimeout(navigateTimeoutRef.current);
+      }
+    };
+  }, [location.pathname]);
 
   // 初始加载聊天未读数
   const loadInitialData = useCallback(async () => {
@@ -188,7 +212,31 @@ export default function ClientLayout() {
   }, [on, toast, location.pathname]);
 
   return (
-    <Box minH="100vh" bg="warm.950">
+    <Box minH="100vh" bg="warm.950" position="relative">
+      {/* 顶部加载进度条 */}
+      <Box
+        position="fixed"
+        top={0}
+        left={0}
+        right={0}
+        zIndex={100}
+        pointerEvents="none"
+        opacity={isNavigating ? 1 : 0}
+        transition="opacity 0.15s ease"
+      >
+        <Progress
+          value={isNavigating ? 100 : 0}
+          size="xs"
+          colorScheme="gold"
+          bg="warm.800"
+          borderRadius="0"
+          sx={{
+            '& > div': {
+              transition: 'width 0.3s ease-out',
+            }
+          }}
+        />
+      </Box>
       <DesktopSidebar chatUnread={chatUnread} />
       <Box
         ml={{ base: 0, lg: '200px' }}
