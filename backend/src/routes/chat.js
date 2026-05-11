@@ -224,7 +224,7 @@ module.exports = function(io) {
   router.get('/sessions/:sessionId/messages', authMiddleware, async (req, res) => {
     try {
       const { sessionId } = req.params;
-      const { limit = 50, before } = req.query;
+      const { limit = 20, before } = req.query;
 
       const session = await prisma.chatSession.findUnique({
         where: { id: sessionId }
@@ -240,8 +240,11 @@ module.exports = function(io) {
       }
 
       const where = { sessionId };
-      if (before) {
-        where.createdAt = { lt: new Date(before) };
+      if (before && before !== 'null') {
+        const beforeDate = new Date(before);
+        if (!isNaN(beforeDate.getTime())) {
+          where.createdAt = { lt: beforeDate };
+        }
       }
 
       const messages = await prisma.message.findMany({
@@ -286,7 +289,9 @@ module.exports = function(io) {
       }
 
       // 附加 flashBurnedByMe 字段
-      const enrichedMessages = filteredMessages.map(m => ({
+      // 有 before 参数时（加载更多）需要反转数组，因为查询是 desc 排序
+      const sortedMessages = before ? filteredMessages.reverse() : filteredMessages;
+      const enrichedMessages = sortedMessages.map(m => ({
         ...m,
         flashBurnedByMe: m.isFlashImage ? burnedMessageIds.has(m.id) : false
       }));
