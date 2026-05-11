@@ -3,7 +3,8 @@ import {
   Box, Heading, Text, SimpleGrid, Card, CardBody, Badge, VStack, HStack, Flex, Avatar,
   Button, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter,
   ModalCloseButton, useDisclosure, FormControl, FormLabel, Input, Select, Textarea,
-  useToast, Spinner, Icon, Image, Progress, Wrap, WrapItem, Tag, TagLabel, Divider, IconButton
+  useToast, Spinner, Icon, Image, Progress, Wrap, WrapItem, Tag, TagLabel, Divider, IconButton,
+  Skeleton
 } from '@chakra-ui/react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiEdit2, FiCamera, FiFileText, FiZap, FiUser, FiCheck, FiX } from 'react-icons/fi';
@@ -979,7 +980,7 @@ export default function GirlDetail() {
                 if (fk === 'weight') return <FieldRow key={fk} label="体重" value={val ? `${val}kg` : null} />;
                 if (fk === 'age') return <FieldRow key={fk} label="年龄" value={val ? `${val}岁` : null} />;
                 return <EmptyValue key={fk} value={val}>
-                  <Box><Text color="rgba(245,240,232,0.55)" fontSize="xs">{getFieldLabel(fk)}</Text><Text color="gray.200" fontSize="sm">{val}</Text></Box>
+                  <Box><Text color="rgba(245,240,232,0.55)" fontSize="xs">{ALL_FIELD_LABELS[fk] || fk}</Text><Text color="gray.200" fontSize="sm">{val}</Text></Box>
                 </EmptyValue>;
               })}
             </SimpleGrid>
