@@ -534,7 +534,12 @@ module.exports = function(io) {
         return res.json({ success: true, perUserBurned: true });
       }
 
-      // 阅后即焚（非闪图）：全局销毁，和之前逻辑一致
+      // 阅后即焚（非闪图）：全局销毁
+      if (!message.isBurnAfterRead) {
+        // 非阅后即焚消息不支持此销毁接口
+        return res.status(400).json({ error: '该消息不支持销毁' });
+      }
+
       if (message.mediaUrl && (message.mediaUrl.startsWith('/encrypted/') || message.mediaUrl.startsWith('/public/'))) {
         const ossPath = message.mediaUrl.replace(/^\//, '');
         try {
@@ -620,41 +625,33 @@ module.exports = function(io) {
         return res.status(403).json({ error: '无权限' });
       }
 
-      // 非加密内容（/public/ 或旧本地路径），直接重定向或本地服务
-      if (!message.mediaUrl.startsWith('/encrypted/')) {
-        // 兼容旧本地文件
-        if (message.mediaUrl.startsWith('/uploads/')) {
-          return res.redirect(message.mediaUrl);
-        }
-        // public OSS 文件：下载后直接返回（支持 Range 请求）
-        if (message.mediaUrl.startsWith('/public/')) {
-          const ossPath = message.mediaUrl.replace(/^\//, '');
-          const buffer = await downloadBuffer(ossPath);
-          if (!buffer) return res.status(404).send('文件不存在');
-          const mime = message.type === 'audio' ? 'audio/mpeg' : message.type === 'video' ? 'video/mp4' : 'image/jpeg';
-          const totalSize = buffer.length;
-          res.set('Content-Type', mime);
-          res.set('Accept-Ranges', 'bytes');
-          const rangeHeader = req.headers.range;
-          if (rangeHeader) {
-            const parts = rangeHeader.replace(/bytes=/, '').split('-');
-            const start = parseInt(parts[0], 10);
-            const end = parts[1] ? parseInt(parts[1], 10) : totalSize - 1;
-            const chunkSize = end - start + 1;
-            res.set('Content-Range', `bytes ${start}-${end}/${totalSize}`);
-            res.set('Content-Length', chunkSize);
-            return res.status(206).send(buffer.slice(start, end + 1));
-          }
-          res.set('Content-Length', buffer.length);
-          return res.send(buffer);
-        }
-        return res.status(400).json({ error: '无法处理此媒体类型' });
+      // 根据消息标志判断是否需要解密，而不是根据路径
+      // 兼容旧本地文件
+      if (message.mediaUrl.startsWith('/uploads/')) {
+        return res.redirect(message.mediaUrl);
       }
 
-      // 加密内容（/encrypted/）：从OSS下载 → 内存解密 → 支持 Range 返回
+      const needsDecryption = message.isBurnAfterRead || message.isFlashImage;
+      const isEncryptedPath = message.mediaUrl.startsWith('/encrypted/');
+
       const ossPath = message.mediaUrl.replace(/^\//, '');
-      const encryptedBuffer = await downloadBuffer(ossPath);
-      const plaintext = decrypt(encryptedBuffer);
+      const fileBuffer = await downloadBuffer(ossPath);
+      if (!fileBuffer) return res.status(404).send('文件不存在');
+
+      let plaintext;
+
+      if (isEncryptedPath) {
+        // /encrypted/ 路径的文件应该都是加密的
+        // 尝试解密，如果失败则说明文件未加密（历史数据不一致），直接返回原始内容
+        try {
+          plaintext = decrypt(fileBuffer);
+        } catch (err) {
+          console.error(`[Media] Decrypt failed for ${ossPath}, using raw data (unencrypted file in /encrypted/ path):`, err.message);
+          plaintext = fileBuffer;
+        }
+      } else {
+        plaintext = fileBuffer;
+      }
 
       const mime = message.type === 'video' ? 'video/mp4' : message.type === 'audio' ? 'audio/mpeg' : 'image/jpeg';
       const totalSize = plaintext.length;

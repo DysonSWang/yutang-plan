@@ -4,7 +4,7 @@
  * 关闭查看器/切换页面不会停止倒计时，时间到仍会被销毁
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Box, Text, Flex, Image, IconButton, Spinner } from '@chakra-ui/react';
+import { Box, Text, Flex, VStack, Button, IconButton, Spinner } from '@chakra-ui/react';
 import { chat } from '../utils/api';
 import { captureError } from '../utils/frontendErrorCapture';
 
@@ -50,6 +50,7 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
   const [remaining, setRemaining] = useState(5);
   const [totalDuration, setTotalDuration] = useState(5);
   const [mediaLoaded, setMediaLoaded] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [videoPaused, setVideoPaused] = useState(false);
   const timerRef = useRef(null);
   const burnRef = useRef(false);
@@ -63,6 +64,7 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
   // 打开/切换时：检查持久化截止时间，决定重置还是恢复
   useEffect(() => {
     if (!isOpen) return;
+    console.log('[FlashImage] 打开查看器:', { imageUrl, messageId, mediaType });
     const pending = getPendingBurn(messageId);
     if (pending?.expired) {
       handleBurn();
@@ -79,6 +81,7 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
     }
     burnRef.current = false;
     setMediaLoaded(false);
+    setLoadError(false);
   }, [isOpen, imageUrl, isBurnAfterRead, burnAfterSeconds]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleBurn = useCallback(async () => {
@@ -309,24 +312,87 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
           <Text color="white" fontSize="xl">🎵 音频播放中 {remaining}s</Text>
         </Box>
       ) : (
-        /* 图片类型 */
-        <Image
-          src={imageUrl}
-          alt="阅后即焚"
+        /* 图片类型 - 使用原生 img 标签确保 APK WebView 兼容性 */
+        <Flex
+          position="relative"
           maxW="95vw"
           maxH="90vh"
-          objectFit="contain"
-          borderRadius="lg"
+          alignItems="center"
+          justifyContent="center"
+          direction="column"
           onClick={handleClose}
           onContextMenu={e => e.preventDefault()}
-          onLoad={() => setMediaLoaded(true)}
-          display={!mediaLoaded ? 'none' : 'block'}
-          boxShadow="0 4px 30px rgba(0,0,0,0.5)"
-          draggable={false}
-          userSelect="none"
           cursor="pointer"
-          css={{ WebkitTouchCallout: 'none', WebkitUserDrag: 'none' }}
-        />
+        >
+          {/* 加载中状态 */}
+          {!loadError && !mediaLoaded && (
+            <Spinner size="xl" color="orange.300" thickness="3px" />
+          )}
+
+          {/* 加载失败状态 - 显示错误信息 */}
+          {loadError && (
+            <VStack spacing={4}>
+              <Text fontSize="6xl">🖼️</Text>
+              <Text color="white" fontSize="md">图片加载失败</Text>
+              <Button
+                size="sm"
+                colorScheme="orange"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLoadError(false);
+                  setMediaLoaded(false);
+                  // 重新加载图片
+                  const img = new Image();
+                  img.src = imageUrl + (imageUrl.includes('?') ? '&t=' : '?t=') + Date.now();
+                  img.onload = () => {
+                    console.log('[FlashImage] 图片重新加载成功:', imageUrl);
+                    setMediaLoaded(true);
+                    setLoadError(false);
+                  };
+                  img.onerror = () => {
+                    console.error('[FlashImage] 图片重新加载失败:', imageUrl);
+                    setLoadError(true);
+                    setMediaLoaded(true);
+                  };
+                }}
+              >
+                重试
+              </Button>
+            </VStack>
+          )}
+
+          {/* 实际图片 */}
+          {!loadError && (
+            <img
+              src={imageUrl}
+              alt="阅后即焚"
+              style={{
+                maxWidth: '95vw',
+                maxHeight: '90vh',
+                objectFit: 'contain',
+                borderRadius: '8px',
+                boxShadow: '0 4px 30px rgba(0,0,0,0.5)',
+                display: mediaLoaded ? 'block' : 'none',
+                WebkitTouchCallout: 'none',
+                WebkitUserDrag: 'none',
+                userSelect: 'none',
+                pointerEvents: 'auto',
+              }}
+              onLoad={() => {
+                console.log('[FlashImage] 图片加载成功:', imageUrl);
+                setMediaLoaded(true);
+                setLoadError(false);
+              }}
+              onError={(e) => {
+                const errorMsg = `[FlashImage] 图片加载失败: ${imageUrl}`;
+                console.error(errorMsg, e);
+                setLoadError(true);
+                setMediaLoaded(true);
+                captureError(new Error(errorMsg), { context: 'FlashImageViewer', imageUrl, error: e.target?.error });
+              }}
+            />
+          )}
+        </Flex>
       )}
 
       {/* 底部提示 */}
