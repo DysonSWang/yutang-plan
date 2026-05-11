@@ -115,6 +115,32 @@ Object.assign(ALL_FIELD_LABELS, {
   kinkInterests: 'Kink兴趣', kinkExperience: 'Kink经验', kinkNotes: 'Kink备注',
 });
 
+// 常用字段（默认显示）
+const COMMON_FIELD_KEYS = new Set([
+  'name', 'age', 'occupation', 'education', 'major', 'residence', 'workplace', 'hometown',
+  'appearance', 'height', 'weight', 'bodyType',
+  'familyBackground', 'familyAtmosphere', 'familyBurden',
+  'workSchedule', 'socialActivity', 'financialHabits',
+  'interests', 'dietPreferences', 'dietRestrictions',
+  'relationshipAttitude', 'attachmentStyle',
+]);
+
+// 字段所属版块（用于编辑弹窗滚动定位）
+const FIELD_SECTIONS = {
+  name: 'basic', age: 'basic', occupation: 'basic', education: 'basic', major: 'basic',
+  residence: 'basic', workplace: 'basic', hometown: 'basic',
+  appearance: 'appearance', height: 'appearance', weight: 'appearance', bodyType: 'appearance', styleTags: 'appearance',
+  avatar: 'appearance',
+  familyBackground: 'family', familyAtmosphere: 'family', familyBurden: 'family', familyComments: 'family',
+  workSchedule: 'lifestyle', socialActivity: 'lifestyle', financialHabits: 'lifestyle',
+  interests: 'interests', dietPreferences: 'interests', dietRestrictions: 'interests', hobbiesDetail: 'interests',
+  relationshipAttitude: 'emotional', pastRelationshipSummary: 'emotional', emotionalWounds: 'emotional',
+  attachmentStyle: 'emotional', dealbreakers: 'emotional',
+  notes: 'emotional', homepageUrl: 'media', photos: 'media', momentPhotos: 'media', videos: 'media',
+  sourcePlatform: 'media', sourceUrl: 'media',
+};
+const getSectionForField = (key) => FIELD_SECTIONS[key] || 'basic';
+
 // ---- 工具函数 ----
 function parseJSONField(val) {
   if (!val) return null;
@@ -338,6 +364,9 @@ export default function GirlDetail() {
   const [aiScreenshotPreview, setAiScreenshotPreview] = useState('');
   const [aiScreenshotUploading, setAiScreenshotUploading] = useState(false);
 
+  // 高级字段折叠
+  const [showAdvancedFields, setShowAdvancedFields] = useState(false);
+
   // 头像编辑
   const avatarFileRef = useRef(null);
   const [avatarFile, setAvatarFile] = useState(null);
@@ -382,14 +411,17 @@ export default function GirlDetail() {
     setAiResult(null);
     setAiScreenshot(null);
     setAiScreenshotPreview('');
+    // 如果 section 不在常用字段范围内，展开高级字段
+    const needsAdvanced = section && !COMMON_FIELD_KEYS.has(section) && !['basic', 'appearance', 'family', 'lifestyle', 'interests', 'emotional', 'media'].some(k => section === k);
+    setShowAdvancedFields(!!needsAdvanced);
     onEditOpen();
     // 滚动到目标 section
-    if (section) {
-      setTimeout(() => {
+    setTimeout(() => {
+      if (section) {
         const target = document.querySelector('[data-section="' + section + '"]');
         if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 150);
-    }
+      }
+    }, 150);
   };
 
   const handleFieldChange = useCallback((key, value) => {
@@ -1262,11 +1294,42 @@ export default function GirlDetail() {
           <ModalBody pb={6}>
             {!aiMode ? (
               /* ---- 手动模式 ---- */
-              <SimpleGrid columns={2} spacing={4}>
-                {GIRL_EDITABLE_FIELDS.map(f => (
-                  <ProfileField key={f.key} field={f} value={editData[f.key]} onChange={handleFieldChange} />
-                ))}
-              </SimpleGrid>
+              <>
+                {/* 常用字段 */}
+                <SimpleGrid columns={2} spacing={4}>
+                  {GIRL_EDITABLE_FIELDS
+                    .filter(f => COMMON_FIELD_KEYS.has(f.key))
+                    .map(f => (
+                      <div data-section={getSectionForField(f.key)} key={f.key}>
+                        <ProfileField key={f.key} field={f} value={editData[f.key]} onChange={handleFieldChange} />
+                      </div>
+                    ))}
+                </SimpleGrid>
+                {/* 更多字段折叠按钮 */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  color="gold.400"
+                  onClick={() => setShowAdvancedFields(!showAdvancedFields)}
+                  _hover={{ bg: 'warm.700' }}
+                  mt={4}
+                >
+                  {showAdvancedFields ? '收起' : '更多资料'}
+                  <Text as="span" ml={1}>{showAdvancedFields ? '▲' : '▼'}</Text>
+                </Button>
+                {/* 高级字段折叠区 */}
+                {showAdvancedFields && (
+                  <SimpleGrid columns={2} spacing={4} mt={4}>
+                    {GIRL_EDITABLE_FIELDS
+                      .filter(f => !COMMON_FIELD_KEYS.has(f.key))
+                      .map(f => (
+                        <div data-section={getSectionForField(f.key)} key={f.key}>
+                          <ProfileField key={f.key} field={f} value={editData[f.key]} onChange={handleFieldChange} />
+                        </div>
+                      ))}
+                  </SimpleGrid>
+                )}
+              </>
             ) : (
               /* ---- AI 模式 ---- */
               <VStack spacing={4} align="stretch">
