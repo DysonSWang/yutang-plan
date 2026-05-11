@@ -17,13 +17,12 @@ echo "========================================="
 # Step 1: 上传代码
 echo ""
 echo "[1/5] 上传代码到服务器..."
-rsync -avz --delete \
-  --exclude 'node_modules' \
-  --exclude 'data/' \
-  --exclude 'logs/' \
-  --exclude '.env' \
-  --exclude 'prisma/dev.db' \
-  "$LOCAL_DIR/" "$REMOTE:$REMOTE_DIR/"
+ssh "$REMOTE" "mkdir -p $REMOTE_DIR"
+# 使用 tar 传输（rsync 需要服务器端安装，多数场景用 tar 更可靠）
+cd "$LOCAL_DIR"
+echo "使用 tar 方式传输..."
+tar --exclude='node_modules' --exclude='data' --exclude='logs' --exclude='.env' --exclude='prisma/dev.db' -czf - . | \
+  ssh "$REMOTE" "cd $REMOTE_DIR && tar -xzf - --strip-components=1"
 
 # Step 2: 上传 .env（排除在 rsync 之外，需要单独处理）
 echo "[2/5] 检查 .env 同步..."

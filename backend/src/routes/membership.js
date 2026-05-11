@@ -78,6 +78,14 @@ router.get('/status', authMiddleware, async (req, res) => {
   }
 });
 
+// 获取会员状态版本号（用于缓存失效）
+router.get('/status/version', authMiddleware, async (req, res) => {
+  const membership = await prisma.membership.findFirst({
+    where: { userId: req.user.id }, orderBy: { createdAt: 'desc' }, select: { updatedAt: true }
+  });
+  res.json({ success: true, version: membership ? membership.updatedAt.getTime() : 0 });
+});
+
 // 档案完善度（与个性化学习引擎使用统一计算逻辑）
 router.get('/profile-completeness', authMiddleware, async (req, res) => {
   try {
@@ -319,7 +327,7 @@ router.get('/learning/chapters', authMiddleware, async (req, res) => {
       select: {
         id: true, chapterId: true, title: true, subtitle: true,
         contentVersion: true, orderIndex: true, status: true,
-        publishedAt: true, createdAt: true, updatedAt: true,
+        lastPublishedAt: true, createdAt: true, updatedAt: true,
       }
     });
     res.json({ success: true, chapters });

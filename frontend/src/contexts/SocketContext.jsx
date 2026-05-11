@@ -3,7 +3,7 @@ import { captureError } from '../utils/frontendErrorCapture';
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 
-const SOCKET_URL = '';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || '';
 const SocketContext = createContext(null);
 
 export function SocketProvider({ children }) {

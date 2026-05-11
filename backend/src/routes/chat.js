@@ -120,6 +120,14 @@ module.exports = function(io) {
     }
   });
 
+  // 获取会话列表版本号（用于缓存失效）
+  router.get('/my-sessions/version', authMiddleware, async (req, res) => {
+    const latest = await prisma.chatSession.findFirst({
+      where: { clientId: req.user.id }, orderBy: { lastMessageAt: 'desc' }, select: { lastMessageAt: true }
+    });
+    res.json({ success: true, version: latest?.lastMessageAt?.getTime() || 0 });
+  });
+
   // 获取或创建与客户的会话
   router.post('/sessions', authMiddleware, async (req, res) => {
     try {

@@ -40,7 +40,7 @@ export default function ClientChat() {
   }, []);
   const [loading, setLoading] = useState(true);
   const toast = useToast();
-  const API_BASE = '';
+  const API_BASE = api.baseUrl;
 
   const virtualizer = useVirtualizer({
     count: messages.length,

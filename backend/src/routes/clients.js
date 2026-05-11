@@ -141,6 +141,14 @@ router.get('/me', authMiddleware, async (req, res) => {
   }
 });
 
+// 获取客户信息版本号（用于缓存失效）
+router.get('/me/version', authMiddleware, async (req, res) => {
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.id }, select: { updatedAt: true }
+  });
+  res.json({ success: true, version: user ? user.updatedAt.getTime() : 0 });
+});
+
 // 获取客户详情（操盘手用）
 router.get('/:id', authMiddleware, async (req, res) => {
   try {

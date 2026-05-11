@@ -49,7 +49,7 @@ export default function AdminChat() {
   const mediaRecorderRef = useRef();
   const audioChunksRef = useRef([]);
   const recordTimerRef = useRef();
-  const API_BASE = '';
+  const API_BASE = api.baseUrl;
 
   const getMediaUrl = (msg) => {
     // 统一通过媒体端点获取，确保后端处理 Range 请求和权限验证
