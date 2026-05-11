@@ -74,8 +74,7 @@ function GirlsTab({ girlsList, isInitialLoad, onAddGirl, onGirlClick }) {
       ) : (
         <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4}>
           {girlsList.map(girl => (
-            <Card key={girl.id} bg="warm.800" cursor="pointer" onClick={() => onGirlClick(girl)}
-              _hover={{ bg: 'warm.700', transform: 'translateY(-2px)' }} transition="all 0.2s">
+            <Card key={girl.id} className="hover-lift" bg="warm.800" cursor="pointer" onClick={() => onGirlClick(girl)}>
               <CardBody>
                 <HStack justify="space-between" mb={2}>
                   <Text color="white" fontWeight="bold" fontSize="lg">{girl.name}</Text>
@@ -186,7 +185,7 @@ function DatesTab({ datesList, allDates, pendingInterviews, isInitialLoad, onRef
       {/* 统计栏 */}
       {!isInitialLoad && (allDates.length > 0 || pendingInterviews.length > 0) && (
         <SimpleGrid columns={{ base: 2, md: 4 }} spacing={3} mb={6}>
-          <Card bg="warm.800" border="1px solid" borderColor="orange.600">
+          <Card className="hover-lift" bg="warm.800" border="1px solid" borderColor="orange.600">
             <CardBody py={4} px={4}>
               <Flex align="center" gap={3}>
                 <Box w="40px" h="40px" borderRadius="10px" bg="rgba(249,115,22,0.2)" display="flex" alignItems="center" justifyContent="center"><Icon as={ClipboardIcon} boxSize={5} color="orange.400" /></Box>
@@ -197,7 +196,7 @@ function DatesTab({ datesList, allDates, pendingInterviews, isInitialLoad, onRef
               </Flex>
             </CardBody>
           </Card>
-          <Card bg="warm.800" border="1px solid" borderColor="green.600">
+          <Card className="hover-lift" bg="warm.800" border="1px solid" borderColor="green.600">
             <CardBody py={4} px={4}>
               <Flex align="center" gap={3}>
                 <Box w="40px" h="40px" borderRadius="10px" bg="rgba(34,197,94,0.2)" display="flex" alignItems="center" justifyContent="center"><Icon as={CheckCircleIcon} boxSize={5} color="green.400" /></Box>
@@ -208,7 +207,7 @@ function DatesTab({ datesList, allDates, pendingInterviews, isInitialLoad, onRef
               </Flex>
             </CardBody>
           </Card>
-          <Card bg="warm.800" border="1px solid" borderColor="cyan.600">
+          <Card className="hover-lift" bg="warm.800" border="1px solid" borderColor="cyan.600">
             <CardBody py={4} px={4}>
               <Flex align="center" gap={3}>
                 <Box w="40px" h="40px" borderRadius="10px" bg="rgba(6,182,212,0.2)" display="flex" alignItems="center" justifyContent="center"><Icon as={CalendarIcon} boxSize={5} color="cyan.400" /></Box>
@@ -219,7 +218,7 @@ function DatesTab({ datesList, allDates, pendingInterviews, isInitialLoad, onRef
               </Flex>
             </CardBody>
           </Card>
-          <Card bg="warm.800" border="1px solid" borderColor="pink.600">
+          <Card className="hover-lift" bg="warm.800" border="1px solid" borderColor="pink.600">
             <CardBody py={4} px={4}>
               <Flex align="center" gap={3}>
                 <Box w="40px" h="40px" borderRadius="10px" bg="rgba(244,114,182,0.2)" display="flex" alignItems="center" justifyContent="center"><Icon as={CreditCardIcon} boxSize={5} color="pink.400" /></Box>
@@ -436,7 +435,7 @@ export default function MyPond() {
       </Flex>
 
       <Tabs colorScheme="gold" variant="soft-rounded" defaultIndex={window.location.hash === '#calendar' ? 2 : window.location.hash === '#dates' ? 1 : 0} isLazy lazyBehavior="keepMounted">
-        <TabList sx={{ '& button': { transition: 'all 0.2s ease' } }}>
+        <TabList sx={{ '& button': { transition: 'all 0.2s ease' } }} flexShrink={0}>
           <Tab _selected={{ color: 'warm.950', bg: 'gold.500' }}><Icon as={FemaleIcon} boxSize={4} mr={1} />女生</Tab>
           <Tab _selected={{ color: 'warm.950', bg: 'gold.500' }}><Icon as={GiftIcon} boxSize={4} mr={1} />约会</Tab>
           <Tab _selected={{ color: 'warm.950', bg: 'gold.500' }}><Icon as={CalendarIcon} boxSize={4} mr={1} />日历</Tab>

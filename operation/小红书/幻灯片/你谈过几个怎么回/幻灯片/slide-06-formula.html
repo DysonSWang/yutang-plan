@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>06 万能公式</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-warm: #FFF8F3;
+  --coral: #E85A4F;
+  --ink: #2D2D2D;
+  --ink-light: #6B6B6B;
+  --gold: #C9A227;
+  --green: #3D8C40;
+  --green-light: rgba(61, 140, 64, 0.1);
+}
+
+body {
+  font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #1a1a2e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.slide {
+  width: 540px;
+  height: 720px;
+  background: var(--bg-warm);
+  position: relative;
+  overflow: hidden;
+}
+
+.tag { width: 100%; height: 48px; background: var(--green); display: flex; align-items: center; padding: 0 22px; box-shadow: 0 4px 16px rgba(61,140,64,0.2); }
+.tag span { color: white; font-size: 15px; font-weight: 600; letter-spacing: 2px; }
+
+.title { padding: 8px 25px 6px; text-align: center; }
+.title-text { font-family: 'Noto Serif SC', serif; font-size: 26px; font-weight: 800; color: var(--ink); }
+.subtitle { font-size: 14px; color: var(--ink-light); margin-top: 2px; }
+.divider { width: 80px; height: 3px; background: var(--green); margin: 4px auto 0; border-radius: 2px; }
+
+.block { margin: 6px 20px; border-radius: 14px; padding: 14px; background: white; box-shadow: 0 2px 12px rgba(0,0,0,0.04); border-left: 4px solid var(--green); }
+.block-label { font-size: 12px; font-weight: 700; color: var(--gold); margin-bottom: 3px; letter-spacing: 1px; }
+.block-title { font-family: .Noto Serif SC., serif; font-size: 17px; font-weight: 700; color: var(--ink); margin-bottom: 3px; }
+.block-example { font-size: 13px; color: var(--ink-light); font-style: italic; }
+
+.bonus { margin: 6px 20px; background: rgba(201,162,39,0.12); border-radius: 14px; padding: 10px 16px; border-left: 4px solid var(--gold); }
+.bonus-label { font-size: 12px; font-weight: 700; color: var(--gold); margin-bottom: 3px; }
+.bonus-text { font-size: 13px; color: var(--ink); font-weight: 600; }
+.bonus-answer { font-size: 13px; color: var(--coral); font-weight: 700; margin-top: 3px; }
+
+.think { margin: 6px 20px 0; background: #2D2D2D; border-radius: 14px; padding: 12px 16px; text-align: center; }
+.think span { font-size: 13px; color: var(--gold); font-weight: 600; line-height: 1.4; }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="tag"><span>进阶 · 3种正确回答</span></div>
+
+  <div class="title">
+    <div class="title-text">3种正确回答方式</div>
+    <div class="subtitle">不是回答数字，而是回答态度</div>
+    <div class="divider"></div>
+  </div>
+
+  <div class="block">
+    <div class="block-label">💡 公式1 · 幽默反转法</div>
+    <div class="block-title">不给真实数字，用荒诞化解</div>
+    <div class="block-example">"认真算的话，暗恋过三十多个。真的谈的？零点几个吧。"</div>
+  </div>
+
+  <div class="block">
+    <div class="block-label">💡 公式2 · 反抛提问法</div>
+    <div class="block-title">把问题踢回去</div>
+    <div class="block-example">"你先说。" 她不说 → "那我也不说。公平吧？"</div>
+  </div>
+
+  <div class="block">
+    <div class="block-label">💡 公式3 · 重新定义法</div>
+    <div class="block-title">不说数量，说成长</div>
+    <div class="block-example">"具体的数不重要。重要的是我学会了怎么好好对一个人。"</div>
+  </div>
+
+  <div class="bonus">
+    <div class="bonus-label">🔥 如果她追问</div>
+    <div class="bonus-text">"到底几个嘛？"</div>
+    <div class="bonus-answer">答案："重要的不是几个，是你让我不想再数了。"</div>
+  </div>
+
+  <div class="think">
+    <span>回答数字必死，回答态度才能活</span>
+  </div>
+
+</div>
+</body>
+</html>

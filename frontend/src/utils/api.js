@@ -388,7 +388,7 @@ export const girls = {
 export const clients = {
   list: (params) => api.get('/api/clients' + (params ? '?' + new URLSearchParams(params) : '')),
   get: (id) => api.get(`/api/clients/${id}`),
-  me: () => api.getCached('/api/clients/me'),
+  me: () => api.getCachedWithVersion('/api/clients/me', '/api/clients/me/version'),
   update: (id, data) => api.put(`/api/clients/${id}`, data).then(r => { api.clearCache(); return r; }),
   create: (data) => api.post('/api/clients', data).then(r => { api.clearCache(); return r; }),
   extractProfile: (text) => api.post('/api/clients/extract-profile', { text }, 60000),
@@ -419,14 +419,14 @@ export const clients = {
 // 聊天
 export const chat = {
   sessions: () => api.get('/api/chat/sessions'),
-  mySessions: () => api.get('/api/chat/my-sessions'),
+  mySessions: () => api.getCachedWithVersion('/api/chat/my-sessions', '/api/chat/my-sessions/version', 180000),
   // 客户端创建会话（自动分配操作员）
   createSession: () => api.post('/api/chat/my-session'),
   // 管理端为客户创建会话
   createSessionForClient: (clientId) => api.post('/api/chat/sessions', { clientId }),
   messages: (sessionId, params) => api.get(`/api/chat/sessions/${sessionId}/messages` + (params ? '?' + new URLSearchParams(params) : '')),
   send: (sessionId, content, type = 'text', mediaUrl, duration, isBurnAfterRead = false, burnAfterSeconds = null, burnTrigger = 'onView') =>
-    api.post('/api/chat/messages', { sessionId, content, type, mediaUrl, duration, isBurnAfterRead, burnAfterSeconds, burnTrigger }),
+    api.post('/api/chat/messages', { sessionId, content, type, mediaUrl, duration, isBurnAfterRead, burnAfterSeconds, burnTrigger }).then(r => { api.clearCache(); return r; }),
   burn: (id) => api.post(`/api/chat/messages/${id}/burn`),
   recall: (messageId) => api.post(`/api/chat/messages/${messageId}/recall`),
   read: (id) => api.post(`/api/chat/messages/${id}/read`),
@@ -794,7 +794,7 @@ export const events = {
 
 // 会员/积分/邀请/学习版块
 export const membership = {
-  status: () => api.getCached('/api/membership/status'),
+  status: () => api.getCachedWithVersion('/api/membership/status', '/api/membership/status/version'),
   purchase: (type, pointsToUse = 0) => api.post('/api/membership/purchase', { type, pointsToUse }).then(r => { api.clearCache(); return r; }),
   // 试用
   activateTrial: () => api.post('/api/membership/trial/activate'),

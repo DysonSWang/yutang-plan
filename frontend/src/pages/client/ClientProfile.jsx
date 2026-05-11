@@ -162,7 +162,7 @@ function ProfileField({ field, value, onChange }) {
           onChange={e => onChange(field.key, e.target.value)}
           bg="warm.700" color="white" border="1px solid" borderColor="warm.600"
           _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
-          _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }}
+          _focus={{ borderColor: 'gold.500', boxShadow: '0 0 0 3px rgba(226,176,68,0.12)' }}
         >
           {options.map(n => (
             <option key={n} value={String(n)}>{n}</option>
@@ -180,7 +180,7 @@ function ProfileField({ field, value, onChange }) {
           onChange={e => onChange(field.key, e.target.value)}
           bg="warm.700" color="white" border="1px solid" borderColor="warm.600"
           _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
-          _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }}
+          _focus={{ borderColor: 'gold.500', boxShadow: '0 0 0 3px rgba(226,176,68,0.12)' }}
         />
       </FormControl>
     );
@@ -197,7 +197,7 @@ function ProfileField({ field, value, onChange }) {
           onChange={e => onChange(field.key, e.target.value)}
           bg="warm.700" color="white" border="1px solid" borderColor="warm.600"
           _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
-          _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }}
+          _focus={{ borderColor: 'gold.500', boxShadow: '0 0 0 3px rgba(226,176,68,0.12)' }}
         >
           <option value="">请选择</option>
           {field.options.map(opt => (
@@ -212,7 +212,7 @@ function ProfileField({ field, value, onChange }) {
             onChange={e => onChange(field.key, e.target.value)}
             bg="warm.700" color="white" border="1px solid" borderColor="warm.600"
             _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
-            _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }}
+            _focus={{ borderColor: 'gold.500', boxShadow: '0 0 0 3px rgba(226,176,68,0.12)' }}
           />
         )}
       </FormControl>
@@ -227,7 +227,7 @@ function ProfileField({ field, value, onChange }) {
           onChange={e => onChange(field.key, e.target.value)}
           bg="warm.700" color="white" border="1px solid" borderColor="warm.600"
           _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
-          _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px var(--chakra-colors-teal-500)' }}
+          _focus={{ borderColor: 'gold.500', boxShadow: '0 0 0 3px rgba(226,176,68,0.12)' }}
           rows={3}
         />
       </FormControl>
@@ -706,7 +706,7 @@ export default function ClientProfile() {
       </Flex>
 
       {/* 个人信息 + 会员合并卡片 */}
-      <Card bg="warm.800" mb={4} borderLeft="3px solid" borderColor="teal.400" sx={{ boxShadow: '0 0 20px rgba(0, 212, 170, 0.08)' }}>
+      <Card className="hover-lift" bg="warm.800" mb={4} borderLeft="3px solid" borderColor="gold.400" sx={{ boxShadow: '0 0 20px rgba(226,176,68,0.08)' }}>
         <CardBody>
           {/* 上排：头像 + 基本信息 | 会员信息 */}
           <HStack spacing={6} align="start" mb={4}>
@@ -818,6 +818,7 @@ export default function ClientProfile() {
               borderRadius="full"
               bg="warm.700"
               mb={2}
+              className="progress-glow"
               sx={{ '& > div': { transition: 'width 0.6s ease' } }}
             />
             {completenessPercent < 80 ? (
@@ -828,10 +829,12 @@ export default function ClientProfile() {
         </CardBody>
       </Card>
 
-      {/* 编辑档案入口，在数据展示区上方 */}
-      <Flex justify="flex-end" mb={4}>
+      {/* 编辑档案入口 - 固定顶部 */}
+      <Box position="sticky" top={0} bg="warm.950" pt={4} pb={4} zIndex={10}>
+      <Flex justify="flex-end">
         <Button size="sm" colorScheme="gold" leftIcon={<Icon as={FiEdit2} />} onClick={openEdit}>编辑档案</Button>
       </Flex>
+      </Box>
 
       <SimpleGrid columns={2} spacing={6}>
         {/* 基础信息 */}

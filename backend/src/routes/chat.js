@@ -576,10 +576,12 @@ module.exports = function(io) {
   // 流媒体解密接口 - 敏感内容走此接口解密展示
   router.get('/media/:messageId', authMiddleware, async (req, res) => {
     try {
+      console.log(`[Media] 请求媒体: messageId=${req.params.messageId}, userId=${req.user.id}`);
       const message = await prisma.message.findUnique({
         where: { id: req.params.messageId }
       });
 
+      console.log(`[Media] 查询结果: message=${JSON.stringify(message ? { id: message.id, mediaUrl: message.mediaUrl, type: message.type } : null)}`);
       if (!message) {
         return res.status(404).json({ error: '消息不存在' });
       }

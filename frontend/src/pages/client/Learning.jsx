@@ -29,11 +29,10 @@ function ChapterCard({ chapter, progress, personalizationStatus, onUpdate }) {
   return (
     <Box
       p={5}
+      className="hover-lift"
       bg="rgba(255,255,255,0.03)"
       border="1px solid rgba(255,255,255,0.06)"
       borderRadius="xl"
-      _hover={{ borderColor: 'rgba(0,212,170,0.3)', bg: 'rgba(255,255,255,0.05)' }}
-      transition="all 0.2s"
       cursor="pointer"
       onClick={() => navigate(`/learning/${chapter.chapterId}`)}
     >
@@ -357,7 +356,7 @@ export default function ClientLearning() {
           <Text color="gold.400" fontWeight="bold">学习进度</Text>
           <Text color="gold.400" fontSize="sm">{studiedCount}/{totalCount} 章节</Text>
         </HStack>
-        <Progress value={percent} size="sm" colorScheme="gold" borderRadius="full" bg="warm.800" sx={{ '& > div': { boxShadow: '0 0 12px rgba(226,176,68,0.4)' } }} />
+        <Progress value={percent} size="sm" colorScheme="gold" borderRadius="full" bg="warm.800" className="progress-glow" sx={{ '& > div': { transition: 'width 0.6s ease' } }} />
         <Text color="rgba(245,240,232,0.55)" fontSize="xs" mt={1}>
           已学习 {percent}% · 坚持学习，提升情商
         </Text>

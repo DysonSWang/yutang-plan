@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>01 封面</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-warm: #FFF8F3;
+  --coral: #E85A4F;
+  --coral-light: rgba(232, 90, 79, 0.1);
+  --coral-glow: rgba(232, 90, 79, 0.25);
+  --ink: #2D2D2D;
+  --ink-light: #6B6B6B;
+  --gold: #C9A227;
+  --green: #3D8C40;
+}
+
+body {
+  font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #1a1a2e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.cover {
+  width: 540px;
+  height: 720px;
+  background: var(--bg-warm);
+  position: relative;
+  overflow: hidden;
+}
+
+.deco { position: absolute; border-radius: 50%; pointer-events: none; }
+.deco-1 { width: 180px; height: 180px; background: radial-gradient(circle, rgba(232,90,79,0.12) 0%, transparent 70%); top: 60px; right: -60px; }
+.deco-2 { width: 220px; height: 220px; background: radial-gradient(circle, rgba(201,162,39,0.12) 0%, transparent 70%); bottom: 80px; left: -90px; }
+
+.top-bar { width: 100%; height: 56px; background: var(--coral); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px var(--coral-glow); }
+.top-bar span { color: white; font-size: 13px; font-weight: 600; letter-spacing: 4px; text-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+
+.main-content { position: absolute; top: 75px; left: 0; right: 0; text-align: center; padding: 0 30px; }
+
+.text-quote { font-family: 'Noto Serif SC', serif; font-size: 58px; font-weight: 800; color: var(--coral); text-shadow: 0 4px 24px var(--coral-glow); margin-bottom: 12px; letter-spacing: 2px; white-space: nowrap; }
+
+.subtitle-box { display: inline-block; background: white; padding: 14px 28px; border-radius: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid rgba(232,90,79,0.15); }
+.subtitle-box span { font-size: 18px; font-weight: 600; color: var(--ink); letter-spacing: 1px; }
+
+.hook-preview { margin: 20px auto 0; background: rgba(255,255,255,0.7); border-radius: 12px; padding: 10px 16px; max-width: 320px; }
+.hook-row { font-size: 13px; margin-bottom: 2px; color: var(--ink-light); }
+.hook-row.her { color: var(--coral); font-weight: 600; }
+.hook-row.his { color: var(--ink); }
+.hook-end { text-align: center; font-size: 12px; color: var(--coral); font-weight: 700; margin-top: 4px; }
+
+.divider { width: 80px; height: 2px; background: linear-gradient(90deg, transparent, var(--coral), transparent); margin: 20px auto 0; }
+
+.footer { position: absolute; bottom: 30px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.golden-rule { font-family: 'Noto Serif SC', serif; font-size: 15px; font-weight: 700; color: var(--gold); letter-spacing: 1px; background: rgba(255,255,255,0.88); padding: 4px 14px; border-radius: 8px; }
+.cta { font-size: 13px; font-weight: 700; color: var(--coral); letter-spacing: 1px; background: rgba(255,255,255,0.88); padding: 3px 14px; border-radius: 8px; }
+</style>
+</head>
+<body>
+<div class="cover">
+  <div class="deco deco-1"></div>
+  <div class="deco deco-2"></div>
+
+  <div class="top-bar"><span>⚠️ 操作类问题</span></div>
+
+  <div class="main-content">
+    <div class="text-quote">约不出来怎么办</div>
+    <div class="subtitle-box"><span>第一步就错了，所以怎么约都没用</span></div>
+    <div class="hook-preview">
+      <div class="hook-row his">你：周六一起吃饭吗？</div>
+      <div class="hook-row her">她：最近有点忙…</div>
+      <div class="hook-row his">你：哦…那下次吧</div>
+      <div class="hook-end">→ 话题结束，窗口关闭</div>
+    </div>
+    <div class="divider"></div>
+  </div>
+
+  <div class="footer">
+    <div class="golden-rule">👑 邀约不是追，是确认她对你有没有窗口</div>
+    <div class="cta">码住，约不出来先对照看看</div>
+  </div>
+</div>
+</body>
+</html>

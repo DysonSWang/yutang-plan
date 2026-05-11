@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>07 CTA总结</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --coral: #E85A4F;
+  --gold: #C9A227;
+  --green: #3D8C40;
+}
+
+body {
+  font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #1a1a2e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.cover {
+  width: 540px;
+  height: 720px;
+  background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 40%, #16213e 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.top { width: 100%; height: 60px; background: linear-gradient(135deg, var(--green) 0%, #4CAF50 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(61,140,64,0.3); }
+.top span { color: white; font-size: 19px; font-weight: 700; letter-spacing: 2px; }
+
+.summary { padding: 20px; }
+
+.formula { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 16px; margin-bottom: 30px; display: flex; align-items: center; gap: 14px; backdrop-filter: blur(10px); }
+.num { width: 34px; height: 34px; background: var(--green); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.num span { color: white; font-size: 13px; font-weight: 700; }
+.text { font-size: 16px; font-weight: 600; color: white; }
+
+.question { margin: 10px 20px; background: rgba(255,255,255,0.04); border-radius: 12px; padding: 18px; text-align: center; backdrop-filter: blur(10px); }
+.question-main { font-family: 'Noto Serif SC', serif; font-size: 18px; font-weight: 700; color: white; margin-bottom: 6px; }
+.question-sub { font-size: 13px; color: rgba(255,255,255,0.5); }
+
+.footer { position: absolute; bottom: 0; left: 0; right: 0; height: 140px; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 28px; }
+.collect { font-family: 'Noto Serif SC', serif; font-size: 18px; font-weight: 700; color: white; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<div class="cover">
+  <div class="top"><span>📌 收藏这张图</span></div>
+
+  <div class="summary">
+    <div class="formula">
+      <div class="num"><span>1</span></div>
+      <div class="text">幽默反转 = 不给真实数字，荒诞化解</div>
+    </div>
+    <div class="formula">
+      <div class="num"><span>2</span></div>
+      <div class="text">反抛提问 = 把问题踢回去</div>
+    </div>
+    <div class="formula">
+      <div class="num"><span>3</span></div>
+      <div class="text">重新定义 = 不说数量说成长</div>
+    </div>
+  </div>
+
+  <div class="question">
+    <div class="question-main">你被问过"你谈过几个"吗？</div>
+    <div class="question-sub">当时怎么回的？评论区说说，帮你分析</div>
+  </div>
+
+  <div class="footer">
+    <div class="collect">收藏起来，关键时刻对照用</div>
+  </div>
+</div>
+</body>
+</html>

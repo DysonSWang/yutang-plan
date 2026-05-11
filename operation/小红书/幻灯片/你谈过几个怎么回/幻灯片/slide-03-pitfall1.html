@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>03 坑1 太老实</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-warm: #FFF8F3;
+  --coral: #E85A4F;
+  --coral-light: rgba(232, 90, 79, 0.1);
+  --ink: #2D2D2D;
+  --ink-light: #6B6B6B;
+  --gold: #C9A227;
+  --green: #3D8C40;
+  --green-light: rgba(61, 140, 64, 0.1);
+}
+
+body {
+  font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #1a1a2e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.slide {
+  width: 540px;
+  height: 720px;
+  background: var(--bg-warm);
+  position: relative;
+  overflow: hidden;
+}
+
+.tag { width: 100%; height: 48px; background: var(--coral); display: flex; align-items: center; padding: 0 22px; box-shadow: 0 4px 16px rgba(232,90,79,0.2); }
+.tag span { color: white; font-size: 15px; font-weight: 600; letter-spacing: 2px; }
+
+.title { padding: 12px 25px 8px; text-align: center; }
+.title-text { font-family: 'Noto Serif SC', serif; font-size: 30px; font-weight: 800; color: var(--ink); }
+.divider { width: 80px; height: 3px; background: var(--coral); margin: 12px auto 0; border-radius: 2px; }
+
+.section { margin: 10px 20px; border-radius: 14px; padding: 16px 18px; }
+.bronze { background: var(--coral-light); border-left: 4px solid var(--coral); }
+.gold { background: var(--green-light); border-left: 4px solid var(--green); }
+
+.label { font-size: 13px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.bronze .label { color: var(--coral); }
+.gold .label { color: var(--green); }
+
+.content { font-size: 15px; color: var(--ink); line-height: 1.55; }
+
+.think { margin: 14px 20px; background: #2D2D2D; border-radius: 14px; padding: 16px 18px; }
+.think-title { font-size: 13px; font-weight: 700; color: var(--gold); margin-bottom: 10px; letter-spacing: 1px; }
+.think-bad, .think-good { font-size: 13px; margin-bottom: 6px; line-height: 1.4; }
+.think-bad { color: #ff8a8a; }
+.think-good { color: #7DD97D; }
+
+.footer { position: absolute; bottom: 30px; left: 0; right: 0; text-align: center; }
+.footer span { font-size: 15px; color: var(--ink); font-weight: 700; background: rgba(255,255,255,0.85); padding: 4px 16px; border-radius: 10px; }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="tag"><span>坑1 · 太老实</span></div>
+
+  <div class="title">
+    <div class="title-text">太老实，数字就是坑</div>
+    <div class="divider"></div>
+  </div>
+
+  <div class="section bronze">
+    <div class="label">❌ 青铜操作</div>
+    <div class="content">"我谈过2个。"<br>她："什么样的人？为什么分了？你还想她吗？"<br>→ 整场约会变成了前任审判</div>
+  </div>
+
+  <div class="section gold">
+    <div class="label">✅ 王者操作</div>
+    <div class="content">"你猜？"<br>她："我怎么知道。"<br>"那就对了，有些事不需要知道数字，只需要知道我现在喜欢和你聊天就够了。"</div>
+  </div>
+
+  <div class="think">
+    <div class="think-title">💡 思维提炼</div>
+    <div class="think-bad">❌ 不管说几个数字，都会被追问。数字本身就是一个坑</div>
+    <div class="think-good">✅ 不回答数字，把焦点拉回"现在和你的相处"</div>
+  </div>
+
+  <div class="footer"><span>收藏起来，下次避免踩坑</span></div>
+</div>
+</body>
+</html>

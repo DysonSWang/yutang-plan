@@ -15,8 +15,8 @@ const theme = extendTheme({
     useSystemColorMode: false,
   },
   fonts: {
-    heading: "'DM Serif Display', 'Noto Serif SC', 'STSong', serif",
-    body: "'Inter', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif",
+    heading: "'Satoshi', 'Noto Serif SC', 'STSong', serif",
+    body: "'Geist', 'Inter', 'Noto Sans SC', 'PingFang SC', sans-serif",
     mono: "'JetBrains Mono', 'Consolas', monospace",
   },
   breakpoints,

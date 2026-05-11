@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>02 场景钩子</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --coral: #E85A4F;
+  --ink: #2D2D2D;
+  --ink-light: #6B6B6B;
+  --gold: #C9A227;
+  --green: #3D8C40;
+}
+
+body {
+  font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #1a1a2e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.cover {
+  width: 540px;
+  height: 720px;
+  background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 100%);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.top { width: 100%; height: 56px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px); }
+.top span { color: white; font-size: 14px; font-weight: 600; letter-spacing: 3px; }
+
+.title { padding: 16px 30px 12px; text-align: center; }
+.title-text { font-family: 'Noto Serif SC', serif; font-size: 26px; font-weight: 800; color: white; margin-bottom: 6px; }
+.subtitle { font-size: 14px; color: rgba(255,255,255,0.6); }
+
+.card { margin: 10px 24px; background: rgba(255,255,255,0.06); border-radius: 14px; padding: 16px 18px; backdrop-filter: blur(10px); }
+.card-label { font-size: 12px; font-weight: 700; color: var(--coral); margin-bottom: 6px; letter-spacing: 1px; }
+.card-text { font-size: 14px; color: rgba(255,255,255,0.85); line-height: 1.5; margin-bottom: 4px; }
+.card-wrong { border-left: 3px solid rgba(232,90,79,0.5); }
+.card-right { border-left: 3px solid rgba(61,140,64,0.5); }
+
+.tag-row { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 24px; margin-top: 6px; }
+.tag { font-size: 12px; padding: 4px 10px; border-radius: 20px; font-weight: 600; }
+.tag-wrong { background: rgba(232,90,79,0.2); color: var(--coral); }
+.tag-note { font-size: 13px; color: rgba(255,255,255,0.5); text-align: center; margin-top: 12px; padding: 0 24px; }
+
+.footer { position: absolute; bottom: 0; left: 0; right: 0; height: 120px; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 28px; }
+.footer-text { font-size: 15px; font-weight: 700; color: white; margin-bottom: 6px; }
+.footer-note { font-size: 12px; color: rgba(255,255,255,0.5); }
+</style>
+</head>
+<body>
+<div class="cover">
+  <div class="top"><span>约不出来，你是怎么应对的？</span></div>
+
+  <div class="title">
+    <div class="title-text">3种错误回应</div>
+    <div class="subtitle">你可能在用第一种，但每一种都暴露了需求感</div>
+  </div>
+
+  <div class="card card-wrong">
+    <div class="card-label">❌ 方式1 · 追问原因</div>
+    <div class="card-text">「为什么呀？是不是我哪里做错了？」</div>
+    <div class="tag-row">
+      <span class="tag tag-wrong">越问越低价值</span>
+      <span class="tag tag-wrong">暴露需求感</span>
+    </div>
+  </div>
+
+  <div class="card card-wrong">
+    <div class="card-label">❌ 方式2 · 强行说服</div>
+    <div class="card-text">「就吃个饭而已，不耽误你很久」</div>
+    <div class="tag-row">
+      <span class="tag tag-wrong">强行推进</span>
+      <span class="tag tag-wrong">入她框架</span>
+    </div>
+  </div>
+
+  <div class="card card-wrong">
+    <div class="card-label">❌ 方式3 · 直接放弃</div>
+    <div class="card-text">「好吧」→ 再也不提 → 错过窗口</div>
+    <div class="tag-row">
+      <span class="tag tag-wrong">窗口关闭</span>
+      <span class="tag tag-wrong">本来有戏变没戏</span>
+    </div>
+  </div>
+
+  <div class="tag-note">这三种回应都暴露了同一个问题：你在追她，而不是在确认她对你有没有窗口。</div>
+
+  <div class="footer">
+    <div class="footer-text">正确认知：邀约不是追，是测试窗口</div>
+    <div class="footer-note">她答应了 = 窗口开了 | 她拒绝了 = 窗口还没开</div>
+  </div>
+</div>
+</body>
+</html>

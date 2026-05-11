@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>06 万能公式</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-warm: #FFF8F3;
+  --coral: #E85A4F;
+  --ink: #2D2D2D;
+  --ink-light: #6B6B6B;
+  --gold: #C9A227;
+  --green: #3D8C40;
+  --green-light: rgba(61, 140, 64, 0.1);
+}
+
+body {
+  font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #1a1a2e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.slide {
+  width: 540px;
+  height: 720px;
+  background: var(--bg-warm);
+  position: relative;
+  overflow: hidden;
+}
+
+.tag { width: 100%; height: 48px; background: var(--green); display: flex; align-items: center; padding: 0 22px; box-shadow: 0 4px 16px rgba(61,140,64,0.2); }
+.tag span { color: white; font-size: 15px; font-weight: 600; letter-spacing: 2px; }
+
+.title { padding: 12px 25px 8px; text-align: center; }
+.title-text { font-family: 'Noto Serif SC', serif; font-size: 26px; font-weight: 800; color: var(--ink); }
+.subtitle { font-size: 14px; color: var(--ink-light); margin-top: 4px; }
+.divider { width: 80px; height: 3px; background: var(--green); margin: 8px auto 0; border-radius: 2px; }
+
+.block { margin: 8px 20px; border-radius: 14px; padding: 16px; background: white; box-shadow: 0 2px 12px rgba(0,0,0,0.04); border-left: 4px solid var(--green); }
+.block-label { font-size: 12px; font-weight: 700; color: var(--gold); margin-bottom: 4px; letter-spacing: 1px; }
+.block-title { font-family: 'Noto Serif SC', serif; font-size: 18px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+.block-example { font-size: 14px; color: var(--ink-light); font-style: italic; }
+
+.bonus { margin: 10px 20px; background: rgba(201,162,39,0.12); border-radius: 14px; padding: 12px 18px; border-left: 4px solid var(--gold); }
+.bonus-label { font-size: 12px; font-weight: 700; color: var(--gold); margin-bottom: 4px; }
+.bonus-text { font-size: 14px; color: var(--ink); font-weight: 600; }
+.bonus-answer { font-size: 14px; color: var(--coral); font-weight: 700; margin-top: 4px; }
+
+.think { margin: 10px 20px 0; background: #2D2D2D; border-radius: 14px; padding: 14px 18px; text-align: center; }
+.think span { font-size: 13px; color: var(--gold); font-weight: 600; line-height: 1.4; }
+
+.footer { position: absolute; bottom: 30px; left: 0; right: 0; text-align: center; }
+.footer span { font-size: 15px; color: var(--ink); font-weight: 700; background: rgba(255,255,255,0.85); padding: 4px 16px; border-radius: 10px; }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="tag"><span>进阶 · 3种正确回答</span></div>
+
+  <div class="title">
+    <div class="title-text">3种正确回答方式</div>
+    <div class="subtitle">不是喜欢你什么，而是为什么是你</div>
+    <div class="divider"></div>
+  </div>
+
+  <div class="block">
+    <div class="block-label">💡 公式1 · 具体细节法</div>
+    <div class="block-title">说一个只有你们知道的细节</div>
+    <div class="block-example">"上次你说想去冰岛，转头就发了三万字攻略……我就知道你是个认真对待自己想做的事的人。"</div>
+  </div>
+
+  <div class="block">
+    <div class="block-label">💡 公式2 · 先推后拉法</div>
+    <div class="block-title">制造情绪张力</div>
+    <div class="block-example">"说实话一开始没觉得你多特别。但后来发现你还挺有意思的。"</div>
+  </div>
+
+  <div class="block">
+    <div class="block-label">💡 公式3 · 反转调侃法</div>
+    <div class="block-title">轻松+真诚</div>
+    <div class="block-example">"喜欢你什么？喜欢你问这种问题让我尴尬吗？好了说正经的……"</div>
+  </div>
+
+  <div class="bonus">
+    <div class="bonus-label">🔥 如果她追问</div>
+    <div class="bonus-text">"那别人不会有吗？"</div>
+    <div class="bonus-answer">答案："但你不是别人。"</div>
+  </div>
+
+  <div class="think">
+    <span>核心原则：回答的关键不是说多少个优点<br>而是能不能说出只有你能看到的优点</span>
+  </div>
+
+</div>
+</body>
+</html>

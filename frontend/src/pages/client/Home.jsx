@@ -46,14 +46,22 @@ function IconBox({ icon, bg = 'gold.500', size = '48px' }) {
   );
 }
 
-/** 数据概览卡片（hero 区域用） */
-function StatCard({ label, value, icon, accent = 'gold', subtitle }) {
+/** 数据概览卡片（Bento 非对称布局） */
+function StatCard({ label, value, icon, accent = 'gold', subtitle, colSpan = 1 }) {
   return (
     <Card
+      className="hover-lift"
       bg="rgba(255,255,255,0.03)"
       border="1px solid rgba(255,255,255,0.08)"
       borderRadius="xl"
-      _hover={{ bg: 'rgba(226,176,68,0.04)', borderColor: 'rgba(226,176,68,0.15)' }}
+      gridColumn={`span ${colSpan}`}
+      _hover={{
+        bg: 'rgba(226,176,68,0.04)',
+        borderColor: 'rgba(226,176,68,0.15)',
+        transform: 'translateY(-4px) scale(1.01)',
+        boxShadow: '0 16px 48px rgba(0,0,0,0.4), 0 0 24px rgba(226,176,68,0.12)'
+      }}
+      transition="all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)"
     >
       <CardBody>
         <HStack justify="space-between">
@@ -138,14 +146,14 @@ export default function ClientHome() {
   return (
     <Box>
       {/* ---- Hero 问候 ---- */}
-      <Box className="stagger-1">
+      <Box className="stagger-1" mb={8}>
         <Heading
           color="white" mb={2}
           fontFamily="heading" fontWeight="700" fontSize={{ base: '2xl', md: '3xl' }}
         >
           欢迎回来
         </Heading>
-        <Text color="rgba(245,240,232,0.6)" fontSize="sm" mb={8}>
+        <Text color="rgba(245,240,232,0.6)" fontSize="sm">
           {stats.serviceStage !== '未开始'
             ? `服务阶段 · ${stats.serviceStage}`
             : hasAnyData
@@ -154,15 +162,15 @@ export default function ClientHome() {
         </Text>
       </Box>
 
-      {/* ---- 数据概览（有数据时展示） ---- */}
+      {/* ---- 数据概览（Bento 2×2 非对称） ---- */}
       {hasAnyData ? (
         <Box className="stagger-2" mb={10}>
           <Text color="rgba(245,240,232,0.55)" fontSize="xs" mb={3} letterSpacing="0.1em" textTransform="uppercase">
             数据概览
           </Text>
           <SimpleGrid columns={{ base: 2, md: 4 }} spacing={3}>
-            <StatCard label="缘分" value={stats.girlCount} icon={FishIcon} accent="rose" subtitle="已添加" />
-            <StatCard label="约会" value={stats.dateCount} icon={CalendarIcon} accent="gold" subtitle="已完成" />
+            <StatCard label="缘分" value={stats.girlCount} icon={FishIcon} accent="rose" subtitle="已添加" colSpan={2} />
+            <StatCard label="约会" value={stats.dateCount} icon={CalendarIcon} accent="gold" subtitle="已完成" colSpan={2} />
             <StatCard label="暧昧" value={stats.intimacyCount} icon={SparklesIcon} accent="yellow" subtitle="进行中" />
             <StatCard label="长期" value={stats.longTermCount} icon={CrownIcon} accent="green" subtitle="已锁定" />
           </SimpleGrid>
@@ -187,26 +195,21 @@ export default function ClientHome() {
         </Box>
       )}
 
-      {/* ---- 快捷入口 ---- */}
+      {/* ---- 快捷入口（Bento 3×2 非对称） ---- */}
       <Box className="stagger-4">
         <Text color="rgba(245,240,232,0.55)" fontSize="xs" mb={4} letterSpacing="0.1em" textTransform="uppercase">
           快捷入口
         </Text>
-        <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4}>
+        <SimpleGrid columns={{ base: 2, sm: 3 }} spacing={4}>
           {QUICK_ENTRIES.map((entry, i) => (
             <Card
               key={entry.label}
+              className={`hover-lift ${i < 2 ? 'bento-featured' : ''}`}
               bg="rgba(255,255,255,0.02)"
               border="1px solid rgba(255,255,255,0.06)"
               backdropFilter="blur(12px)"
               cursor="pointer"
               onClick={() => entry.path ? navigate(entry.path) : null}
-              _hover={{
-                bg: 'rgba(226,176,68,0.04)',
-                borderColor: 'rgba(226,176,68,0.15)',
-                transform: 'translateY(-2px)',
-              }}
-              transition="all 0.25s ease"
             >
               <CardBody>
                 <HStack spacing={4} align="start" justify="space-between">

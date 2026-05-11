@@ -667,13 +667,14 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
       )}
       <Box
         maxW="75%"
-        bg={isUser ? 'gold.700' : 'warm.700'}
-        color={isUser ? 'white' : 'warm.100'}
+        className="bubble-glow"
+        bg={isUser ? 'linear-gradient(135deg, rgba(226,176,68,0.88), rgba(201,127,89,0.82))' : 'rgba(255,255,255,0.06)'}
+        border={isUser ? 'none' : '1px solid rgba(226,176,68,0.12)'}
+        color={isUser ? 'rgba(30,20,0,0.9)' : 'rgba(255,255,255,0.92)'}
         px={hasReasoning ? 0 : 4}
         py={hasReasoning ? 0 : 3}
-        borderRadius="2xl"
-        borderBottomRightRadius={isUser ? 'sm' : '2xl'}
-        borderBottomLeftRadius={isUser ? '2xl' : 'sm'}
+        borderRadius="18px 4px 18px 18px"
+        boxShadow={isUser ? '0 4px 16px rgba(226,176,68,0.20)' : 'none'}
         position="relative"
         overflow="hidden"
       >

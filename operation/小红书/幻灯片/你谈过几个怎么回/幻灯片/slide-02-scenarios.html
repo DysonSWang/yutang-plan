@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>02 场景钩子</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --coral: #E85A4F;
+  --gold: #C9A227;
+  --green: #3D8C40;
+}
+
+body {
+  font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #1a1a2e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.slide {
+  width: 540px;
+  height: 720px;
+  background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 40%, #16213e 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.header { width: 100%; height: 56px; background: rgba(255,255,255,0.03); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(232,90,79,0.3); }
+.header span { color: white; font-size: 17px; font-weight: 600; letter-spacing: 2px; }
+
+.chat-hook { margin: 16px 20px 8px; background: rgba(255,255,255,0.06); border-radius: 14px; padding: 16px 18px; backdrop-filter: blur(10px); }
+.chat-line { display: flex; margin-bottom: 8px; }
+.chat-line:last-child { margin-bottom: 0; }
+.chat-line.her { justify-content: flex-start; }
+.chat-line.his { justify-content: flex-end; }
+.bubble { max-width: 70%; padding: 8px 14px; border-radius: 12px; font-size: 14px; }
+.bubble.her { background: rgba(232,90,79,0.15); color: #ff8a80; border-bottom-left-radius: 4px; }
+.bubble.his { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); border-bottom-right-radius: 4px; }
+.chat-question { text-align: center; font-size: 13px; color: var(--gold); margin-top: 10px; font-weight: 600; }
+
+.pitfalls { padding: 8px 22px; }
+.pitfall { background: rgba(255,255,255,0.04); border-radius: 12px; padding: 12px 16px; margin-bottom: 10px; border-left: 3px solid var(--coral); }
+.pitfall-label { font-size: 13px; font-weight: 700; color: var(--coral); margin-bottom: 4px; letter-spacing: 1px; }
+.pitfall-title { font-size: 14px; font-weight: 600; color: white; margin-bottom: 2px; }
+.pitfall-desc { font-size: 12px; color: rgba(255,255,255,0.5); }
+
+.footer { position: absolute; bottom: 30px; left: 0; right: 0; text-align: center; }
+.footer span { color: var(--coral); font-size: 16px; font-weight: 600; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="header"><span>是不是每次都被问住？</span></div>
+
+  <div class="chat-hook">
+    <div class="chat-line her">
+      <div class="bubble her">她：你谈过几个？</div>
+    </div>
+    <div class="chat-line his">
+      <div class="bubble his">你：呃……两个吧。</div>
+    </div>
+    <div class="chat-line her">
+      <div class="bubble her">她：哦……</div>
+    </div>
+    <div class="chat-question">这种对话你们是不是经历过？</div>
+  </div>
+
+  <div class="pitfalls">
+    <div class="pitfall">
+      <div class="pitfall-label">❌ 太老实</div>
+      <div class="pitfall-title">"谈过2个" → 她追问细节</div>
+      <div class="pitfall-desc">不管几个，都会被刨根问底</div>
+    </div>
+    <div class="pitfall">
+      <div class="pitfall-label">❌ 太详细</div>
+      <div class="pitfall-title">全盘托出前任故事 → 变成回忆录</div>
+      <div class="pitfall-desc">每一任都会变成她心里的假想敌</div>
+    </div>
+    <div class="pitfall">
+      <div class="pitfall-label">❌ 太敷衍</div>
+      <div class="pitfall-title">"没谈过，就等你" → 假得离谱</div>
+      <div class="pitfall-desc">明摆着是假话，瞬间拉低吸引力</div>
+    </div>
+  </div>
+
+  <div class="footer"><span>想改变？往下看 ↓</span></div>
+</div>
+</body>
+</html>

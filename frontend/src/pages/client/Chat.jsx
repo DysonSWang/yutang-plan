@@ -53,7 +53,9 @@ export default function ClientChat() {
   const getMediaUrl = (msg) => {
     // 统一通过媒体端点获取，确保后端处理 Range 请求和权限验证
     const token = api.getToken();
-    return `${API_BASE}/api/chat/media/${msg.id}?token=${token}`;
+    const url = `${API_BASE}/api/chat/media/${msg.id}?token=${token}`;
+    console.log('[DEBUG] getMediaUrl:', { msgId: msg.id, url, API_BASE });
+    return url;
   };
 
   const handleEmojiSelect = useCallback((emoji) => {
@@ -840,8 +842,8 @@ export default function ClientChat() {
     <Flex h="calc(100vh - 120px)" direction="column" gap={4}>
       {/* 聊天区域 */}
       <Box flex={1} bg="rgba(255,255,255,0.02)" border="1px solid rgba(255,255,255,0.06)" borderRadius="xl" display="flex" flexDirection="column" overflow="hidden">
-        {/* 聊天头部 */}
-        <Box p={4} borderBottom="1px solid rgba(255,255,255,0.06)">
+        {/* 聊天头部 - 固定 */}
+        <Box p={4} borderBottom="1px solid rgba(255,255,255,0.06)" flexShrink={0}>
           <HStack spacing={3}>
             <Box w="40px" h="40px" borderRadius="full" bg="gold.500" display="flex" alignItems="center" justifyContent="center" overflow="hidden">
               <Image src="/logo.png" alt="Mo哥" w="28px" h="28px" objectFit="contain" />
@@ -853,7 +855,7 @@ export default function ClientChat() {
           </HStack>
         </Box>
 
-        {/* 消息列表 */}
+        {/* 消息列表 - 可滚动 */}
         <Box
           ref={scrollRef}
           flex={1}
@@ -938,13 +940,15 @@ export default function ClientChat() {
                       <Box
                         w="75%"
                         p={3}
+                        className="bubble-glow"
                         bg={msg.isBurnAfterRead && !msg.burnedAt
                           ? 'linear-gradient(135deg, rgba(255,140,0,0.25), rgba(255,80,0,0.15))'
                           : isClient
-                            ? 'linear-gradient(135deg, rgba(255,200,100,0.85), rgba(255,170,60,0.8))'
+                            ? 'linear-gradient(135deg, rgba(226,176,68,0.90), rgba(201,127,89,0.85))'
                             : 'rgba(255,255,255,0.06)'}
-                        border={msg.isBurnAfterRead && !msg.burnedAt ? '1px solid rgba(255,140,0,0.35)' : 'none'}
-                        borderRadius={isClient ? '18px 6px 18px 18px' : '6px 18px 18px 18px'}
+                        border={msg.isBurnAfterRead && !msg.burnedAt ? '1px solid rgba(255,140,0,0.35)' : (isClient ? 'none' : '1px solid rgba(226,176,68,0.15)')}
+                        borderRadius={isClient ? '18px 4px 18px 18px' : '4px 18px 18px 18px'}
+                        boxShadow={isClient ? '0 4px 16px rgba(226,176,68,0.20)' : 'none'}
                         color={isClient ? 'rgba(30,20,0,0.9)' : 'rgba(255,255,255,0.92)'}
                         role="group"
                         _hover={{ '.recall-btn': { opacity: 1 } }}
@@ -1000,7 +1004,7 @@ export default function ClientChat() {
         </Box>
 
         {/* 输入区域 */}
-        <Box p={4} borderTop="1px solid rgba(255,255,255,0.06)">
+        <Box p={4} borderTop="1px solid rgba(255,255,255,0.06)" bg="rgba(255,255,255,0.02)">
           {/* 媒体预览（仅语音需要确认，视频/图片直接发送） */}
           {previewFile && previewFile.type === 'audio' && (
             <Box mb={2} p={2} bg="rgba(255,255,255,0.05)" borderRadius="md">
@@ -1193,11 +1197,12 @@ export default function ClientChat() {
                 placeholder="输入消息..."
                 flex={1}
                 minW="0"
-                bg="rgba(255,255,255,0.05)"
-                border="1px solid rgba(255,255,255,0.1)"
+                bg="warm.800"
+                border="1px solid rgba(255,255,255,0.08)"
+                borderRadius="xl"
                 color="white"
                 _placeholder={{ color: 'rgba(245,240,232,0.4)' }}
-                _focus={{ borderColor: 'gold.500' }}
+                _focus={{ borderColor: 'gold.500', boxShadow: '0 0 0 3px rgba(226,176,68,0.12)' }}
               />
               <Button colorScheme="gold" onClick={sendMessage} isLoading={sending} isDisabled={!input.trim()} size="sm">
                 发送
