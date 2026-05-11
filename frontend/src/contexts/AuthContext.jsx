@@ -49,6 +49,7 @@ export function AuthProvider({ children }) {
 
   const logout = () => {
     localStorage.removeItem('zhuiai_token');
+    sessionStorage.removeItem('zhuiai_unlocked');
     setUser(null);
   };
 
