@@ -678,6 +678,10 @@ module.exports = function(io) {
         res.setHeader('Content-Type', mime);
         res.setHeader('Cache-Control', 'no-store, no-cache, private');
         res.setHeader('Accept-Ranges', 'bytes');
+        res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+        res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+        res.setHeader('Cross-Origin-Opener-Policy', 'unsafe-none');
         res.end(chunk);
         return;
       }
@@ -687,6 +691,11 @@ module.exports = function(io) {
       res.setHeader('X-Content-Type-Options', 'nosniff');
       res.setHeader('Content-Length', totalSize);
       res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      // 允许跨域访问媒体资源
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+      res.setHeader('Cross-Origin-Opener-Policy', 'unsafe-none');
       res.end(plaintext);
     } catch (error) {
       console.error('[Chat] 流媒体获取失败:', error);

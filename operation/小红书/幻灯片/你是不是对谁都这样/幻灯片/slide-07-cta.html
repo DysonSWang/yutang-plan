@@ -11,10 +11,10 @@
 
 :root {
   --bg-warm: #FFF8F3;
-  --coral: #E85A4F;
+  --coral: #C0392B;
   --ink: #2D2D2D;
   --ink-light: #6B6B6B;
-  --gold: #C9A227;
+  --gold: #A08020;
   --green: #3D8C40;
 }
 
@@ -38,31 +38,28 @@ body {
   flex-direction: column;
 }
 
-.top { width: 100%; height: 56px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px); }
-.top span { color: white; font-size: 14px; font-weight: 600; letter-spacing: 3px; }
+.top { width: 100%; height: 56px; background: rgba(192,57,43,0.15); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(192,57,43,0.2); }
+.top span { color: white; font-size: 12px; font-weight: 700; letter-spacing: 4px; }
 
-.title { padding: 16px 30px 12px; text-align: center; }
-.title-text { font-family: 'Noto Serif SC', serif; font-size: 24px; font-weight: 800; color: white; margin-bottom: 6px; }
+.title { padding: 20px 30px 12px; text-align: center; }
+.title-text { font-family: 'Noto Serif SC', serif; font-size: 28px; font-weight: 800; color: white; margin-bottom: 8px; line-height: 1.2; }
 .subtitle { font-size: 14px; color: rgba(255,255,255,0.6); }
 
-.card { margin: 10px 24px; background: rgba(255,255,255,0.06); border-radius: 14px; padding: 16px 18px; backdrop-filter: blur(10px); }
-.card-label { font-size: 12px; font-weight: 700; color: var(--green); margin-bottom: 6px; letter-spacing: 1px; }
-.card-text { font-size: 14px; color: rgba(255,255,255,0.85); line-height: 1.5; margin-bottom: 4px; }
-.card-1 { border-left: 3px solid rgba(61,140,64,0.5); }
-.card-2 { border-left: 3px solid rgba(201,162,39,0.5); }
-.card-3 { border-left: 3px solid rgba(232,90,79,0.5); }
+.hero-quote { margin: 16px 24px; padding: 20px 24px; background: rgba(255,255,255,0.05); border-radius: 16px; border-left: 4px solid var(--coral); backdrop-filter: blur(8px); }
+.quote-label { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.4); letter-spacing: 1px; margin-bottom: 8px; }
+.quote-text { font-family: 'Noto Serif SC', serif; font-size: 18px; font-weight: 700; color: white; line-height: 1.4; }
+.quote-sub { font-size: 13px; color: rgba(255,255,255,0.5); margin-top: 8px; }
 
-.tag-row { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 24px; margin-top: 6px; }
-.tag { font-size: 12px; padding: 4px 10px; border-radius: 20px; font-weight: 600; }
-.tag-green { background: rgba(61,140,64,0.2); color: var(--green); }
-.tag-gold { background: rgba(201,162,39,0.2); color: var(--gold); }
-.tag-coral { background: rgba(232,90,79,0.2); color: var(--coral); }
+.discuss-area { margin: 16px 24px 0; background: rgba(255,255,255,0.04); border-radius: 12px; padding: 18px 20px; border: 1px solid rgba(255,255,255,0.08); flex: 1; }
+.discuss-label { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.4); letter-spacing: 1px; margin-bottom: 10px; }
+.discuss-q { font-size: 15px; color: white; line-height: 1.5; margin-bottom: 10px; }
+.discuss-example { font-size: 13px; color: rgba(255,255,255,0.45); font-style: italic; padding: 10px 14px; background: rgba(255,255,255,0.04); border-radius: 8px; margin-bottom: 10px; }
+.discuss-example::before { content: '例：'; color: var(--gold); font-style: normal; }
+.discuss-cta { font-size: 14px; color: var(--gold); font-weight: 600; text-align: center; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.06); }
 
-.note { font-size: 13px; color: rgba(255,255,255,0.5); text-align: center; margin-top: 12px; padding: 0 24px; }
-
-.footer { position: absolute; bottom: 0; left: 0; right: 0; height: 120px; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 28px; }
-.footer-text { font-size: 15px; font-weight: 700; color: white; margin-bottom: 6px; }
-.footer-note { font-size: 12px; color: rgba(255,255,255,0.5); }
+.footer { position: absolute; bottom: 0; left: 0; right: 0; height: 110px; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 26px; }
+.footer-text { font-size: 15px; font-weight: 700; color: white; margin-bottom: 5px; }
+.footer-note { font-size: 12px; color: rgba(255,255,255,0.45); }
 </style>
 </head>
 <body>
@@ -74,37 +71,21 @@ body {
     <div class="subtitle">她在测试你有没有标准，不是在审问你</div>
   </div>
 
-  <div class="card card-1">
-    <div class="card-label">✅ 调侃绕过</div>
-    <div class="card-text">「我只对好看的人这样」→ 不进框架</div>
-    <div class="tag-row">
-      <span class="tag tag-green">幽默</span>
-      <span class="tag tag-green">不解释</span>
-    </div>
+  <div class="hero-quote">
+    <div class="quote-label">记住这句话</div>
+    <div class="quote-text">不解释 = 有框架 = 高价值</div>
+    <div class="quote-sub">正确做法：调侃绕过 · 反问回踢 · 幽默转移</div>
   </div>
 
-  <div class="card card-2">
-    <div class="card-label">✅ 反问回踢</div>
-    <div class="card-text">「你觉得呢？」→ 把球踢回去</div>
-    <div class="tag-row">
-      <span class="tag tag-gold">框架</span>
-      <span class="tag tag-gold">主导</span>
-    </div>
+  <div class="discuss-area">
+    <div class="discuss-label">评论区等你</div>
+    <div class="discuss-q">她问过你「你是不是对谁都这样」这个问题吗？你当时怎么回的？</div>
+    <div class="discuss-example">我先说：我当时直接慌了，然后解释一堆...</div>
+    <div class="discuss-cta">说出来，帮你分析 ↓</div>
   </div>
-
-  <div class="card card-3">
-    <div class="card-label">✅ 幽默转移</div>
-    <div class="card-text">「怎么，想给我介绍对象？」→ 话题带跑</div>
-    <div class="tag-row">
-      <span class="tag tag-coral">不纠缠</span>
-      <span class="tag tag-coral">轻松</span>
-    </div>
-  </div>
-
-  <div class="note">她问过你这个问题吗？你当时怎么回的？评论区说说 👇</div>
 
   <div class="footer">
-    <div class="footer-text">👑 不解释 = 有框架 = 高价值</div>
+    <div class="footer-text">◆ 不解释 = 有框架 = 高价值</div>
     <div class="footer-note">收藏起来，下次遇到废测先对照看看</div>
   </div>
 </div>

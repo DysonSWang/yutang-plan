@@ -11,10 +11,10 @@
 
 :root {
   --bg-warm: #FFF8F3;
-  --coral: #E85A4F;
+  --coral: #C0392B;
   --ink: #2D2D2D;
-  --ink-light: #6B6B6B;
-  --gold: #C9A227;
+  --ink-light: #4A4A4A;
+  --gold: #A08020;
   --green: #3D8C40;
 }
 
@@ -42,9 +42,9 @@ body {
 .divider { width: 80px; height: 3px; background: var(--coral); margin: 6px auto 0; border-radius: 2px; }
 
 .section { margin: 10px 20px; border-radius: 14px; padding: 16px 18px; }
-.bronze { background: rgba(232,90,79,0.08); border-left: 4px solid var(--coral); }
-.gold { background: rgba(201,162,39,0.1); border-left: 4px solid var(--gold); }
-.section-label { font-size: 12px; font-weight: 700; margin-bottom: 6px; letter-spacing: 1px; }
+.bronze { background: rgba(192,57,43,0.08); border-left: 4px solid var(--coral); }
+.gold { background: rgba(160,128,32,0.1); border-left: 4px solid var(--gold); }
+.section-label { font-size: 13px; font-weight: 700; margin-bottom: 6px; letter-spacing: 1px; }
 .bronze .section-label { color: var(--coral); }
 .gold .section-label { color: var(--gold); }
 .section-title { font-family: 'Noto Serif SC', serif; font-size: 18px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
@@ -55,7 +55,8 @@ body {
 .think-text { font-size: 14px; color: var(--gold); font-weight: 600; }
 
 .footer { position: absolute; bottom: 30px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.footer span { font-size: 14px; font-weight: 700; padding: 4px 16px; border-radius: 10px; background: rgba(255,255,255,0.88); color: var(--ink); }
+.footer span { cursor: pointer; transition: transform 0.15s ease; font-size: 14px; font-weight: 700; padding: 4px 16px; border-radius: 10px; background: rgba(255,255,255,0.88); color: var(--ink); }
+.footer span:active { transform: scale(0.96); }
 </style>
 </head>
 <body>
@@ -67,25 +68,25 @@ body {
   </div>
 
   <div class="section bronze">
-    <div class="section-label">❌ 青铜</div>
+    <div class="section-label">X 青铜</div>
     <div class="section-title">「就吃个饭而已，不耽误你很久」</div>
     <div class="section-text">强行说服她，给她压力，想通过见面证明自己</div>
   </div>
 
   <div class="section bronze">
-    <div class="section-label">💥 结果</div>
+    <div class="section-label">! 结果</div>
     <div class="section-title">强行推进，入她的框架</div>
     <div class="section-text">越推越远，她会觉得你在纠缠</div>
   </div>
 
   <div class="section gold">
-    <div class="section-label">✅ 王者</div>
+    <div class="section-label">V 王者</div>
     <div class="section-title">给台阶但不纠缠</div>
     <div class="section-text">「那看时间吧，改天再约」→ 不锁死，保持可能性</div>
   </div>
 
   <div class="section gold">
-    <div class="section-label">💎 结果</div>
+    <div class="section-label">◆ 结果</div>
     <div class="section-title">保持框架，不把门关死</div>
     <div class="section-text">让她知道你感兴趣，但不会因为被拒绝就翻脸</div>
   </div>

@@ -11,11 +11,11 @@
 
 :root {
   --bg-warm: #FFF8F3;
-  --coral: #E85A4F;
+  --coral: #C0392B;
   --coral-light: rgba(232, 90, 79, 0.1);
   --ink: #2D2D2D;
   --ink-light: #6B6B6B;
-  --gold: #C9A227;
+  --gold: #A08020;
   --green: #3D8C40;
   --green-light: rgba(61, 140, 64, 0.1);
 }
@@ -38,7 +38,7 @@ body {
   overflow: hidden;
 }
 
-.header { width: 100%; height: 56px; background: rgba(255,255,255,0.03); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(232,90,79,0.3); }
+.header { width: 100%; height: 56px; background: rgba(255,255,255,0.03); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(192,57,43,0.3); }
 .header span { color: white; font-size: 17px; font-weight: 600; letter-spacing: 2px; }
 
 /* Chat bubble section */
@@ -48,7 +48,7 @@ body {
 .chat-line.her { justify-content: flex-start; }
 .chat-line.his { justify-content: flex-end; }
 .bubble { max-width: 70%; padding: 8px 14px; border-radius: 12px; font-size: 14px; }
-.bubble.her { background: rgba(232,90,79,0.15); color: #ff8a80; border-bottom-left-radius: 4px; }
+.bubble.her { background: rgba(192,57,43,0.15); color: #ff8a80; border-bottom-left-radius: 4px; }
 .bubble.his { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); border-bottom-right-radius: 4px; }
 .chat-question { text-align: center; font-size: 13px; color: var(--gold); margin-top: 10px; font-weight: 600; }
 
@@ -68,7 +68,8 @@ body {
 .tier.king .tier-text { color: white; font-weight: 600; }
 
 .footer { position: absolute; bottom: 30px; left: 0; right: 0; text-align: center; }
-.footer span { color: var(--gold); font-size: 16px; font-weight: 600; letter-spacing: 1px; }
+.footer span { cursor: pointer; transition: transform 0.15s ease; }
+.footer span:active { transform: scale(0.96); }color: var(--gold); font-size: 16px; font-weight: 600; letter-spacing: 1px; }
 </style>
 </head>
 <body>
@@ -92,7 +93,7 @@ body {
   <!-- Tier comparison -->
   <div class="tiers">
     <div class="tier bronze">
-      <div class="tier-label">❌ 青铜</div>
+      <div class="tier-label">X 青铜</div>
       <div class="tier-text">老老实实回答 → "在上班""在吃饭"</div>
     </div>
     <div class="tier silver">
@@ -100,11 +101,11 @@ body {
       <div class="tier-text">平淡互动 → "刚吃完，你呢？"</div>
     </div>
     <div class="tier diamond">
-      <div class="tier-label">❌ 钻石</div>
+      <div class="tier-label">X 钻石</div>
       <div class="tier-text">连环追问 → "今天怎么样？周末呢？"</div>
     </div>
     <div class="tier king">
-      <div class="tier-label">✅ 王者</div>
+      <div class="tier-label">V 王者</div>
       <div class="tier-text">状态 + 好奇 → "刚忙完，正准备找你呢"</div>
     </div>
   </div>

@@ -11,10 +11,10 @@
 
 :root {
   --bg-warm: #FFF8F3;
-  --coral: #E85A4F;
+  --coral: #C0392B;
   --ink: #2D2D2D;
   --ink-light: #6B6B6B;
-  --gold: #C9A227;
+  --gold: #A08020;
   --green: #3D8C40;
 }
 
@@ -55,7 +55,8 @@ body {
 .think-text { font-size: 14px; color: var(--gold); font-weight: 600; }
 
 .footer { position: absolute; bottom: 30px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.footer span { font-size: 14px; font-weight: 700; padding: 4px 16px; border-radius: 10px; background: rgba(255,255,255,0.88); color: var(--ink); }
+.footer span { cursor: pointer; transition: transform 0.15s ease; }
+.footer span:active { transform: scale(0.96); }font-size: 14px; font-weight: 700; padding: 4px 16px; border-radius: 10px; background: rgba(255,255,255,0.88); color: var(--ink); }
 </style>
 </head>
 <body>
@@ -67,25 +68,25 @@ body {
   </div>
 
   <div class="section bronze">
-    <div class="section-label">❌ 青铜</div>
+    <div class="section-label">X 青铜</div>
     <div class="section-title">「你怎么会这么想？我不是这样的人」</div>
     <div class="section-text">反驳她的问题，试图改变她的想法</div>
   </div>
 
   <div class="section bronze">
-    <div class="section-label">💥 结果</div>
+    <div class="section-label">! 结果</div>
     <div class="section-title">被她的问题带跑</div>
     <div class="section-text">越描越黑，她觉得你在心虚</div>
   </div>
 
   <div class="section gold">
-    <div class="section-label">✅ 王者</div>
+    <div class="section-label">V 王者</div>
     <div class="section-title">幽默转移，绕过问题</div>
     <div class="section-text">「怎么，想给我介绍对象？」→ 话题直接带跑</div>
   </div>
 
   <div class="section gold">
-    <div class="section-label">💎 结果</div>
+    <div class="section-label">◆ 结果</div>
     <div class="section-title">不纠缠，不解释</div>
     <div class="section-text">用幽默化解，她拿你没办法</div>
   </div>

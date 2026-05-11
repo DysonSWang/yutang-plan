@@ -166,9 +166,9 @@ function EQBar({ label, value }) {
     </HStack>
   );
 }
-function SectionCard({ title, children, color }) {
+function SectionCard({ title, children, color, section }) {
   return (
-    <Box className="hover-lift" bg="warm.700" border="1px solid" borderColor="rgba(226,176,68,0.1)" borderRadius="md" p={4} mb={4}>
+    <Box data-section={section} className="hover-lift" bg="warm.700" border="1px solid" borderColor="rgba(226,176,68,0.1)" borderRadius="md" p={4} mb={4} cursor="pointer" onClick={() => openEdit(section)} _hover={{ borderColor: 'rgba(226,176,68,0.25)' }}>
       <Text color={color || 'teal.400'} fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">{title}</Text>
       {children}
     </Box>
@@ -364,7 +364,7 @@ export default function GirlDetail() {
 
   // ---- 编辑 ----
 
-  const openEdit = () => {
+  const openEdit = (section = null) => {
     const data = { ...girl };
     // 确保媒体字段为数组；avatar 是单值字符串
     if (data.avatar && typeof data.avatar === 'string') {
@@ -383,6 +383,13 @@ export default function GirlDetail() {
     setAiScreenshot(null);
     setAiScreenshotPreview('');
     onEditOpen();
+    // 滚动到目标 section
+    if (section) {
+      setTimeout(() => {
+        const target = document.querySelector('[data-section="' + section + '"]');
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 150);
+    }
   };
 
   const handleFieldChange = useCallback((key, value) => {
@@ -971,7 +978,7 @@ export default function GirlDetail() {
 
       <SimpleGrid columns={{ base: 1, md: 2 }} spacing={0} gap={4} mb={4}>
         {Object.entries(FIELD_GROUPS).map(([groupKey, group]) => (
-          <Box key={groupKey} className="hover-lift" bg="warm.700" border="1px solid" borderColor="rgba(226,176,68,0.1)" borderRadius="md" p={4}>
+          <Box key={groupKey} data-section={groupKey} className="hover-lift" bg="warm.700" border="1px solid" borderColor="rgba(226,176,68,0.1)" borderRadius="md" p={4} cursor="pointer" onClick={() => openEdit(groupKey)} _hover={{ borderColor: 'rgba(226,176,68,0.25)' }}>
             <Text color={group.color} fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">{group.title}</Text>
             <SimpleGrid columns={2} spacing={3}>
               {group.fields.map(fk => {
@@ -994,7 +1001,7 @@ export default function GirlDetail() {
       <Box mt={0}>
         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
           {/* 主页与来源 */}
-          <Box className="hover-lift" bg="warm.700" border="1px solid" borderColor="rgba(226,176,68,0.1)" borderRadius="md" p={4}>
+          <Box data-section="media" className="hover-lift" bg="warm.700" border="1px solid" borderColor="rgba(226,176,68,0.1)" borderRadius="md" p={4} cursor="pointer" onClick={() => openEdit('media')} _hover={{ borderColor: 'rgba(226,176,68,0.25)' }}>
             <Text color="gold.400" fontSize="xs" fontWeight="bold" mb={3} textTransform="uppercase" letterSpacing="wider">主页与来源</Text>
             <VStack spacing={3} align="stretch">
               <EmptyValue value={girl.homepageUrl}>
@@ -1077,7 +1084,7 @@ export default function GirlDetail() {
 
       <SimpleGrid columns={{ base: 1, md: 2 }} spacing={0} gap={4}>
         {/* AI画像 */}
-        <SectionCard title="AI 画像" color="purple.400">
+        <SectionCard title="AI 画像" color="purple.400" section="personality">
           <FieldRow label="性格" value={girl.personality} />
           <TagRow label="价值观" value={girl.values_} />
           <FieldRow label="沟通风格" value={girl.communicationStyle} />
@@ -1087,7 +1094,7 @@ export default function GirlDetail() {
         </SectionCard>
 
         {/* EQ评分 */}
-        <SectionCard title="EQ 评分" color="purple.400">
+        <SectionCard title="EQ 评分" color="purple.400" section="eq">
           <EQBar label="共情能力" value={girl.empathy} />
           <EQBar label="自我认知" value={girl.selfAwareness} />
           <EQBar label="沟通能力" value={girl.communication} />
@@ -1099,7 +1106,7 @@ export default function GirlDetail() {
         </SectionCard>
 
         {/* AI战略建议 */}
-        <SectionCard title="AI 战略建议" color="orange.400">
+        <SectionCard title="AI 战略建议" color="orange.400" section="strategy">
           <FieldRow label="最佳策略" value={girl.bestApproach} />
           <FieldRow label="推荐话题" value={girl.recommendedTopics} />
           <FieldRow label="升级条件" value={girl.upgradeConditions} />
@@ -1109,7 +1116,7 @@ export default function GirlDetail() {
         </SectionCard>
 
         {/* 匹配分析 */}
-        <SectionCard title="匹配分析" color="orange.400">
+        <SectionCard title="匹配分析" color="orange.400" section="match">
           {girl.matchScore ? (
             <HStack mb={3}>
               <Text color="rgba(245,240,232,0.55)" fontSize="xs">匹配度</Text>

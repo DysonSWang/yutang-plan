@@ -11,11 +11,11 @@
 
 :root {
   --bg-warm: #FFF8F3;
-  --coral: #E85A4F;
+  --coral: #C0392B;
   --coral-light: rgba(232, 90, 79, 0.1);
   --ink: #2D2D2D;
   --ink-light: #6B6B6B;
-  --gold: #C9A227;
+  --gold: #A08020;
   --green: #3D8C40;
   --green-light: rgba(61, 140, 64, 0.1);
 }
@@ -62,7 +62,8 @@ body {
 .think-good { color: #7DD97D; }
 
 .footer { position: absolute; bottom: 30px; left: 0; right: 0; text-align: center; }
-.footer span { font-size: 15px; color: var(--ink); font-weight: 700; background: rgba(255,255,255,0.85); padding: 4px 16px; border-radius: 10px; }
+.footer span { cursor: pointer; transition: transform 0.15s ease; }
+.footer span:active { transform: scale(0.96); }font-size: 15px; color: var(--ink); font-weight: 700; background: rgba(255,255,255,0.85); padding: 4px 16px; border-radius: 10px; }
 </style>
 </head>
 <body>
@@ -75,19 +76,19 @@ body {
   </div>
 
   <div class="section bronze">
-    <div class="label">❌ 青铜操作</div>
+    <div class="label">X 青铜操作</div>
     <div class="content">"我大学谈了一个，工作后谈了一个，第一个温柔但是异地，第二个性格不合……"<br>→ 她：（开始走神）</div>
   </div>
 
   <div class="section gold">
-    <div class="label">✅ 王者操作</div>
+    <div class="label">V 王者操作</div>
     <div class="content">"谈过。教会我一件事——喜欢一个人不是因为ta有多好，而是因为你愿意为ta变得更好。"</div>
   </div>
 
   <div class="think">
     <div class="think-title">💡 思维提炼</div>
-    <div class="think-bad">❌ 说得越详细，她脑补得越多。每个前任都是假想敌</div>
-    <div class="think-good">✅ 从过去提炼成长，不讲述细节。她听到的是你有反思能力</div>
+    <div class="think-bad">X 说得越详细，她脑补得越多。每个前任都是假想敌</div>
+    <div class="think-good">V 从过去提炼成长，不讲述细节。她听到的是你有反思能力</div>
   </div>
 
   <div class="footer"><span>收藏起来，下次避免踩坑</span></div>

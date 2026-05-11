@@ -11,11 +11,11 @@
 
 :root {
   --bg-warm: #FFF8F3;
-  --coral: #E85A4F;
+  --coral: #C0392B;
   --coral-light: rgba(232, 90, 79, 0.1);
   --ink: #2D2D2D;
   --ink-light: #6B6B6B;
-  --gold: #C9A227;
+  --gold: #A08020;
   --green: #3D8C40;
   --green-light: rgba(61, 140, 64, 0.1);
 }
@@ -62,7 +62,8 @@ body {
 .think-good { color: #7DD97D; }
 
 .footer { position: absolute; bottom: 30px; left: 0; right: 0; text-align: center; }
-.footer span { font-size: 15px; color: var(--ink); font-weight: 700; background: rgba(255,255,255,0.85); padding: 4px 16px; border-radius: 10px; }
+.footer span { cursor: pointer; transition: transform 0.15s ease; }
+.footer span:active { transform: scale(0.96); }font-size: 15px; color: var(--ink); font-weight: 700; background: rgba(255,255,255,0.85); padding: 4px 16px; border-radius: 10px; }
 </style>
 </head>
 <body>
@@ -75,19 +76,19 @@ body {
   </div>
 
   <div class="section bronze">
-    <div class="label">❌ 青铜操作</div>
+    <div class="label">X 青铜操作</div>
     <div class="content">"我喜欢你，因为我觉得你是我这辈子最重要的人。"<br>→ 她内心：我们要结婚了吗？</div>
   </div>
 
   <div class="section gold">
-    <div class="label">✅ 王者操作</div>
+    <div class="label">V 王者操作</div>
     <div class="content">"喜欢你什么？喜欢你问这种问题让我尴尬吗？"（调侃）<br>"好了说正经的，我喜欢的是……你笑起来眼睛会弯成月牙。"（认真）</div>
   </div>
 
   <div class="think">
     <div class="think-title">💡 思维提炼</div>
-    <div class="think-bad">❌ 一开口就是人生哲学，女生瞬间进入防御状态</div>
-    <div class="think-good">✅ 轻松+真诚。先用幽默化解，再接认真回答</div>
+    <div class="think-bad">X 一开口就是人生哲学，女生瞬间进入防御状态</div>
+    <div class="think-good">V 轻松+真诚。先用幽默化解，再接认真回答</div>
   </div>
 
   <div class="footer"><span>收藏起来，下次避免踩坑</span></div>

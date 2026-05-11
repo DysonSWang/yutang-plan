@@ -11,10 +11,10 @@
 
 :root {
   --bg-warm: #FFF8F3;
-  --coral: #E85A4F;
+  --coral: #C0392B;
   --ink: #2D2D2D;
   --ink-light: #6B6B6B;
-  --gold: #C9A227;
+  --gold: #A08020;
   --green: #3D8C40;
 }
 
@@ -55,7 +55,8 @@ body {
 .think-text { font-size: 14px; color: var(--gold); font-weight: 600; }
 
 .footer { position: absolute; bottom: 30px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.footer span { font-size: 14px; font-weight: 700; padding: 4px 16px; border-radius: 10px; background: rgba(255,255,255,0.88); color: var(--ink); }
+.footer span { cursor: pointer; transition: transform 0.15s ease; }
+.footer span:active { transform: scale(0.96); }font-size: 14px; font-weight: 700; padding: 4px 16px; border-radius: 10px; background: rgba(255,255,255,0.88); color: var(--ink); }
 </style>
 </head>
 <body>
@@ -67,25 +68,25 @@ body {
   </div>
 
   <div class="section bronze">
-    <div class="section-label">❌ 青铜</div>
+    <div class="section-label">X 青铜</div>
     <div class="section-title">「怎么会呢，我只对你一个人」</div>
     <div class="section-text">急着否认，试图让她相信你的忠诚</div>
   </div>
 
   <div class="section bronze">
-    <div class="section-label">💥 结果</div>
+    <div class="section-label">! 结果</div>
     <div class="section-title">你在向她证明自己</div>
     <div class="section-text">需要她来认证你，框架倒置</div>
   </div>
 
   <div class="section gold">
-    <div class="section-label">✅ 王者</div>
+    <div class="section-label">V 王者</div>
     <div class="section-title">反问回踢，把球踢回去</div>
     <div class="section-text">「你觉得呢？」→ 让她进你的框架</div>
   </div>
 
   <div class="section gold">
-    <div class="section-label">💎 结果</div>
+    <div class="section-label">◆ 结果</div>
     <div class="section-title">不进她的框架，反客为主</div>
     <div class="section-text">她来测试你，你反过来让她回答</div>
   </div>

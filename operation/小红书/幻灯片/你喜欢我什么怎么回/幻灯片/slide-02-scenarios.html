@@ -10,8 +10,8 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
-  --coral: #E85A4F;
-  --gold: #C9A227;
+  --coral: #C0392B;
+  --gold: #A08020;
   --green: #3D8C40;
 }
 
@@ -33,7 +33,7 @@ body {
   overflow: hidden;
 }
 
-.header { width: 100%; height: 56px; background: rgba(255,255,255,0.03); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(232,90,79,0.3); }
+.header { width: 100%; height: 56px; background: rgba(255,255,255,0.03); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(192,57,43,0.3); }
 .header span { color: white; font-size: 17px; font-weight: 600; letter-spacing: 2px; }
 
 .chat-hook { margin: 16px 20px 8px; background: rgba(255,255,255,0.06); border-radius: 14px; padding: 16px 18px; backdrop-filter: blur(10px); }
@@ -42,7 +42,7 @@ body {
 .chat-line.her { justify-content: flex-start; }
 .chat-line.his { justify-content: flex-end; }
 .bubble { max-width: 70%; padding: 8px 14px; border-radius: 12px; font-size: 14px; }
-.bubble.her { background: rgba(232,90,79,0.15); color: #ff8a80; border-bottom-left-radius: 4px; }
+.bubble.her { background: rgba(192,57,43,0.15); color: #ff8a80; border-bottom-left-radius: 4px; }
 .bubble.his { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); border-bottom-right-radius: 4px; }
 .chat-question { text-align: center; font-size: 13px; color: var(--gold); margin-top: 10px; font-weight: 600; }
 
@@ -53,7 +53,8 @@ body {
 .pitfall-desc { font-size: 12px; color: rgba(255,255,255,0.5); }
 
 .footer { position: absolute; bottom: 30px; left: 0; right: 0; text-align: center; }
-.footer span { color: var(--coral); font-size: 16px; font-weight: 600; letter-spacing: 1px; }
+.footer span { cursor: pointer; transition: transform 0.15s ease; }
+.footer span:active { transform: scale(0.96); }color: var(--coral); font-size: 16px; font-weight: 600; letter-spacing: 1px; }
 </style>
 </head>
 <body>
@@ -75,17 +76,17 @@ body {
 
   <div class="pitfalls">
     <div class="pitfall">
-      <div class="pitfall-label">❌ 太泛泛</div>
+      <div class="pitfall-label">X 太泛泛</div>
       <div class="pitfall-title">"你善良温柔大方" → 等于没回答</div>
       <div class="pitfall-desc">放在任何女生身上都成立</div>
     </div>
     <div class="pitfall">
-      <div class="pitfall-label">❌ 太讨好</div>
+      <div class="pitfall-label">X 太讨好</div>
       <div class="pitfall-title">"我喜欢你的一切" → 暴露需求感</div>
       <div class="pitfall-desc">除了暴露你上头，没有任何价值</div>
     </div>
     <div class="pitfall">
-      <div class="pitfall-label">❌ 太沉重</div>
+      <div class="pitfall-label">X 太沉重</div>
       <div class="pitfall-title">"你是我这辈子最重要的人" → 压力太大</div>
       <div class="pitfall-desc">一开口就是人生哲学，女生瞬间防御</div>
     </div>

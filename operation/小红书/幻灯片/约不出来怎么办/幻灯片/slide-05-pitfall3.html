@@ -11,10 +11,10 @@
 
 :root {
   --bg-warm: #FFF8F3;
-  --coral: #E85A4F;
+  --coral: #C0392B;
   --ink: #2D2D2D;
-  --ink-light: #6B6B6B;
-  --gold: #C9A227;
+  --ink-light: #4A4A4A;
+  --gold: #A08020;
   --green: #3D8C40;
 }
 
@@ -42,9 +42,9 @@ body {
 .divider { width: 80px; height: 3px; background: var(--coral); margin: 6px auto 0; border-radius: 2px; }
 
 .section { margin: 10px 20px; border-radius: 14px; padding: 16px 18px; }
-.bronze { background: rgba(232,90,79,0.08); border-left: 4px solid var(--coral); }
-.gold { background: rgba(201,162,39,0.1); border-left: 4px solid var(--gold); }
-.section-label { font-size: 12px; font-weight: 700; margin-bottom: 6px; letter-spacing: 1px; }
+.bronze { background: rgba(192,57,43,0.08); border-left: 4px solid var(--coral); }
+.gold { background: rgba(160,128,32,0.1); border-left: 4px solid var(--gold); }
+.section-label { font-size: 13px; font-weight: 700; margin-bottom: 6px; letter-spacing: 1px; }
 .bronze .section-label { color: var(--coral); }
 .gold .section-label { color: var(--gold); }
 .section-title { font-family: 'Noto Serif SC', serif; font-size: 18px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
@@ -55,7 +55,8 @@ body {
 .think-text { font-size: 14px; color: var(--gold); font-weight: 600; }
 
 .footer { position: absolute; bottom: 30px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.footer span { font-size: 14px; font-weight: 700; padding: 4px 16px; border-radius: 10px; background: rgba(255,255,255,0.88); color: var(--ink); }
+.footer span { cursor: pointer; transition: transform 0.15s ease; font-size: 14px; font-weight: 700; padding: 4px 16px; border-radius: 10px; background: rgba(255,255,255,0.88); color: var(--ink); }
+.footer span:active { transform: scale(0.96); }
 </style>
 </head>
 <body>
@@ -67,25 +68,25 @@ body {
   </div>
 
   <div class="section bronze">
-    <div class="section-label">❌ 青铜</div>
+    <div class="section-label">X 青铜</div>
     <div class="section-title">「好吧」→ 再也不提</div>
     <div class="section-text">直接放弃，不做任何动作，错过窗口</div>
   </div>
 
   <div class="section bronze">
-    <div class="section-label">💥 结果</div>
+    <div class="section-label">! 结果</div>
     <div class="section-title">窗口关闭，本来有戏变没戏</div>
     <div class="section-text">她觉得你根本不是真心，约了一次就不来了</div>
   </div>
 
   <div class="section gold">
-    <div class="section-label">✅ 王者</div>
+    <div class="section-label">V 王者</div>
     <div class="section-title">保持联系，但不再提邀约</div>
     <div class="section-text">继续发圈、正常聊天，等下一个窗口</div>
   </div>
 
   <div class="section gold">
-    <div class="section-label">💎 结果</div>
+    <div class="section-label">◆ 结果</div>
     <div class="section-title">窗口会再来，关系不下头</div>
     <div class="section-text">她会因为你的淡定而重新好奇你</div>
   </div>

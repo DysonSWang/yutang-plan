@@ -11,11 +11,11 @@
 
 :root {
   --bg-warm: #FFF8F3;
-  --coral: #E85A4F;
+  --coral: #C0392B;
   --coral-light: rgba(232, 90, 79, 0.1);
   --ink: #2D2D2D;
   --ink-light: #6B6B6B;
-  --gold: #C9A227;
+  --gold: #A08020;
   --green: #3D8C40;
   --green-light: rgba(61, 140, 64, 0.1);
 }
@@ -62,7 +62,8 @@ body {
 .ryan-quote span { font-size: 13px; color: var(--gold); font-weight: 600; line-height: 1.4; }
 
 .footer { position: absolute; bottom: 30px; left: 0; right: 0; text-align: center; }
-.footer span { font-size: 15px; color: var(--ink); font-weight: 700; background: rgba(255,255,255,0.85); padding: 4px 16px; border-radius: 10px; }
+.footer span { cursor: pointer; transition: transform 0.15s ease; }
+.footer span:active { transform: scale(0.96); }font-size: 15px; color: var(--ink); font-weight: 700; background: rgba(255,255,255,0.85); padding: 4px 16px; border-radius: 10px; }
 </style>
 </head>
 <body>
