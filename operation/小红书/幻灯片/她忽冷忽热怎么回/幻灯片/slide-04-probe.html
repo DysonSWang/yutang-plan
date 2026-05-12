@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>04 探测vs猜</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --coral: #E74C3C;
+  --gold: #F39C12;
+  --green: #27AE60;
+}
+
+body {
+  font-family: 'Noto Sans SC', sans-serif;
+  background: #1a1a2e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.slide {
+  width: 540px;
+  height: 720px;
+  background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 100%);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.top { width: 100%; height: 60px; background: rgba(231,76,60,0.18); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(231,76,60,0.28); }
+.top span { color: white; font-size: 18px; font-weight: 700; letter-spacing: 2px; }
+
+.header { padding: 16px 28px 12px; text-align: center; }
+.header-title { font-family: 'Noto Serif SC', serif; font-size: 32px; font-weight: 800; color: white; }
+.header-sub { font-size: 17px; color: rgba(255,255,255,0.5); margin-top: 6px; }
+
+.section { margin: 8px 22px; border-radius: 12px; padding: 14px 18px; }
+.bronze { background: rgba(255,255,255,0.06); border-left: 5px solid rgba(231,76,60,0.7); }
+.king { background: rgba(255,255,255,0.06); border-left: 5px solid rgba(39,174,96,0.7); }
+.section-label { font-size: 16px; font-weight: 700; margin-bottom: 6px; letter-spacing: 1px; }
+.bronze .section-label { color: var(--coral); }
+.king .section-label { color: var(--green); }
+.section-title { font-family: 'Noto Serif SC', serif; font-size: 18px; font-weight: 700; color: white; margin-bottom: 5px; }
+.section-text { font-size: 16px; color: rgba(255,255,255,0.7); line-height: 1.5; }
+
+.think { margin: 12px 22px 0; padding: 14px 18px; background: rgba(255,255,255,0.06); border-radius: 12px; text-align: center; }
+.think-label { font-size: 13px; color: rgba(255,255,255,0.4); margin-bottom: 5px; }
+.think-text { font-size: 18px; color: var(--gold); font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="top"><span>核心区别：猜 vs 探测</span></div>
+
+  <div class="header">
+    <div class="header-title">青铜 vs 王者</div>
+    <div class="header-sub">不要猜，要测试</div>
+  </div>
+
+  <div class="section bronze">
+    <div class="section-label">X 青铜</div>
+    <div class="section-title">「她怎么突然冷了？我说错什么？」</div>
+    <div class="section-text">坐在那里瞎猜 → 越猜越焦虑 → 行为变形</div>
+  </div>
+
+  <div class="section bronze">
+    <div class="section-label">! 结果</div>
+    <div class="section-title">她感知到你的焦虑</div>
+    <div class="section-text">开始拿捏你，确定你是条鱼</div>
+  </div>
+
+  <div class="section king">
+    <div class="section-label">V 王者</div>
+    <div class="section-title">小步探测，用行为换信息</div>
+    <div class="section-text">「这周新开了家店，一起去？」→ 探测窗口</div>
+  </div>
+
+  <div class="section king">
+    <div class="section-label">◆ 结果</div>
+    <div class="section-title">探测成功推进，失败就撤</div>
+    <div class="section-text">永远不猜，永远用行动测试</div>
+  </div>
+
+  </div>
+</body>
+</html>

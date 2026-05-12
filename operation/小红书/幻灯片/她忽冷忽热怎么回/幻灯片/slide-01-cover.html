@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>01 封面</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --coral: #E74C3C;
+  --gold: #F39C12;
+}
+
+body {
+  font-family: 'Noto Sans SC', sans-serif;
+  background: #1a1a2e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.cover {
+  width: 540px;
+  height: 720px;
+  background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 100%);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.top-bar { width: 100%; height: 60px; background: rgba(231,76,60,0.2); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(231,76,60,0.35); }
+.top-bar span { color: white; font-size: 18px; font-weight: 700; letter-spacing: 3px; }
+
+.main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 32px; }
+
+.question { font-size: 18px; color: rgba(255,255,255,0.7); margin-bottom: 12px; text-align: center; }
+
+.title { font-family: 'Noto Serif SC', serif; font-size: 46px; font-weight: 800; color: white; text-align: center; margin-bottom: 12px; line-height: 1.2; }
+.title-red { color: var(--coral); }
+
+.levels { display: flex; align-items: center; justify-content: center; gap: 24px; margin: 16px 0; }
+.level { font-size: 18px; font-weight: 600; }
+.level-bronze { color: rgba(231,76,60,0.9); }
+.level-silver { color: rgba(255,255,255,0.5); }
+.level-gold { color: var(--gold); }
+
+.hook-box { background: rgba(255,255,255,0.08); border-radius: 14px; padding: 18px 22px; margin: 10px 24px; width: calc(100% - 48px); }
+.hook-line { font-size: 17px; margin-bottom: 6px; color: rgba(255,255,255,0.8); line-height: 1.5; }
+.hook-line.her { color: white; font-weight: 600; }
+.hook-line.end { color: rgba(231,76,60,0.95); font-weight: 800; margin-top: 12px; text-align: center; font-size: 20px; }
+
+.subtitle { font-size: 18px; color: rgba(255,255,255,0.6); text-align: center; margin: 14px 0; font-weight: 500; }
+
+.footer { height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+.footer-rule { font-family: 'Noto Serif SC', serif; font-size: 20px; font-weight: 700; color: var(--gold); letter-spacing: 1px; }
+</style>
+</head>
+<body>
+<div class="cover">
+  <div class="top-bar"><span>聊天诊断</span></div>
+
+  <div class="main">
+    <div class="question">她忽冷忽热，忽冷忽热</div>
+    <div class="title">她是在<span class="title-red">养鱼</span>吗？</div>
+
+    <div class="levels">
+      <span class="level level-bronze">青铜 ✕</span>
+      <span class="level level-silver">白银 ✓</span>
+      <span class="level level-gold">王者 ✓✓</span>
+    </div>
+
+    <div class="hook-box">
+      <div class="hook-line her">她：在干嘛呀～（很热）</div>
+      <div class="hook-line her">（第二天）她：嗯（冷淡）</div>
+      <div class="hook-line her">（第三天）她：哈哈（又热了）</div>
+      <div class="hook-line end">→ 你到底是鱼还是候选人？</div>
+    </div>
+
+    <div class="subtitle">实战聊天诊断</div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-rule">◆ 看行为，不听语言</div>
+  </div>
+</div>
+</body>
+</html>

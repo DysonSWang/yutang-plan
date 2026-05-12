@@ -12,6 +12,7 @@ import {
 import { events as eventsApi, dates as datesApi } from '../utils/api';
 import { captureError } from '../utils/frontendErrorCapture';
 import { FireIcon, CalendarIcon, PlusIcon, TrashIcon, EditIcon, CheckIcon } from './Icons';
+import { ChevronDownIcon } from '@chakra-ui/icons';
 import { useConfirmModal } from './ConfirmModal';
 
 const DATE_STATUS_CONFIG = {
@@ -57,7 +58,7 @@ function saveView(view) {
   try { localStorage.setItem('calendarView', view); } catch { /* noop */ }
 }
 
-export default function ClientCalendar({ clientId, clientNickname, girlList, refreshKey }) {
+export default function ClientCalendar({ clientId, clientNickname, girlList, refreshKey, onDateDetail }) {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [calendarView, setCalendarView] = useState(getSavedView);
@@ -230,15 +231,15 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
   const handleSave = async () => {
     // 验证必填字段
     if (!clientId) {
-      toast({ title: '无法创建，请刷新页面重试', status: 'error', duration: 4000, duration: 3000 });
+      toast({ title: '无法创建，请刷新页面重试', status: 'error', duration: 3000 });
       return;
     }
     if (!form.title && form.type !== 'date') {
-      toast({ title: '请填写标题', status: 'warning', duration: 3000, duration: 2000 });
+      toast({ title: '请填写标题', status: 'warning', duration: 2000 });
       return;
     }
     if (!form.dateTime) {
-      toast({ title: '请选择时间', status: 'warning', duration: 3000, duration: 2000 });
+      toast({ title: '请选择时间', status: 'warning', duration: 2000 });
       return;
     }
     setSaving(true);
@@ -258,7 +259,7 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
             onClose();
             loadEvents();
           } else {
-            toast({ title: res.error || '创建失败', status: 'error', duration: 4000, duration: 3000 });
+            toast({ title: res.error || '创建失败', status: 'error', duration: 3000 });
           }
         } else {
           // 创建事件
@@ -276,7 +277,7 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
             onClose();
             loadEvents();
           } else {
-            toast({ title: res.error || '创建失败', status: 'error', duration: 4000, duration: 3000 });
+            toast({ title: res.error || '创建失败', status: 'error', duration: 3000 });
           }
         }
       } else {
@@ -294,7 +295,7 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
             onClose();
             loadEvents();
           } else {
-            toast({ title: res.error || '更新失败', status: 'error', duration: 4000, duration: 2000 });
+            toast({ title: res.error || '更新失败', status: 'error', duration: 2000 });
           }
         } else {
           // 更新事件
@@ -311,13 +312,13 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
             onClose();
             loadEvents();
           } else {
-            toast({ title: res.error || '更新失败', status: 'error', duration: 4000, duration: 2000 });
+            toast({ title: res.error || '更新失败', status: 'error', duration: 2000 });
           }
         }
       }
     } catch (e) {
       captureError(e);
-      toast({ title: '操作失败', status: 'error', duration: 4000, duration: 2000 });
+      toast({ title: '操作失败', status: 'error', duration: 2000 });
     } finally {
       setSaving(false);
     }
@@ -346,29 +347,35 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
         onClose();
         loadEvents();
       } else {
-        toast({ title: res.error || '操作失败', status: 'error', duration: 4000, duration: 2000 });
+        toast({ title: res.error || '操作失败', status: 'error', duration: 2000 });
       }
     } catch (e) {
       captureError(e);
-      toast({ title: '操作失败', status: 'error', duration: 4000, duration: 2000 });
+      toast({ title: '操作失败', status: 'error', duration: 2000 });
     } finally {
       setDeleting(false);
     }
   };
 
   const handleToggleComplete = async () => {
-    if (!selectedEvent || isDateEvent) return;
-    const newStatus = selectedEvent.status === 'completed' ? 'pending' : 'completed';
+    if (!selectedEvent) return;
     const eventId = selectedEvent.eventId || selectedEvent.id;
     try {
-      const res = await eventsApi.updateStatus(eventId, newStatus);
+      let res;
+      if (isDateEvent) {
+        // 约会事件：仅支持标记完成
+        res = await datesApi.update(eventId, { status: 'completed' });
+      } else {
+        const newStatus = selectedEvent.status === 'completed' ? 'pending' : 'completed';
+        res = await eventsApi.updateStatus(eventId, newStatus);
+      }
       if (res.success) {
-        toast({ title: newStatus === 'completed' ? '已标记完成' : '已取消完成', status: 'success', duration: 1500 });
+        toast({ title: '已标记完成', status: 'success', duration: 1500 });
         onClose();
         loadEvents();
       }
     } catch (e) {
-      toast({ title: '操作失败', status: 'error', duration: 4000, duration: 2000 });
+      toast({ title: '操作失败', status: 'error', duration: 2000 });
     }
   };
 
@@ -539,6 +546,16 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
                   )}
                 </SimpleGrid>
 
+                {/* 约会状态 */}
+                {isDateEvent && selectedEvent?.planStatus && (
+                  <Box bg="warm.800" p={3} borderRadius="md">
+                    <Text color="rgba(245,240,232,0.4)" fontSize="xs">AI 方案</Text>
+                    <Badge colorScheme={selectedEvent.planStatus === 'completed' ? 'green' : selectedEvent.planStatus === 'generated' ? 'blue' : 'gray'}>
+                      {selectedEvent.planStatus === 'completed' ? '已完成' : selectedEvent.planStatus === 'generated' ? '已生成' : selectedEvent.planStatus === 'pending' ? '待生成' : selectedEvent.planStatus}
+                    </Badge>
+                  </Box>
+                )}
+
                 {selectedEvent?.content && (
                   <Box bg="warm.800" p={3} borderRadius="md">
                     <Text color="rgba(245,240,232,0.4)" fontSize="xs">内容</Text>
@@ -585,30 +602,37 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
                   {isDateEvent ? (
                     <FormControl isRequired>
                       <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">女生</FormLabel>
-                      <Select
-                        value={form.girlId}
-                        onChange={e => setForm({ ...form, girlId: e.target.value })}
-                        bg="warm.700" color="white"
-                      >
-                        <option value="">选择女生</option>
-                        {(girlList || []).map(g => (
-                          <option key={g.id} value={g.id}>{g.name || g.nickname}</option>
-                        ))}
-                      </Select>
+                      <Menu>
+                        <MenuButton as={Button} rightIcon={<ChevronDownIcon />} bg="warm.700" color="white" _hover={{ bg: 'warm.600' }} _expanded={{ bg: 'warm.600' }} width="100%" textAlign="left" fontWeight="normal">
+                          {form.girlId ? (girlList || []).find(g => String(g.id) === String(form.girlId))?.name || '选择女生' : '选择女生'}
+                        </MenuButton>
+                        <MenuList bg="warm.700" borderColor="warm.600" maxH="200px" overflowY="auto">
+                          {(girlList || []).map(g => (
+                            <MenuItem key={g.id} bg="warm.700" _hover={{ bg: 'warm.600' }} color="white" onClick={() => setForm({ ...form, girlId: g.id })}>
+                              {g.name || g.nickname}
+                            </MenuItem>
+                          ))}
+                        </MenuList>
+                      </Menu>
                     </FormControl>
                   ) : (
                     <FormControl>
                       <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">关联女生</FormLabel>
-                      <Select
-                        value={form.girlId}
-                        onChange={e => setForm({ ...form, girlId: e.target.value })}
-                        bg="warm.700" color="white"
-                      >
-                        <option value="">不关联</option>
-                        {(girlList || []).map(g => (
-                          <option key={g.id} value={g.id}>{g.name || g.nickname}</option>
-                        ))}
-                      </Select>
+                      <Menu>
+                        <MenuButton as={Button} rightIcon={<ChevronDownIcon />} bg="warm.700" color="white" _hover={{ bg: 'warm.600' }} _expanded={{ bg: 'warm.600' }} width="100%" textAlign="left" fontWeight="normal">
+                          {form.girlId ? (girlList || []).find(g => String(g.id) === String(form.girlId))?.name || '不关联' : '不关联'}
+                        </MenuButton>
+                        <MenuList bg="warm.700" borderColor="warm.600" maxH="200px" overflowY="auto">
+                          <MenuItem bg="warm.700" _hover={{ bg: 'warm.600' }} color="rgba(245,240,232,0.55)" onClick={() => setForm({ ...form, girlId: '' })}>
+                            不关联
+                          </MenuItem>
+                          {(girlList || []).map(g => (
+                            <MenuItem key={g.id} bg="warm.700" _hover={{ bg: 'warm.600' }} color="white" onClick={() => setForm({ ...form, girlId: g.id })}>
+                              {g.name || g.nickname}
+                            </MenuItem>
+                          ))}
+                        </MenuList>
+                      </Menu>
                     </FormControl>
                   )}
                   <FormControl isRequired>
@@ -662,6 +686,29 @@ export default function ClientCalendar({ clientId, clientNickname, girlList, ref
           <ModalFooter>
             {editMode === 'view' ? (
               <HStack spacing={2}>
+                {/* 约会事件：未完成时显示标记完成 */}
+                {isDateEvent && selectedEvent?.dateStatus !== 'completed' && (
+                  <Button
+                    variant="ghost"
+                    colorScheme="green"
+                    size="sm"
+                    leftIcon={<CheckIcon />}
+                    onClick={handleToggleComplete}
+                  >
+                    标记完成
+                  </Button>
+                )}
+                {/* 约会事件：查看详情 */}
+                {isDateEvent && onDateDetail && (
+                  <Button
+                    colorScheme="gold"
+                    size="sm"
+                    onClick={() => onDateDetail(selectedEvent?.eventId)}
+                  >
+                    查看详情
+                  </Button>
+                )}
+                {/* 普通事件：标记完成/取消完成 */}
                 {!isDateEvent && selectedEvent?.status !== 'completed' && (
                   <Button
                     variant="ghost"

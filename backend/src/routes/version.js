@@ -10,7 +10,7 @@ const router = express.Router();
 const VERSION_CONFIG = {
   latestVersion: '1.5.1',
   minVersion: '1.5.1',
-  downloadUrl: 'https://zhuiai.club/apk/app-release.apk',
+  downloadUrl: 'https://zhuiai.club/apk/app.apk',
   updateDescription: '兼容性优化',
   buildNumber: 43,
   apkSize: '约 2.8 MB'

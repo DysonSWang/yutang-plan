@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>02 场景钩子</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --coral: #E74C3C;
+  --gold: #F39C12;
+}
+
+body {
+  font-family: 'Noto Sans SC', sans-serif;
+  background: #1a1a2e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.slide {
+  width: 540px;
+  height: 720px;
+  background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 100%);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.top { width: 100%; height: 60px; background: rgba(231,76,60,0.18); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(231,76,60,0.28); }
+.top span { color: white; font-size: 18px; font-weight: 700; letter-spacing: 2px; }
+
+.header { padding: 16px 28px 12px; text-align: center; }
+.header-title { font-family: 'Noto Serif SC', serif; font-size: 32px; font-weight: 800; color: white; }
+.header-sub { font-size: 17px; color: rgba(255,255,255,0.6); margin-top: 6px; }
+
+.card { margin: 8px 24px; background: rgba(255,255,255,0.08); border-radius: 14px; padding: 16px 18px; border-left: 5px solid var(--coral); }
+.card-label { font-size: 17px; font-weight: 700; color: var(--coral); margin-bottom: 8px; letter-spacing: 1px; }
+.card-text { font-size: 17px; color: white; line-height: 1.5; margin-bottom: 8px; font-weight: 500; }
+
+.tag-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.tag { font-size: 15px; padding: 5px 12px; border-radius: 18px; font-weight: 600; background: rgba(231,76,60,0.35); color: white; }
+
+.tag-note { font-size: 17px; color: rgba(255,255,255,0.7); text-align: center; margin-top: 16px; padding: 0 24px; font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="top"><span>她忽冷忽热，你踩了几个坑？</span></div>
+
+  <div class="header">
+    <div class="header-title">3种错误应对</div>
+    <div class="header-sub">每一种都让她确定你是条鱼</div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">X 坑1 · 追问型</div>
+    <div class="card-text">「你怎么不回我？发生什么事了？」</div>
+    <div class="tag-row">
+      <span class="tag">暴露焦虑</span>
+      <span class="tag">低位信号</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">X 坑2 · 跪舔型</div>
+    <div class="card-text">「我可以等，你想聊随时找我」</div>
+    <div class="tag-row">
+      <span class="tag">没有标准</span>
+      <span class="tag">不被珍惜</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">X 坑3 · 赌气型</div>
+    <div class="card-text">「哦」（冷回去，等她来哄）</div>
+    <div class="tag-row">
+      <span class="tag">情绪对抗</span>
+      <span class="tag">双输</span>
+    </div>
+  </div>
+
+  <div class="tag-note">她不是忽冷忽热，是你的反应让她知道：你上钩了</div>
+</div>
+</body>
+</html>

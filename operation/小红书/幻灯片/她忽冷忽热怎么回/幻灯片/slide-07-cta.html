@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>07 结尾</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --coral: #E74C3C;
+  --gold: #F39C12;
+}
+
+body {
+  font-family: 'Noto Sans SC', sans-serif;
+  background: #1a1a2e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.cover {
+  width: 540px;
+  height: 720px;
+  background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 100%);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.top { width: 100%; height: 60px; background: rgba(231,76,60,0.2); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(231,76,60,0.35); }
+.top span { color: white; font-size: 18px; font-weight: 700; letter-spacing: 4px; }
+
+.title { padding: 20px 28px 14px; text-align: center; }
+.title-text { font-family: 'Noto Serif SC', serif; font-size: 32px; font-weight: 800; color: white; margin-bottom: 8px; line-height: 1.3; }
+.subtitle { font-size: 17px; color: rgba(255,255,255,0.6); }
+
+.hero-quote { margin: 12px 24px; padding: 20px 24px; background: rgba(255,255,255,0.06); border-radius: 16px; border-left: 5px solid var(--coral); }
+.quote-label { font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.5); margin-bottom: 10px; }
+.quote-text { font-family: 'Noto Serif SC', serif; font-size: 26px; font-weight: 800; color: white; line-height: 1.4; }
+.quote-sub { font-size: 16px; color: rgba(255,255,255,0.5); margin-top: 10px; }
+
+.discuss-area { margin: 12px 24px 0; background: rgba(255,255,255,0.05); border-radius: 14px; padding: 18px 20px; border: 1px solid rgba(255,255,255,0.08); flex: 1; }
+.discuss-label { font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.5); margin-bottom: 10px; }
+.discuss-q { font-size: 17px; color: white; line-height: 1.5; margin-bottom: 10px; }
+.discuss-example { font-size: 16px; color: rgba(255,255,255,0.5); font-style: italic; padding: 12px 14px; background: rgba(255,255,255,0.04); border-radius: 10px; margin-bottom: 10px; }
+.discuss-example::before { content: '例：'; color: var(--gold); font-style: normal; }
+.discuss-cta { font-size: 17px; color: var(--gold); font-weight: 700; text-align: center; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.06); }
+
+.footer { position: absolute; bottom: 0; left: 0; right: 0; height: 100px; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 24px; }
+.footer-text { font-size: 18px; font-weight: 700; color: white; margin-bottom: 5px; }
+.footer-note { font-size: 15px; color: rgba(255,255,255,0.5); }
+</style>
+</head>
+<body>
+<div class="cover">
+  <div class="top"><span>核心认知</span></div>
+
+  <div class="title">
+    <div class="title-text">你不是她的鱼，你是选择者</div>
+    <div class="subtitle">她养不养鱼是她的事，你当不当鱼是你的事</div>
+  </div>
+
+  <div class="hero-quote">
+    <div class="quote-label">记住这句话</div>
+    <div class="quote-text">看她做什么，不看她说什么</div>
+    <div class="quote-sub">这不是策略，是心态</div>
+  </div>
+
+  <div class="discuss-area">
+    <div class="discuss-label">评论区等你</div>
+    <div class="discuss-q">你遇到过她忽冷忽热吗？你当时怎么应对的？</div>
+    <div class="discuss-example">我先说：我当时追问了三天，然后她就彻底消失了...</div>
+    <div class="discuss-cta">说出来，帮你分析 ↓</div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-text">◆ 她养不养鱼，由她决定</div>
+    <div class="footer-note">你当不当鱼，由你决定</div>
+  </div>
+</div>
+</body>
+</html>

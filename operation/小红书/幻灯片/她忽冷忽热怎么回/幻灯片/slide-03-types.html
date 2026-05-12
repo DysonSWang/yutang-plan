@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>03 三种类型</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --coral: #E74C3C;
+  --gold: #F39C12;
+  --green: #27AE60;
+  --blue: #3498DB;
+}
+
+body {
+  font-family: 'Noto Sans SC', sans-serif;
+  background: #1a1a2e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.slide {
+  width: 540px;
+  height: 720px;
+  background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 100%);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.top { width: 100%; height: 60px; background: rgba(243,156,18,0.18); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(243,156,18,0.28); }
+.top span { color: white; font-size: 18px; font-weight: 700; letter-spacing: 2px; }
+
+.header { padding: 16px 28px 12px; text-align: center; }
+.header-title { font-family: 'Noto Serif SC', serif; font-size: 32px; font-weight: 800; color: white; }
+.header-sub { font-size: 17px; color: rgba(255,255,255,0.5); margin-top: 6px; }
+
+.section { margin: 8px 22px; border-radius: 12px; padding: 14px 18px; }
+.type-a { background: rgba(39,174,96,0.12); border-left: 5px solid rgba(39,174,96,0.8); }
+.type-b { background: rgba(231,76,60,0.12); border-left: 5px solid rgba(231,76,60,0.8); }
+.type-c { background: rgba(52,152,219,0.12); border-left: 5px solid rgba(52,152,219,0.8); }
+.section-label { font-size: 16px; font-weight: 700; margin-bottom: 6px; letter-spacing: 1px; }
+.type-a .section-label { color: var(--green); }
+.type-b .section-label { color: var(--coral); }
+.type-c .section-label { color: var(--blue); }
+.section-title { font-family: 'Noto Serif SC', serif; font-size: 18px; font-weight: 700; color: white; margin-bottom: 5px; }
+.section-text { font-size: 16px; color: rgba(255,255,255,0.7); line-height: 1.5; }
+
+.think { margin: 12px 22px 0; padding: 14px 18px; background: rgba(255,255,255,0.06); border-radius: 12px; text-align: center; }
+.think-label { font-size: 13px; color: rgba(255,255,255,0.4); margin-bottom: 5px; }
+.think-text { font-size: 18px; color: var(--gold); font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="top"><span>她在养鱼吗？先判断类型</span></div>
+
+  <div class="header">
+    <div class="header-title">三种忽冷忽热</div>
+    <div class="header-sub">判断清楚，再决定怎么应对</div>
+  </div>
+
+  <div class="section type-a">
+    <div class="section-label">A 型 · 真窗口波动</div>
+    <div class="section-title">她对你有意思，但在反复确认</div>
+    <div class="section-text">热多冷少，冷完会主动回来找 → 有戏</div>
+  </div>
+
+  <div class="section type-b">
+    <div class="section-label">B 型 · 养鱼型</div>
+    <div class="section-title">你只是她池塘里的一条</div>
+    <div class="section-text">冷多热少，热只是偶尔施舍 → 止损</div>
+  </div>
+
+  <div class="section type-c">
+    <div class="section-label">C 型 · 慢热型</div>
+    <div class="section-title">她需要更多时间确认心意</div>
+    <div class="section-text">进度慢但从未消失，投入一直在 → 耐心</div>
+  </div>
+
+  </div>
+</body>
+</html>

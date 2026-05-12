@@ -38,6 +38,8 @@ export default function ClientDates() {
   const [showAiFields, setShowAiFields] = useState(false);
   const [showMoreFields, setShowMoreFields] = useState(false);
   const [filterGirlId, setFilterGirlId] = useState('');
+  const aiFieldsRef = useRef(null);
+  const addModalRef = useRef(null);
   const toast = useToast();
   // 加载记忆的偏好设置
   useEffect(() => {
@@ -819,6 +821,13 @@ export default function ClientDates() {
                 clientId={clientId}
                 girlList={girlList}
                 refreshKey={isInitialLoad}
+                onDateDetail={(dateId) => {
+                  const dateItem = allDates.find(d => d.id === dateId);
+                  if (dateItem) {
+                    setSelected(dateItem);
+                    onOpen();
+                  }
+                }}
               />
             ) : (
               <Flex justify="center" py={12}><Spinner /></Flex>
@@ -1025,7 +1034,7 @@ export default function ClientDates() {
       {/* 添加约会 Modal - 双步统一流程 */}
       <Modal isOpen={showAddModal} onClose={() => { setShowAddModal(false); resetDateForm(); }} size="lg">
         <ModalOverlay />
-        <ModalContent bg="warm.800" maxH="85vh" overflow="auto">
+        <ModalContent bg="warm.800" maxH="85vh" overflow="auto" ref={addModalRef}>
           <ModalHeader color="white">
             {addStep === 1 ? '选择约会对象' : '填写约会信息'}
           </ModalHeader>
@@ -1077,6 +1086,7 @@ export default function ClientDates() {
                       onClick={() => {
                         setSelectedGirlForDate(girl);
                         setAddStep(2);
+                        setTimeout(() => addModalRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 50);
                         const stageMap = {
                           '陌生': '初次见面', '朋友': '已聊过几次',
                           '暧昧': '暧昧中', '亲密': '确定关系',
@@ -1131,7 +1141,10 @@ export default function ClientDates() {
                   size="lg"
                   mt={4}
                   isDisabled={!selectedGirlForDate}
-                  onClick={() => setAddStep(2)}
+                  onClick={() => {
+                    setAddStep(2);
+                    setTimeout(() => addModalRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 50);
+                  }}
                 >
                   下一步
                 </Button>
@@ -1319,7 +1332,13 @@ export default function ClientDates() {
                     leftIcon={<SparklesIcon />}
                     flex={1}
                     size="lg"
-                    onClick={() => setShowAiFields(!showAiFields)}
+                    onClick={() => {
+                      const willShow = !showAiFields;
+                      setShowAiFields(willShow);
+                      if (willShow) {
+                        setTimeout(() => aiFieldsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                      }
+                    }}
                   >
                     {showAiFields ? '收起 AI 策划' : 'AI 智能策划'}
                   </Button>
@@ -1327,7 +1346,7 @@ export default function ClientDates() {
 
                 {/* --- AI 智能策划区域（showAiFields 只控制这个区域） --- */}
                 {showAiFields && (
-                  <VStack spacing={3} align="stretch" mt={2}>
+                  <VStack spacing={3} align="stretch" mt={2} ref={aiFieldsRef}>
                     <Divider />
                     <HStack spacing={2}><Icon as={SparklesIcon} boxSize={4} color="gold.400" /><Text color="gold.400" fontWeight="bold" fontSize="sm">AI 精细化方案（基于上方已填写的偏好）</Text></HStack>
                     <Text color="rgba(245,240,232,0.4)" fontSize="xs">填写上方"更多选项"后，AI 将生成更精准的时间表、场地推荐和聊天话题</Text>

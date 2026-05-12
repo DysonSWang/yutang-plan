@@ -318,9 +318,9 @@ router.post('/batch', authMiddleware, async (req, res) => {
         where: { userId: clientId },
         include: { girl: { select: { id: true, name: true, stage: true } } }
       }),
-      // 日历事件
+      // 日历事件（排除关联约会的 Event，避免重复）
       prisma.event.findMany({
-        where,
+        where: { ...where, dateId: null },
         include: { girl: { select: { id: true, name: true, stage: true } } }
       })
     ]);
@@ -341,7 +341,8 @@ router.post('/batch', authMiddleware, async (req, res) => {
       isDate: true,
       dateStatus: d.status,
       location: d.location,
-      rating: d.rating
+      rating: d.rating,
+      planStatus: d.planStatus
     }));
 
     // 映射普通事件

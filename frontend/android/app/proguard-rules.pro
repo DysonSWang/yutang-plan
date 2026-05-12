@@ -22,6 +22,10 @@
 -keep class com.getcapacitor.** { *; }
 -dontwarn com.getcapacitor.**
 
+# ========== LocalBroadcastManager ==========
+-keep class androidx.localbroadcastmanager.** { *; }
+-dontwarn androidx.localbroadcastmanager.**
+
 # ========== FullCalendar ==========
 -keep class fullcalendar.** { *; }
 -dontwarn fullcalendar.**

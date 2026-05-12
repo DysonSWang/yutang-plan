@@ -7,6 +7,7 @@ import emojiCategories from '../data/emojiData';
 
 export default function EmojiPanel({ onSelect, isDisabled = false, variant = 'admin' }) {
   const [activeIdx, setActiveIdx] = useState(0);
+  const [isOpen, setIsOpen] = useState(false);
 
   const isAdmin = variant === 'admin';
   const popoverBg = isAdmin ? 'warm.700' : 'warm.900';
@@ -20,7 +21,7 @@ export default function EmojiPanel({ onSelect, isDisabled = false, variant = 'ad
   const currentEmojis = emojiCategories[activeIdx]?.emojis || [];
 
   return (
-    <Popover placement="top-start" isLazy>
+    <Popover placement="top-start" isLazy isOpen={isOpen} onClose={() => setIsOpen(false)}>
       <PopoverTrigger>
         <IconButton
           icon={<Text>😊</Text>}
@@ -29,6 +30,7 @@ export default function EmojiPanel({ onSelect, isDisabled = false, variant = 'ad
           color={triggerColor}
           aria-label="表情"
           isDisabled={isDisabled}
+          onClick={() => setIsOpen(v => !v)}
         />
       </PopoverTrigger>
       <PopoverContent
@@ -56,7 +58,7 @@ export default function EmojiPanel({ onSelect, isDisabled = false, variant = 'ad
                   lineHeight="34px"
                   _hover={{ bg: hoverBg }}
                   _active={{ bg: activeBg }}
-                  onClick={() => onSelect(emoji)}
+                  onClick={(e) => { e.stopPropagation(); onSelect(emoji); }}
                 >
                   {emoji}
                 </Box>

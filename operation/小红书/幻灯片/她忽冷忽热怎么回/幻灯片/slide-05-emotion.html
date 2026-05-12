@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>05 情绪判断</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --coral: #E74C3C;
+  --gold: #F39C12;
+  --green: #27AE60;
+}
+
+body {
+  font-family: 'Noto Sans SC', sans-serif;
+  background: #1a1a2e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.slide {
+  width: 540px;
+  height: 720px;
+  background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 100%);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.top { width: 100%; height: 60px; background: rgba(52,152,219,0.18); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(52,152,219,0.28); }
+.top span { color: white; font-size: 18px; font-weight: 700; letter-spacing: 2px; }
+
+.header { padding: 16px 28px 12px; text-align: center; }
+.header-title { font-family: 'Noto Serif SC', serif; font-size: 32px; font-weight: 800; color: white; }
+.header-sub { font-size: 17px; color: rgba(255,255,255,0.5); margin-top: 6px; }
+
+.section { margin: 8px 22px; border-radius: 12px; padding: 14px 18px; }
+.fake-bad { background: rgba(39,174,96,0.1); border-left: 5px solid rgba(39,174,96,0.7); }
+.fake-good { background: rgba(231,76,60,0.1); border-left: 5px solid rgba(231,76,60,0.7); }
+.section-label { font-size: 16px; font-weight: 700; margin-bottom: 6px; letter-spacing: 1px; }
+.fake-bad .section-label { color: var(--green); }
+.fake-good .section-label { color: var(--coral); }
+.section-title { font-family: 'Noto Serif SC', serif; font-size: 18px; font-weight: 700; color: white; margin-bottom: 5px; }
+.section-text { font-size: 16px; color: rgba(255,255,255,0.7); line-height: 1.5; }
+
+.think { margin: 12px 22px 0; padding: 14px 18px; background: rgba(255,255,255,0.06); border-radius: 12px; text-align: center; }
+.think-label { font-size: 13px; color: rgba(255,255,255,0.4); margin-bottom: 5px; }
+.think-text { font-size: 18px; color: var(--gold); font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="top"><span>嘴硬心软 vs 嘴甜心冷</span></div>
+
+  <div class="header">
+    <div class="header-title">她嘴上说的 ≠ 心里想的</div>
+    <div class="header-sub">看她做什么，别听她说什么</div>
+  </div>
+
+  <div class="section fake-bad">
+    <div class="section-label">嘴硬心软（假坏）</div>
+    <div class="section-title">「讨厌」「滚」「你好烦」</div>
+    <div class="section-text">但没拉黑你，还在跟你聊 → 她在撩你</div>
+  </div>
+
+  <div class="section fake-good">
+    <div class="section-label">嘴甜心冷（假好）</div>
+    <div class="section-title">「好呀～」「么么哒」「想你了」</div>
+    <div class="section-text">但从不延展、不约出来 → 她在敷衍</div>
+  </div>
+
+  <div class="section fake-bad">
+    <div class="section-label">核心判断</div>
+    <div class="section-title">语言可以骗人，行为骗不了</div>
+    <div class="section-text">嘴上讨厌但身体靠近=有戏；嘴上喜欢但从不付出=没戏</div>
+  </div>
+
+  </div>
+</body>
+</html>

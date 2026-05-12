@@ -82,7 +82,7 @@ function StatCard({ label, value, icon, accent = 'gold', subtitle, colSpan = 1 }
 }
 
 const QUICK_ENTRIES = [
-  { path: null, label: '联系Mo哥', desc: '人工沟通，更私密', icon: ChatIcon, gradient: 'linear(135deg, gold.500, gold.400)' },
+  { path: '/chat', label: '和Mo哥一起追ai', desc: '一起追ai', icon: ChatIcon, gradient: 'linear(135deg, gold.500, gold.400)' },
   { path: '/ai-coach', label: 'AI教练咨询', desc: '24小时在线', icon: SparklesIcon, gradient: 'linear(135deg, gold.500, gold.400)' },
   { path: '/my-pond', label: '查看我的缘分', desc: '管理我的缘分', icon: FishIcon, gradient: 'linear(135deg, rose.500, rose.400)' },
   { path: '/learning', label: '学习中心', desc: 'Mo哥宝典章节学习', icon: BookIcon, gradient: 'linear(135deg, gold.500, gold.400)' },

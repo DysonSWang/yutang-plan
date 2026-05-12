@@ -25,5 +25,8 @@
   "homepage": "https://github.com/DysonSWang/zhuiai#readme",
   "devDependencies": {
     "@playwright/test": "^1.59.1"
+  },
+  "dependencies": {
+    "playwright": "^1.60.0"
   }
 }

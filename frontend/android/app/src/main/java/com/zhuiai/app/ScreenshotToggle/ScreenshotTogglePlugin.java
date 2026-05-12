@@ -1,6 +1,6 @@
 package com.zhuiai.app.ScreenshotToggle;
 
-import android.content.Intent;
+import android.app.Activity;
 import android.content.SharedPreferences;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -15,12 +15,19 @@ public class ScreenshotTogglePlugin extends Plugin {
 
     @PluginMethod
     public void toggle(PluginCall call) {
-        SharedPreferences prefs = getContext().getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE);
+        Activity activity = getActivity();
+        if (activity == null) {
+            call.reject("Activity is null");
+            return;
+        }
+        SharedPreferences prefs = activity.getSharedPreferences(PREFS_NAME, Activity.MODE_PRIVATE);
         boolean next = !prefs.getBoolean(KEY_SCREENSHOT_ENABLED, false);
         prefs.edit().putBoolean(KEY_SCREENSHOT_ENABLED, next).apply();
 
-        Intent intent = new Intent("com.zhuiai.app.TOGGLE_SCREENSHOT");
-        getContext().sendBroadcast(intent);
+        // 直接调用 Activity 方法应用截屏保护
+        if (activity instanceof com.zhuiai.app.MainActivity) {
+            ((com.zhuiai.app.MainActivity) activity).applyScreenshotProtection();
+        }
 
         call.resolve();
     }
