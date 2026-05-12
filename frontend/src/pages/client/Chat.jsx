@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Box, VStack, HStack, Stack, Input, Button, Text, Flex, IconButton, Image, Badge, useToast, Center, Spinner, Icon, Menu, MenuButton, MenuList, MenuItem, MenuDivider, Switch, FormControl, FormLabel } from '@chakra-ui/react';
+import { Box, VStack, HStack, Stack, Input, Button, Text, Flex, IconButton, Image, Badge, useToast, Center, Spinner, Icon, Menu, MenuButton, MenuList, MenuItem, MenuDivider, Switch, FormControl, FormLabel, Tooltip } from '@chakra-ui/react';
+import { WarningIcon, CheckCircleIcon } from '@chakra-ui/icons';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { api, chat, upload } from '../../utils/api';
 import { captureError } from '../../utils/frontendErrorCapture';
@@ -39,6 +40,11 @@ export default function ClientChat() {
     setFlashViewer({ isOpen: true, ...params });
   }, []);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [messageStatus, setMessageStatus] = useState({}); // messageId -> 'sending' | 'sent' | 'failed'
+  const [recentlySent, setRecentlySent] = useState(new Set()); // 发送成功后短暂显示确认标记
+  const messagesEndRef = useRef(null);
   const toast = useToast();
   const API_BASE = api.baseUrl;
 
@@ -189,15 +195,27 @@ export default function ClientChat() {
     burnTimersRef.current[msg.id] = setTimeout(tick, 1000);
   }, [handleBurnMessage]);
 
-  const loadMessages = async (sessionId) => {
+  const loadMessages = async (sessionId, isLoadMore = false) => {
     try {
-      const res = await chat.messages(sessionId);
+      if (isLoadMore) {
+        setLoadingMore(true);
+      }
+      const oldestMsg = messages.length > 0 ? messages[0].createdAt : null;
+      const res = await chat.messages(sessionId, { before: oldestMsg, limit: 20 });
       if (res.success) {
-        setMessages(res.messages);
+        if (isLoadMore) {
+          setMessages(prev => [...res.messages, ...prev]);
+          setHasMore(res.messages.length === 50);
+        } else {
+          setMessages(res.messages);
+          setHasMore(res.messages.length === 50);
+        }
         // 注意：onView 模式的倒计时在点击查看后才开始，不在这里启动
       }
     } catch (e) {
       captureError(e);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -263,17 +281,46 @@ export default function ClientChat() {
     };
   }, []);
 
+  // 发送成功确认标记 3 秒后自动消失
+  useEffect(() => {
+    if (recentlySent.size === 0) return;
+    const timer = setTimeout(() => {
+      setRecentlySent(new Set());
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [recentlySent]);
+
   const sendMediaMessage = async (url, type, duration, isBurnAfterRead = false, overrideBurnSeconds = null) => {
     if (!session || sending) return;
     setSending(true);
+    const tempId = `temp-media-${Date.now()}`;
+    const optimisticMsg = {
+      id: tempId,
+      sessionId: session.id,
+      senderRole: 'client',
+      type,
+      mediaUrl: url,
+      duration,
+      createdAt: new Date().toISOString(),
+      status: 'sending',
+      isBurnAfterRead,
+      burnAfterSeconds: isBurnAfterRead ? (overrideBurnSeconds ?? (burnDurationType === 'adaptive' ? 5 : burnSeconds)) : null,
+    };
+    setMessages(prev => [...prev, optimisticMsg]);
+    setMessageStatus(prev => ({ ...prev, [tempId]: 'sending' }));
+
     try {
       const effectiveBurn = overrideBurnSeconds != null ? overrideBurnSeconds : (burnDurationType === 'adaptive' ? 5 : burnSeconds);
       const res = await chat.send(session.id, null, type, url, duration, isBurnAfterRead, isBurnAfterRead ? effectiveBurn : null, burnTrigger);
       if (res.success) {
-        setMessages(prev => [...prev, res.message]);
+        setMessages(prev => prev.map(m => m.id === tempId ? res.message : m));
+        setMessageStatus(prev => ({ ...prev, [tempId]: 'sent' }));
+        setRecentlySent(prev => new Set([...prev, res.message.id]));
       }
     } catch (e) {
       captureError(e);
+      setMessageStatus(prev => ({ ...prev, [tempId]: 'failed' }));
+      toast({ title: '发送失败，点击重试', status: 'error', duration: 4000 });
     } finally {
       setSending(false);
       setPreviewFile(null);
@@ -564,21 +611,37 @@ export default function ClientChat() {
 
   const sendMessageAfterSession = async (sessionId, content) => {
     setSending(true);
+    // 生成临时 ID 追踪消息状态
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMsg = {
+      id: tempId,
+      sessionId,
+      senderRole: 'client',
+      content,
+      type: 'text',
+      createdAt: new Date().toISOString(),
+      status: 'sending'
+    };
+    setMessages(prev => [...prev, optimisticMsg]);
+    setMessageStatus(prev => ({ ...prev, [tempId]: 'sending' }));
+
     try {
       const isBurn = burnMode;
       const effectiveSeconds = burnDurationType === 'adaptive' ? 5 : burnSeconds;
       const res = await chat.send(sessionId, content, 'text', null, null, isBurn, isBurn ? effectiveSeconds : null, burnTrigger);
       if (res.success) {
-        setMessages(prev => [...prev, res.message]);
+        // 用真实消息替换临时消息
+        setMessages(prev => prev.map(m => m.id === tempId ? res.message : m));
+        setMessageStatus(prev => ({ ...prev, [tempId]: 'sent' }));
+        setRecentlySent(prev => new Set([...prev, res.message.id]));
         setInput('');
         console.log('[DEBUG] 发送阅后即焚消息', { isBurn, isBurnAfterRead: res.message.isBurnAfterRead, burnAfterSeconds: res.message.burnAfterSeconds, id: res.message.id });
-        // 注意：前端不启动倒计时
-        // - 即时模式由后端定时器处理
-        // - 阅后模式由接收方点击查看时触发
       }
     } catch (e) {
       captureError(e);
-      toast({ title: '发送失败', status: 'error', duration: 4000, duration: 2000 });
+      // 标记消息为失败
+      setMessageStatus(prev => ({ ...prev, [tempId]: 'failed' }));
+      toast({ title: '发送失败，点击消息重试', status: 'error', duration: 4000 });
     } finally {
       setSending(false);
     }
@@ -593,6 +656,23 @@ export default function ClientChat() {
       }
     } catch (e) {
       captureError(e);
+    }
+  };
+
+  // 重试发送失败的消息
+  const handleRetryMessage = async (msg) => {
+    if (messageStatus[msg.id] !== 'failed') return;
+    setMessageStatus(prev => ({ ...prev, [msg.id]: 'sending' }));
+    try {
+      const res = await chat.send(msg.sessionId, msg.content, msg.type || 'text', msg.midjourneyPrompt);
+      if (res.success) {
+        setMessages(prev => prev.map(m => m.id === msg.id ? res.message : m));
+        setMessageStatus(prev => ({ ...prev, [msg.id]: 'sent' }));
+      } else {
+        setMessageStatus(prev => ({ ...prev, [msg.id]: 'failed' }));
+      }
+    } catch (e) {
+      setMessageStatus(prev => ({ ...prev, [msg.id]: 'failed' }));
     }
   };
 
@@ -865,6 +945,10 @@ export default function ClientChat() {
             if (!scrollRef.current) return;
             const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
             shouldAutoScrollRef.current = scrollHeight - scrollTop - clientHeight < 120;
+            // 滚动到顶部时加载更多
+            if (scrollTop < 100 && hasMore && !loadingMore && session) {
+              loadMessages(session.id, true);
+            }
           }}
         >
           {messages.length === 0 ? (
@@ -877,7 +961,7 @@ export default function ClientChat() {
                   不知道聊什么？试试下面这些话题
                 </Text>
                 <VStack spacing={2} w="full" maxW="280px">
-                  {['我想开始一段新的感情 💕', '最近遇到了感情困扰', '想提升自己的恋爱情商'].map(topic => (
+                  {['我想开始一段新的感情', '最近遇到了感情困扰', '想提升自己的恋爱情商'].map(topic => (
                     <Button
                       key={topic}
                       size="sm"
@@ -980,6 +1064,26 @@ export default function ClientChat() {
                           />
                         )}
                       </Box>
+                      {/* 发送状态指示器 */}
+                      {isClient && messageStatus[msg.id] === 'sending' && (
+                        <Spinner size="sm" color="orange.300" flexShrink={0} />
+                      )}
+                      {isClient && messageStatus[msg.id] === 'failed' && (
+                        <Tooltip label="点击重试" placement="top">
+                          <IconButton
+                            icon={<Icon as={WarningIcon} boxSize={4} />}
+                            size="sm"
+                            variant="ghost"
+                            color="red.400"
+                            onClick={() => handleRetryMessage(msg)}
+                            aria-label="重试发送"
+                            flexShrink={0}
+                          />
+                        </Tooltip>
+                      )}
+                      {isClient && recentlySent.has(msg.id) && (
+                        <Icon as={CheckCircleIcon} boxSize={4} color="green.400" flexShrink={0} />
+                      )}
                       {isClient && (
                         <Box
                           w="36px"
@@ -1039,7 +1143,7 @@ export default function ClientChat() {
 
           <Stack direction={{ base: 'column', md: 'row' }} spacing={{ base: 2, md: 2 }} w="full">
             {/* 工具栏按钮 — 移动端独占一行 */}
-            <HStack spacing={1} justify={{ base: 'space-around', md: 'start' }}>
+            <HStack spacing={2} justify={{ base: 'space-around', md: 'start' }}>
               <IconButton
                 icon={<Icon as={CameraIcon} boxSize={4} />}
                 variant="ghost"

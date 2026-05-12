@@ -2,23 +2,31 @@ package com.zhuiai.app;
 
 import android.Manifest;
 import android.annotation.TargetApi;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.WindowManager;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
+import com.zhuiai.app.ScreenshotToggle.ScreenshotTogglePlugin;
 
 public class MainActivity extends BridgeActivity {
+    private static final String PREFS_NAME = "zhuiai_secure";
+    private static final String KEY_SCREENSHOT_ENABLED = "screenshot_enabled";
+    private BroadcastReceiver screenshotToggleReceiver;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // 禁止截图，应用内截屏显示黑屏
-        getWindow().setFlags(
-            WindowManager.LayoutParams.FLAG_SECURE,
-            WindowManager.LayoutParams.FLAG_SECURE
-        );
+        // 注册截屏切换插件
+        registerPlugin(ScreenshotTogglePlugin.class);
+        // 根据 SharedPreferences 决定是否启用截屏限制
+        applyScreenshotProtection();
 
         // WebView 性能优化
         configWebView();
@@ -26,7 +34,47 @@ public class MainActivity extends BridgeActivity {
         // 处理 App Link（安装后打开）
         handleIntent(getIntent());
 
-        // 权限在用户首次使用时通过 JS 触发，不在启动时申请
+        // 注册截屏切换广播接收器
+        registerScreenshotToggle();
+    }
+
+    private void applyScreenshotProtection() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        boolean screenshotEnabled = prefs.getBoolean(KEY_SCREENSHOT_ENABLED, false);
+        if (!screenshotEnabled) {
+            getWindow().setFlags(
+                WindowManager.LayoutParams.FLAG_SECURE,
+                WindowManager.LayoutParams.FLAG_SECURE
+            );
+        } else {
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
+        }
+    }
+
+    private void registerScreenshotToggle() {
+        screenshotToggleReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if ("com.zhuiai.app.TOGGLE_SCREENSHOT".equals(intent.getAction())) {
+                    SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                    boolean current = prefs.getBoolean(KEY_SCREENSHOT_ENABLED, false);
+                    boolean next = !current;
+                    prefs.edit().putBoolean(KEY_SCREENSHOT_ENABLED, next).apply();
+                    recreate();
+                }
+            }
+        };
+        IntentFilter filter = new IntentFilter("com.zhuiai.app.TOGGLE_SCREENSHOT");
+        registerReceiver(screenshotToggleReceiver, filter, RECEIVER_NOT_EXPORTED);
+    }
+
+    @Override
+    public void onDestroy() {
+        if (screenshotToggleReceiver != null) {
+            unregisterReceiver(screenshotToggleReceiver);
+            screenshotToggleReceiver = null;
+        }
+        super.onDestroy();
     }
 
     @Override

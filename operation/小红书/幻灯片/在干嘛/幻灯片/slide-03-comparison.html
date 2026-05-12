@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<title>03 青铜 vs 王者对比</title>
+<title>03 对比分析</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -10,14 +10,11 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
-  --bg-warm: #FFF8F3;
   --coral: #C0392B;
-  --coral-light: rgba(232, 90, 79, 0.1);
   --ink: #2D2D2D;
   --ink-light: #6B6B6B;
   --gold: #A08020;
   --green: #3D8C40;
-  --green-light: rgba(61, 140, 64, 0.1);
 }
 
 body {
@@ -33,91 +30,87 @@ body {
 .slide {
   width: 540px;
   height: 720px;
-  background: var(--bg-warm);
+  background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 100%);
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.tag { width: 100%; height: 48px; background: var(--coral); display: flex; align-items: center; padding: 0 22px; box-shadow: 0 4px 16px rgba(232,90,79,0.2); }
-.tag span { color: white; font-size: 15px; font-weight: 600; letter-spacing: 2px; }
+.top { width: 100%; height: 56px; background: rgba(192,57,43,0.12); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(192,57,43,0.18); }
+.top span { color: white; font-size: 13px; font-weight: 700; letter-spacing: 2px; }
 
-.title { padding: 26px 25px 12px; text-align: center; }
-.title-text { font-family: 'Noto Serif SC', serif; font-size: 28px; font-weight: 800; color: var(--ink); }
-.divider { width: 80px; height: 3px; background: var(--coral); margin: 10px auto 0; border-radius: 2px; }
+.header { padding: 14px 24px 8px; text-align: center; }
+.header-title { font-family: 'Noto Serif SC', serif; font-size: 22px; font-weight: 800; color: white; margin-bottom: 4px; }
+.header-sub { font-size: 13px; color: rgba(255,255,255,0.5); }
 
-.content { padding: 0 20px; }
+.card { margin: 0 20px 10px; border-radius: 14px; padding: 14px 16px; }
+.card-bronze { background: rgba(255,255,255,0.05); border-left: 4px solid rgba(192,57,43,0.6); }
+.card-king { background: rgba(255,255,255,0.05); border-left: 4px solid var(--green); }
 
-.section { margin: 10px 0; border-radius: 14px; padding: 16px 18px; }
-.bronze { background: var(--coral-light); border-left: 4px solid var(--coral); }
-.gold { background: var(--green-light); border-left: 4px solid var(--green); }
-
-.label { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
-.bronze .label { color: var(--coral); }
-.gold .label { color: var(--green); }
+.card-label { font-size: 12px; font-weight: 700; margin-bottom: 8px; letter-spacing: 1px; }
+.card-bronze .card-label { color: rgba(192,57,43,0.9); }
+.card-king .card-label { color: var(--green); }
 
 .flow { margin-bottom: 6px; }
-.flow:last-child { margin-bottom: 0; }
 .chat-row { display: flex; margin-bottom: 4px; }
 .chat-row.her { justify-content: flex-start; }
 .chat-row.his { justify-content: flex-end; }
 .bubble { max-width: 75%; padding: 6px 12px; border-radius: 10px; font-size: 13px; }
-.bronze .bubble.her { background: rgba(232,90,79,0.12); color: #c0392b; }
-.bronze .bubble.his { background: rgba(0,0,0,0.06); color: var(--ink-light); }
-.gold .bubble.her { background: rgba(61,140,64,0.12); color: #2d6a30; }
-.gold .bubble.his { background: rgba(0,0,0,0.06); color: var(--ink-light); }
-.result { font-size: 12px; font-weight: 700; margin-top: 6px; text-align: center; }
-.bronze .result { color: var(--coral); }
-.gold .result { color: var(--green); }
+.bubble.her { background: rgba(192,57,43,0.2); color: white; border-bottom-left-radius: 4px; }
+.bubble.his { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.6); border-bottom-right-radius: 4px; }
+.result { font-size: 12px; font-weight: 600; margin-top: 6px; text-align: center; }
+.card-bronze .result { color: rgba(192,57,43,0.8); }
+.card-king .result { color: var(--green); }
 
-.think { margin: 12px 20px; background: #2D2D2D; border-radius: 14px; padding: 16px 18px; }
-.think-title { font-size: 13px; font-weight: 700; color: var(--gold); margin-bottom: 10px; letter-spacing: 1px; }
-.think-bad, .think-good { font-size: 13px; margin-bottom: 6px; line-height: 1.4; }
-.think-bad { color: #ff8a8a; }
-.think-good { color: #7DD97D; }
+.think { margin: 8px 20px 0; padding: 12px 16px; background: rgba(255,255,255,0.05); border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); }
+.think-label { font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 6px; letter-spacing: 1px; }
+.think-bad, .think-good { font-size: 13px; margin-bottom: 4px; }
+.think-bad { color: rgba(255,120,120,0.9); }
+.think-good { color: rgba(125,217,125,0.9); }
 
-.footer { position: absolute; bottom: 30px; left: 0; right: 0; text-align: center; }
-.footer span { cursor: pointer; transition: transform 0.15s ease; }
-.footer span:active { transform: scale(0.96); }font-size: 15px; color: var(--ink); font-weight: 700; background: rgba(255,255,255,0.85); padding: 4px 16px; border-radius: 10px; }
+.footer { position: absolute; bottom: 0; left: 0; right: 0; height: 80px; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 22px; }
+.footer span { font-size: 13px; color: rgba(255,255,255,0.5); }
 </style>
 </head>
 <body>
 <div class="slide">
-  <div class="tag"><span>对比分析</span></div>
+  <div class="top"><span>为什么不能直接回答？</span></div>
 
-  <div class="title">
-    <div class="title-text">为什么不能直接回答？</div>
-    <div class="divider"></div>
+  <div class="header">
+    <div class="header-title">青铜 vs 王者 操作对比</div>
+    <div class="header-sub">同样是回答，差别在哪里？</div>
   </div>
 
-  <div class="content">
-    <div class="section bronze">
-      <div class="label">X 青铜操作</div>
-      <div class="flow">
-        <div class="chat-row her"><div class="bubble her">她：在干嘛？</div></div>
-        <div class="chat-row his"><div class="bubble his">你：在上班啊，你呢？</div></div>
-        <div class="chat-row her"><div class="bubble her">她：哦</div></div>
-      </div>
-      <div class="result">→ 话题结束</div>
+  <div class="card card-bronze">
+    <div class="card-label">X 青铜操作</div>
+    <div class="flow">
+      <div class="chat-row her"><div class="bubble her">她：在干嘛？</div></div>
+      <div class="chat-row his"><div class="bubble his">你：在上班啊，你呢？</div></div>
+      <div class="chat-row her"><div class="bubble her">她：哦</div></div>
     </div>
+    <div class="result">→ 话题结束</div>
+  </div>
 
-    <div class="section gold">
-      <div class="label">V 王者操作</div>
-      <div class="flow">
-        <div class="chat-row her"><div class="bubble her">她：在干嘛？</div></div>
-        <div class="chat-row his"><div class="bubble his">你：刚开完会，头都大了，你今天呢？</div></div>
-        <div class="chat-row her"><div class="bubble her">她：哈哈怎么了？</div></div>
-      </div>
-      <div class="result">→ 话题继续</div>
+  <div class="card card-king">
+    <div class="card-label">V 王者操作</div>
+    <div class="flow">
+      <div class="chat-row her"><div class="bubble her">她：在干嘛？</div></div>
+      <div class="chat-row his"><div class="bubble his">你：刚开完会，头都大了，你今天呢？</div></div>
+      <div class="chat-row her"><div class="bubble her">她：哈哈怎么了？</div></div>
     </div>
+    <div class="result">→ 话题继续</div>
   </div>
 
   <div class="think">
-    <div class="think-title">💡 核心逻辑</div>
+    <div class="think-label">核心逻辑</div>
     <div class="think-bad">X 直接回答 = 审问式聊天，她压力大</div>
     <div class="think-good">V 状态+好奇 = 有来有往，她更愿回应</div>
   </div>
 
-  <div class="footer"><span>收藏起来，下次避免踩坑</span></div>
+  <div class="footer">
+    <span>收藏起来，下次避免踩坑</span>
+  </div>
 </div>
 </body>
 </html>

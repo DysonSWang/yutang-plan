@@ -88,15 +88,20 @@ export default function ChapterDetail() {
   }, []);
 
   const { isInitialLoad } = useKeepAliveData(async () => {
-    const [chRes, progRes, perRes] = await Promise.all([
+    const [chRes, progRes, chDetailRes, perRes] = await Promise.all([
       membershipApi.chapters().catch(() => ({ success: false })),
       membershipApi.learningProgress().catch(() => ({ success: false })),
+      membershipApi.getChapter(chapterId).catch(() => ({ success: false })),
       membershipApi.getPersonalizedChapter(chapterId).catch(() => null),
     ]);
     if (chRes.success) {
       const sorted = chRes.chapters;
       setAllChapters(sorted);
-      const ch = sorted.find(c => c.chapterId === chapterId);
+    }
+    if (chDetailRes.success) {
+      setChapter(chDetailRes.chapter);
+    } else if (chRes.success) {
+      const ch = chRes.chapters.find(c => c.chapterId === chapterId);
       setChapter(ch);
     }
     if (progRes.success) {

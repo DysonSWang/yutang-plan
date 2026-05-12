@@ -10,13 +10,11 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
-  --bg-warm: #FFF8F3;
   --coral: #C0392B;
   --ink: #2D2D2D;
   --ink-light: #6B6B6B;
   --gold: #A08020;
   --green: #3D8C40;
-  --green-light: rgba(61, 140, 64, 0.1);
 }
 
 body {
@@ -29,79 +27,81 @@ body {
   padding: 20px;
 }
 
-.cover {
+.slide {
   width: 540px;
   height: 720px;
-  background: var(--bg-warm);
+  background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 100%);
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.tag { width: 100%; height: 48px; background: var(--gold); display: flex; align-items: center; padding: 0 22px; }
-.tag span { color: white; font-size: 15px; font-weight: 600; letter-spacing: 2px; }
+.top { width: 100%; height: 56px; background: rgba(201,162,39,0.2); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(201,162,39,0.3); }
+.top span { color: white; font-size: 13px; font-weight: 700; letter-spacing: 2px; }
 
-.title { padding: 26px 25px 12px; text-align: center; }
-.title-text { font-family: 'Noto Serif SC', serif; font-size: 28px; font-weight: 800; color: var(--ink); }
+.header { padding: 14px 24px 10px; text-align: center; }
+.header-title { font-family: 'Noto Serif SC', serif; font-size: 22px; font-weight: 800; color: white; }
 
-.list { padding: 10px 22px; }
-
-.item { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
-.item-num { width: 28px; height: 28px; background: var(--coral); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.item { display: flex; align-items: flex-start; gap: 12px; margin: 0 20px 12px; }
+.item-num { width: 28px; height: 28px; background: rgba(192,57,43,0.25); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .item-num span { color: white; font-size: 13px; font-weight: 700; }
-.item-num.gold-bg { background: var(--gold); }
+.item-num.gold-bg { background: rgba(201,162,39,0.25); }
 .item-content { flex: 1; }
-.item-title { font-size: 15px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
-.item-desc { font-size: 13px; color: var(--ink-light); line-height: 1.4; }
+.item-title { font-size: 14px; font-weight: 700; color: white; margin-bottom: 4px; }
+.item-desc { font-size: 12px; color: rgba(255,255,255,0.6); line-height: 1.4; }
 
-.think { margin: 14px 20px; background: #2D2D2D; border-radius: 14px; padding: 16px 18px; }
-.think-title { font-size: 13px; font-weight: 700; color: var(--gold); margin-bottom: 8px; }
-.think-text { font-size: 13px; color: rgba(255,255,255,0.8); line-height: 1.5; }
+.think { margin: 8px 20px 0; padding: 12px 16px; background: rgba(255,255,255,0.05); border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); }
+.think-label { font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 6px; letter-spacing: 1px; }
+.think-row { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 4px; line-height: 1.4; }
+.think-row:last-child { margin-bottom: 0; }
 
-.footer { position: absolute; bottom: 30px; left: 0; right: 0; text-align: center; }
-.footer span { cursor: pointer; transition: transform 0.15s ease; }
-.footer span:active { transform: scale(0.96); }font-size: 15px; color: var(--ink); font-weight: 700; background: rgba(255,255,255,0.85); padding: 4px 16px; border-radius: 10px; }
+.footer { position: absolute; bottom: 0; left: 0; right: 0; height: 80px; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 22px; }
+.footer span { font-size: 13px; color: rgba(255,255,255,0.5); }
 </style>
 </head>
 <body>
-<div class="cover">
-  <div class="tag"><span>思维提炼</span></div>
+<div class="slide">
+  <div class="top"><span>思维提炼</span></div>
 
-  <div class="title">
-    <div class="title-text">回复背后的3个逻辑</div>
+  <div class="header">
+    <div class="header-title">回复背后的3个逻辑</div>
   </div>
 
-  <div class="list">
-    <div class="item">
-      <div class="item-num"><span>1</span></div>
-      <div class="item-content">
-        <div class="item-title">不要审问，要互动</div>
-        <div class="item-desc">不断提问像审讯机，压力巨大</div>
-      </div>
+  <div class="item">
+    <div class="item-num"><span>1</span></div>
+    <div class="item-content">
+      <div class="item-title">不要审问，要互动</div>
+      <div class="item-desc">不断提问像审讯机，压力巨大</div>
     </div>
+  </div>
 
-    <div class="item">
-      <div class="item-num"><span>2</span></div>
-      <div class="item-content">
-        <div class="item-title">给状态 = 分享欲</div>
-        <div class="item-desc">先分享自己在做什么，对方才有话题接</div>
-      </div>
+  <div class="item">
+    <div class="item-num"><span>2</span></div>
+    <div class="item-content">
+      <div class="item-title">给状态 = 分享欲</div>
+      <div class="item-desc">先分享自己在做什么，对方才有话题接</div>
     </div>
+  </div>
 
-    <div class="item">
-      <div class="item-num gold-bg"><span>3</span></div>
-      <div class="item-content">
-        <div class="item-title">抛好奇 = 给话口</div>
-        <div class="item-desc">让她知道问什么、怎么回</div>
-      </div>
+  <div class="item">
+    <div class="item-num gold-bg"><span>3</span></div>
+    <div class="item-content">
+      <div class="item-title">抛好奇 = 给话口</div>
+      <div class="item-desc">让她知道问什么、怎么回</div>
     </div>
   </div>
 
   <div class="think">
-    <div class="think-title">💡 我踩过坑</div>
-    <div class="think-text">第一次用这个公式，对方回了个表情包<br>我当场不会接了……但这不是公式的问题<br>是心态没转过来</div>
+    <div class="think-label">我踩过坑</div>
+    <div class="think-row">第一次用这个公式，对方回了个表情包</div>
+    <div class="think-row">我当场不会接了……但这不是公式的问题</div>
+    <div class="think-row">是心态没转过来</div>
   </div>
 
-  <div class="footer"><span>记住这个逻辑，受用终身</span></div>
+  <div class="footer">
+    <span>记住这个逻辑，受用终身</span>
+  </div>
 </div>
 </body>
 </html>

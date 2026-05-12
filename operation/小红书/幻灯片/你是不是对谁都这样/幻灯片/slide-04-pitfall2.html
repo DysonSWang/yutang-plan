@@ -10,12 +10,11 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
-  --bg-warm: #FFF8F3;
-  --coral: #C0392B;
+  --coral: #E74C3C;
   --ink: #2D2D2D;
   --ink-light: #6B6B6B;
-  --gold: #A08020;
-  --green: #3D8C40;
+  --gold: #F39C12;
+  --green: #27AE60;
 }
 
 body {
@@ -31,73 +30,70 @@ body {
 .slide {
   width: 540px;
   height: 720px;
-  background: var(--bg-warm);
+  background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 100%);
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.title { padding: 12px 25px 8px; text-align: center; }
-.title-text { font-family: 'Noto Serif SC', serif; font-size: 30px; font-weight: 800; color: var(--ink); }
-.subtitle { font-size: 14px; color: var(--ink-light); margin-top: 2px; }
-.divider { width: 80px; height: 3px; background: var(--coral); margin: 6px auto 0; border-radius: 2px; }
+.top { width: 100%; height: 56px; background: rgba(231,76,60,0.15); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(231,76,60,0.25); }
+.top span { color: white; font-size: 15px; font-weight: 700; letter-spacing: 2px; }
 
-.section { margin: 10px 20px; border-radius: 14px; padding: 16px 18px; }
-.bronze { background: rgba(232,90,79,0.08); border-left: 4px solid var(--coral); }
-.gold { background: rgba(201,162,39,0.1); border-left: 4px solid var(--gold); }
-.section-label { font-size: 12px; font-weight: 700; margin-bottom: 6px; letter-spacing: 1px; }
+.header { padding: 14px 28px 10px; text-align: center; }
+.header-title { font-family: 'Noto Serif SC', serif; font-size: 28px; font-weight: 800; color: white; }
+.header-sub { font-size: 15px; color: rgba(255,255,255,0.5); margin-top: 3px; }
+
+.section { margin: 10px 22px; border-radius: 14px; padding: 16px 18px; }
+.bronze { background: rgba(255,255,255,0.05); border-left: 5px solid rgba(231,76,60,0.7); }
+.king { background: rgba(255,255,255,0.05); border-left: 5px solid rgba(39,174,96,0.7); }
+.section-label { font-size: 14px; font-weight: 700; margin-bottom: 7px; letter-spacing: 1px; }
 .bronze .section-label { color: var(--coral); }
-.gold .section-label { color: var(--gold); }
-.section-title { font-family: 'Noto Serif SC', serif; font-size: 18px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
-.section-text { font-size: 13px; color: var(--ink-light); font-style: italic; }
+.king .section-label { color: var(--green); }
+.section-title { font-family: 'Noto Serif SC', serif; font-size: 17px; font-weight: 700; color: white; margin-bottom: 5px; }
+.section-text { font-size: 15px; color: rgba(255,255,255,0.65); line-height: 1.5; }
 
-.think { margin: 14px 20px; background: #2D2D2D; border-radius: 14px; padding: 16px 18px; text-align: center; }
-.think-label { font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 4px; }
-.think-text { font-size: 14px; color: var(--gold); font-weight: 600; }
-
-.footer { position: absolute; bottom: 30px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.footer span { cursor: pointer; transition: transform 0.15s ease; }
-.footer span:active { transform: scale(0.96); }font-size: 14px; font-weight: 700; padding: 4px 16px; border-radius: 10px; background: rgba(255,255,255,0.88); color: var(--ink); }
+.think { margin: 12px 22px 0; padding: 14px 18px; background: rgba(255,255,255,0.05); border-radius: 12px; text-align: center; }
+.think-label { font-size: 12px; color: rgba(255,255,255,0.4); margin-bottom: 5px; }
+.think-text { font-size: 15px; color: var(--gold); font-weight: 700; }
 </style>
 </head>
 <body>
 <div class="slide">
-  <div class="title">
-    <div class="title-text">否认型</div>
-    <div class="subtitle">青铜 vs 王者 · 第二种错误</div>
-    <div class="divider"></div>
+  <div class="top"><span>第二种错误：否认型</span></div>
+
+  <div class="header">
+    <div class="header-title">青铜 vs 王者</div>
+    <div class="header-sub">被问题带走，主动进框架</div>
   </div>
 
   <div class="section bronze">
     <div class="section-label">X 青铜</div>
     <div class="section-title">「怎么会呢，我只对你一个人」</div>
-    <div class="section-text">急着否认，试图让她相信你的忠诚</div>
+    <div class="section-text">你也在回答她的问题，而不是让她回答你的框架</div>
   </div>
 
   <div class="section bronze">
     <div class="section-label">! 结果</div>
-    <div class="section-title">你在向她证明自己</div>
-    <div class="section-text">需要她来认证你，框架倒置</div>
+    <div class="section-title">越描越黑</div>
+    <div class="section-text">话题主导权给了她</div>
   </div>
 
-  <div class="section gold">
+  <div class="section king">
     <div class="section-label">V 王者</div>
-    <div class="section-title">反问回踢，把球踢回去</div>
-    <div class="section-text">「你觉得呢？」→ 让她进你的框架</div>
+    <div class="section-title">反问回踢</div>
+    <div class="section-text">「你觉得呢？」→ 把球踢回去，让她进你的框架</div>
   </div>
 
-  <div class="section gold">
+  <div class="section king">
     <div class="section-label">◆ 结果</div>
-    <div class="section-title">不进她的框架，反客为主</div>
-    <div class="section-text">她来测试你，你反过来让她回答</div>
+    <div class="section-title">主动权拿回</div>
+    <div class="section-text">她在回答你的问题，而不是你在回答她</div>
   </div>
 
   <div class="think">
     <div class="think-label">思维升级</div>
-    <div class="think-text">否认 = 进了她的框架 = 她在审问你，不是你在主导</div>
-  </div>
-
-  <div class="footer">
-    <span>收藏起来，废测来袭时对照用</span>
+    <div class="think-text">否认 = 告诉她"我需要你相信我" = 低价值</div>
   </div>
 </div>
 </body>

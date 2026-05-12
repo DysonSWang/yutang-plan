@@ -66,7 +66,7 @@ function StatCard({ label, value, icon, accent = 'gold', subtitle, colSpan = 1 }
       <CardBody>
         <HStack justify="space-between">
           <VStack align="start" spacing={1}>
-            <Text color="rgba(245,240,232,0.35)" fontSize="xs" letterSpacing="0.05em">{label}</Text>
+            <Text color="rgba(245,240,232,0.55)" fontSize="xs" letterSpacing="0.05em">{label}</Text>
             <Text color="white" fontSize="2xl" fontWeight="700" fontFamily="heading">
               <AnimatedNumber value={value} />
             </Text>
@@ -86,7 +86,7 @@ const QUICK_ENTRIES = [
   { path: '/ai-coach', label: 'AI教练咨询', desc: '24小时在线', icon: SparklesIcon, gradient: 'linear(135deg, gold.500, gold.400)' },
   { path: '/my-pond', label: '查看我的缘分', desc: '管理我的缘分', icon: FishIcon, gradient: 'linear(135deg, rose.500, rose.400)' },
   { path: '/learning', label: '学习中心', desc: 'Mo哥宝典章节学习', icon: BookIcon, gradient: 'linear(135deg, gold.500, gold.400)' },
-  { path: '/my-pond', label: '约会与方案', desc: '约会确认和AI方案', icon: GiftIcon, gradient: 'linear(135deg, gold.500, gold.400)' },
+  { path: '/dates', label: '约会与方案', desc: '约会确认和AI方案', icon: GiftIcon, gradient: 'linear(135deg, gold.500, gold.400)' },
   { path: '/my-pond#calendar', label: '我的日历', desc: '查看约会与活动', icon: CalendarIcon, gradient: 'linear(135deg, gold.500, gold.400)' },
 ];
 

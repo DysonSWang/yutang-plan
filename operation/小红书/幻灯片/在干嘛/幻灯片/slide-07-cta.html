@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<title>07 CTA 总结</title>
+<title>07 CTA</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -10,13 +10,11 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
-  --bg-warm: #FFF8F3;
   --coral: #C0392B;
   --ink: #2D2D2D;
   --ink-light: #6B6B6B;
   --gold: #A08020;
   --green: #3D8C40;
-  --green-light: rgba(61, 140, 64, 0.1);
 }
 
 body {
@@ -29,58 +27,70 @@ body {
   padding: 20px;
 }
 
-.cover {
+.slide {
   width: 540px;
   height: 720px;
-  background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 40%, #16213e 100%);
+  background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 100%);
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.top { width: 100%; height: 60px; background: linear-gradient(135deg, var(--green) 0%, #4CAF50 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(61,140,64,0.3); }
-.top span { color: white; font-size: 19px; font-weight: 700; letter-spacing: 2px; }
+.top { width: 100%; height: 56px; background: rgba(61,140,64,0.2); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(61,140,64,0.3); }
+.top span { color: white; font-size: 13px; font-weight: 700; letter-spacing: 2px; }
 
-.summary { padding: 20px; }
+.main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 30px; }
+.main-title { font-family: 'Noto Serif SC', serif; font-size: 26px; font-weight: 800; color: white; text-align: center; margin-bottom: 6px; }
+.main-sub { font-size: 14px; color: rgba(255,255,255,0.5); text-align: center; margin-bottom: 20px; }
 
-.formula { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 16px; margin-bottom: 30px; display: flex; align-items: center; gap: 14px; backdrop-filter: blur(10px); }
-.num { width: 34px; height: 34px; background: var(--green); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.num span { color: white; font-size: 13px; font-weight: 700; }
-.text { font-size: 16px; font-weight: 600; color: white; }
+.formula-list { width: 100%; margin: 0 24px; }
+.formula-item { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.formula-num { width: 28px; height: 28px; background: rgba(61,140,64,0.25); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.formula-num span { color: white; font-size: 13px; font-weight: 700; }
+.formula-text { font-size: 14px; color: white; }
 
-.question { margin: 10px 20px; background: rgba(255,255,255,0.04); border-radius: 12px; padding: 18px; text-align: center; backdrop-filter: blur(10px); }
-.question-main { font-family: 'Noto Serif SC', serif; font-size: 18px; font-weight: 700; color: white; margin-bottom: 6px; }
-.question-sub { font-size: 13px; color: rgba(255,255,255,0.5); }
+.discuss { margin: 10px 24px 0; background: rgba(255,255,255,0.06); border-radius: 12px; padding: 14px 16px; border-left: 3px solid var(--gold); }
+.discuss-q { font-size: 13px; color: rgba(255,255,255,0.6); margin-bottom: 8px; }
+.discuss-answer { font-size: 13px; color: white; background: rgba(255,255,255,0.06); border-radius: 8px; padding: 10px 12px; border-left: 2px solid var(--green); }
 
-.footer { position: absolute; bottom: 0; left: 0; right: 0; height: 140px; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 28px; }
-.collect { font-family: 'Noto Serif SC', serif; font-size: 18px; font-weight: 700; color: white; margin-bottom: 8px; }
+.footer { height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+.footer-text { font-size: 14px; font-weight: 700; color: var(--gold); }
+.footer-tag { font-size: 12px; color: rgba(255,255,255,0.4); }
 </style>
 </head>
 <body>
-<div class="cover">
+<div class="slide">
   <div class="top"><span>📌 收藏这张图</span></div>
 
-  <div class="summary">
-    <div class="formula">
-      <div class="num"><span>1</span></div>
-      <div class="text">状态 + 感受 + 好奇 = 引发回复</div>
-    </div>
-    <div class="formula">
-      <div class="num"><span>2</span></div>
-      <div class="text">反客为主 = 制造悬念</div>
-    </div>
-    <div class="formula">
-      <div class="num"><span>3</span></div>
-      <div class="text">情绪引导 = 让她上头</div>
+  <div class="main">
+    <div class="main-title">核心公式</div>
+    <div class="main-sub">3个公式，聊天再也不踩坑</div>
+
+    <div class="formula-list">
+      <div class="formula-item">
+        <div class="formula-num"><span>1</span></div>
+        <div class="formula-text">状态 + 感受 + 好奇 = 引发回复</div>
+      </div>
+      <div class="formula-item">
+        <div class="formula-num"><span>2</span></div>
+        <div class="formula-text">反客为主 = 制造悬念</div>
+      </div>
+      <div class="formula-item">
+        <div class="formula-num"><span>3</span></div>
+        <div class="formula-text">情绪引导 = 让她上头</div>
+      </div>
     </div>
   </div>
 
-  <div class="question">
-    <div class="question-main">你之前"在干嘛"都怎么回的？</div>
-    <div class="question-sub">评论区说说，帮你分析</div>
+  <div class="discuss">
+    <div class="discuss-q">你之前"在干嘛"都怎么回的？</div>
+    <div class="discuss-answer">评论区说说，帮你分析 ↓</div>
   </div>
 
   <div class="footer">
-    <div class="collect">收藏起来，聊天时对照用</div>
+    <div class="footer-text">收藏起来，聊天时对照用</div>
+    <div class="footer-tag">#聊天诊断 #废物测试 #追爱AI</div>
   </div>
 </div>
 </body>

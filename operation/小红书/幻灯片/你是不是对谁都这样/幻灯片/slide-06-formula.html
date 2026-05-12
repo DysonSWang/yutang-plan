@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<title>06 公式</title>
+<title>06 正确回应</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -10,12 +10,11 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
-  --bg-warm: #FFF8F3;
-  --coral: #C0392B;
+  --coral: #E74C3C;
   --ink: #2D2D2D;
   --ink-light: #6B6B6B;
-  --gold: #A08020;
-  --green: #3D8C40;
+  --gold: #F39C12;
+  --green: #27AE60;
 }
 
 body {
@@ -31,75 +30,69 @@ body {
 .slide {
   width: 540px;
   height: 720px;
-  background: var(--bg-warm);
+  background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 100%);
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.title { padding: 8px 25px 6px; text-align: center; }
-.title-text { font-family: 'Noto Serif SC', serif; font-size: 26px; font-weight: 800; color: var(--ink); }
-.subtitle { font-size: 14px; color: var(--ink-light); margin-top: 2px; }
-.divider { width: 80px; height: 3px; background: var(--green); margin: 4px auto 0; border-radius: 2px; }
+.top { width: 100%; height: 56px; background: rgba(39,174,96,0.15); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(39,174,96,0.25); }
+.top span { color: white; font-size: 15px; font-weight: 700; letter-spacing: 2px; }
 
-.block { margin: 6px 20px; padding: 14px; border-radius: 14px; }
-.green { background: rgba(61,140,64,0.08); border-left: 4px solid var(--green); }
-.block-label { font-size: 12px; font-weight: 700; margin-bottom: 3px; letter-spacing: 1px; color: var(--green); }
-.block-title { font-family: 'Noto Serif SC', serif; font-size: 17px; font-weight: 700; color: var(--ink); margin-bottom: 3px; }
-.block-example { font-size: 13px; color: var(--ink-light); }
+.header { padding: 14px 28px 10px; text-align: center; }
+.header-title { font-family: 'Noto Serif SC', serif; font-size: 28px; font-weight: 800; color: white; }
+.header-sub { font-size: 15px; color: rgba(255,255,255,0.5); margin-top: 3px; }
 
-.bonus { margin: 6px 20px; padding: 10px 16px; border-radius: 14px; background: rgba(201,162,39,0.1); border-left: 4px solid var(--gold); }
-.bonus-label { font-size: 12px; font-weight: 700; margin-bottom: 3px; letter-spacing: 1px; color: var(--gold); }
-.bonus-text { font-size: 13px; color: var(--ink); }
-.bonus-answer { font-size: 13px; color: var(--gold); font-weight: 600; margin-top: 3px; }
+.block { margin: 10px 22px; border-radius: 14px; padding: 16px 18px; background: rgba(39,174,96,0.1); border-left: 5px solid var(--green); }
+.block-label { font-size: 14px; font-weight: 700; margin-bottom: 6px; letter-spacing: 1px; color: var(--green); }
+.block-title { font-family: 'Noto Serif SC', serif; font-size: 17px; font-weight: 700; color: white; margin-bottom: 5px; }
+.block-text { font-size: 15px; color: rgba(255,255,255,0.65); line-height: 1.5; }
 
-.think { margin: 6px 20px 0; padding: 12px 16px; background: #2D2D2D; border-radius: 14px; text-align: center; }
-.think-label { font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 3px; }
-.think-text { font-size: 14px; color: var(--gold); font-weight: 600; }
+.bonus { margin: 10px 22px; border-radius: 14px; padding: 14px 18px; background: rgba(243,156,18,0.1); border-left: 5px solid var(--gold); }
+.bonus-label { font-size: 14px; font-weight: 700; margin-bottom: 6px; letter-spacing: 1px; color: var(--gold); }
+.bonus-text { font-size: 15px; color: white; line-height: 1.5; }
 
-.footer { position: absolute; bottom: 30px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.footer span { cursor: pointer; transition: transform 0.15s ease; }
-.footer span:active { transform: scale(0.96); }font-size: 15px; font-weight: 700; padding: 4px 16px; border-radius: 10px; background: rgba(255,255,255,0.88); color: var(--ink); }
+.think { margin: 12px 22px 0; padding: 14px 18px; background: rgba(255,255,255,0.05); border-radius: 12px; text-align: center; }
+.think-label { font-size: 12px; color: rgba(255,255,255,0.4); margin-bottom: 5px; }
+.think-text { font-size: 15px; color: var(--gold); font-weight: 700; }
 </style>
 </head>
 <body>
 <div class="slide">
-  <div class="title">
-    <div class="title-text">3种正确回应方式</div>
-    <div class="subtitle">她问「你是不是对谁都这样」？答对她会倒追</div>
-    <div class="divider"></div>
+  <div class="top"><span>正确回应方式</span></div>
+
+  <div class="header">
+    <div class="header-title">3种正确回应</div>
+    <div class="header-sub">她问"你是不是对谁都这样"？答对她会倒追</div>
   </div>
 
-  <div class="block green">
-    <div class="block-label">V 方式一</div>
-    <div class="block-title">调侃绕过</div>
-    <div class="block-example">「我只对好看的人这样」→ 幽默化解，不进框架</div>
+  <div class="block">
+    <div class="block-label">V 方式一：调侃绕过</div>
+    <div class="block-title">把问题幽默化解</div>
+    <div class="block-text">「我只对好看的人这样」→ 幽默化解，不进框架</div>
   </div>
 
-  <div class="block green">
-    <div class="block-label">V 方式二</div>
-    <div class="block-title">反问回踢</div>
-    <div class="block-example">「你觉得呢？」→ 把球踢回去，让她进你的框架</div>
+  <div class="block">
+    <div class="block-label">V 方式二：反问回踢</div>
+    <div class="block-title">把球踢回去</div>
+    <div class="block-text">「你觉得呢？」→ 让她进你的框架</div>
   </div>
 
-  <div class="block green">
-    <div class="block-label">V 方式三</div>
-    <div class="block-title">幽默转移</div>
-    <div class="block-example">「怎么，想给我介绍对象？」→ 话题直接带跑</div>
+  <div class="block">
+    <div class="block-label">V 方式三：幽默转移</div>
+    <div class="block-title">话题直接带跑</div>
+    <div class="block-text">「怎么，想给我介绍对象？」→ 话题直接带跑</div>
   </div>
 
   <div class="bonus">
-    <div class="bonus-label">「 她继续追问怎么办</div>
-    <div class="bonus-text">不要解释，用调侃保持框架</div>
-    <div class="bonus-answer">「你今天问题好多啊」→ 把话题反客为主</div>
+    <div class="bonus-label">进阶 · 她继续追问</div>
+    <div class="bonus-text">不要解释，用调侃保持框架 → 「你今天问题好多啊」</div>
   </div>
 
   <div class="think">
     <div class="think-label">思维升级</div>
     <div class="think-text">她在测试你有没有标准，不是在审问你</div>
-  </div>
-
-  <div class="footer">
-    <span>收藏起来，废测来袭时对照用</span>
   </div>
 </div>
 </body>

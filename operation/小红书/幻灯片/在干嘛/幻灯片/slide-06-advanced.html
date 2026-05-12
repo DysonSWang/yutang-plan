@@ -10,14 +10,11 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
-  --bg-warm: #FFF8F3;
   --coral: #C0392B;
-  --coral-light: rgba(232, 90, 79, 0.1);
   --ink: #2D2D2D;
   --ink-light: #6B6B6B;
   --gold: #A08020;
   --green: #3D8C40;
-  --green-light: rgba(61, 140, 64, 0.1);
 }
 
 body {
@@ -33,40 +30,39 @@ body {
 .slide {
   width: 540px;
   height: 720px;
-  background: var(--bg-warm);
+  background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 100%);
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.tag { width: 100%; height: 48px; background: var(--green); display: flex; align-items: center; padding: 0 22px; box-shadow: 0 4px 16px rgba(61,140,64,0.2); }
-.tag span { color: white; font-size: 15px; font-weight: 600; letter-spacing: 2px; }
+.top { width: 100%; height: 56px; background: rgba(61,140,64,0.2); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(61,140,64,0.3); }
+.top span { color: white; font-size: 13px; font-weight: 700; letter-spacing: 2px; }
 
-.title { padding: 24px 25px 10px; text-align: center; }
-.title-text { font-family: 'Noto Serif SC', serif; font-size: 26px; font-weight: 800; color: var(--ink); }
-.subtitle { font-size: 14px; color: var(--ink-light); margin-top: 4px; }
-.divider { width: 80px; height: 3px; background: var(--green); margin: 10px auto 0; border-radius: 2px; }
+.header { padding: 14px 24px 10px; text-align: center; }
+.header-title { font-family: 'Noto Serif SC', serif; font-size: 22px; font-weight: 800; color: white; margin-bottom: 4px; }
+.header-sub { font-size: 13px; color: rgba(255,255,255,0.5); }
 
-.block { margin: 10px 20px; border-radius: 14px; padding: 18px; background: white; box-shadow: 0 2px 12px rgba(0,0,0,0.04); border-left: 4px solid var(--green); }
-.block-label { font-size: 12px; font-weight: 700; color: var(--gold); margin-bottom: 6px; letter-spacing: 1px; }
-.block-title { font-family: 'Noto Serif SC', serif; font-size: 20px; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
-.block-example { font-size: 14px; color: var(--ink-light); font-style: italic; }
+.block { margin: 6px 20px; border-radius: 12px; padding: 14px 16px; background: rgba(255,255,255,0.05); border-left: 3px solid var(--green); }
+.block-label { font-size: 11px; font-weight: 700; color: var(--green); margin-bottom: 6px; letter-spacing: 1px; }
+.block-title { font-size: 15px; font-weight: 700; color: white; margin-bottom: 4px; }
+.block-example { font-size: 13px; color: rgba(255,255,255,0.6); font-style: italic; }
 
-.think { margin: 14px 20px 50px; background: #2D2D2D; border-radius: 14px; padding: 14px 18px; text-align: center; }
-.think span { font-size: 13px; color: var(--gold); font-weight: 600; line-height: 1.4; }
+.think { margin: 10px 20px 0; padding: 12px 16px; background: rgba(255,255,255,0.05); border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); text-align: center; }
+.think-text { font-size: 13px; color: var(--gold); font-weight: 600; line-height: 1.5; }
 
-.footer { position: absolute; bottom: 30px; left: 0; right: 0; text-align: center; }
-.footer span { cursor: pointer; transition: transform 0.15s ease; }
-.footer span:active { transform: scale(0.96); }font-size: 15px; color: var(--ink); font-weight: 700; background: rgba(255,255,255,0.85); padding: 4px 16px; border-radius: 10px; }
+.footer { position: absolute; bottom: 0; left: 0; right: 0; height: 80px; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 22px; }
+.footer span { font-size: 13px; color: rgba(255,255,255,0.5); }
 </style>
 </head>
 <body>
 <div class="slide">
-  <div class="tag"><span>进阶 · 从回答到主导</span></div>
+  <div class="top"><span>进阶技巧</span></div>
 
-  <div class="title">
-    <div class="title-text">从回答到主导</div>
-    <div class="subtitle">3个进阶技巧，让聊天节奏由你掌控</div>
-    <div class="divider"></div>
+  <div class="header">
+    <div class="header-title">从回答到主导</div>
+    <div class="header-sub">3个进阶技巧，让聊天节奏由你掌控</div>
   </div>
 
   <div class="block">
@@ -88,10 +84,12 @@ body {
   </div>
 
   <div class="think">
-    <span>我的体会：太快的满足不真实，让她追逐真实的东西</span>
+    <div class="think-text">我的体会：太快的满足不真实，让她追逐真实的东西</div>
   </div>
 
-  <div class="footer"><span>收藏起来，聊天直接用</span></div>
+  <div class="footer">
+    <span>收藏起来，聊天直接用</span>
+  </div>
 </div>
 </body>
 </html>

@@ -4,7 +4,7 @@ import {
   Button, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter,
   ModalCloseButton, useDisclosure, FormControl, FormLabel, Input, Select, Textarea,
   useToast, Spinner, Icon, Image, Progress, Wrap, WrapItem, Tag, TagLabel, Divider, IconButton,
-  Skeleton
+  Skeleton, Menu, MenuButton, MenuList, MenuItem
 } from '@chakra-ui/react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiEdit2, FiCamera, FiFileText, FiZap, FiUser, FiCheck, FiX } from 'react-icons/fi';
@@ -282,19 +282,36 @@ function ProfileField({ field, value, onChange }) {
     const hasOther = field.options.includes('其他');
     const isCustom = hasOther && value && !field.options.includes(value);
     const showCustomInput = hasOther && (value === '其他' || isCustom);
+    const displayValue = isCustom ? '其他' : (value || '');
     return (
       <FormControl>
         <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">{field.label}</FormLabel>
-        <Select
-          value={isCustom ? '其他' : (value || '')}
-          onChange={e => onChange(field.key, e.target.value === '其他' ? '' : e.target.value)}
-          bg="warm.700" color="white" border="1px solid" borderColor="warm.600"
-          _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
-          _focus={{ borderColor: 'gold.500', boxShadow: '0 0 0 1px var(--chakra-colors-gold-500)' }}
-        >
-          <option value="">请选择</option>
-          {field.options.map(o => <option key={o} value={o}>{o}</option>)}
-        </Select>
+        <Menu>
+          <MenuButton
+            as={Button}
+            size="sm"
+            variant="outline"
+            borderColor="warm.600"
+            bg="warm.700"
+            color="white"
+            _hover={{ bg: 'warm.600' }}
+            _full={{ borderColor: 'gold.500' }}
+            rightIcon={<Text fontSize="xs">▼</Text>}
+            w="full"
+          >
+            {displayValue || '请选择'}
+          </MenuButton>
+          <MenuList bg="warm.800" borderColor="warm.600" minW="160px">
+            <MenuItem _hover={{ bg: 'warm.700' }} onClick={() => onChange(field.key, '')}>
+              <Text color="rgba(245,240,232,0.4)">请选择</Text>
+            </MenuItem>
+            {field.options.map(o => (
+              <MenuItem key={o} _hover={{ bg: 'warm.700' }} onClick={() => onChange(field.key, o === '其他' ? '' : o)}>
+                {o}
+              </MenuItem>
+            ))}
+          </MenuList>
+        </Menu>
         {showCustomInput && (
           <Input
             mt={2}

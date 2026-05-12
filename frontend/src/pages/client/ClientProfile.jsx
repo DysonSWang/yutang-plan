@@ -39,6 +39,18 @@ const STAGE_COLORS = {
   '维护': 'teal',
 };
 
+// 缺失字段 → section 映射（用于定位）
+const MISSING_SECTION_PRIORITY = ['basic', 'appearance', 'personality', 'emotion', 'family', 'value', 'preference', 'bio'];
+
+function getTopMissingSection(missingFields) {
+  if (!missingFields || missingFields.length === 0) return null;
+  for (const sec of MISSING_SECTION_PRIORITY) {
+    const field = missingFields.find(f => getSectionForField(f) === sec);
+    if (field) return sec;
+  }
+  return MISSING_SECTION_PRIORITY[0];
+}
+
 // 客户可见的字段（可编辑）
 const CLIENT_EDITABLE_FIELDS = [
   { key: 'nickname', label: '昵称', type: 'input' },
@@ -147,7 +159,12 @@ Object.assign(ALL_FIELD_LABELS, {
 });
 
 // 单个字段组件（避免整体重渲染）
-function ProfileField({ field, value, onChange }) {
+function ProfileField({ field, value, onChange, highlighted }) {
+  const highlightStyle = highlighted ? {
+    borderColor: 'gold.400',
+    animation: 'fieldHighlight 2s ease forwards',
+  } : {};
+
   // 数字选择器：生成范围选项
   if (field.type === 'number-select') {
     const [min, max] = field.range;
@@ -155,14 +172,15 @@ function ProfileField({ field, value, onChange }) {
     const options = [];
     for (let i = min; i <= max; i += step) options.push(i);
     return (
-      <FormControl key={field.key}>
+      <FormControl key={field.key} data-field-key={field.key}>
         <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">{field.label}</FormLabel>
         <Select
           value={value || (field.default ? String(field.default) : '')}
           onChange={e => onChange(field.key, e.target.value)}
-          bg="warm.700" color="white" border="1px solid" borderColor="warm.600"
+          bg="warm.700" color="white" border="1px solid" borderColor={highlighted ? 'gold.400' : 'warm.600'}
           _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
           _focus={{ borderColor: 'gold.500', boxShadow: '0 0 0 3px rgba(226,176,68,0.12)' }}
+          sx={highlightStyle}
         >
           {options.map(n => (
             <option key={n} value={String(n)}>{n}</option>
@@ -173,14 +191,15 @@ function ProfileField({ field, value, onChange }) {
   }
   if (field.type === 'input') {
     return (
-      <FormControl key={field.key}>
+      <FormControl key={field.key} data-field-key={field.key}>
         <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">{field.label}</FormLabel>
         <Input
           value={value || ''}
           onChange={e => onChange(field.key, e.target.value)}
-          bg="warm.700" color="white" border="1px solid" borderColor="warm.600"
+          bg="warm.700" color="white" border="1px solid" borderColor={highlighted ? 'gold.400' : 'warm.600'}
           _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
           _focus={{ borderColor: 'gold.500', boxShadow: '0 0 0 3px rgba(226,176,68,0.12)' }}
+          sx={highlightStyle}
         />
       </FormControl>
     );
@@ -190,14 +209,15 @@ function ProfileField({ field, value, onChange }) {
     const isCustom = hasOther && value && !field.options.includes(value);
     const showCustomInput = hasOther && (value === '其他' || isCustom);
     return (
-      <FormControl key={field.key}>
+      <FormControl key={field.key} data-field-key={field.key}>
         <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">{field.label}</FormLabel>
         <Select
           value={isCustom ? '其他' : (value || '')}
           onChange={e => onChange(field.key, e.target.value)}
-          bg="warm.700" color="white" border="1px solid" borderColor="warm.600"
+          bg="warm.700" color="white" border="1px solid" borderColor={highlighted ? 'gold.400' : 'warm.600'}
           _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
           _focus={{ borderColor: 'gold.500', boxShadow: '0 0 0 3px rgba(226,176,68,0.12)' }}
+          sx={highlightStyle}
         >
           <option value="">请选择</option>
           {field.options.map(opt => (
@@ -220,22 +240,23 @@ function ProfileField({ field, value, onChange }) {
   }
   if (field.type === 'textarea') {
     return (
-      <FormControl key={field.key}>
+      <FormControl key={field.key} data-field-key={field.key}>
         <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">{field.label}</FormLabel>
         <Textarea
           value={value || ''}
           onChange={e => onChange(field.key, e.target.value)}
-          bg="warm.700" color="white" border="1px solid" borderColor="warm.600"
+          bg="warm.700" color="white" border="1px solid" borderColor={highlighted ? 'gold.400' : 'warm.600'}
           _hover={{ borderColor: 'rgba(245,240,232,0.2)' }}
           _focus={{ borderColor: 'gold.500', boxShadow: '0 0 0 3px rgba(226,176,68,0.12)' }}
           rows={3}
+          sx={highlightStyle}
         />
       </FormControl>
     );
   }
   if (field.type === 'region') {
     return (
-      <FormControl key={field.key}>
+      <FormControl key={field.key} data-field-key={field.key}>
         <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">{field.label}</FormLabel>
         <RegionSelector
           value={value || ''}
@@ -276,6 +297,7 @@ export default function ClientProfile() {
   const [aiExtracting, setAiExtracting] = useState(false);
   const [aiStreamText, setAiStreamText] = useState('');
   const [aiExtractedFields, setAiExtractedFields] = useState(null);
+  const [highlightedFields, setHighlightedFields] = useState([]);
   const [aiScreenshotThinking, setAiScreenshotThinking] = useState(false);
   const [aiScreenshotStep, setAiScreenshotStep] = useState(''); // '上传图片' | 'AI 思考中...' | '解析信号...' | '生成报告...'
   const [aiScreenshotThinkingContent, setAiScreenshotThinkingContent] = useState('');
@@ -560,7 +582,20 @@ export default function ClientProfile() {
       return;
     }
     setEditData(prev => ({ ...prev, ...updates }));
-    toast({ title: `已应用 ${Object.keys(updates).length} 个字段`, description: '请检查并修改后保存', status: 'success' });
+
+    // 高亮反馈：标记被更新的字段，2秒后自动清除
+    const updatedKeys = Object.keys(updates);
+    setHighlightedFields(updatedKeys);
+    setTimeout(() => setHighlightedFields([]), 2000);
+
+    // 滚动到第一个被更新的字段
+    setTimeout(() => {
+      const firstKey = updatedKeys[0];
+      const el = document.querySelector(`[data-field-key="${firstKey}"]`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+
+    toast({ title: `已应用 ${updatedKeys.length} 个字段`, description: '请检查并修改后保存', status: 'success' });
   };
 
   // 截图文件选择
@@ -582,7 +617,7 @@ export default function ClientProfile() {
         toast({ title: '已是最新版本', description: `V${VERSION}`, status: 'success', duration: 3000 });
       }
     } catch (e) {
-      toast({ title: '检查更新失败', status: 'error', duration: 4000, duration: 3000 });
+      toast({ title: '检查更新失败', status: 'error', duration: 3000 });
     } finally {
       setCheckingUpdate(false);
     }
@@ -661,7 +696,7 @@ export default function ClientProfile() {
     try {
       const uploadRes = await upload.image(avatarFile);
       if (!uploadRes.url) {
-        toast({ title: '上传失败', status: 'error', duration: 4000, duration: 2000 });
+        toast({ title: '上传失败', status: 'error', duration: 2000 });
         return;
       }
       const res = await clients.update(profile.id, { avatar: uploadRes.url });
@@ -821,10 +856,22 @@ export default function ClientProfile() {
               className="progress-glow"
               sx={{ '& > div': { transition: 'width 0.6s ease' } }}
             />
-            {completenessPercent < 80 ? (
-              <Text color="warm.600" fontSize="xs" mb={2}>完善档案后，AI 教练能为你提供更精准的建议</Text>
+            {completenessPercent < 80 && completenessMissing.length > 0 ? (
+              <HStack justify="space-between">
+                <Text color="warm.600" fontSize="xs">完善档案后，AI 教练能为你提供更精准的建议</Text>
+                <Button
+                  size="xs"
+                  variant="link"
+                  colorScheme="gold"
+                  onClick={() => openEdit(getTopMissingSection())}
+                  rightIcon={<Text fontSize="xs">→</Text>}
+                >
+                  补全前{Math.min(3, completenessMissing.length)}项
+                </Button>
+              </HStack>
+            ) : completenessPercent >= 80 ? (
+              <Text color="green.400" fontSize="xs">档案完整度良好 ✓</Text>
             ) : null}
-
           </Box>
         </CardBody>
       </Card>
@@ -1054,6 +1101,14 @@ export default function ClientProfile() {
       </Card>
       </Box>
 
+      <style>{`
+        @keyframes fieldHighlight {
+          0% { box-shadow: 0 0 0px rgba(226,176,68,0); border-color: warm.600; }
+          30% { box-shadow: 0 0 16px rgba(226,176,68,0.6); border-color: gold.400; }
+          100% { box-shadow: 0 0 0px rgba(226,176,68,0); border-color: warm.600; }
+        }
+      `}</style>
+
       {/* 编辑档案弹窗 */}
       <Modal isOpen={isOpen} onClose={onClose} size="xl">
         <ModalOverlay bg="blackAlpha.700" backdropFilter="blur(4px)" />
@@ -1077,52 +1132,105 @@ export default function ClientProfile() {
 
           {/* Scrollable Body */}
           <Box overflowY="auto" maxH="calc(90vh - 140px)" pb={4}>
-            <VStack spacing={6} align="stretch" px={6} pt={4}>
+            <VStack spacing={5} align="stretch" px={6} pt={4}>
+              {/* 手动填写表单 - 默认展示常用字段 */}
+              <SimpleGrid columns={2} spacing={5} data-section-form>
+                {CLIENT_EDITABLE_FIELDS
+                  .filter(f => COMMON_FIELD_KEYS.has(f.key))
+                  .map(field => (
+                    <div data-section={getSectionForField(field.key)} key={field.key}>
+                    <ProfileField
+                      key={field.key}
+                      field={field}
+                      value={editData[field.key]}
+                      onChange={handleFieldChange}
+                      highlighted={highlightedFields.includes(field.key)}
+                    />
+                    </div>
+                  ))}
+              </SimpleGrid>
+
+              {/* 更多资料折叠按钮 */}
+              <Button
+                variant="ghost"
+                size="sm"
+                color="gold.400"
+                onClick={() => setShowAdvancedFields(!showAdvancedFields)}
+                _hover={{ bg: 'warm.700' }}
+              >
+                {showAdvancedFields ? '▲ 收起' : `▼ 还有 ${CLIENT_EDITABLE_FIELDS.filter(f => !COMMON_FIELD_KEYS.has(f.key)).length} 项资料`}
+              </Button>
+
+              {/* 高级字段折叠区 */}
+              {showAdvancedFields && (
+                <SimpleGrid columns={2} spacing={5} data-section-form>
+                  {CLIENT_EDITABLE_FIELDS
+                    .filter(f => !COMMON_FIELD_KEYS.has(f.key))
+                    .map(field => (
+                      <div data-section={getSectionForField(field.key)} key={field.key}>
+                      <ProfileField
+                        key={field.key}
+                        field={field}
+                        value={editData[field.key]}
+                        onChange={handleFieldChange}
+                        highlighted={highlightedFields.includes(field.key)}
+                      />
+                      </div>
+                    ))}
+                </SimpleGrid>
+              )}
+
+              {/* 分隔符 + AI 辅助（移到最底部） */}
+              <HStack>
+                <Box flex={1} h="1px" bg="warm.600" />
+                <Text color="rgba(245,240,232,0.3)" fontSize="xs">AI 辅助</Text>
+                <Box flex={1} h="1px" bg="warm.600" />
+              </HStack>
+
               {/* AI 智能识别 - 双 Tab 版本 */}
-              <Card bg="rgba(212,168,83,0.08)" border="1px solid" borderColor="gold.500" borderRadius="xl">
+              <Card bg="rgba(212,168,83,0.06)" border="1px solid" borderColor="gold.700" borderRadius="xl">
                 <CardBody>
                   {/* AI Header */}
-                  <HStack spacing={2} mb={4}>
-                    <Box w="20px" h="20px" borderRadius="full" bg="gold.500" display="flex" alignItems="center" justifyContent="center">
-                      <Text fontSize="12px" color="warm.900">✦</Text>
+                  <HStack spacing={2} mb={3}>
+                    <Box w="18px" h="18px" borderRadius="full" bg="gold.500" display="flex" alignItems="center" justifyContent="center" flexShrink={0}>
+                      <Text fontSize="10px" color="warm.900">✦</Text>
                     </Box>
                     <Text color="gold.400" fontWeight="500" fontSize="sm">AI 智能填充</Text>
+                    <Text color="rgba(245,240,232,0.3)" fontSize="xs">不想手动填？试试 AI</Text>
                   </HStack>
 
                   {/* 双 Tab 切换 */}
-                  <HStack spacing={3} mb={4}>
+                  <HStack spacing={2} mb={3}>
                     <Button
                       flex={1}
                       variant={aiTab === 'text' ? 'solid' : 'outline'}
                       colorScheme={aiTab === 'text' ? 'gold' : 'gray'}
                       onClick={() => setAiTab('text')}
-                      size="md"
+                      size="sm"
                       borderRadius="lg"
-                      _hover={{ transform: aiTab !== 'text' ? 'translateY(-1px)' : 'none' }}
                     >
-                      <Text mr={2}>📝</Text> 文字输入
+                      <Text mr={1}>📝</Text> 文字输入
                     </Button>
                     <Button
                       flex={1}
                       variant={aiTab === 'upload' ? 'solid' : 'outline'}
                       colorScheme={aiTab === 'upload' ? 'gold' : 'gray'}
                       onClick={() => setAiTab('upload')}
-                      size="md"
+                      size="sm"
                       borderRadius="lg"
-                      _hover={{ transform: aiTab !== 'upload' ? 'translateY(-1px)' : 'none' }}
                     >
-                      <Text mr={2}>🖼</Text> 上传截图
+                      <Text mr={1}>🖼</Text> 上传截图
                     </Button>
                   </HStack>
 
                   {/* 文字输入 Tab */}
                   {aiTab === 'text' && (
-                    <VStack spacing={3} align="stretch">
+                    <VStack spacing={2} align="stretch">
                       <Textarea
                         value={aiText}
                         onChange={e => setAiText(e.target.value)}
-                        placeholder="粘贴自我介绍文字，AI 自动提取档案字段（年龄、职业、性格、感情观等）..."
-                        rows={4}
+                        placeholder="粘贴自我介绍文字，AI 自动提取档案字段..."
+                        rows={3}
                         bg="warm.700"
                         color="white"
                         border="1px solid"
@@ -1137,7 +1245,7 @@ export default function ClientProfile() {
                         loadingText="分析中..."
                         isDisabled={aiText.trim().length < 20}
                         borderRadius="lg"
-                        _hover={{ transform: 'translateY(-1px)', filter: 'brightness(1.1)' }}
+                        size="sm"
                       >
                         ✦ 智能分析
                       </Button>
@@ -1145,9 +1253,9 @@ export default function ClientProfile() {
                       {/* 流式分析进度 */}
                       {aiExtracting && aiStreamText && (
                         <Card bg="warm.800" border="1px solid" borderColor="gold.600">
-                          <CardBody py={3}>
-                            <Text color="gold.300" fontWeight="bold" fontSize="sm" mb={2}>AI 正在分析...</Text>
-                            <Text color="gray.300" fontSize="sm" whiteSpace="pre-wrap" maxH="150px" overflowY="auto">
+                          <CardBody py={2}>
+                            <Text color="gold.300" fontWeight="bold" fontSize="xs" mb={1}>AI 正在分析...</Text>
+                            <Text color="gray.300" fontSize="xs" whiteSpace="pre-wrap" maxH="100px" overflowY="auto">
                               {aiStreamText}
                             </Text>
                           </CardBody>
@@ -1158,7 +1266,7 @@ export default function ClientProfile() {
 
                   {/* 截图上传 Tab */}
                   {aiTab === 'upload' && (
-                    <VStack spacing={3} align="stretch">
+                    <VStack spacing={2} align="stretch">
                       <Input
                         type="file"
                         accept="image/*"
@@ -1168,13 +1276,13 @@ export default function ClientProfile() {
                       />
                       {aiScreenshotPreview ? (
                         <Box position="relative" borderRadius="lg" overflow="hidden" bg="gray.900">
-                          <Image src={aiScreenshotPreview} alt="预览" maxH="160px" w="full" objectFit="contain" />
+                          <Image src={aiScreenshotPreview} alt="预览" maxH="120px" w="full" objectFit="contain" />
                           <IconButton
-                            icon={<Icon as={FiEdit2} />}
+                            icon={<Text fontSize="xs">✕</Text>}
                             size="xs"
                             position="absolute"
-                            top={2}
-                            right={2}
+                            top={1}
+                            right={1}
                             colorScheme="red"
                             onClick={() => { setAiScreenshotFile(null); setAiScreenshotPreview(''); setAiExtractedFields(null); setAiConfirmSelections({}); }}
                             aria-label="移除图片"
@@ -1185,14 +1293,15 @@ export default function ClientProfile() {
                           variant="outline"
                           colorScheme="gold"
                           onClick={() => screenshotInputRef.current?.click()}
-                          h="80px"
+                          h="60px"
                           borderStyle="dashed"
                           borderRadius="lg"
                           _hover={{ bg: 'rgba(212,168,83,0.1)' }}
+                          size="sm"
                         >
-                          <VStack spacing={1}>
-                            <Text>点击选择聊天截图</Text>
-                            <Text fontSize="xs" color="rgba(245,240,232,0.4)">支持朋友圈、探探、Soul 等截图</Text>
+                          <VStack spacing={0}>
+                            <Text fontSize="xs">点击选择聊天截图</Text>
+                            <Text fontSize="10px" color="rgba(245,240,232,0.3)">支持朋友圈、探探、Soul 等</Text>
                           </VStack>
                         </Button>
                       )}
@@ -1203,6 +1312,7 @@ export default function ClientProfile() {
                           isLoading={aiExtracting}
                           loadingText={aiScreenshotStep || '分析中...'}
                           borderRadius="lg"
+                          size="sm"
                         >
                           ✦ 上传分析
                         </Button>
@@ -1211,15 +1321,14 @@ export default function ClientProfile() {
                       {/* 截图分析思考过程 */}
                       {aiScreenshotThinking && (
                         <Card bg="warm.800" border="1px solid" borderColor="gold.600">
-                          <CardBody py={3}>
-                            <HStack mb={2}>
-                              <Spinner size="sm" color="gold.400" />
-                              <Text color="gold.300" fontWeight="bold" fontSize="sm">{aiScreenshotStep || 'AI 思考中...'}</Text>
+                          <CardBody py={2}>
+                            <HStack mb={1}>
+                              <Spinner size="xs" color="gold.400" />
+                              <Text color="gold.300" fontWeight="bold" fontSize="xs">{aiScreenshotStep || 'AI 思考中...'}</Text>
                             </HStack>
-                            <Text color="rgba(245,240,232,0.5)" fontSize="xs">
+                            <Text color="rgba(245,240,232,0.5)" fontSize="10px">
                               {aiScreenshotThinkingContent}
                             </Text>
-                            <Progress value={undefined} size="xs" colorScheme="yellow" mt={2} isIndeterminate />
                           </CardBody>
                         </Card>
                       )}
@@ -1228,13 +1337,13 @@ export default function ClientProfile() {
 
                   {/* AI 提取结果 */}
                   {aiExtractedFields && (
-                    <Card bg="warm.800" border="1px solid" borderColor="teal.500" mt={4}>
+                    <Card bg="warm.800" border="1px solid" borderColor="teal.500" mt={3}>
                       <CardBody>
-                        <HStack justify="space-between" mb={3}>
-                          <Text color="teal.400" fontWeight="bold" fontSize="sm">
-                            AI 识别结果（共 {Object.entries(aiExtractedFields).filter(([, v]) => v).length} 个字段）
+                        <HStack justify="space-between" mb={2}>
+                          <Text color="teal.400" fontWeight="bold" fontSize="xs">
+                            识别到 {Object.entries(aiExtractedFields).filter(([, v]) => v).length} 个字段
                           </Text>
-                          <HStack spacing={2}>
+                          <HStack spacing={1}>
                             <Button size="xs" variant="ghost" color="teal.400" onClick={() => {
                               const all = {};
                               Object.keys(aiExtractedFields).forEach(k => { all[k] = true; });
@@ -1243,86 +1352,33 @@ export default function ClientProfile() {
                             <Button size="xs" variant="ghost" color="rgba(245,240,232,0.4)" onClick={() => setAiConfirmSelections({})}>反选</Button>
                           </HStack>
                         </HStack>
-                        <VStack spacing={1} align="stretch" maxH="200px" overflowY="auto">
+                        <VStack spacing={1} align="stretch" maxH="160px" overflowY="auto">
                           {Object.entries(aiExtractedFields).map(([key, value]) => {
                             if (!value) return null;
                             const label = ALL_FIELD_LABELS[key] || key;
                             return (
-                              <HStack key={key} bg="warm.700" px={3} py={2} borderRadius="md">
+                              <HStack key={key} bg="warm.700" px={2} py={1.5} borderRadius="md">
                                 <Checkbox
                                   isChecked={!!aiConfirmSelections[key]}
                                   onChange={e => setAiConfirmSelections(prev => ({ ...prev, [key]: e.target.checked }))}
                                   colorScheme="teal"
                                   size="sm"
                                 />
-                                <Text color="rgba(245,240,232,0.4)" fontSize="sm" minW="80px">{label}</Text>
-                                <Text color="white" fontSize="sm" fontWeight="medium" flex={1}>{String(value)}</Text>
+                                <Text color="rgba(245,240,232,0.4)" fontSize="xs" minW="70px">{label}</Text>
+                                <Text color="white" fontSize="xs" fontWeight="medium" flex={1} noOfLines={1}>{String(value)}</Text>
                               </HStack>
                             );
                           })}
                         </VStack>
-                        <HStack justify="flex-end" mt={3} spacing={3}>
-                          <Button size="sm" variant="ghost" color="rgba(245,240,232,0.4)" onClick={() => { setAiExtractedFields(null); setAiConfirmSelections({}); }}>清除</Button>
-                          <Button size="sm" colorScheme="teal" onClick={handleApplySelectedFields}>应用已选字段</Button>
+                        <HStack justify="flex-end" mt={2} spacing={2}>
+                          <Button size="xs" variant="ghost" color="rgba(245,240,232,0.4)" onClick={() => { setAiExtractedFields(null); setAiConfirmSelections({}); }}>清除</Button>
+                          <Button size="xs" colorScheme="teal" onClick={handleApplySelectedFields}>应用已选</Button>
                         </HStack>
                       </CardBody>
                     </Card>
                   )}
                 </CardBody>
               </Card>
-
-              {/* 分隔符 */}
-              <HStack>
-                <Box flex={1} h="1px" bg="warm.600" />
-                <Text color="rgba(245,240,232,0.4)" fontSize="xs">或</Text>
-                <Box flex={1} h="1px" bg="warm.600" />
-              </HStack>
-
-              {/* 手动填写表单 - 增加间距 */}
-              <SimpleGrid columns={2} spacing={6} data-section-form>
-                {CLIENT_EDITABLE_FIELDS
-                  .filter(f => COMMON_FIELD_KEYS.has(f.key))
-                  .map(field => (
-                    <div data-section={getSectionForField(field.key)} key={field.key}>
-                    <ProfileField
-                      key={field.key}
-                      field={field}
-                      value={editData[field.key]}
-                      onChange={handleFieldChange}
-                    />
-                    </div>
-                  ))}
-              </SimpleGrid>
-
-              {/* 更多资料折叠按钮 */}
-              <Button
-                variant="ghost"
-                size="sm"
-                color="gold.400"
-                onClick={() => setShowAdvancedFields(!showAdvancedFields)}
-                _hover={{ bg: 'warm.700' }}
-              >
-                {showAdvancedFields ? '收起' : '更多资料'}
-                <Text as="span" ml={1}>{showAdvancedFields ? '▲' : '▼'}</Text>
-              </Button>
-
-              {/* 高级字段折叠区 */}
-              {showAdvancedFields && (
-                <SimpleGrid columns={2} spacing={6} data-section-form>
-                  {CLIENT_EDITABLE_FIELDS
-                    .filter(f => !COMMON_FIELD_KEYS.has(f.key))
-                    .map(field => (
-                      <div data-section={getSectionForField(field.key)} key={field.key}>
-                      <ProfileField
-                        key={field.key}
-                        field={field}
-                        value={editData[field.key]}
-                        onChange={handleFieldChange}
-                      />
-                      </div>
-                    ))}
-                </SimpleGrid>
-              )}
 
               {/* 底部按钮 */}
               <HStack justify="flex-end" spacing={3} pb={2}>

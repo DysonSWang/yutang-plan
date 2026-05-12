@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>06 公式</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto Serif+SC:wght@400;600;700;800&family=Noto Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-warm: #FFF8F3;
+  --coral: #C0392B;
+  --ink: #2D2D2D;
+  --ink-light: #6B6B6B;
+  --gold: #A08020;
+  --green: #3D8C40;
+}
+
+body {
+  font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #1a1a2e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.slide {
+  width: 540px;
+  height: 720px;
+  background: var(--bg-warm);
+  position: relative;
+  overflow: hidden;
+}
+
+.title { padding: 8px 25px 6px; text-align: center; }
+.title-text { font-family: 'Noto Serif SC', serif; font-size: 26px; font-weight: 800; color: var(--ink); }
+.subtitle { font-size: 14px; color: var(--ink-light); margin-top: 2px; }
+.divider { width: 80px; height: 3px; background: var(--green); margin: 4px auto 0; border-radius: 2px; }
+
+.block { margin: 6px 20px; padding: 14px; border-radius: 14px; }
+.green { background: rgba(61,140,64,0.08); border-left: 4px solid var(--green); }
+.block-label { font-size: 12px; font-weight: 700; margin-bottom: 3px; letter-spacing: 1px; color: var(--green); }
+.block-title { font-family: 'Noto Serif SC', serif; font-size: 17px; font-weight: 700; color: var(--ink); margin-bottom: 3px; }
+.block-example { font-size: 13px; color: var(--ink-light); }
+
+.bonus { margin: 6px 20px; padding: 10px 16px; border-radius: 14px; background: rgba(201,162,39,0.1); border-left: 4px solid var(--gold); }
+.bonus-label { font-size: 12px; font-weight: 700; margin-bottom: 3px; letter-spacing: 1px; color: var(--gold); }
+.bonus-text { font-size: 13px; color: var(--ink); }
+.bonus-answer { font-size: 13px; color: var(--gold); font-weight: 600; margin-top: 3px; }
+
+.think { margin: 6px 20px 0; padding: 12px 16px; background: #2D2D2D; border-radius: 14px; text-align: center; }
+.think-label { font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 3px; }
+.think-text { font-size: 14px; color: var(--gold); font-weight: 600; }
+
+.footer { position: absolute; bottom: 30px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.footer span { cursor: pointer; transition: transform 0.15s ease; font-size: 14px; font-weight: 700; padding: 4px 16px; border-radius: 10px; background: rgba(255,255,255,0.88); color: var(--ink); }
+.footer span:active { transform: scale(0.96); }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="title">
+    <div class="title-text">3种正确回应方式</div>
+    <div class="subtitle">她问「你是不是渣男」？答对她会高看你</div>
+    <div class="divider"></div>
+  </div>
+
+  <div class="block green">
+    <div class="block-label">V 方式一：镜像法</div>
+    <div class="block-title">把问题镜像回去</div>
+    <div class="block-example">「你觉得呢？」→ 不否认不承认，把球踢回去</div>
+  </div>
+
+  <div class="block green">
+    <div class="block-label">V 方式二：态度法</div>
+    <div class="block-title">给态度，不给答案</div>
+    <div class="block-example">「我是认真的人，你信不信随你」→ 态度明确，不纠缠</div>
+  </div>
+
+  <div class="block green">
+    <div class="block-label">V 方式三：调侃法</div>
+    <div class="block-title">用幽默化解，不进框架</div>
+    <div class="block-example">「我要真是渣男，会告诉你吗？」→ 调侃中带智慧</div>
+  </div>
+
+  <div class="bonus">
+    <div class="bonus-label">高段位回应</div>
+    <div class="bonus-text">「你觉得我像吗？」——反问她，让她说出对你的判断</div>
+  </div>
+
+  <div class="think">
+    <div class="think-label">思维升级</div>
+    <div class="think-text">不解释 = 不证明 = 有框架 = 高价值</div>
+  </div>
+
+  <div class="footer">
+    <span>收藏起来，废测来袭时对照用</span>
+  </div>
+</div>
+</body>
+</html>

@@ -816,6 +816,7 @@ export const membership = {
   myInvitationStats: () => api.get('/api/membership/invitation/my-stats'),
   // 学习
   chapters: () => api.getCachedWithVersion('/api/membership/learning/chapters', '/api/membership/learning/content-version'),
+  getChapter: (chapterId) => api.get(`/api/membership/learning/${chapterId}`),
   learningProgress: () => api.getCachedWithVersion('/api/membership/learning/progress', '/api/membership/learning/content-version'),
   updateLearningProgress: (chapterId, status) => api.put(`/api/membership/learning/progress/${chapterId}`, { status }),
   // 个性化学习

@@ -1,5 +1,5 @@
-import { Box, Heading, Text, VStack, HStack, Button, Badge, Progress, SimpleGrid, useToast, Spinner, Center, Collapse, Icon, Flex, Skeleton } from '@chakra-ui/react';
-import { useState, useEffect } from 'react';
+import { Box, Heading, Text, VStack, HStack, Button, Badge, Progress, SimpleGrid, useToast, Spinner, Center, Collapse, Icon, Flex, Skeleton, Menu, MenuButton, MenuList, MenuItem } from '@chakra-ui/react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { membership as membershipApi } from '../../utils/api';
 import { BookIcon, CheckIcon } from '../../components/Icons';
@@ -13,15 +13,11 @@ import useKeepAliveData from '../../hooks/useKeepAliveData';
 function ChapterCard({ chapter, progress, personalizationStatus, onUpdate }) {
   const navigate = useNavigate();
   const p = progress.find(p => p.chapterId === chapter.chapterId);
-  // 状态：已学习(studied) vs 未学习(not_studied)
   const isStudied = p?.status === 'completed' || p?.status === 'in_progress';
   const statusColor = isStudied ? 'green' : 'gray';
-  // 个性化状态
   const perCh = personalizationStatus?.find(c => c.chapterId === chapter.chapterId);
   const perBadge = perCh?.status === 'completed' ? { label: '已定制', color: 'purple' }
     : perCh?.status === 'generating' ? { label: '生成中', color: 'blue' } : null;
-
-  // 内容更新检测：已学习 + 内容有更新版本 + 未通知过
   const hasUpdate = isStudied
     && p?.notifiedUpdate === false
     && chapter.contentVersion > (p.contentVersion || 0);
@@ -73,37 +69,9 @@ function ChapterCard({ chapter, progress, personalizationStatus, onUpdate }) {
         </HStack>
       </HStack>
 
-      <HStack mt={4} gap={2}>
-        {!isStudied ? (
-          <Button
-            size="sm"
-            colorScheme="gold"
-            variant="outline"
-            onClick={(e) => { e.stopPropagation(); onUpdate(chapter.chapterId, 'completed'); }}
-          >
-            开始学习
-          </Button>
-        ) : (
-          <Button
-            size="sm"
-            variant="ghost"
-            colorScheme="gray"
-            onClick={async (e) => {
-              e.stopPropagation();
-              if (hasUpdate) {
-                membershipApi.acknowledgeUpdate(chapter.chapterId).catch(() => {});
-              }
-              onUpdate(chapter.chapterId, 'not_started');
-            }}
-          >
-            重新学习
-          </Button>
-        )}
-      </HStack>
-
       {hasUpdate && (
-        <Text color="orange.300" fontSize="xs" mt={3}>
-          内容已更新，建议重新学习
+        <Text color="orange.300" fontSize="xs" mt={1}>
+          内容已更新，点击查看
         </Text>
       )}
     </Box>
@@ -230,6 +198,20 @@ export default function ClientLearning() {
   const studiedCount = progress.filter(p => p.status === 'completed' || p.status === 'in_progress').length;
   const totalCount = chapters.length;
   const percent = totalCount > 0 ? Math.round((studiedCount / totalCount) * 100) : 0;
+  const chapterList = chapters.filter(c => c.chapterId !== '00');
+  const [showProgressAnim, setShowProgressAnim] = useState(false);
+  const [prevPercent, setPrevPercent] = useState(percent);
+  const prevPercentRef = useRef(percent);
+
+  // 进度增加时触发动画
+  useEffect(() => {
+    if (percent > prevPercentRef.current) {
+      prevPercentRef.current = percent;
+      setPrevPercent(percent);
+      setShowProgressAnim(true);
+      setTimeout(() => setShowProgressAnim(false), 2000);
+    }
+  }, [percent]);
 
   if (isInitialLoad) return (
     <Box>
@@ -248,34 +230,67 @@ export default function ClientLearning() {
 
   return (
     <Box>
-      <HStack mb={6} gap={4}>
-        <Box>
-          <Heading size="lg" color="white" display="flex" alignItems="center" gap={2}>
-            <BookIcon /> 学习中心
-          </Heading>
-        </Box>
+      <HStack mb={6} gap={4} justify="space-between" flexWrap="wrap">
+        <Heading size="lg" color="white" display="flex" alignItems="center" gap={2}>
+          <BookIcon /> 学习中心
+        </Heading>
+        {chapterList.length > 0 && (
+          <Menu>
+            <MenuButton
+              as={Button}
+              size="sm"
+              variant="outline"
+              colorScheme="gray"
+              rightIcon={<FiChevronDown />}
+            >
+              章节 {chapterList.findIndex(c => c.chapterId === '01') + 1}/{chapterList.length}
+            </MenuButton>
+            <MenuList bg="warm.800" borderColor="warm.600" maxH="300px" overflowY="auto">
+              {chapterList.map(ch => (
+                <MenuItem
+                  key={ch.chapterId}
+                  bg="transparent"
+                  _hover={{ bg: 'warm.700' }}
+                  onClick={() => navigate(`/learning/${ch.chapterId}`)}
+                >
+                  <HStack spacing={2}>
+                    <Text color="rgba(245,240,232,0.5)" fontSize="xs" w="20px">{ch.chapterId}</Text>
+                    <Text color="white" fontSize="sm">{ch.title}</Text>
+                    {progress.find(p => p.chapterId === ch.chapterId && (p.status === 'completed' || p.status === 'in_progress')) && (
+                      <CheckIcon color="green.400" boxSize={3} />
+                    )}
+                  </HStack>
+                </MenuItem>
+              ))}
+            </MenuList>
+          </Menu>
+        )}
       </HStack>
 
       {/* 个性化学习引导 */}
       <PersonalizationBanner />
 
       {/* 前言区 - 可展开 */}
-      <Box mb={6} p={5} bg="rgba(0,212,170,0.06)" borderRadius="xl" border="1px solid rgba(0,212,170,0.15)">
-        <Flex justify="space-between" align="center" cursor="pointer" onClick={() => setShowPreface(!showPreface)}>
-          <Box>
-            <Text color="gold.300" fontWeight="bold" fontSize="lg">
+      <Box mb={4} borderRadius="xl" border="1px solid rgba(0,212,170,0.15)" overflow="hidden">
+        <Flex
+          justify="space-between"
+          align="center"
+          cursor="pointer"
+          onClick={() => setShowPreface(!showPreface)}
+          px={4}
+          py={3}
+          bg="rgba(0,212,170,0.06)"
+        >
+          <HStack spacing={3}>
+            <Text color="gold.300" fontWeight="bold" fontSize="md">
               {prefaceData?.title || '写在前面'}
             </Text>
-          </Box>
-          <HStack gap={3} onClick={(e) => e.stopPropagation()}>
-            <Icon
-              as={showPreface ? FiChevronUp : FiChevronDown}
-              color="gold.300"
-              boxSize={6}
-              cursor="pointer"
-              onClick={() => setShowPreface(!showPreface)}
-            />
           </HStack>
+          <Icon
+            as={showPreface ? FiChevronUp : FiChevronDown}
+            color="gold.300"
+            boxSize={5}
+          />
         </Flex>
         <Collapse in={showPreface} animateOpacity>
           <Box mt={4} pt={4} borderTop="1px solid rgba(255,255,255,0.1)">
@@ -351,15 +366,31 @@ export default function ClientLearning() {
         </Collapse>
       </Box>
 
-      <Box mb={6} p={4} bg="rgba(0,212,170,0.08)" borderRadius="lg" border="1px solid rgba(0,212,170,0.2)">
+      <Box mb={6} p={4} bg="rgba(0,212,170,0.08)" borderRadius="lg" border="1px solid rgba(0,212,170,0.2)" position="relative">
         <HStack justify="space-between" mb={2}>
-          <Text color="gold.400" fontWeight="bold">学习进度</Text>
+          <HStack spacing={2}>
+            <Text color="gold.400" fontWeight="bold">学习进度</Text>
+            {showProgressAnim && (
+              <Text color="green.400" fontSize="xs" fontWeight="bold" animation="fadeUp 2s ease forwards">
+                +1
+              </Text>
+            )}
+          </HStack>
           <Text color="gold.400" fontSize="sm">{studiedCount}/{totalCount} 章节</Text>
         </HStack>
-        <Progress value={percent} size="sm" colorScheme="gold" borderRadius="full" bg="warm.800" className="progress-glow" sx={{ '& > div': { transition: 'width 0.6s ease' } }} />
+        <Progress
+          value={percent}
+          size="sm"
+          colorScheme="gold"
+          borderRadius="full"
+          bg="warm.800"
+          className="progress-glow"
+          sx={{ '& > div': { transition: 'width 0.6s ease' } }}
+        />
         <Text color="rgba(245,240,232,0.55)" fontSize="xs" mt={1}>
           已学习 {percent}% · 坚持学习，提升情商
         </Text>
+        <style>{`@keyframes fadeUp { 0%{opacity:1;transform:translateY(0)} 100%{opacity:0;transform:translateY(-10px)} }`}</style>
       </Box>
 
       <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>

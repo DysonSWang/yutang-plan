@@ -100,10 +100,10 @@ function MobileBottomNav({ chatUnread }) {
                 py={2}
                 px={3}
                 cursor="pointer"
-                color={isActive ? 'gold.500' : 'rgba(245,240,232,0.4)'}
+                color={isActive ? 'gold.500' : 'rgba(245,240,232,0.7)'}
                 transition="all 0.15s ease"
                 _hover={{ color: 'gold.400' }}
-                minW="60px"
+                minW="64px"
                 position="relative"
               >
                 <Icon as={item.icon} boxSize={5} mb={1} />

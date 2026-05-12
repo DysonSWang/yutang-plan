@@ -12,6 +12,7 @@ dependencies {
     implementation project(':bricks-soft-cap-downloader')
     implementation project(':capacitor-app')
     implementation project(':capacitor-browser')
+    implementation project(':capacitor-clipboard')
     implementation project(':capacitor-filesystem')
     implementation project(':capawesome-team-capacitor-file-opener')
 

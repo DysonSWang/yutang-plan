@@ -7,7 +7,7 @@ import {
   Input, Button, useToast, NumberInput, NumberInputField, NumberInputStepper,
   NumberIncrementStepper, NumberDecrementStepper, Select, FormControl, FormLabel,
   Skeleton, Tabs, TabList, TabPanels, Tab, TabPanel, Avatar, Divider, Alert, AlertIcon,
-  AlertDescription, Progress,
+  AlertDescription, Progress, Menu, MenuButton, MenuList, MenuItem,
 } from '@chakra-ui/react';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import { zhCN } from 'date-fns/locale/zh-CN';
@@ -31,6 +31,7 @@ function GirlsTab({ girlsList, isInitialLoad, onAddGirl, onGirlClick }) {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [addForm, setAddForm] = useState({ name: '', age: '', occupation: '' });
   const [adding, setAdding] = useState(false);
+  const [showMore, setShowMore] = useState(false);
   const toast = useToast();
 
   const handleAdd = async () => {
@@ -41,6 +42,7 @@ function GirlsTab({ girlsList, isInitialLoad, onAddGirl, onGirlClick }) {
       if (res.success) {
         toast({ title: res.quotaLeft !== undefined ? `添加成功，剩余 ${res.quotaLeft} 个名额` : '添加成功', status: 'success' });
         setAddForm({ name: '', age: '', occupation: '' });
+        setShowMore(false);
         onClose();
         onAddGirl();
       } else if (res.code === 'QUOTA_EXCEEDED') {
@@ -104,26 +106,37 @@ function GirlsTab({ girlsList, isInitialLoad, onAddGirl, onGirlClick }) {
                   placeholder="输入昵称" bg="warm.700" color="white"
                   onKeyDown={e => { if (e.key === 'Enter') handleAdd(); }} />
               </FormControl>
-              <HStack spacing={4}>
-                <FormControl>
-                  <FormLabel color="rgba(245,240,232,0.4)">年龄</FormLabel>
-                  <NumberInput value={addForm.age} onChange={(_, v) => setAddForm({...addForm, age: v})} bg="warm.700" min={18} max={60}>
-                    <NumberInputField color="white" /><NumberInputStepper>
-                      <NumberIncrementStepper color="rgba(245,240,232,0.4)" />
-                      <NumberDecrementStepper color="rgba(245,240,232,0.4)" />
-                    </NumberInputStepper>
-                  </NumberInput>
-                </FormControl>
-                <FormControl>
-                  <FormLabel color="rgba(245,240,232,0.4)">职业</FormLabel>
-                  <Select value={addForm.occupation} onChange={e => setAddForm({...addForm, occupation: e.target.value})}
-                    bg="warm.700" color="white" placeholder="选择">
-                    {['学生', '上班族', '自由职业', '企业主', '公务员', '医生', '律师', '教师', '销售', '设计师', '程序员', '其他'].map(o => (
-                      <option key={o} value={o}>{o}</option>
-                    ))}
-                  </Select>
-                </FormControl>
-              </HStack>
+              <Button
+                size="sm"
+                variant="ghost"
+                color="rgba(245,240,232,0.45)"
+                onClick={() => setShowMore(!showMore)}
+                _hover={{ color: 'rgba(245,240,232,0.7)' }}
+              >
+                {showMore ? '收起更多信息' : '+ 更多（年龄、职业）'}
+              </Button>
+              {showMore && (
+                <HStack spacing={4}>
+                  <FormControl>
+                    <FormLabel color="rgba(245,240,232,0.4)">年龄</FormLabel>
+                    <NumberInput value={addForm.age} onChange={(_, v) => setAddForm({...addForm, age: v})} bg="warm.700" min={18} max={60}>
+                      <NumberInputField color="white" /><NumberInputStepper>
+                        <NumberIncrementStepper color="rgba(245,240,232,0.4)" />
+                        <NumberDecrementStepper color="rgba(245,240,232,0.4)" />
+                      </NumberInputStepper>
+                    </NumberInput>
+                  </FormControl>
+                  <FormControl>
+                    <FormLabel color="rgba(245,240,232,0.4)">职业</FormLabel>
+                    <Select value={addForm.occupation} onChange={e => setAddForm({...addForm, occupation: e.target.value})}
+                      bg="warm.700" color="white" placeholder="选择">
+                      {['学生', '上班族', '自由职业', '企业主', '公务员', '医生', '律师', '教师', '销售', '设计师', '程序员', '其他'].map(o => (
+                        <option key={o} value={o}>{o}</option>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </HStack>
+              )}
               <Button colorScheme="gold" onClick={handleAdd} isLoading={adding} w="100%">添加</Button>
             </VStack>
           </ModalBody>
@@ -285,9 +298,24 @@ function DatesTab({ datesList, allDates, pendingInterviews, isInitialLoad, onRef
       ) : (
         <VStack spacing={4} align="stretch">
           <Flex gap={3} wrap="wrap">
-            <Select placeholder={`全部女生 (${girlList.length})`} w="180px" size="sm" bg="warm.800" color="white" borderColor="warm.600" value={filterGirlId} onChange={e => setFilterGirlId(e.target.value)}>
-              {girlList.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-            </Select>
+            <Menu>
+              <MenuButton as={Button} size="sm" variant="outline" borderColor="warm.600" _hover={{ bg: 'warm.700' }} rightIcon={<Text fontSize="xs">▼</Text>}>
+                {filterGirlId ? girlList.find(g => g.id === filterGirlId)?.name : `全部女生 (${girlList.length})`}
+              </MenuButton>
+              <MenuList bg="warm.800" borderColor="warm.600" minW="160px">
+                <MenuItem _hover={{ bg: 'warm.700' }} onClick={() => setFilterGirlId('')}>
+                  <Text color="rgba(245,240,232,0.6)">全部女生 ({girlList.length})</Text>
+                </MenuItem>
+                {girlList.map(g => (
+                  <MenuItem key={g.id} _hover={{ bg: 'warm.700' }} onClick={() => setFilterGirlId(g.id)}>
+                    <HStack spacing={2}>
+                      <Avatar size="xs" name={g.name} src={g.avatar} bg="purple.400" />
+                      <Text>{g.name}</Text>
+                    </HStack>
+                  </MenuItem>
+                ))}
+              </MenuList>
+            </Menu>
             {filterGirlId && <Button size="sm" variant="ghost" onClick={() => setFilterGirlId('')}>清除过滤</Button>}
           </Flex>
           {filteredDates.map(d => (

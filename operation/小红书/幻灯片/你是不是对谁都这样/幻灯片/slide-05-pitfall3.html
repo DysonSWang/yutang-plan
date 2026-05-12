@@ -10,12 +10,11 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
-  --bg-warm: #FFF8F3;
-  --coral: #C0392B;
+  --coral: #E74C3C;
   --ink: #2D2D2D;
   --ink-light: #6B6B6B;
-  --gold: #A08020;
-  --green: #3D8C40;
+  --gold: #F39C12;
+  --green: #27AE60;
 }
 
 body {
@@ -31,73 +30,70 @@ body {
 .slide {
   width: 540px;
   height: 720px;
-  background: var(--bg-warm);
+  background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 100%);
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.title { padding: 12px 25px 8px; text-align: center; }
-.title-text { font-family: 'Noto Serif SC', serif; font-size: 30px; font-weight: 800; color: var(--ink); }
-.subtitle { font-size: 14px; color: var(--ink-light); margin-top: 2px; }
-.divider { width: 80px; height: 3px; background: var(--coral); margin: 6px auto 0; border-radius: 2px; }
+.top { width: 100%; height: 56px; background: rgba(231,76,60,0.15); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(231,76,60,0.25); }
+.top span { color: white; font-size: 15px; font-weight: 700; letter-spacing: 2px; }
 
-.section { margin: 10px 20px; border-radius: 14px; padding: 16px 18px; }
-.bronze { background: rgba(232,90,79,0.08); border-left: 4px solid var(--coral); }
-.gold { background: rgba(201,162,39,0.1); border-left: 4px solid var(--gold); }
-.section-label { font-size: 12px; font-weight: 700; margin-bottom: 6px; letter-spacing: 1px; }
+.header { padding: 14px 28px 10px; text-align: center; }
+.header-title { font-family: 'Noto Serif SC', serif; font-size: 28px; font-weight: 800; color: white; }
+.header-sub { font-size: 15px; color: rgba(255,255,255,0.5); margin-top: 3px; }
+
+.section { margin: 10px 22px; border-radius: 14px; padding: 16px 18px; }
+.bronze { background: rgba(255,255,255,0.05); border-left: 5px solid rgba(231,76,60,0.7); }
+.king { background: rgba(255,255,255,0.05); border-left: 5px solid rgba(39,174,96,0.7); }
+.section-label { font-size: 14px; font-weight: 700; margin-bottom: 7px; letter-spacing: 1px; }
 .bronze .section-label { color: var(--coral); }
-.gold .section-label { color: var(--gold); }
-.section-title { font-family: 'Noto Serif SC', serif; font-size: 18px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
-.section-text { font-size: 13px; color: var(--ink-light); font-style: italic; }
+.king .section-label { color: var(--green); }
+.section-title { font-family: 'Noto Serif SC', serif; font-size: 17px; font-weight: 700; color: white; margin-bottom: 5px; }
+.section-text { font-size: 15px; color: rgba(255,255,255,0.65); line-height: 1.5; }
 
-.think { margin: 14px 20px; background: #2D2D2D; border-radius: 14px; padding: 16px 18px; text-align: center; }
-.think-label { font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 4px; }
-.think-text { font-size: 14px; color: var(--gold); font-weight: 600; }
-
-.footer { position: absolute; bottom: 30px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.footer span { cursor: pointer; transition: transform 0.15s ease; }
-.footer span:active { transform: scale(0.96); }font-size: 14px; font-weight: 700; padding: 4px 16px; border-radius: 10px; background: rgba(255,255,255,0.88); color: var(--ink); }
+.think { margin: 12px 22px 0; padding: 14px 18px; background: rgba(255,255,255,0.05); border-radius: 12px; text-align: center; }
+.think-label { font-size: 12px; color: rgba(255,255,255,0.4); margin-bottom: 5px; }
+.think-text { font-size: 15px; color: var(--gold); font-weight: 700; }
 </style>
 </head>
 <body>
 <div class="slide">
-  <div class="title">
-    <div class="title-text">反驳型</div>
-    <div class="subtitle">青铜 vs 王者 · 第三种错误</div>
-    <div class="divider"></div>
+  <div class="top"><span>第三种错误：反驳型</span></div>
+
+  <div class="header">
+    <div class="header-title">青铜 vs 王者</div>
+    <div class="header-sub">试图让她满意，丢失框架</div>
   </div>
 
   <div class="section bronze">
     <div class="section-label">X 青铜</div>
     <div class="section-title">「你怎么会这么想？我不是这样的人」</div>
-    <div class="section-text">反驳她的问题，试图改变她的想法</div>
+    <div class="section-text">你在试图说服她，你是好的</div>
   </div>
 
   <div class="section bronze">
     <div class="section-label">! 结果</div>
-    <div class="section-title">被她的问题带跑</div>
-    <div class="section-text">越描越黑，她觉得你在心虚</div>
+    <div class="section-title">失去主动权</div>
+    <div class="section-text">等于把判断标准给她，让她决定你好不好</div>
   </div>
 
-  <div class="section gold">
+  <div class="section king">
     <div class="section-label">V 王者</div>
-    <div class="section-title">幽默转移，绕过问题</div>
-    <div class="section-text">「怎么，想给我介绍对象？」→ 话题直接带跑</div>
+    <div class="section-title">态度比解释更重要</div>
+    <div class="section-text">「我就是这样的人，你信不信随你」→ 我的态度在这里</div>
   </div>
 
-  <div class="section gold">
+  <div class="section king">
     <div class="section-label">◆ 结果</div>
-    <div class="section-title">不纠缠，不解释</div>
-    <div class="section-text">用幽默化解，她拿你没办法</div>
+    <div class="section-title">她知道了你的底线</div>
+    <div class="section-text">反而更尊重你</div>
   </div>
 
   <div class="think">
     <div class="think-label">思维升级</div>
-    <div class="think-text">反驳 = 被她的问题带走 = 你进了她的框架</div>
-  </div>
-
-  <div class="footer">
-    <span>收藏起来，废测来袭时对照用</span>
+    <div class="think-text">反驳 = 告诉她"我需要你认可" = 低价值</div>
   </div>
 </div>
 </body>

@@ -4,7 +4,7 @@ import {
   Box, Heading, Card, CardBody, Button, Badge, Modal, ModalOverlay, ModalContent,
   ModalHeader, ModalBody, ModalCloseButton, useDisclosure, VStack, HStack, Text,
   SimpleGrid, Flex, Divider, Tag, Wrap, WrapItem, useToast, Textarea, FormControl,
-  FormLabel, Icon, Alert, AlertIcon, AlertDescription, Spinner, Progress, Tabs, TabList, TabPanels, Tab, TabPanel, Input, Select, Avatar
+  FormLabel, Icon, Alert, AlertIcon, AlertDescription, Spinner, Progress, Tabs, TabList, TabPanels, Tab, TabPanel, Input, Select, Avatar, Menu, MenuButton, MenuList, MenuItem
 } from '@chakra-ui/react';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import { zhCN } from 'date-fns/locale/zh-CN';
@@ -36,6 +36,7 @@ export default function ClientDates() {
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [showAiFields, setShowAiFields] = useState(false);
+  const [showMoreFields, setShowMoreFields] = useState(false);
   const [filterGirlId, setFilterGirlId] = useState('');
   const toast = useToast();
   // 加载记忆的偏好设置
@@ -117,6 +118,7 @@ export default function ClientDates() {
       relationshipStage: '初次见面', specialRequirements: ''
     });
     setShowAiFields(false);
+    setShowMoreFields(false);
     setSelectedGirlForDate(null);
     setAddStep(1);
   };
@@ -688,20 +690,25 @@ export default function ClientDates() {
               <VStack spacing={4} align="stretch">
                 {/* 过滤栏 */}
                 <Flex gap={3} wrap="wrap">
-                  <Select
-                    placeholder={`全部女生 (${girlList.length})`}
-                    w="180px"
-                    size="sm"
-                    bg="warm.800"
-                    color="white"
-                    borderColor="warm.600"
-                    value={filterGirlId}
-                    onChange={e => setFilterGirlId(e.target.value)}
-                  >
-                    {girlList.map(g => (
-                      <option key={g.id} value={g.id}>{g.name}{g.stage ? ` · ${g.stage}` : ''}</option>
-                    ))}
-                  </Select>
+                  <Menu>
+                    <MenuButton as={Button} size="sm" variant="outline" borderColor="warm.600" _hover={{ bg: 'warm.700' }} rightIcon={<Text fontSize="xs">▼</Text>}>
+                      {filterGirlId ? girlList.find(g => g.id === filterGirlId)?.name : `全部女生 (${girlList.length})`}
+                    </MenuButton>
+                    <MenuList bg="warm.800" borderColor="warm.600" minW="180px">
+                      <MenuItem _hover={{ bg: 'warm.700' }} onClick={() => setFilterGirlId('')}>
+                        <Text color="rgba(245,240,232,0.6)">全部女生 ({girlList.length})</Text>
+                      </MenuItem>
+                      {girlList.map(g => (
+                        <MenuItem key={g.id} _hover={{ bg: 'warm.700' }} onClick={() => setFilterGirlId(g.id)}>
+                          <HStack spacing={2}>
+                            <Avatar size="xs" name={g.name} src={g.avatar} bg="purple.400" />
+                            <Text>{g.name}</Text>
+                            {g.stage && <Badge size="sm" colorScheme="orange" fontSize="10px">{g.stage}</Badge>}
+                          </HStack>
+                        </MenuItem>
+                      ))}
+                    </MenuList>
+                  </Menu>
                   {filterGirlId && (
                     <Button
                       size="sm"
@@ -1025,16 +1032,18 @@ export default function ClientDates() {
           <ModalCloseButton onClick={() => { setShowAddModal(false); resetDateForm(); }} />
           <ModalBody pb={6}>
             {/* 步骤指示器 */}
-            <Flex justify="center" gap={2} mb={8}>
-              {[1, 2].map(step => (
-                <Box
-                  key={step}
-                  w={addStep === step ? '32px' : '8px'}
-                  h="8px"
-                  borderRadius="full"
-                  bg={addStep >= step ? 'gold.500' : 'warm.600'}
-                  transition="all 0.3s"
-                />
+            <Flex justify="center" gap={2} mb={6}>
+              {[{ n: 1, label: '选择对象' }, { n: 2, label: '填写信息' }].map(({ n, label }) => (
+                <VStack key={n} spacing={1}>
+                  <Box
+                    w={addStep === n ? '32px' : '8px'}
+                    h="8px"
+                    borderRadius="full"
+                    bg={addStep >= n ? 'gold.500' : 'warm.600'}
+                    transition="all 0.3s"
+                  />
+                  <Text fontSize="xs" color={addStep >= n ? 'gold.400' : 'rgba(245,240,232,0.35)'}>{label}</Text>
+                </VStack>
               ))}
             </Flex>
 
@@ -1206,64 +1215,66 @@ export default function ClientDates() {
                   />
                 </FormControl>
 
-                {/* --- 操作按钮 --- */}
-                <HStack mt={4} spacing={3}>
-                  <Button
-                    colorScheme="green"
-                    flex={1}
-                    size="lg"
-                    isLoading={saving}
-                    onClick={handleSaveDate}
-                  >
-                    保存约会
-                  </Button>
-                  <Button
-                    variant={showAiFields ? 'solid' : 'outline'}
-                    colorScheme={showAiFields ? 'brand' : 'gray'}
-                    leftIcon={<SparklesIcon />}
-                    flex={1}
-                    size="lg"
-                    onClick={() => setShowAiFields(!showAiFields)}
-                  >
-                    {showAiFields ? '收起 AI 策划' : 'AI 智能策划'}
-                  </Button>
-                </HStack>
+                <Button size="sm" variant="ghost" color="rgba(245,240,232,0.4)" onClick={() => setShowMoreFields(!showMoreFields)} _hover={{ color: 'rgba(245,240,232,0.7)' }}>
+                  {showMoreFields ? '收起' : '+ 更多选项'}
+                </Button>
 
-                {/* --- AI 智能策划区域（可展开） --- */}
-                {showAiFields && (
-                  <VStack spacing={4} align="stretch" mt={2}>
-                    <Divider />
-                    <HStack spacing={2}><Icon as={SparklesIcon} boxSize={4} color="gold.400" /><Text color="gold.400" fontWeight="bold" fontSize="sm">AI 增强信息（可选填，填得越详细方案越精准）</Text></HStack>
-
+                {showMoreFields && (
+                  <VStack spacing={4} align="stretch">
                     <FormControl>
                       <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">出行方式</FormLabel>
-                      <Select
-                        value={dateForm.transportMode}
-                        onChange={e => {
-                          setDateForm({ ...dateForm, transportMode: e.target.value });
-                          localStorage.setItem('dating_transportMode', e.target.value);
-                        }}
-                        bg="warm.700" borderColor="warm.600"
-                      >
-                        <option value="地铁/打车">地铁/打车</option>
-                        <option value="开车">开车</option>
-                        <option value="步行">步行</option>
-                        <option value="骑车">骑车</option>
-                      </Select>
+                      <Menu>
+                        <MenuButton as={Button} size="sm" variant="outline" borderColor="warm.600" _hover={{ bg: 'warm.700' }} rightIcon={<Text fontSize="xs">▼</Text>} w="full">
+                          {dateForm.transportMode || '请选择'}
+                        </MenuButton>
+                        <MenuList bg="warm.800" borderColor="warm.600" minW="160px">
+                          {['地铁/打车', '开车', '步行', '骑车'].map(opt => (
+                            <MenuItem key={opt} _hover={{ bg: 'warm.700' }} onClick={() => {
+                              setDateForm({ ...dateForm, transportMode: opt });
+                              localStorage.setItem('dating_transportMode', opt);
+                            }}>{opt}</MenuItem>
+                          ))}
+                        </MenuList>
+                      </Menu>
                     </FormControl>
 
                     <FormControl>
                       <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">当前关系阶段</FormLabel>
-                      <Select
-                        value={dateForm.relationshipStage}
-                        onChange={e => setDateForm({ ...dateForm, relationshipStage: e.target.value })}
+                      <Menu>
+                        <MenuButton as={Button} size="sm" variant="outline" borderColor="warm.600" _hover={{ bg: 'warm.700' }} rightIcon={<Text fontSize="xs">▼</Text>} w="full">
+                          {dateForm.relationshipStage || '请选择'}
+                        </MenuButton>
+                        <MenuList bg="warm.800" borderColor="warm.600" minW="160px">
+                          {['初次见面', '已聊过几次', '暧昧中', '确定关系'].map(opt => (
+                            <MenuItem key={opt} _hover={{ bg: 'warm.700' }} onClick={() => setDateForm({ ...dateForm, relationshipStage: opt })}>{opt}</MenuItem>
+                          ))}
+                        </MenuList>
+                      </Menu>
+                    </FormControl>
+
+                    <FormControl>
+                      <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">时长</FormLabel>
+                      <Menu>
+                        <MenuButton as={Button} size="sm" variant="outline" borderColor="warm.600" _hover={{ bg: 'warm.700' }} rightIcon={<Text fontSize="xs">▼</Text>} w="full">
+                          {dateForm.duration || '请选择'}
+                        </MenuButton>
+                        <MenuList bg="warm.800" borderColor="warm.600" minW="140px">
+                          {['2小时内', '半天', '一天', '多天'].map(opt => (
+                            <MenuItem key={opt} _hover={{ bg: 'warm.700' }} onClick={() => setDateForm({ ...dateForm, duration: opt })}>{opt}</MenuItem>
+                          ))}
+                        </MenuList>
+                      </Menu>
+                    </FormControl>
+
+                    <FormControl>
+                      <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">预算</FormLabel>
+                      <Input
+                        placeholder="如：1000元左右"
+                        value={dateForm.budget}
+                        onChange={e => setDateForm({ ...dateForm, budget: e.target.value })}
                         bg="warm.700" borderColor="warm.600"
-                      >
-                        <option value="初次见面">初次见面</option>
-                        <option value="已聊过几次">已聊过几次</option>
-                        <option value="暧昧中">暧昧中</option>
-                        <option value="确定关系">确定关系</option>
-                      </Select>
+                        _placeholder={{ color: 'rgba(245,240,232,0.4)' }}
+                      />
                     </FormControl>
 
                     <FormControl>
@@ -1288,38 +1299,42 @@ export default function ClientDates() {
                         rows={3}
                       />
                     </FormControl>
+                  </VStack>
+                )}
 
-                    <HStack>
-                      <FormControl>
-                        <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">预算</FormLabel>
-                        <Input
-                          placeholder="如：1000元左右"
-                          value={dateForm.budget}
-                          onChange={e => setDateForm({ ...dateForm, budget: e.target.value })}
-                          bg="warm.700" borderColor="warm.600"
-                          _placeholder={{ color: 'rgba(245,240,232,0.4)' }}
-                        />
-                      </FormControl>
-                      <FormControl>
-                        <FormLabel color="rgba(245,240,232,0.4)" fontSize="sm">时长</FormLabel>
-                        <Select
-                          value={dateForm.duration}
-                          onChange={e => setDateForm({ ...dateForm, duration: e.target.value })}
-                          bg="warm.700" borderColor="warm.600"
-                        >
-                          <option value="2小时内">2小时内</option>
-                          <option value="半天">半天</option>
-                          <option value="一天">一天</option>
-                          <option value="多天">多天</option>
-                        </Select>
-                      </FormControl>
-                    </HStack>
+                {/* --- 操作按钮 --- */}
+                <HStack mt={4} spacing={3}>
+                  <Button
+                    colorScheme="green"
+                    flex={1}
+                    size="lg"
+                    isLoading={saving}
+                    onClick={handleSaveDate}
+                  >
+                    保存约会
+                  </Button>
+                  <Button
+                    variant={showAiFields ? 'solid' : 'outline'}
+                    colorScheme={showAiFields ? 'brand' : 'gray'}
+                    leftIcon={<SparklesIcon />}
+                    flex={1}
+                    size="lg"
+                    onClick={() => setShowAiFields(!showAiFields)}
+                  >
+                    {showAiFields ? '收起 AI 策划' : 'AI 智能策划'}
+                  </Button>
+                </HStack>
 
+                {/* --- AI 智能策划区域（showAiFields 只控制这个区域） --- */}
+                {showAiFields && (
+                  <VStack spacing={3} align="stretch" mt={2}>
+                    <Divider />
+                    <HStack spacing={2}><Icon as={SparklesIcon} boxSize={4} color="gold.400" /><Text color="gold.400" fontWeight="bold" fontSize="sm">AI 精细化方案（基于上方已填写的偏好）</Text></HStack>
+                    <Text color="rgba(245,240,232,0.4)" fontSize="xs">填写上方"更多选项"后，AI 将生成更精准的时间表、场地推荐和聊天话题</Text>
                     <Button
                       colorScheme="gold"
                       leftIcon={<SparklesIcon />}
                       size="lg"
-                      mt={2}
                       onClick={() => {
                         setGenerating(true);
                         toast({ title: 'AI 正在精心策划中...', status: 'info', duration: 2000 });

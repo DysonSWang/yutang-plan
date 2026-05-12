@@ -10,14 +10,11 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
-  --bg-warm: #FFF8F3;
   --coral: #C0392B;
-  --coral-light: rgba(232, 90, 79, 0.1);
   --ink: #2D2D2D;
   --ink-light: #6B6B6B;
   --gold: #A08020;
   --green: #3D8C40;
-  --green-light: rgba(61, 140, 64, 0.1);
 }
 
 body {
@@ -33,84 +30,87 @@ body {
 .slide {
   width: 540px;
   height: 720px;
-  background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 40%, #16213e 100%);
+  background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 100%);
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.header { width: 100%; height: 56px; background: rgba(255,255,255,0.03); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(192,57,43,0.3); }
-.header span { color: white; font-size: 17px; font-weight: 600; letter-spacing: 2px; }
+.top { width: 100%; height: 56px; background: rgba(192,57,43,0.12); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(192,57,43,0.18); }
+.top span { color: white; font-size: 13px; font-weight: 700; letter-spacing: 2px; }
 
-/* Chat bubble section */
-.chat-hook { margin: 16px 20px 8px; background: rgba(255,255,255,0.06); border-radius: 14px; padding: 16px 18px; backdrop-filter: blur(10px); }
+.title { padding: 14px 24px 10px; text-align: center; }
+.title-text { font-family: 'Noto Serif SC', serif; font-size: 24px; font-weight: 800; color: white; margin-bottom: 4px; }
+.subtitle { font-size: 13px; color: rgba(255,255,255,0.5); }
+
+.chat { margin: 0 20px; background: rgba(255,255,255,0.06); border-radius: 14px; padding: 14px 16px; }
 .chat-line { display: flex; margin-bottom: 8px; }
 .chat-line:last-child { margin-bottom: 0; }
-.chat-line.her { justify-content: flex-start; }
-.chat-line.his { justify-content: flex-end; }
-.bubble { max-width: 70%; padding: 8px 14px; border-radius: 12px; font-size: 14px; }
-.bubble.her { background: rgba(192,57,43,0.15); color: #ff8a80; border-bottom-left-radius: 4px; }
-.bubble.his { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); border-bottom-right-radius: 4px; }
-.chat-question { text-align: center; font-size: 13px; color: var(--gold); margin-top: 10px; font-weight: 600; }
+.bubble { max-width: 70%; padding: 8px 12px; border-radius: 12px; font-size: 13px; }
+.bubble.her { background: rgba(192,57,43,0.2); color: white; border-bottom-left-radius: 4px; }
+.bubble.his { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.6); border-bottom-right-radius: 4px; margin-left: auto; }
+.chat-end { text-align: center; font-size: 12px; color: var(--coral); font-weight: 600; margin-top: 10px; }
 
-/* Tier blocks */
-.tiers { padding: 0 22px; }
-.tier { border-radius: 12px; padding: 12px 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
-.tier.bronze { background: rgba(255,255,255,0.04); border-left: 3px solid #ff6b6b; }
-.tier.silver { background: rgba(255,255,255,0.04); border-left: 3px solid #aaa; }
+.tier { margin: 8px 20px; border-radius: 12px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; }
+.tier.bronze { background: rgba(255,255,255,0.04); border-left: 3px solid rgba(192,57,43,0.6); }
+.tier.silver { background: rgba(255,255,255,0.04); border-left: 3px solid rgba(255,255,255,0.3); }
 .tier.diamond { background: rgba(255,255,255,0.04); border-left: 3px solid var(--gold); }
-.tier.king { background: var(--green-light); border-left: 3px solid var(--green); }
-.tier-label { font-size: 13px; font-weight: 700; letter-spacing: 1px; flex-shrink: 0; width: 52px; }
-.tier.bronze .tier-label { color: #ff6b6b; }
-.tier.silver .tier-label { color: #aaa; }
+.tier.king { background: rgba(61,140,64,0.12); border-left: 3px solid var(--green); }
+.tier-label { font-size: 12px; font-weight: 700; letter-spacing: 1px; flex-shrink: 0; width: 52px; }
+.tier.bronze .tier-label { color: rgba(192,57,43,0.9); }
+.tier.silver .tier-label { color: rgba(255,255,255,0.5); }
 .tier.diamond .tier-label { color: var(--gold); }
 .tier.king .tier-label { color: var(--green); }
-.tier-text { font-size: 13px; color: rgba(255,255,255,0.85); }
-.tier.king .tier-text { color: white; font-weight: 600; }
+.tier-text { font-size: 13px; color: rgba(255,255,255,0.7); }
+.tier.king .tier-text { color: white; }
 
-.footer { position: absolute; bottom: 30px; left: 0; right: 0; text-align: center; }
-.footer span { cursor: pointer; transition: transform 0.15s ease; }
-.footer span:active { transform: scale(0.96); }color: var(--gold); font-size: 16px; font-weight: 600; letter-spacing: 1px; }
+.footer { position: absolute; bottom: 0; left: 0; right: 0; height: 80px; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 22px; }
+.footer span { font-size: 13px; color: rgba(255,255,255,0.5); }
 </style>
 </head>
 <body>
 <div class="slide">
-  <div class="header"><span>她问"在干嘛"，你在哪种段位？</span></div>
+  <div class="top"><span>她问"在干嘛"，你在哪种段位？</span></div>
 
-  <!-- Chat conversation hook -->
-  <div class="chat-hook">
-    <div class="chat-line her">
+  <div class="title">
+    <div class="title-text">3种错误回答 vs 1个正确思路</div>
+    <div class="subtitle">青铜老老实实 白银平淡互动 钻石连环追问</div>
+  </div>
+
+  <div class="chat">
+    <div class="chat-line">
       <div class="bubble her">她：在干嘛？</div>
     </div>
-    <div class="chat-line his">
+    <div class="chat-line">
       <div class="bubble his">你：在上班</div>
     </div>
-    <div class="chat-line her">
+    <div class="chat-line">
       <div class="bubble her">她：哦</div>
     </div>
-    <div class="chat-question">这种对话你们是不是经历过？</div>
+    <div class="chat-end">→ 越解释越像在心虚</div>
   </div>
 
-  <!-- Tier comparison -->
-  <div class="tiers">
-    <div class="tier bronze">
-      <div class="tier-label">X 青铜</div>
-      <div class="tier-text">老老实实回答 → "在上班""在吃饭"</div>
-    </div>
-    <div class="tier silver">
-      <div class="tier-label">△ 白银</div>
-      <div class="tier-text">平淡互动 → "刚吃完，你呢？"</div>
-    </div>
-    <div class="tier diamond">
-      <div class="tier-label">X 钻石</div>
-      <div class="tier-text">连环追问 → "今天怎么样？周末呢？"</div>
-    </div>
-    <div class="tier king">
-      <div class="tier-label">V 王者</div>
-      <div class="tier-text">状态 + 好奇 → "刚忙完，正准备找你呢"</div>
-    </div>
+  <div class="tier bronze">
+    <div class="tier-label">X 青铜</div>
+    <div class="tier-text">老老实实回答 → "在上班""在吃饭"</div>
+  </div>
+  <div class="tier silver">
+    <div class="tier-label">△ 白银</div>
+    <div class="tier-text">平淡互动 → "刚吃完，你呢？"</div>
+  </div>
+  <div class="tier diamond">
+    <div class="tier-label">X 钻石</div>
+    <div class="tier-text">连环追问 → "今天怎么样？周末呢？"</div>
+  </div>
+  <div class="tier king">
+    <div class="tier-label">V 王者</div>
+    <div class="tier-text">状态 + 好奇 → "刚忙完，正准备找你呢"</div>
   </div>
 
-  <div class="footer"><span>往下看，避免踩坑 ↓</span></div>
+  <div class="footer">
+    <span>往下看，避免踩坑 ↓</span>
+  </div>
 </div>
 </body>
 </html>
