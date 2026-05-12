@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Box, VStack, HStack, Stack, Input, Button, Text, Flex, IconButton, Image, Badge, useToast, Center, Spinner, Icon, Menu, MenuButton, MenuList, MenuItem, MenuDivider, Switch, FormControl, FormLabel, Tooltip } from '@chakra-ui/react';
+import { Box, VStack, HStack, Stack, Input, Button, Text, Flex, IconButton, Image, Badge, useToast, Center, Spinner, Icon, Switch, FormControl, FormLabel, Tooltip, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure } from '@chakra-ui/react';
 import { WarningIcon } from '@chakra-ui/icons';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { api, chat, upload } from '../../utils/api';
@@ -25,6 +25,7 @@ export default function ClientChat() {
   const [burnSeconds, setBurnSeconds] = useState(5);
   const [burnTrigger, setBurnTrigger] = useState('onView');    // 'immediately' | 'onView'
   const [burnDurationType, setBurnDurationType] = useState('fixed'); // 'fixed' | 'adaptive'
+  const { isOpen: isBurnOpen, onOpen: onBurnOpen, onClose: onBurnClose } = useDisclosure();
   const scrollRef = useRef();
   const shouldAutoScrollRef = useRef(true);
   const fileInputRef = useRef();
@@ -242,7 +243,7 @@ export default function ClientChat() {
       if (session && message.sessionId === session.id) {
         setMessages(prev => [...prev, message]);
         console.log('[DEBUG] Socket收到消息', { isBurnAfterRead: message.isBurnAfterRead, burnAfterSeconds: message.burnAfterSeconds, burnTrigger: message.burnTrigger, id: message.id });
-        if (message.isBurnAfterRead && message.burnAfterSeconds && !message.burnedAt && message.burnTrigger === 'onView') {
+        if (message.isBurnAfterRead && message.burnAfterSeconds && !message.burnedAt) {
           startBurnTimer(message);
         }
       }
@@ -411,7 +412,7 @@ export default function ClientChat() {
         };
         setMessages(prev => [...prev, tempMsg]);
 
-        const res = await upload.image(file, isBurn, (info) => {
+        const res = await upload.image(file, isBurn, false, (info) => {
           setMessages(prev => prev.map(m =>
             m.tempId === tempId ? { ...m, uploadProgress: info.percent } : m
           ));
@@ -1209,73 +1210,20 @@ export default function ClientChat() {
                   isDisabled={sending}
                 />
                 {/* 阅后即焚 */}
-                <Box position="relative">
-                  <Menu placement="top-start">
-                    <MenuButton
-                      as={Button}
-                      size="sm"
-                      variant={burnMode ? 'solid' : 'ghost'}
-                      colorScheme="orange"
-                      bg={burnMode ? 'orange.600' : 'transparent'}
-                      color={burnMode ? 'white' : 'rgba(245,240,232,0.4)'}
-                      border={burnMode ? '2px solid orange.300' : '2px solid transparent'}
-                      _hover={{ bg: burnMode ? 'orange.500' : 'whiteAlpha.100' }}
-                      isDisabled={voiceState === 'preview'}
-                    >
-                      <Icon as={FireIcon} boxSize={4} color={burnMode ? 'white' : 'orange.400'} mr={1} />
-                      {burnMode ? (burnTrigger === 'immediately' ? '即时' : '阅后') : '阅后即焚'}
-                    </MenuButton>
-                    <MenuList bg="warm.800" borderColor="rgba(255,255,255,0.1)" minW="280px" p={4}>
-                      <FormControl display="flex" alignItems="center" justifyContent="space-between" mb={4}>
-                        <FormLabel htmlFor="burn-mode-switch" mb="0" color={burnMode ? 'orange.300' : 'gray.300'} fontWeight="bold">
-                          {burnMode ? '🔥 阅后即焚已开启' : '○ 阅后即焚未开启'}
-                        </FormLabel>
-                        <Switch
-                          id="burn-mode-switch"
-                          size="lg"
-                          colorScheme="orange"
-                          isChecked={burnMode}
-                          onChange={(e) => {
-                            const isOn = e.target.checked;
-                            setBurnMode(isOn);
-                            if (!isOn) { setBurnTrigger('onView'); setBurnDurationType('fixed'); setBurnSeconds(5); }
-                          }}
-                        />
-                      </FormControl>
-                      {burnMode && (
-                        <>
-                          <MenuDivider />
-                          <Box mb={3}>
-                            <Text fontSize="xs" color="gray.400" fontWeight="bold" mb={2}>触发时机</Text>
-                            <Stack spacing={2}>
-                              <Button size="sm" variant={burnTrigger === 'immediately' ? 'solid' : 'outline'} colorScheme="orange" onClick={() => setBurnTrigger('immediately')} w="full">即时（发出后立即计时）</Button>
-                              <Button size="sm" variant={burnTrigger === 'onView' ? 'solid' : 'outline'} colorScheme="orange" onClick={() => setBurnTrigger('onView')} w="full">阅后（点击后计时）</Button>
-                            </Stack>
-                          </Box>
-                          <MenuDivider />
-                          <Box mb={3}>
-                            <Text fontSize="xs" color="gray.400" fontWeight="bold" mb={2}>时长</Text>
-                            <Stack spacing={2}>
-                              <Button size="sm" variant={burnDurationType === 'fixed' ? 'solid' : 'outline'} colorScheme="orange" onClick={() => setBurnDurationType('fixed')} w="full">固定秒数</Button>
-                              <Button size="sm" variant={burnDurationType === 'adaptive' ? 'solid' : 'outline'} colorScheme="orange" onClick={() => setBurnDurationType('adaptive')} w="full">自适应（文字/图片5秒，视频/音频按实际时长）</Button>
-                            </Stack>
-                          </Box>
-                          {burnDurationType === 'fixed' && (
-                            <>
-                              <MenuDivider />
-                              <Text fontSize="xs" color="gray.400" fontWeight="bold" mb={2}>选择秒数</Text>
-                              <HStack spacing={2} justify="center">
-                                {[3, 5, 10, 15, 30, 60].map(s => (
-                                  <Button key={s} size="md" variant={burnSeconds === s ? 'solid' : 'outline'} colorScheme="orange" onClick={() => setBurnSeconds(s)} minW="50px">{s}s</Button>
-                                ))}
-                              </HStack>
-                            </>
-                          )}
-                        </>
-                      )}
-                    </MenuList>
-                  </Menu>
-                </Box>
+                <Button
+                  size="sm"
+                  variant={burnMode ? 'solid' : 'ghost'}
+                  colorScheme="orange"
+                  bg={burnMode ? 'orange.600' : 'transparent'}
+                  color={burnMode ? 'white' : 'rgba(245,240,232,0.4)'}
+                  border={burnMode ? '2px solid orange.300' : '2px solid transparent'}
+                  _hover={{ bg: burnMode ? 'orange.500' : 'whiteAlpha.100' }}
+                  isDisabled={voiceState === 'preview'}
+                  onClick={onBurnOpen}
+                >
+                  <Icon as={FireIcon} boxSize={4} color={burnMode ? 'white' : 'orange.400'} mr={1} />
+                  {burnMode ? (burnTrigger === 'immediately' ? '即时' : '阅后') : '阅后即焚'}
+                </Button>
                 <EmojiPanel onSelect={handleEmojiSelect} isDisabled={sending || voiceState === 'preview'} variant="client" />
               </HStack>
               {/* 输入框 + 发送 / 按住说话 */}
@@ -1402,6 +1350,64 @@ export default function ClientChat() {
           </Box>
         </>
       )}
+
+      {/* 阅后即焚设置弹窗 */}
+      <Modal isOpen={isBurnOpen} onClose={onBurnClose} isCentered motionPreset="slideInBottom" size="md">
+        <ModalOverlay />
+        <ModalContent bg="warm.800" color="white" borderRadius="xl" mx={4}>
+          <ModalHeader fontSize="md" pb={2}>阅后即焚设置</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            <FormControl display="flex" alignItems="center" justifyContent="space-between" mb={4}>
+              <FormLabel htmlFor="burn-mode-switch" mb="0" color={burnMode ? 'orange.300' : 'gray.300'} fontWeight="bold">
+                {burnMode ? '🔥 已开启' : '○ 未开启'}
+              </FormLabel>
+              <Switch
+                id="burn-mode-switch"
+                size="lg"
+                colorScheme="orange"
+                isChecked={burnMode}
+                onChange={(e) => {
+                  const isOn = e.target.checked;
+                  setBurnMode(isOn);
+                  if (!isOn) { setBurnTrigger('onView'); setBurnDurationType('fixed'); setBurnSeconds(5); }
+                }}
+              />
+            </FormControl>
+            {burnMode && (
+              <>
+                <Box mb={4}>
+                  <Text fontSize="xs" color="gray.400" fontWeight="bold" mb={2}>触发时机</Text>
+                  <Stack spacing={2}>
+                    <Button size="sm" variant={burnTrigger === 'immediately' ? 'solid' : 'outline'} colorScheme="orange" onClick={() => setBurnTrigger('immediately')} w="full">即时（发出后立即计时）</Button>
+                    <Button size="sm" variant={burnTrigger === 'onView' ? 'solid' : 'outline'} colorScheme="orange" onClick={() => setBurnTrigger('onView')} w="full">阅后（点击后计时）</Button>
+                  </Stack>
+                </Box>
+                <Box mb={4}>
+                  <Text fontSize="xs" color="gray.400" fontWeight="bold" mb={2}>时长</Text>
+                  <Stack spacing={2}>
+                    <Button size="sm" variant={burnDurationType === 'fixed' ? 'solid' : 'outline'} colorScheme="orange" onClick={() => setBurnDurationType('fixed')} w="full">固定秒数</Button>
+                    <Button size="sm" variant={burnDurationType === 'adaptive' ? 'solid' : 'outline'} colorScheme="orange" onClick={() => setBurnDurationType('adaptive')} w="full">自适应（文字/图片5秒，视频/音频按实际时长）</Button>
+                  </Stack>
+                </Box>
+                {burnDurationType === 'fixed' && (
+                  <Box mb={4}>
+                    <Text fontSize="xs" color="gray.400" fontWeight="bold" mb={2}>选择秒数</Text>
+                    <HStack spacing={2} justify="center" flexWrap="wrap">
+                      {[3, 5, 10, 15, 30, 60].map(s => (
+                        <Button key={s} size="md" variant={burnSeconds === s ? 'solid' : 'outline'} colorScheme="orange" onClick={() => setBurnSeconds(s)} minW="50px">{s}s</Button>
+                      ))}
+                    </HStack>
+                  </Box>
+                )}
+              </>
+            )}
+            <Button colorScheme="orange" w="full" size="lg" borderRadius="xl" mt={2} onClick={onBurnClose}>
+              确认
+            </Button>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
     </Flex>
   );
 }

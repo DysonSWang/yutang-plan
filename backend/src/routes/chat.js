@@ -394,7 +394,7 @@ module.exports = function(io) {
             const reEncrypted = encrypt(watermarkedBuffer);
             const crypto = require('crypto');
             const newOssPath = `encrypted/${type}s/${crypto.randomBytes(16).toString('hex')}.${type === 'image' ? 'jpg' : 'mp4'}.enc`;
-            await uploadBuffer(reEncrypted, newOssPath, true);
+            await uploadBuffer(newOssPath, reEncrypted);
 
             // 删除原OSS文件
             await deleteFile(ossPath);
