@@ -145,6 +145,7 @@ class Api {
   get(path) { return this.request('GET', path); }
   post(path, data, timeoutMs) { return this.request('POST', path, data, timeoutMs); }
   put(path, data, timeoutMs) { return this.request('PUT', path, data, timeoutMs); }
+  patch(path, data, timeoutMs) { return this.request('PATCH', path, data, timeoutMs); }
   delete(path) { return this.request('DELETE', path); }
 
   // 版本号缓存：首次请求正常缓存，再次请求时先检查版本号
