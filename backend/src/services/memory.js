@@ -11,6 +11,7 @@
 
 const prisma = require('../prisma');
 const compaction = require('./compaction');
+const { storeSummary } = require('../memory/SessionSummaryStore');
 
 // ---- 内部配置 ----
 const MAX_STORED_MESSAGES = 50; // 硬上限（防止极端情况）
@@ -183,6 +184,23 @@ async function runCompaction(memory) {
       hardConstraints: hardConstraints ? JSON.stringify(hardConstraints) : memory.hardConstraints
     }
   });
+
+  // Auto-generate session summary
+  try {
+    const summaryText = mergedSummary || '';
+    const nextStepsMatch = summaryText.match(/下一步[：:]\s*(.+)/i);
+    await storeSummary({
+      clientId: memory.clientId,
+      girlId: memory.girlId,
+      coachId: memory.coachId,
+      request: toCompact.length > 0 ? toCompact[toCompact.length - 1]?.content?.slice(0, 200) : null,
+      learned: summaryText.length > 500 ? summaryText.slice(0, 500) : summaryText,
+      nextSteps: nextStepsMatch ? nextStepsMatch[1].slice(0, 300) : null,
+      memoryId: memory.id,
+    });
+  } catch (e) {
+    console.warn('[Memory] Session summary generation failed:', e.message);
+  }
 
   console.log(`[Memory] Compacted session ${memory.id}: removed ${toCompact.length} messages, ` +
     `chain length: ${newChain ? JSON.parse(newChain).length : 0}, ` +

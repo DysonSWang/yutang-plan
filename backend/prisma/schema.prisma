@@ -347,6 +347,7 @@ model Girl {
   stageHistory    RelationshipStageHistory[]
   alerts          Alert[]
   datingPlans     DatingPlan[]
+  structuredObservations StructuredObservation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1411,4 +1412,62 @@ model ContentVersion {
   notes           String?  // 发布备注
 
   @@map("content_versions")
+}
+
+// ========== 结构化记忆系统 ==========
+
+model StructuredObservation {
+  id          String   @id @default(uuid())
+  clientId    String
+  girlId      String?
+  coachId     String?
+  type        String          // signal/insight/strategy/lesson/milestone/warning
+  title       String
+  subtitle    String?
+  narrative   String?
+  facts       String?         // JSON array
+  concepts    String?         // JSON array
+  sourceType  String          // coach_chat/screenshot/date_review/manual/ai_extract
+  sourceId    String?
+  contentHash String          // SHA256 truncated to 16 chars
+  createdAt   DateTime @default(now())
+  girl        Girl?    @relation(fields: [girlId], references: [id])
+
+  @@unique([clientId, contentHash])
+  @@index([clientId, girlId])
+  @@index([clientId, type])
+  @@index([clientId, createdAt])
+  @@map("structured_observations")
+}
+
+model SessionSummary {
+  id            String   @id @default(uuid())
+  clientId      String
+  girlId        String?
+  coachId       String?
+  request       String?
+  investigated  String?
+  learned       String?
+  completed     String?
+  nextSteps     String?
+  notes         String?
+  filesRead     String?
+  memoryId      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([clientId, girlId])
+  @@index([clientId, createdAt])
+  @@map("session_summaries")
+}
+
+model MemoryWatermark {
+  id            String   @id @default(uuid())
+  clientId      String
+  lastObsId     Int      @default(0)
+  lastSummaryId Int      @default(0)
+  updatedAt     DateTime @updatedAt
+
+  @@unique([clientId])
+  @@map("memory_watermarks")
 }

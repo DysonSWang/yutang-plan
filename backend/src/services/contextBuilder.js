@@ -5,6 +5,8 @@
 
 const prisma = require('../prisma');
 const path = require('path');
+const { getObservations } = require('../memory/ObservationStore');
+const { getRecentSummaries } = require('../memory/SessionSummaryStore');
 
 // ---- 新鲜度保护 ----
 
@@ -332,6 +334,37 @@ async function buildAICoachContext(clientId, girlId, userMessage, opts = {}) {
   if (learnings.length > 0) {
     const learningsText = learnings.map(l => `[${l.type}] ${l.scene}: ${l.content}`).join('\n');
     sections.push({ label: '经验教训', content: learningsText, priority: 5 });
+  }
+
+  // 结构化观察
+  try {
+    const structuredObs = await getObservations({ clientId, girlId, limit: 10 });
+    if (structuredObs.length > 0) {
+      const typeLabel = { signal: '信号', insight: '洞察', strategy: '策略', lesson: '教训', milestone: '里程碑', warning: '警告' };
+      const obsText = structuredObs.map(o =>
+        `[${typeLabel[o.type] || o.type}] ${o.title}${o.subtitle ? ' - ' + o.subtitle : ''}`
+      ).join('\n');
+      sections.push({ label: '结构化观察', content: obsText, priority: 4.5 });
+    }
+  } catch (e) {
+    console.warn('[ContextBuilder] Failed to load structured observations:', e.message);
+  }
+
+  // 历史会话摘要
+  try {
+    const summaries = await getRecentSummaries({ clientId, girlId, limit: 3 });
+    if (summaries.length > 0) {
+      const summaryText = summaries.map(s => {
+        const parts = [];
+        if (s.request) parts.push(`诉求: ${s.request.slice(0, 100)}`);
+        if (s.learned) parts.push(`学到: ${s.learned.slice(0, 150)}`);
+        if (s.nextSteps) parts.push(`下一步: ${s.nextSteps.slice(0, 100)}`);
+        return parts.join(' → ');
+      }).join('\n');
+      sections.push({ label: '历史会话', content: summaryText, priority: 6.5 });
+    }
+  } catch (e) {
+    console.warn('[ContextBuilder] Failed to load session summaries:', e.message);
   }
 
   // 对话摘要（如果存在）
