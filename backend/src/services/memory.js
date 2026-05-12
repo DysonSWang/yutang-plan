@@ -275,54 +275,60 @@ async function shouldSummarize(memoryId) {
  * 获取对话历史（带压缩链）
  * 返回: [compaction chain summaries] + [continuation system msg] + [recent messages]
  */
-async function getConversationHistory(memoryId) {
+async function getConversationHistory(memoryId, { limit = 20 } = {}) {
   const memory = await prisma.conversationMemory.findUnique({
     where: { id: memoryId }
   });
 
   if (!memory) return [];
 
-  const messages = parseMessages(memory);
+  let messages = parseMessages(memory);
 
   if (!memory.summary) {
-    // 未压缩：返回所有消息
-    return messages;
-  }
-
-  // 已压缩：构建包含chain的上下文
-  const result = [];
-
-  // 1. 压缩链中的历史摘要（最多展示最近2个）
-  let chain = null;
-  try {
-    chain = memory.compactionChain ? JSON.parse(memory.compactionChain) : null;
-  } catch (e) {
-    console.warn(`[Memory] compactionChain 解析失败 memoryId=${memory?.id || memoryId}:`, e.message);
-    chain = null;
-  }
-
-  if (chain && chain.length > 0) {
-    // 展示chain中的摘要作为参考上下文
-    const recentChainEntries = chain.slice(-2);
-    for (const entry of recentChainEntries) {
-      result.push({
-        role: 'system',
-        content: `[历史摘要 #${entry.seq}] ${entry.summary}`,
-        timestamp: entry.timestamp
-      });
-    }
-  }
-
-  // 2. 消息列表中已存的continuation system消息
-  // （第一条应该是system continuation）
-  if (messages.length > 0 && messages[0].role === 'system') {
-    result.push(messages[0]);
-    result.push(...messages.slice(1));
+    // 未压缩：使用原始消息
   } else {
-    result.push(...messages);
+    // 已压缩：构建包含chain的上下文
+    const result = [];
+
+    // 1. 压缩链中的历史摘要（最多展示最近2个）
+    let chain = null;
+    try {
+      chain = memory.compactionChain ? JSON.parse(memory.compactionChain) : null;
+    } catch (e) {
+      console.warn(`[Memory] compactionChain 解析失败 memoryId=${memory?.id || memoryId}:`, e.message);
+      chain = null;
+    }
+
+    if (chain && chain.length > 0) {
+      // 展示chain中的摘要作为参考上下文
+      const recentChainEntries = chain.slice(-2);
+      for (const entry of recentChainEntries) {
+        result.push({
+          role: 'system',
+          content: `[历史摘要 #${entry.seq}] ${entry.summary}`,
+          timestamp: entry.timestamp
+        });
+      }
+    }
+
+    // 2. 消息列表中已存的continuation system消息
+    // （第一条应该是system continuation）
+    if (messages.length > 0 && messages[0].role === 'system') {
+      result.push(messages[0]);
+      result.push(...messages.slice(1));
+    } else {
+      result.push(...messages);
+    }
+
+    messages = result;
   }
 
-  return result;
+  // 限制返回消息数量（默认20条）
+  if (limit > 0 && messages.length > limit) {
+    messages = messages.slice(-limit);
+  }
+
+  return messages;
 }
 
 /**
