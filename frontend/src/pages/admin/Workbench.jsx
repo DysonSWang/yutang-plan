@@ -351,7 +351,7 @@ export default function AdminWorkbench() {
   const loadClientSession = useCallback(async () => {
     if (!selectedClient) return;
     try {
-      const res = await chat.createSession(selectedClient.id);
+      const res = await chat.createSessionForClient(selectedClient.id);
       if (res.success) {
         setClientSession(res.session);
       }
