@@ -891,6 +891,6 @@ export const reports = {
 };
 
 // AI军师 - 聊天记录分析
-export const analyzeChatHistory = (messages, girlId) => api.analyzeChatHistory(messages, girlId);
+export const analyzeChatHistory = (messages, girlId) => aiCoach.analyzeChatHistory(messages, girlId);
 // AI军师 - 删除实战消息
-export const deleteCombatMessage = (girlId, messageId) => api.deleteCombatMessage(girlId, messageId);
+export const deleteCombatMessage = (girlId, messageId) => aiCoach.deleteCombatMessage(girlId, messageId);
