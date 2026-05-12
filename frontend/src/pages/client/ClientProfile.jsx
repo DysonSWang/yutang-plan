@@ -623,6 +623,16 @@ export default function ClientProfile() {
     }
   };
 
+  const handleClearCache = () => {
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+      toast({ title: '缓存已清除', description: '请刷新页面使更新生效', status: 'success', duration: 3000 });
+    } catch {
+      toast({ title: '清除缓存失败', status: 'error', duration: 3000 });
+    }
+  };
+
   const handleChangePassword = async () => {
     if (!oldPassword || !newPassword || !confirmPassword) {
       toast({ title: '请填写所有密码字段', status: 'warning', duration: 3000 });
@@ -1083,6 +1093,9 @@ export default function ClientProfile() {
               </Button>
               <Button size="sm" variant="outline" colorScheme="orange" onClick={onPwdOpen}>
                 修改密码
+              </Button>
+              <Button size="sm" variant="ghost" color="rgba(245,240,232,0.5)" onClick={handleClearCache} _hover={{ color: 'white' }}>
+                清除缓存
               </Button>
             </HStack>
             <Button
