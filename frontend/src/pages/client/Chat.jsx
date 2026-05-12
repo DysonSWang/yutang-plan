@@ -9,7 +9,7 @@ import { useRouteActivated } from '../../hooks/useRouteLifecycle';
 import FlashImageViewer from '../../components/FlashImageViewer';
 import EmojiPanel from '../../components/EmojiPanel';
 import AudioPlayer from '../../components/AudioPlayer';
-import { CameraIcon, MicIcon, StopIcon, FireIcon, SpeakerIcon, UserIcon, ArrowLeftIcon } from '../../components/Icons';
+import { CameraIcon, MicIcon, FireIcon, SpeakerIcon } from '../../components/Icons';
 
 export default function ClientChat() {
   const { on } = useSocket();
@@ -20,7 +20,6 @@ export default function ClientChat() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null); // 视频上传进度
   const [previewFile, setPreviewFile] = useState(null);
-  const [recording, setRecording] = useState(false);
   const [recordTime, setRecordTime] = useState(0);
   const [burnMode, setBurnMode] = useState(false);
   const [burnSeconds, setBurnSeconds] = useState(5);
@@ -518,72 +517,6 @@ export default function ClientChat() {
     }
   };
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // Android WebView 优先使用 mp4/opus，iOS 使用 mp4，兜底 webm
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : MediaRecorder.isTypeSupported('audio/mp4')
-          ? 'audio/mp4'
-          : undefined;
-      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-      mediaRecorderRef.current = recorder;
-      audioChunksRef.current = [];
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data);
-      };
-      recorder.onstop = async () => {
-        stream.getTracks().forEach(t => t.stop());
-        const actualType = recorder.mimeType || 'audio/webm';
-        const blob = new Blob(audioChunksRef.current, { type: actualType });
-        setPreviewFile({
-          file: blob,
-          preview: URL.createObjectURL(blob),
-          type: 'audio',
-          duration: recordTime
-        });
-        setRecordTime(0);
-      };
-      recorder.start();
-      setRecording(true);
-      setRecordTime(0);
-      recordTimerRef.current = setInterval(() => {
-        setRecordTime(prev => prev + 1);
-      }, 1000);
-    } catch (e) {
-      captureError(e, { context: '无法访问麦克风' });
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && recording) {
-      mediaRecorderRef.current.stop();
-      setRecording(false);
-      clearInterval(recordTimerRef.current);
-    }
-  };
-
-  const confirmSendAudio = async () => {
-    if (!previewFile || previewFile.type !== 'audio') return;
-    setUploading(true);
-    try {
-      const isBurn = burnMode;
-      const audioDuration = await getMediaDuration(previewFile.file, 'audio');
-      const effectiveSeconds = burnDurationType === 'adaptive'
-        ? Math.max(3, Math.ceil(audioDuration))
-        : burnSeconds;
-      const res = await upload.audio(previewFile.file);
-      if (res.url) {
-        await sendMediaMessage(res.url, 'audio', audioDuration, isBurn, effectiveSeconds);
-      }
-    } catch (e) {
-      captureError(e);
-    } finally {
-      setUploading(false);
-    }
-  };
-
   const cancelPreview = () => {
     if (previewFile?.preview) URL.revokeObjectURL(previewFile.preview);
     setPreviewFile(null);
@@ -764,7 +697,6 @@ export default function ClientChat() {
   const voiceStopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
-      setRecording(false);
       clearInterval(recordTimerRef.current);
     }
   };
@@ -776,7 +708,6 @@ export default function ClientChat() {
       mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
     }
     clearInterval(recordTimerRef.current);
-    setRecording(false);
     setVoiceState('idle');
     setRecordTime(0);
   };
@@ -798,6 +729,7 @@ export default function ClientChat() {
       captureError(e);
     } finally {
       setUploading(false);
+      cancelPreview();
       setVoiceState('idle');
     }
   };

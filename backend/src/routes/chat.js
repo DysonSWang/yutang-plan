@@ -425,16 +425,16 @@ module.exports = function(io) {
 
       // 更新会话
       if (session.operatorId === req.user.id || req.user.role === 'admin') {
-        // operator 或 admin 发消息 → client 端未读 +1，operator 自己清零
+        // operator 或 admin 发消息 → client 端未读 +1
         await prisma.chatSession.update({
           where: { id: sessionId },
           data: { lastMessage: content?.substring(0, 50), lastMessageAt: new Date(), unreadCount: session.unreadCount + 1 }
         });
       } else {
-        // client 发消息 → operator 端未读 +1，client 自己清零
+        // client 发消息 → 自己清零（不给自己产生未读）
         await prisma.chatSession.update({
           where: { id: sessionId },
-          data: { lastMessage: content?.substring(0, 50), lastMessageAt: new Date(), unreadCount: session.unreadCount + 1 }
+          data: { lastMessage: content?.substring(0, 50), lastMessageAt: new Date(), unreadCount: 0 }
         });
       }
 
