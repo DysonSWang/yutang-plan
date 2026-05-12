@@ -6,8 +6,7 @@ import {
 } from '@chakra-ui/react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FiEye, FiEdit3, FiArrowLeft } from 'react-icons/fi';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { marked } from 'marked';
 import { membership as membershipApi } from '../../utils/api';
 import useKeepAliveData from '../../hooks/useKeepAliveData';
 
@@ -277,11 +276,8 @@ export default function ChapterEditor() {
                 a: { color: 'teal.300' },
                 hr: { borderColor: 'warm.700', my: 4 },
               }}
-            >
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {content}
-              </ReactMarkdown>
-            </Box>
+              dangerouslySetInnerHTML={{ __html: marked.parse(content || '') }}
+            />
           ) : (
             <Text color="warm.600" fontStyle="italic">输入正文后在此预览</Text>
           )}

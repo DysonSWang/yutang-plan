@@ -4,16 +4,33 @@ import {
   Heading, Select, Textarea, Spinner, Flex, Badge, Icon, Tooltip, useToast,
   Avatar, Wrap, WrapItem, useDisclosure, Modal, ModalOverlay, ModalContent,
   ModalHeader, ModalBody, ModalFooter, Tabs, TabList, TabPanels, Tab, TabPanel,
-  Image, SimpleGrid, Switch, IconButton
+  Image, SimpleGrid, Switch, IconButton, Menu, MenuButton, MenuList, MenuItem
 } from '@chakra-ui/react';
 import { AddIcon } from '@chakra-ui/icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSocket } from '../../contexts/SocketContext';
 import { girls as girlsApi, analyzeChatHistory, deleteCombatMessage } from '../../utils/api';
 import { captureError } from '../../utils/frontendErrorCapture';
-import { FireIcon, SnowIcon, SparklesIcon, BrainIcon } from '../../components/Icons';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { FireIcon, SnowIcon, SparklesIcon, BrainIcon, InboxIcon } from '../../components/Icons';
+import { marked } from 'marked';
+
+// marked 配置：GFM 支持，链接新窗口打开
+const renderer = new marked.Renderer();
+renderer.link = function(href, title, text) {
+  return `<a href="${href}" target="_blank" rel="noopener noreferrer">${text}</a>`;
+};
+marked.setOptions({ gfm: true, breaks: true, renderer });
+
+// 渲染 Markdown → HTML（用 marked 替代 remark-gfm，兼容所有浏览器）
+function renderMD(text) {
+  if (!text) return '';
+  try {
+    return marked.parse(text);
+  } catch {
+    return text;
+  }
+}
+import { Clipboard } from '@capacitor/clipboard';
 
 // 共享 Markdown 渲染组件 — 全部使用原生 HTML 元素，让 CSS 控制排版
 const markdownComponents = {
@@ -190,7 +207,7 @@ const InputArea = memo(({ onSubmit, onImageSubmit, onStop, loading, deepMode, on
             p={1}
             minW="36px"
           >
-            <span style={{ fontSize: '18px' }}>📎</span>
+            <Icon as={InboxIcon} boxSize={4} color="rgba(245,240,232,0.6)" />
           </Button>
         </Tooltip>
         <input
@@ -308,7 +325,7 @@ const SessionBar = memo(({
   };
 
   return (
-    <Flex align="center" gap={2} flexShrink={0} bg="warm.800" px={2} py={1.5} borderRadius="md" border="1px solid" borderColor="whiteAlpha.100">
+    <Flex align="center" gap={1} flexShrink={0} px={1} py={1}>
       <Select
         value={activeSessionId || ''}
         onChange={e => {
@@ -320,13 +337,13 @@ const SessionBar = memo(({
           }
         }}
         bg="warm.700" border="none" color="white" size="xs"
-        flex={1} maxW="200px"
+        flex={1} maxW="140px"
         borderRadius="md"
         isDisabled={loading}
       >
-        <option value="">🆕 新会话</option>
+        <option value="">+ 新会话</option>
         {displaySessions.map(s => (
-          <option key={s.id} value={s.id}>{formatTime(s.createdAt)} · {(s.messages || []).length}条</option>
+          <option key={s.id} value={s.id}>{formatTime(s.createdAt)}</option>
         ))}
       </Select>
       <IconButton
@@ -342,7 +359,9 @@ const SessionBar = memo(({
       />
       {onDeepModeToggle ? (
         <Flex align="center" gap={1} flexShrink={0} ml={1}>
-          <Text fontSize="10px" color={deepMode ? 'gold.300' : 'warm.300'}>{deepMode ? '🌙' : '⚡'}</Text>
+          <Text fontSize="9px" color={deepMode ? 'gold.300' : 'warm.300'} fontWeight="bold">
+            {deepMode ? '深度' : '快速'}
+          </Text>
           <Switch
             size="sm"
             isChecked={deepMode}
@@ -397,20 +416,27 @@ const ReplySuggestionsPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
 
   const copyToClipboard = useCallback(async (text) => {
     try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
-      } else {
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        ta.style.cssText = 'position:fixed;left:-9999px';
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-      }
+      await Clipboard.write({ string: text });
       toast({ title: '已复制', status: 'success', duration: 2000 });
     } catch (e) {
-      toast({ title: '复制失败', status: 'error', duration: 2000 });
+      // Fallback for web
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.cssText = 'position:fixed;left:-9999px';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+        toast({ title: '已复制', status: 'success', duration: 2000 });
+      } catch (e2) {
+        captureError(e2, { context: 'copyToClipboard' });
+        toast({ title: '复制失败', status: 'error', duration: 2000 });
+      }
     }
   }, [toast]);
 
@@ -442,11 +468,16 @@ const ReplySuggestionsPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
             <HStack spacing={3}>
               <Box flex={1}>
                 <Text color="rgba(245,240,232,0.6)" fontSize="sm" mb={2}>回复风格（可选）</Text>
-                <Select value={replyStyle} onChange={e => { setReplyStyle(e.target.value); setReplyStyleCustom(''); }} bg="warm.700" border="none" color="white" placeholder="不选则返回多种风格">
-                  <option value="稳妥型">稳妥型</option>
-                  <option value="推进型">推进型</option>
-                  <option value="调侃型">调侃型</option>
-                </Select>
+                <Menu>
+                  <MenuButton as={Button} size="sm" variant="outline" borderColor="warm.600" _hover={{ bg: 'warm.700' }} rightIcon={<Text fontSize="xs">▼</Text>} w="full">
+                    {replyStyle || '不选则返回多种风格'}
+                  </MenuButton>
+                  <MenuList bg="warm.800" borderColor="warm.600" minW="140px">
+                    {['稳妥型', '推进型', '调侃型'].map(opt => (
+                      <MenuItem key={opt} _hover={{ bg: 'warm.700' }} onClick={() => { setReplyStyle(opt); setReplyStyleCustom(''); }}>{opt}</MenuItem>
+                    ))}
+                  </MenuList>
+                </Menu>
               </Box>
               <Box flex={1}>
                 <Text color="rgba(245,240,232,0.6)" fontSize="sm" mb={2}>或自定义风格</Text>
@@ -525,20 +556,27 @@ const OptimizeReplyPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
 
   const copyToClipboard = useCallback(async (text) => {
     try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
-      } else {
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        ta.style.cssText = 'position:fixed;left:-9999px';
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-      }
+      await Clipboard.write({ string: text });
       toast({ title: '已复制', status: 'success', duration: 2000 });
     } catch (e) {
-      toast({ title: '复制失败', status: 'error', duration: 2000 });
+      // Fallback for web
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.cssText = 'position:fixed;left:-9999px';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+        toast({ title: '已复制', status: 'success', duration: 2000 });
+      } catch (e2) {
+        captureError(e2, { context: 'copyToClipboard' });
+        toast({ title: '复制失败', status: 'error', duration: 2000 });
+      }
     }
   }, [toast]);
 
@@ -570,12 +608,16 @@ const OptimizeReplyPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
             <HStack spacing={3}>
               <Box flex={1}>
                 <Text color="rgba(245,240,232,0.6)" fontSize="sm" mb={2}>优化方向（可选）</Text>
-                <Select value={optimizeGoal} onChange={e => { setOptimizeGoal(e.target.value); setOptimizeGoalCustom(''); }} bg="warm.700" border="none" color="white" placeholder="不选则自动优化">
-                  <option value="更幽默">更幽默</option>
-                  <option value="更暧昧">更暧昧</option>
-                  <option value="更自然">更自然</option>
-                  <option value="更真诚">更真诚</option>
-                </Select>
+                <Menu>
+                  <MenuButton as={Button} size="sm" variant="outline" borderColor="warm.600" _hover={{ bg: 'warm.700' }} rightIcon={<Text fontSize="xs">▼</Text>} w="full">
+                    {optimizeGoal || '不选则自动优化'}
+                  </MenuButton>
+                  <MenuList bg="warm.800" borderColor="warm.600" minW="140px">
+                    {['更幽默', '更暧昧', '更自然', '更真诚'].map(opt => (
+                      <MenuItem key={opt} _hover={{ bg: 'warm.700' }} onClick={() => { setOptimizeGoal(opt); setOptimizeGoalCustom(''); }}>{opt}</MenuItem>
+                    ))}
+                  </MenuList>
+                </Menu>
               </Box>
               <Box flex={1}>
                 <Text color="rgba(245,240,232,0.6)" fontSize="sm" mb={2}>或自定义方向</Text>
@@ -613,7 +655,7 @@ const OptimizeReplyPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
 function filterReasoning(text) {
   if (!text) return '';
   // 不要分割文本，保持 Markdown 结构完整
-  // 直接返回原文，由 ReactMarkdown 负责渲染
+  // 直接返回原文，由 marked 负责渲染
   return text;
 }
 
@@ -655,18 +697,9 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
 
   return (
     <Flex justify={isUser ? 'flex-end' : 'flex-start'} mb={4}>
-      {!isUser && (
-        <Avatar
-          size="sm"
-          name="AI教练"
-          bg="gold.500"
-          color="white"
-          mr={2}
-          icon={<Icon as={SparklesIcon} />}
-        />
-      )}
+      {/* 头像已移除以增加内容空间 */}
       <Box
-        maxW="75%"
+        maxW="85%"
         className="bubble-glow"
         bg={isUser ? 'linear-gradient(135deg, rgba(226,176,68,0.88), rgba(201,127,89,0.82))' : 'rgba(255,255,255,0.06)'}
         border={isUser ? 'none' : '1px solid rgba(226,176,68,0.12)'}
@@ -700,12 +733,7 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
             {reasoningOpen && (
               <Box px={4} py={3} maxH="260px" overflowY="auto" borderBottom="1px solid" borderColor="whiteAlpha.200">
                 <Box className="ai-coach-markdown" fontSize="13px" lineHeight="1.8" color="rgba(245,240,232,0.6)">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={reasoningMarkdownComponents}
-                  >
-                    {filterReasoning(reasoning)}
-                  </ReactMarkdown>
+                  <Box dangerouslySetInnerHTML={{ __html: renderMD(filterReasoning(reasoning)) }} />
                 </Box>
               </Box>
             )}
@@ -713,12 +741,7 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
             <Box px={4} py={3}>
               {message.content ? (
                 <Box className="ai-coach-markdown" fontSize="14px" lineHeight="1.8" color="warm.50">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={markdownComponents}
-                  >
-                    {fixMarkdown(message.content)}
-                  </ReactMarkdown>
+                  <Box dangerouslySetInnerHTML={{ __html: renderMD(fixMarkdown(message.content)) }} />
                 </Box>
               ) : (
                 reasoningLoading && (
@@ -757,12 +780,7 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
               </>
             ) : (
               <Box className="ai-coach-markdown" fontSize="14px" lineHeight="1.8" color="warm.50">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={markdownComponents}
-                >
-                  {fixMarkdown(message.content)}
-                </ReactMarkdown>
+                <Box dangerouslySetInnerHTML={{ __html: renderMD(fixMarkdown(message.content)) }} />
               </Box>
             )}
           </>
@@ -830,15 +848,7 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
           </HStack>
         )}
       </Box>
-      {isUser && (
-        <Avatar
-          size="sm"
-          name="用户"
-          bg="warm.600"
-          color="white"
-          ml={2}
-        />
-      )}
+      {/* 用户头像已移除以增加内容空间 */}
     </Flex>
   );
 }
@@ -1150,7 +1160,7 @@ const ImportChatModal = memo(({ isOpen, onClose, girlId, girlName, apiUrl, onImp
       <ModalOverlay />
       <ModalContent bg="warm.800" borderColor="rgba(245,240,232,0.1)" color="white" maxW="640px">
         <ModalHeader fontSize="md" borderBottom="1px solid" borderColor="rgba(245,240,232,0.08)">
-          📎 导入聊天截图 {girlName ? `- ${girlName}` : ''}
+          导入聊天截图 {girlName ? `- ${girlName}` : ''}
         </ModalHeader>
 
         <ModalBody py={4}>
@@ -1349,7 +1359,8 @@ const CombatInputBar = memo(({ mode, onModeChange, value, onChange, onSubmit, lo
             onClick={onImportClick}
             fontSize="12px"
             ml="auto"
-          >📎 导入聊天</Button>
+            leftIcon={<Icon as={InboxIcon} boxSize={3} />}
+          >导入聊天</Button>
         )}
       </Flex>
 
@@ -1701,11 +1712,17 @@ export default function AICoach() {
   const { user } = useAuth();
   const { socketRef } = useSocket();
   const [girls, setGirls] = useState([]);
-  const [selectedGirlId, setSelectedGirlId] = useState('');
+  const [selectedGirlId, setSelectedGirlId] = useState(() => {
+    try { return localStorage.getItem('zhuiai_last_girl_id') || ''; }
+    catch { return ''; }
+  });
   const [selectedGirl, setSelectedGirl] = useState(null);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [deepMode, setDeepMode] = useState(true); // 默认深度思考模式
+  const [deepMode, setDeepMode] = useState(() => {
+    try { return localStorage.getItem('zhuiai_deep_mode') !== 'false'; }
+    catch { return true; }
+  });
   const [messages, setMessages] = useState([]);
   const [sessions, setSessions] = useState([]);
   const [activeSessionId, setActiveSessionId] = useState(null);
@@ -1731,7 +1748,10 @@ export default function AICoach() {
 
   // ====== 聊天实战 state ======
   const [combatHistories, setCombatHistories] = useState({}); // { [girlId]: CombatMessage[] }
-  const [combatMode, setCombatMode] = useState('suggest'); // 'suggest' | 'optimize'
+  const [combatMode, setCombatMode] = useState(() => {
+    try { return localStorage.getItem('zhuiai_combat_mode') || 'suggest'; }
+    catch { return 'suggest'; }
+  });
   const [combatInput, setCombatInput] = useState('');
   const [combatLoading, setCombatLoading] = useState(false);
   const [combatSuggestions, setCombatSuggestions] = useState(null);
@@ -1747,8 +1767,12 @@ export default function AICoach() {
   const [girlAnalysisReasoning, setGirlAnalysisReasoning] = useState(''); // DeepSeek 思考过程
   const girlAnalysisReasoningRef = useRef('');
   const [girlAnalysisLoading, setGirlAnalysisLoading] = useState(false);
+  const [showAnalysisModal, setShowAnalysisModal] = useState(false); // 分析弹窗
   // Track active tab (0 = AI教练, 1 = 聊天实战/回复建议)
-  const [activeTabIndex, setActiveTabIndex] = useState(0);
+  const [activeTabIndex, setActiveTabIndex] = useState(() => {
+    try { return parseInt(localStorage.getItem('zhuiai_active_tab') || '0', 10); }
+    catch { return 0; }
+  });
   // 聊天导入弹窗
   const [importModalOpen, setImportModalOpen] = useState(false);
   // 侧边栏上下文数据（信号/待办/客户画像）
@@ -1830,15 +1854,28 @@ export default function AICoach() {
 
   // 使用 useCallback 稳定 deepMode 切换函数
   const handleDeepModeToggle = useCallback(() => {
-    setDeepMode(d => !d);
+    setDeepMode(d => {
+      const newValue = !d;
+      try { localStorage.setItem('zhuiai_deep_mode', String(newValue)); } catch {}
+      return newValue;
+    });
   }, []);
 
   useEffect(() => {
     loadGirls();
-    // 显式传空字符串确保加载"无女生"的通用会话
-    loadHistory(selectedGirlId ? selectedGirlId : '');
-    loadCombatHistory('__general__');
   }, []);
+
+  // 当 selectedGirlId 恢复后，加载对应数据
+  useEffect(() => {
+    if (!selectedGirlId) {
+      loadHistory('');
+      loadCombatHistory('__general__');
+    } else {
+      loadHistory(selectedGirlId);
+      loadCombatHistory(selectedGirlId);
+      loadGirlContext(selectedGirlId);
+    }
+  }, [selectedGirlId]);
 
   useEffect(() => {
     if (selectedGirlId) {
@@ -2052,13 +2089,16 @@ export default function AICoach() {
 
   const handleGirlChange = (girlId) => {
     setSelectedGirlId(girlId);
+    try { localStorage.setItem('zhuiai_last_girl_id', girlId); } catch {}
+    setShowAnalysisModal(false); // 关闭分析弹窗
     if (girlId) {
       // 切换上下文：先清空避免混入旧上下文消息，再加载女生专属会话历史
       setMessages([]);
       setActiveSessionId(null);
       setActiveTabIndex(0);
+      try { localStorage.setItem('zhuiai_active_tab', '0'); } catch {}
       setGirlAnalysisContent('');
-      loadGirlAnalysis(girlId);
+      // 不再自动分析，改为手动触发
       loadGirlContext(girlId);
       loadHistory(girlId);
       loadCombatHistory(girlId);
@@ -2094,21 +2134,28 @@ export default function AICoach() {
 
   const handleCopy = useCallback(async (content, messageId) => {
     try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(content);
-      } else {
-        const ta = document.createElement('textarea');
-        ta.value = content;
-        ta.style.cssText = 'position:fixed;left:-9999px';
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-      }
+      await Clipboard.write({ string: content });
       setCopiedId(messageId);
       setTimeout(() => setCopiedId(null), 2000);
     } catch (e) {
-      captureError(e);
+      // Fallback for web
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(content);
+        } else {
+          const ta = document.createElement('textarea');
+          ta.value = content;
+          ta.style.cssText = 'position:fixed;left:-9999px';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+        setCopiedId(messageId);
+        setTimeout(() => setCopiedId(null), 2000);
+      } catch (e2) {
+        captureError(e2, { context: 'handleCopy' });
+      }
     }
   }, []);
 
@@ -2578,26 +2625,31 @@ export default function AICoach() {
 
   // 复制建议内容
   const handleCopySuggestion = useCallback((text) => {
-    if (navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(text).then(() => {
-        toast({ title: '已复制到剪贴板', duration: 2000, colorScheme: 'green' });
-      }).catch(() => {
-        toast({ title: '复制失败', duration: 2000, colorScheme: 'red' });
-      });
-    } else {
-      try {
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        ta.style.cssText = 'position:fixed;left:-9999px';
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-        toast({ title: '已复制到剪贴板', duration: 2000, colorScheme: 'green' });
-      } catch {
-        toast({ title: '复制失败', duration: 2000, colorScheme: 'red' });
+    Clipboard.write({ string: text }).then(() => {
+      toast({ title: '已复制到剪贴板', duration: 2000, colorScheme: 'green' });
+    }).catch(() => {
+      // Fallback for web
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          toast({ title: '已复制到剪贴板', duration: 2000, colorScheme: 'green' });
+        }).catch(() => {
+          toast({ title: '复制失败', duration: 2000, colorScheme: 'red' });
+        });
+      } else {
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.cssText = 'position:fixed;left:-9999px';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          toast({ title: '已复制到剪贴板', duration: 2000, colorScheme: 'green' });
+        } catch {
+          toast({ title: '复制失败', duration: 2000, colorScheme: 'red' });
+        }
       }
-    }
+    });
   }, [toast]);
 
   // 收藏/取消收藏建议
@@ -2677,6 +2729,7 @@ export default function AICoach() {
   // 聊天实战 - 模式切换
   const handleCombatModeChange = useCallback((mode) => {
     setCombatMode(mode);
+    try { localStorage.setItem('zhuiai_combat_mode', mode); } catch {}
     setCombatInput('');
     setCombatSuggestions(null);
     setSelectedSuggestionIndex(null);
@@ -2727,6 +2780,7 @@ export default function AICoach() {
     setActiveTabIndex(1);
     // 切换到回复建议模式
     setCombatMode('suggest');
+    try { localStorage.setItem('zhuiai_combat_mode', 'suggest'); } catch {}
 
     // 自动触发回复建议（用最后一条女生消息）
     const lastGirlMsg = [...msgs].reverse().find(m => m.role === 'girl');
@@ -3104,20 +3158,26 @@ export default function AICoach() {
 
   const copyToClipboard = async (text) => {
     try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
-      } else {
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        ta.style.cssText = 'position:fixed;left:-9999px';
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-      }
+      await Clipboard.write({ string: text });
       toast({ title: '已复制', status: 'success', duration: 2000 });
     } catch (e) {
-      toast({ title: '复制失败', status: 'error', duration: 2000 });
+      // Fallback for web
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.cssText = 'position:fixed;left:-9999px';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+        toast({ title: '已复制', status: 'success', duration: 2000 });
+      } catch (e2) {
+        toast({ title: '复制失败', status: 'error', duration: 2000 });
+      }
     }
   };
 
@@ -3127,15 +3187,6 @@ export default function AICoach() {
     '约她出来玩她总是说忙怎么办？',
     '怎么避免成为舔狗？'
   ];
-
-  if (loadingHistory) {
-    return (
-      <Box p={8} textAlign="center">
-        <Spinner size="xl" color="gold.400" />
-        <Text color="rgba(245,240,232,0.4)" mt={4}>加载聊天历史...</Text>
-      </Box>
-    );
-  }
 
   const hasGirl = !!(selectedGirlId && selectedGirl);
   const currentCombatHistory = combatHistories[combatHistoryKey] || [];
@@ -3148,8 +3199,13 @@ export default function AICoach() {
       <>
         <Box flex="1" minH="0" display="flex" flexDirection="column" bg="warm.800" borderRadius="md" mb={2} overflow="hidden">
           <Box id="chat-scroll-container" flex="1" overflowY="auto" p={4} ref={scrollContainerRef} sx={{ overflowAnchor: 'none' }}>
-            {/* 空状态：无消息且无分析内容时显示引导 */}
-            {messages.length === 0 && !girlAnalysisContent && !girlAnalysisLoading && (
+            {/* 加载状态 */}
+            {loadingHistory ? (
+              <VStack spacing={4} py={8} justify="center" minH="200px">
+                <Spinner size="xl" color="gold.400" />
+                <Text color="rgba(245,240,232,0.4)">加载聊天历史...</Text>
+              </VStack>
+            ) : messages.length === 0 && !girlAnalysisContent && !girlAnalysisLoading && (
               <VStack spacing={4} py={8} justify="center" minH="200px">
                 <Text color="rgba(245,240,232,0.4)" textAlign="center">
                   围绕{selectedGirl?.name || '女生'}的情况，向我提问
@@ -3224,10 +3280,7 @@ export default function AICoach() {
                     )}
                     <Box px={4} py={3}>
                       <Box fontSize="13px" lineHeight="1.7" color="warm.50">
-                        <ReactMarkdown
-                          remarkPlugins={[remarkGfm]}
-                          components={markdownComponents}
-                        >{fixMarkdown(girlAnalysisContent)}</ReactMarkdown>
+                        <Box dangerouslySetInnerHTML={{ __html: renderMD(fixMarkdown(girlAnalysisContent)) }} />
                       </Box>
                       {girlAnalysisLoading && (
                         <Box as="span" display="inline-block" w="2px" h="16px" bg="gold.400" ml="2px"
@@ -3313,16 +3366,66 @@ export default function AICoach() {
         <Flex justify="space-between" align="center" mb={2} flexShrink={0} gap={3} wrap="wrap">
           <Heading color="white" size="md" whiteSpace="nowrap">AI教练</Heading>
           <HStack spacing={2} flexShrink={0}>
-            <Select
-              value={selectedGirlId}
-              onChange={e => handleGirlChange(e.target.value)}
-              bg="warm.700" border="none" color="white" size="sm" maxW="180px" borderRadius="md"
-              placeholder="关联女生"
-            >
-              {(girls || []).map(g => (
-                <option key={g.id} value={g.id}>{g.name}</option>
-              ))}
-            </Select>
+            <Menu>
+              <MenuButton
+                as={Button}
+                size="sm"
+                variant="outline"
+                colorScheme="gold"
+                borderColor="gold.600"
+                _hover={{ bg: 'gold.900' }}
+                rightIcon={<Text fontSize="xs">▼</Text>}
+              >
+                {selectedGirlId ? (
+                  <HStack spacing={2}>
+                    <Avatar
+                      size="xs"
+                      name={girls.find(g => g.id === selectedGirlId)?.name}
+                      src={girls.find(g => g.id === selectedGirlId)?.avatar}
+                      bg="gold.500"
+                    />
+                    <Text>{girls.find(g => g.id === selectedGirlId)?.name}</Text>
+                  </HStack>
+                ) : (
+                  <Text color="rgba(245,240,232,0.6)">关联女生</Text>
+                )}
+              </MenuButton>
+              <MenuList bg="warm.800" borderColor="warm.600" minW="180px">
+                {(girls || []).map(g => (
+                  <MenuItem
+                    key={g.id}
+                    onClick={() => handleGirlChange(g.id)}
+                    bg={selectedGirlId === g.id ? 'gold.900' : 'transparent'}
+                    _hover={{ bg: 'warm.700' }}
+                  >
+                    <HStack spacing={2}>
+                      <Avatar size="xs" name={g.name} src={g.avatar} bg="gold.500" />
+                      <Text>{g.name}</Text>
+                      {g.stage && <Badge size="sm" colorScheme="orange" fontSize="10px">{g.stage}</Badge>}
+                    </HStack>
+                  </MenuItem>
+                ))}
+                {(!girls || girls.length === 0) && (
+                  <MenuItem _hover={{ bg: 'transparent' }} cursor="default">
+                    <Text color="rgba(245,240,232,0.4)" fontSize="sm">暂无女生</Text>
+                  </MenuItem>
+                )}
+              </MenuList>
+            </Menu>
+            {selectedGirlId && (
+              <Button
+                size="sm"
+                colorScheme="gold"
+                variant="outline"
+                onClick={() => {
+                  setShowAnalysisModal(true);
+                  loadGirlAnalysis(selectedGirlId);
+                }}
+                isLoading={girlAnalysisLoading}
+              >
+                分析
+              </Button>
+            )}
           </HStack>
         </Flex>
 
@@ -3332,7 +3435,10 @@ export default function AICoach() {
           <Box flex="1" minW="0" display="flex" flexDirection="column">
             <Tabs
               variant="soft-rounded" colorScheme="gold"
-              index={activeTabIndex} onChange={setActiveTabIndex}
+              index={activeTabIndex} onChange={(i) => {
+                setActiveTabIndex(i);
+                try { localStorage.setItem('zhuiai_active_tab', String(i)); } catch {}
+              }}
               sx={{ display: 'flex', flexDirection: 'column', flex: 1, minH: 0, overflow: 'hidden' }}
             >
               <TabList bg="warm.800" borderRadius="lg" p={1} flexShrink={0}>
@@ -3427,7 +3533,12 @@ export default function AICoach() {
       <Box flex="1" minH="0" display="flex" flexDirection="column" bg="warm.800" borderRadius="md" mb={2} overflow="hidden">
         {/* 消息列表区域 - 可滚动 */}
         <Box id="chat-scroll-container" flex="1" overflowY="auto" p={4} ref={scrollContainerRef} sx={{ overflowAnchor: 'none' }}>
-          {messages.length === 0 ? (
+          {loadingHistory ? (
+            <VStack spacing={4} py={8} justify="center" minH="200px">
+              <Spinner size="xl" color="gold.400" />
+              <Text color="rgba(245,240,232,0.4)">加载聊天历史...</Text>
+            </VStack>
+          ) : messages.length === 0 ? (
             <VStack spacing={4} py={8} justify="center" minH="200px">
               <Text color="rgba(245,240,232,0.4)" textAlign="center">
                 描述你的情况，AI 教练为你分析
@@ -3501,16 +3612,50 @@ export default function AICoach() {
     <Box display="flex" flexDirection="column" h={{ base: 'calc(100vh - 96px)', lg: 'calc(100vh - 48px)' }} overflow="hidden">
       <Flex justify="space-between" align="center" mb={3} flexShrink={0} gap={3}>
         <Heading color="white" size="md">AI教练</Heading>
-        <Select
-          value={selectedGirlId}
-          onChange={e => handleGirlChange(e.target.value)}
-          bg="warm.700" border="none" color="white" size="sm" maxW="180px" borderRadius="md"
-          placeholder="关联女生"
-        >
-          {(girls || []).map(g => (
-            <option key={g.id} value={g.id}>{g.name}</option>
-          ))}
-        </Select>
+        <HStack spacing={2}>
+          <Menu>
+            <MenuButton as={Button} size="sm" variant="outline" colorScheme="gold" borderColor="gold.600" _hover={{ bg: 'gold.900' }} rightIcon={<Text fontSize="xs">▼</Text>}>
+              {selectedGirlId ? (
+                <HStack spacing={2}>
+                  <Avatar size="xs" name={girls.find(g => g.id === selectedGirlId)?.name} src={girls.find(g => g.id === selectedGirlId)?.avatar} bg="gold.500" />
+                  <Text>{girls.find(g => g.id === selectedGirlId)?.name}</Text>
+                </HStack>
+              ) : (
+                <Text color="rgba(245,240,232,0.6)">关联女生</Text>
+              )}
+            </MenuButton>
+            <MenuList bg="warm.800" borderColor="warm.600" minW="180px">
+              {(girls || []).map(g => (
+                <MenuItem key={g.id} _hover={{ bg: 'warm.700' }} onClick={() => handleGirlChange(g.id)}>
+                  <HStack spacing={2}>
+                    <Avatar size="xs" name={g.name} src={g.avatar} bg="gold.500" />
+                    <Text>{g.name}</Text>
+                    {g.stage && <Badge size="sm" colorScheme="orange" fontSize="10px">{g.stage}</Badge>}
+                  </HStack>
+                </MenuItem>
+              ))}
+              {(!girls || girls.length === 0) && (
+                <MenuItem _hover={{ bg: 'transparent' }} cursor="default">
+                  <Text color="rgba(245,240,232,0.4)" fontSize="sm">暂无女生</Text>
+                </MenuItem>
+              )}
+            </MenuList>
+          </Menu>
+          {selectedGirlId && (
+            <Button
+              size="sm"
+              colorScheme="gold"
+              variant="outline"
+              onClick={() => {
+                setShowAnalysisModal(true);
+                loadGirlAnalysis(selectedGirlId);
+              }}
+              isLoading={girlAnalysisLoading}
+            >
+              分析
+            </Button>
+          )}
+        </HStack>
       </Flex>
 
       <Tabs variant="soft-rounded" colorScheme="gold" sx={{ display: 'flex', flexDirection: 'column', flex: 1, minH: 0, overflow: 'hidden' }} defaultIndex={0}>
@@ -3544,6 +3689,45 @@ export default function AICoach() {
           </TabPanel>
         </TabPanels>
       </Tabs>
+
+      {/* 女生分析弹窗 */}
+      <Modal isOpen={showAnalysisModal} onClose={() => setShowAnalysisModal(false)} size="xl">
+        <ModalOverlay />
+        <ModalContent bg="warm.800" color="white" maxH="80vh">
+          <ModalHeader borderBottom="1px solid" borderColor="whiteAlpha.200">
+            <Flex align="center" gap={2}>
+              <Text>女生分析</Text>
+              {selectedGirl && <Badge colorScheme="gold">{selectedGirl.name}</Badge>}
+              {girlAnalysisLoading && <Spinner size="sm" color="gold.400" />}
+            </Flex>
+          </ModalHeader>
+          <ModalBody py={4} overflowY="auto" maxH="calc(80vh - 120px)">
+            {/* 思考过程 */}
+            {girlAnalysisReasoning && (
+              <Box mb={4} p={3} bg="warm.700" borderRadius="md" fontSize="13px">
+                <Text color="gold.300" fontSize="xs" mb={1}>思考过程</Text>
+                <Box color="rgba(245,240,232,0.6)" lineHeight="1.7">
+                  <Box dangerouslySetInnerHTML={{ __html: renderMD(girlAnalysisReasoning) }} />
+                </Box>
+              </Box>
+            )}
+            {/* 分析内容 */}
+            {girlAnalysisContent && (
+              <Box fontSize="14px" lineHeight="1.8">
+                <Box dangerouslySetInnerHTML={{ __html: renderMD(fixMarkdown(girlAnalysisContent)) }} />
+              </Box>
+            )}
+            {!girlAnalysisContent && !girlAnalysisLoading && (
+              <Text color="rgba(245,240,232,0.4)" textAlign="center" py={8}>
+                点击"分析"按钮开始分析
+              </Text>
+            )}
+          </ModalBody>
+          <ModalFooter borderTop="1px solid" borderColor="whiteAlpha.200">
+            <Button variant="ghost" onClick={() => setShowAnalysisModal(false)}>关闭</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 }

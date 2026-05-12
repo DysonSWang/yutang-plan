@@ -15,16 +15,16 @@ import { api } from './utils/api';
 import { normalizeError, getErrorMessage } from './utils/errorHandler';
 import { captureError } from './utils/frontendErrorCapture';
 
-// 预加载常用页面（避免首次访问时懒加载的转圈）
-import ClientHome from './pages/client/Home';
-import ClientProfile from './pages/client/ClientProfile';
-import ClientChat from './pages/client/Chat';
-import AICoach from './pages/client/AICoach';
-import MyPond from './pages/client/MyPond';
-import GirlDetail from './pages/client/GirlDetail';
-import ClientDates from './pages/client/ClientDates';
-import ClientLearning from './pages/client/Learning';
-import ChapterDetail from './pages/client/ChapterDetail';
+// 懒加载所有页面（减少首屏 JS 体积）
+const ClientHome = lazy(() => import('./pages/client/Home'));
+const ClientProfile = lazy(() => import('./pages/client/ClientProfile'));
+const ClientChat = lazy(() => import('./pages/client/Chat'));
+const AICoach = lazy(() => import('./pages/client/AICoach'));
+const MyPond = lazy(() => import('./pages/client/MyPond'));
+const GirlDetail = lazy(() => import('./pages/client/GirlDetail'));
+const ClientDates = lazy(() => import('./pages/client/ClientDates'));
+const ClientLearning = lazy(() => import('./pages/client/Learning'));
+const ChapterDetail = lazy(() => import('./pages/client/ChapterDetail'));
 
 // 懒加载非常用页面
 const Onboarding = lazy(() => import('./pages/client/Onboarding'));

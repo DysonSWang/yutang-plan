@@ -19,6 +19,21 @@ export default defineConfig({
   optimizeDeps: {
     include: ['@chakra-ui/react', '@chakra-ui/hooks'],
   },
+  build: {
+    target: 'safari14',
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          if (id.includes('node_modules/react')) return 'vendor-react';
+          if (id.includes('node_modules/@chakra-ui')) return 'vendor-chakra';
+          if (id.includes('node_modules/react-router')) return 'vendor-router';
+          if (id.includes('node_modules/date-fns') || id.includes('node_modules/axios') || id.includes('node_modules/lodash')) return 'vendor-utils';
+          if (id.includes('node_modules')) return 'vendor-other';
+        },
+      },
+    },
+    chunkSizeWarningLimit: 600,
+  },
   server: {
     port: 5181,
     host: '0.0.0.0',

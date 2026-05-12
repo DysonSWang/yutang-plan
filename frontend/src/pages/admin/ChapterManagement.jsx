@@ -9,8 +9,7 @@ import {
 } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
 import { FiEdit2, FiTrash2, FiPlus, FiEye, FiEyeOff, FiGlobe, FiMenu, FiChevronDown, FiChevronUp, FiUsers, FiFileText, FiX } from 'react-icons/fi';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { marked } from 'marked';
 import { membership as membershipApi } from '../../utils/api';
 import useKeepAliveData from '../../hooks/useKeepAliveData';
 
@@ -221,9 +220,7 @@ function PreviewModal({ isOpen, onClose, chapterId, chapter }) {
                   hr: { borderColor: 'warm.700', my: 4 }
                 }}
               >
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {detail.content || '*暂无正文*'}
-                </ReactMarkdown>
+                <Box dangerouslySetInnerHTML={{ __html: marked.parse(detail.content || '*暂无正文*') }} />
               </Box>
             </Box>
           ) : (

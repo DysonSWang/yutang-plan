@@ -7,8 +7,7 @@ import {
 } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
 import { FiUpload, FiEye, FiCheck, FiX, FiChevronDown, FiChevronUp, FiClock, FiUsers, FiArrowLeft } from 'react-icons/fi';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { marked } from 'marked';
 import { membership as membershipApi } from '../../utils/api';
 
 const DEFAULT_CONTENT_DIR = '/home/admin/mo-ge-core/正式版';
@@ -54,9 +53,7 @@ function DiffViewer({ oldContent, newContent }) {
           <Text fontSize="sm">Markdown 预览</Text>
         </HStack>
         <Box p={4} bg="warm.800" borderRadius="md" maxH="600px" overflowY="auto">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {newContent}
-          </ReactMarkdown>
+          <Box dangerouslySetInnerHTML={{ __html: marked.parse(newContent || '') }} />
         </Box>
       </Box>
     );

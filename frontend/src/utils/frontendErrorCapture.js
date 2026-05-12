@@ -3,7 +3,7 @@
  * 全局监听未捕获错误、Promise 拒绝，统一上报到后端日志系统
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
+const API_BASE = import.meta.env.VITE_API_URL || ''; // Web 用相对路径，Capacitor 用绝对路径
 
 const MAX_PER_MINUTE = 20; // 每分钟最多上报 20 条
 const DEDUP_WINDOW = 5000; // 5 秒内相同错误去重
