@@ -532,7 +532,7 @@
   <div class="dl-card">
     <div class="dl-size" id="version-info">检测中...</div>
 
-    <a class="dl-btn" href="/apk/app-release.apk" id="dl-btn">
+    <a class="dl-btn" href="/apk/app.apk" id="dl-btn">
       <span class="icon">⬇️</span>
       立即下载安装包
     </a>
@@ -627,7 +627,7 @@
 
   // ─── 动态加载版本信息 ───
   var latestVersion = '';
-  var downloadUrl = 'https://zhuiai.club/apk/app-release.apk';
+  var downloadUrl = 'https://zhuiai.club/apk/app.apk';
   var apkSize = '约 4.2 MB';
 
   fetch('/api/version/check')
@@ -674,7 +674,7 @@
   // ─── 非微信：自动下载 ───
   var iframe = document.createElement('iframe');
   iframe.style.display = 'none';
-  iframe.src = '/apk/app-release.apk';
+  iframe.src = '/apk/app.apk';
   document.body.appendChild(iframe);
 
   // 标记下载开始时间
