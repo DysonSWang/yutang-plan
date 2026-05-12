@@ -3410,6 +3410,16 @@ export default function AICoach() {
                     <Text color="rgba(245,240,232,0.4)" fontSize="sm">暂无女生</Text>
                   </MenuItem>
                 )}
+                {selectedGirlId && (
+                  <>
+                    <MenuItem borderTop="1px solid" borderColor="warm.600" mt={1} onClick={() => handleGirlChange(null)}>
+                      <HStack spacing={2}>
+                        <Avatar size="xs" bg="red.500" />
+                        <Text color="red.400">取消关联</Text>
+                      </HStack>
+                    </MenuItem>
+                  </>
+                )}
               </MenuList>
             </Menu>
             {selectedGirlId && (
@@ -3638,6 +3648,16 @@ export default function AICoach() {
                 <MenuItem _hover={{ bg: 'transparent' }} cursor="default">
                   <Text color="rgba(245,240,232,0.4)" fontSize="sm">暂无女生</Text>
                 </MenuItem>
+              )}
+              {selectedGirlId && (
+                <>
+                  <MenuItem borderTop="1px solid" borderColor="warm.600" mt={1} onClick={() => handleGirlChange(null)}>
+                    <HStack spacing={2}>
+                      <Avatar size="xs" bg="red.500" />
+                      <Text color="red.400">取消关联</Text>
+                    </HStack>
+                  </MenuItem>
+                </>
               )}
             </MenuList>
           </Menu>
