@@ -11,16 +11,16 @@ const prisma = require('../prisma');
 const authMiddleware = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   const token = authHeader?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: '未登录' });
+  if (!token) return res.status(401).json({ error: { code: 'A0101', message: '未登录' } });
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
     next();
-  } catch { res.status(401).json({ error: 'token无效' }); }
+  } catch { res.status(401).json({ error: { code: 'A0102', message: '认证令牌无效' } }); }
 };
 
 function operatorOnly(req, res, next) {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: '需要管理员权限' });
+  if (req.user.role !== 'admin') return res.status(403).json({ error: { code: 'A0108', message: '需要管理员权限' } });
   next();
 }
 
@@ -208,7 +208,7 @@ router.get('/overview', authMiddleware, operatorOnly, async (req, res) => {
     });
   } catch (error) {
     console.error('[Reports] 获取报表失败:', error);
-    res.status(500).json({ error: '获取报表失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取报表失败，请稍后重试' } });
   }
 });
 

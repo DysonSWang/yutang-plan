@@ -42,13 +42,13 @@ const MAX_IMAGE_SIZE = 20 * 1024 * 1024;
 const authMiddleware = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   const token = authHeader?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: '未登录' });
+  if (!token) return res.status(401).json({ error: { code: 'A0101', message: '未登录' } });
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
     next();
   } catch {
-    res.status(401).json({ error: 'token无效' });
+    res.status(401).json({ error: { code: 'A0102', message: '认证令牌无效' } });
   }
 };
 
@@ -71,7 +71,7 @@ const upload = multer({
 // POST /api/upload/compress-video
 // 接收视频文件，自动判断是否需要压缩，返回最终可访问的 URL
 router.post('/compress-video', authMiddleware, upload.single('file'), async (req, res) => {
-  if (!req.file) return res.status(400).json({ error: '未上传文件' });
+  if (!req.file) return res.status(400).json({ error: { code: 'U0701', message: '未上传文件' } });
 
   const inputPath = req.file.path;
   const originalSize = req.file.size;
@@ -164,7 +164,7 @@ router.post('/compress-video', authMiddleware, upload.single('file'), async (req
     ]);
 
     console.error('视频压缩失败:', err.message);
-    res.status(500).json({ error: '视频压缩失败: ' + err.message });
+    res.status(500).json({ error: { code: 'S0802', message: '视频压缩失败: ' + err.message } });
   }
 });
 

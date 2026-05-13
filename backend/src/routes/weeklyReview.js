@@ -12,19 +12,19 @@ const prisma = require('../prisma');
 const authenticate = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   const token = authHeader?.split(' ')[1];
-  if (!token) return res.status(401).json({ success: false, error: '未登录' });
+  if (!token) return res.status(401).json({ success: false, error: { code: 'A0101', message: '未登录' } });
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
     next();
   } catch {
-    res.status(401).json({ success: false, error: '未登录' });
+    res.status(401).json({ success: false, error: { code: 'A0102', message: '认证令牌无效' } });
   }
 };
 
 const requireRole = (...roles) => (req, res, next) => {
   if (!roles.includes(req.user.role)) {
-    return res.status(403).json({ success: false, error: '无权限' });
+    return res.status(403).json({ success: false, error: { code: 'A0108', message: '无此操作权限' } });
   }
   next();
 };
@@ -44,7 +44,7 @@ router.get('/:clientId/weekly-review', authenticate, requireRole('admin'), async
         where: { operatorId_clientId: { operatorId, clientId } }
       });
       if (!session) {
-        return res.status(403).json({ success: false, error: '无权限访问该客户的周报' });
+        return res.status(403).json({ success: false, error: { code: 'A0108', message: '无权限访问此客户的周报' } });
       }
     }
 
@@ -52,7 +52,7 @@ router.get('/:clientId/weekly-review', authenticate, requireRole('admin'), async
     res.json({ success: true, data: review });
   } catch (err) {
     console.error('[WeeklyReview] 获取周报失败:', err);
-    res.status(500).json({ success: false, error: '获取周报失败' });
+    res.status(500).json({ success: false, error: { code: 'S0802', message: '获取周报失败，请稍后重试' } });
   }
 });
 
@@ -71,7 +71,7 @@ router.get('/:clientId/weekly-review/history', authenticate, requireRole('admin'
         where: { operatorId_clientId: { operatorId, clientId } }
       });
       if (!session) {
-        return res.status(403).json({ success: false, error: '无权限访问该客户的周报' });
+        return res.status(403).json({ success: false, error: { code: 'A0108', message: '无权限访问此客户的周报' } });
       }
     }
 
@@ -79,7 +79,7 @@ router.get('/:clientId/weekly-review/history', authenticate, requireRole('admin'
     res.json({ success: true, data: history });
   } catch (err) {
     console.error('[WeeklyReview] 获取历史周报失败:', err);
-    res.status(500).json({ success: false, error: '获取历史周报失败' });
+    res.status(500).json({ success: false, error: { code: 'S0802', message: '获取历史周报失败，请稍后重试' } });
   }
 });
 
@@ -97,7 +97,7 @@ router.post('/:clientId/weekly-review/generate', authenticate, requireRole('admi
         where: { operatorId_clientId: { operatorId, clientId } }
       });
       if (!session) {
-        return res.status(403).json({ success: false, error: '无权限访问该客户的周报' });
+        return res.status(403).json({ success: false, error: { code: 'A0108', message: '无权限访问此客户的周报' } });
       }
     }
 
@@ -105,7 +105,7 @@ router.post('/:clientId/weekly-review/generate', authenticate, requireRole('admi
     res.json({ success: true, data: review });
   } catch (err) {
     console.error('[WeeklyReview] 生成周报失败:', err);
-    res.status(500).json({ success: false, error: '生成周报失败' });
+    res.status(500).json({ success: false, error: { code: 'S0802', message: '生成周报失败，请稍后重试' } });
   }
 });
 

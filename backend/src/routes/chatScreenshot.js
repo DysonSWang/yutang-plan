@@ -53,7 +53,7 @@ const authMiddleware = async (req, res, next) => {
   const token = authHeader?.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ error: '未登录' });
+    return res.status(401).json({ error: { code: 'A0101', message: '未提供认证令牌' } });
   }
 
   try {
@@ -61,15 +61,16 @@ const authMiddleware = async (req, res, next) => {
     req.user = decoded;
     next();
   } catch (err) {
-    res.status(401).json({ error: 'token无效' });
+    res.status(401).json({ error: { code: 'A0102', message: '认证令牌无效' } });
   }
+};
 };
 
 // 获取女生的截图记录列表
 router.get('/girl/:girlId', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { girlId } = req.params;
@@ -77,12 +78,12 @@ router.get('/girl/:girlId', authMiddleware, async (req, res) => {
 
     // 安全：验证操盘手拥有此女生（admin 跳过）
     const girl = await prisma.girl.findUnique({ where: { id: girlId } });
-    if (!girl) return res.status(404).json({ error: '女生不存在' });
+    if (!girl) return res.status(404).json({ error: { code: 'G0301', message: '女生不存在' } });
     if (req.user.role !== 'admin') {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: girl.clientId }
       });
-      if (!session) return res.status(403).json({ error: '无权限访问此女生数据' });
+      if (!session) return res.status(403).json({ error: { code: 'A0108', message: '无权限访问此女生数据' } });
     }
 
     const screenshots = await prisma.chatScreenshot.findMany({
@@ -94,7 +95,7 @@ router.get('/girl/:girlId', authMiddleware, async (req, res) => {
     res.json({ success: true, screenshots });
   } catch (error) {
     console.error('[ChatScreenshot] 获取截图记录失败:', error);
-    res.status(500).json({ error: '获取失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取截图记录失败，请稍后重试' } });
   }
 });
 
@@ -102,7 +103,7 @@ router.get('/girl/:girlId', authMiddleware, async (req, res) => {
 router.post('/', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     upload.single('image')(req, res, async (err) => {
@@ -111,13 +112,13 @@ router.post('/', authMiddleware, async (req, res) => {
       }
 
       if (!req.file) {
-        return res.status(400).json({ error: '请上传图片' });
+        return res.status(400).json({ error: { code: 'S0803', message: '请上传图片' } });
       }
 
       const { girlId, clientId, notes, isMomentScreenshot } = req.body;
 
       if (!girlId || !clientId) {
-        return res.status(400).json({ error: '参数不完整' });
+        return res.status(400).json({ error: { code: 'S0803', message: '缺少必填字段：girlId、platform' } });
       }
 
       // 自动从女生获取平台信息
@@ -127,7 +128,7 @@ router.post('/', authMiddleware, async (req, res) => {
       });
 
       if (!girl) {
-        return res.status(404).json({ error: '女生不存在' });
+        return res.status(404).json({ error: { code: 'G0301', message: '女生不存在' } });
       }
 
       // 安全：操盘手只能为自己负责的客户的女生上传截图（admin 跳过）
@@ -136,7 +137,7 @@ router.post('/', authMiddleware, async (req, res) => {
           where: { operatorId: req.user.id, clientId: girl.clientId }
         });
         if (!session) {
-          return res.status(403).json({ error: '无权限为该客户上传截图' });
+          return res.status(403).json({ error: { code: 'A0108', message: '无权限为该客户上传截图' } });
         }
       }
 
@@ -187,7 +188,7 @@ router.post('/', authMiddleware, async (req, res) => {
     });
   } catch (error) {
     console.error('[ChatScreenshot] 上传截图失败:', error);
-    res.status(500).json({ error: '上传失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '上传截图失败，请稍后重试' } });
   }
 });
 
@@ -195,22 +196,22 @@ router.post('/', authMiddleware, async (req, res) => {
 router.post('/confirm-fields', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { girlId, pendingId, selectedFields } = req.body;
     if (!girlId || !pendingId) {
-      return res.status(400).json({ error: '参数不完整，需要 girlId 和 pendingId' });
+      return res.status(400).json({ error: { code: 'S0803', message: 'girlId和pendingId是必需的' } });
     }
 
     // 安全：操盘手只能操作自己负责的客户的女生（admin 跳过）
     const girl = await prisma.girl.findUnique({ where: { id: girlId } });
-    if (!girl) return res.status(404).json({ error: '女生不存在' });
+    if (!girl) return res.status(404).json({ error: { code: 'G0301', message: '女生不存在' } });
     if (req.user.role !== 'admin') {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: girl.clientId }
       });
-      if (!session) return res.status(403).json({ error: '无权限操作此女生数据' });
+      if (!session) return res.status(403).json({ error: { code: 'A0108', message: '无权限操作此女生数据' } });
     }
 
     // 调用新的确认接口
@@ -223,7 +224,7 @@ router.post('/confirm-fields', authMiddleware, async (req, res) => {
     res.json({ success: true, ...result });
   } catch (error) {
     console.error('[ChatScreenshot] 确认字段失败:', error);
-    res.status(500).json({ error: '确认失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '确认截图字段失败，请稍后重试' } });
   }
 });
 
@@ -231,20 +232,20 @@ router.post('/confirm-fields', authMiddleware, async (req, res) => {
 router.patch('/:id/notes', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { id } = req.params;
     const { notes } = req.body;
 
     const screenshot = await prisma.chatScreenshot.findUnique({ where: { id } });
-    if (!screenshot) return res.status(404).json({ error: '截图不存在' });
+    if (!screenshot) return res.status(404).json({ error: { code: 'S0804', message: '截图不存在' } });
     // 安全：操盘手只能操作自己负责的客户的截图（admin 跳过）
     if (req.user.role !== 'admin') {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: screenshot.clientId }
       });
-      if (!session) return res.status(403).json({ error: '无权限操作此截图' });
+      if (!session) return res.status(403).json({ error: { code: 'A0108', message: '无权限操作此截图' } });
     }
 
     const updated = await prisma.chatScreenshot.update({
@@ -255,7 +256,7 @@ router.patch('/:id/notes', authMiddleware, async (req, res) => {
     res.json({ success: true, screenshot: updated });
   } catch (error) {
     console.error('[ChatScreenshot] 更新备注失败:', error);
-    res.status(500).json({ error: '更新失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '更新截图失败，请稍后重试' } });
   }
 });
 
@@ -263,7 +264,7 @@ router.patch('/:id/notes', authMiddleware, async (req, res) => {
 router.post('/:id/ai-notes', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const screenshot = await prisma.chatScreenshot.findUnique({
@@ -281,7 +282,7 @@ router.post('/:id/ai-notes', authMiddleware, async (req, res) => {
     });
 
     if (!screenshot) {
-      return res.status(404).json({ error: '截图不存在' });
+      return res.status(404).json({ error: { code: 'S0804', message: '截图不存在' } });
     }
 
     // 安全：操盘手只能操作自己负责的客户的截图（admin 跳过）
@@ -289,7 +290,7 @@ router.post('/:id/ai-notes', authMiddleware, async (req, res) => {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: screenshot.clientId }
       });
-      if (!session) return res.status(403).json({ error: '无权限操作此截图' });
+      if (!session) return res.status(403).json({ error: { code: 'A0108', message: '无权限操作此截图' } });
     }
 
     // 标记为 pending，后台分析
@@ -318,7 +319,7 @@ router.post('/:id/ai-notes', authMiddleware, async (req, res) => {
     });
   } catch (error) {
     console.error('[ChatScreenshot] AI生成备注失败:', error);
-    res.status(500).json({ error: 'AI生成失败' });
+    res.status(500).json({ error: { code: 'S0802', message: 'AI生成失败，请稍后重试' } });
   }
 });
 
@@ -326,7 +327,7 @@ router.post('/:id/ai-notes', authMiddleware, async (req, res) => {
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const screenshot = await prisma.chatScreenshot.findUnique({
@@ -334,7 +335,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     });
 
     if (!screenshot) {
-      return res.status(404).json({ error: '截图不存在' });
+      return res.status(404).json({ error: { code: 'S0804', message: '截图不存在' } });
     }
 
     // 安全：操盘手只能删除自己负责的客户的截图（admin 跳过）
@@ -342,7 +343,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: screenshot.clientId }
       });
-      if (!session) return res.status(403).json({ error: '无权限删除此截图' });
+      if (!session) return res.status(403).json({ error: { code: 'A0108', message: '无权限删除此截图' } });
     }
 
     // 删除文件
@@ -358,7 +359,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error('[ChatScreenshot] 删除截图失败:', error);
-    res.status(500).json({ error: '删除失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '删除截图失败，请稍后重试' } });
   }
 });
 
@@ -367,7 +368,7 @@ router.get('/client/me', authMiddleware, async (req, res) => {
   try {
     // 客户才能查自己的截图
     if (req.user.role !== 'client') {
-      return res.status(403).json({ error: '只有客户可以访问此接口' });
+      return res.status(403).json({ error: { code: 'A0108', message: '只有客户可以访问此接口' } });
     }
 
     const { girlId, limit = 50 } = req.query;
@@ -381,7 +382,7 @@ router.get('/client/me', authMiddleware, async (req, res) => {
         where: { id: girlId, clientId: req.user.id }
       });
       if (!girl) {
-        return res.status(403).json({ error: '无权查看此女生的截图' });
+        return res.status(403).json({ error: { code: 'A0108', message: '无权查看此女生的截图' } });
       }
       where.girlId = girlId;
     }
@@ -404,7 +405,7 @@ router.get('/client/me', authMiddleware, async (req, res) => {
     res.json({ success: true, screenshots });
   } catch (error) {
     console.error('[ChatScreenshot] 获取客户截图记录失败:', error);
-    res.status(500).json({ error: '获取失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取截图记录失败，请稍后重试' } });
   }
 });
 
@@ -412,16 +413,16 @@ router.get('/client/me', authMiddleware, async (req, res) => {
 router.post('/client-extract', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     if (!req.file) {
-      return res.status(400).json({ error: '请上传截图' });
+      return res.status(400).json({ error: { code: 'U0701', message: '请上传截图' } });
     }
 
     const { clientId } = req.body;
     if (!clientId) {
-      return res.status(400).json({ error: '缺少 clientId' });
+      return res.status(400).json({ error: { code: 'S0803', message: 'clientId是必需的' } });
     }
 
     // 验证客户存在
@@ -429,7 +430,7 @@ router.post('/client-extract', authMiddleware, async (req, res) => {
       where: { id: clientId }
     });
     if (!client) {
-      return res.status(404).json({ error: '客户不存在' });
+      return res.status(404).json({ error: { code: 'C0201', message: '客户不存在' } });
     }
 
     // 保存截图到数据库（关联到客户但不关联到女生）
@@ -481,7 +482,7 @@ router.post('/client-extract', authMiddleware, async (req, res) => {
     });
   } catch (error) {
     console.error('[ChatScreenshot] 客户截图提取失败:', error);
-    res.status(500).json({ error: '提取失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '提取客户档案失败，请稍后重试' } });
   }
 });
 
@@ -510,7 +511,7 @@ router.get('/:id/analysis-status', authMiddleware, async (req, res) => {
     });
 
     if (!screenshot) {
-      return res.status(404).json({ error: '截图不存在' });
+      return res.status(404).json({ error: { code: 'S0804', message: '截图不存在' } });
     }
 
     res.json({
@@ -523,7 +524,7 @@ router.get('/:id/analysis-status', authMiddleware, async (req, res) => {
     });
   } catch (error) {
     console.error('[ChatScreenshot] 查询分析状态失败:', error);
-    res.status(500).json({ error: '查询失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '查询截图列表失败，请稍后重试' } });
   }
 });
 

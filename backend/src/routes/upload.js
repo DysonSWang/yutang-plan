@@ -19,13 +19,13 @@ const { uploadBuffer } = require('../services/ossClient');
 const authMiddleware = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   const token = authHeader?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: '未登录' });
+  if (!token) return res.status(401).json({ error: { code: 'A0101', message: '未提供认证令牌' } });
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
     next();
   } catch {
-    res.status(401).json({ error: 'token无效' });
+    res.status(401).json({ error: { code: 'A0102', message: '认证令牌无效' } });
   }
 };
 
@@ -45,11 +45,11 @@ router.post('/image', authMiddleware, multer({
   limits: { fileSize: 20 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) cb(null, true);
-    else cb(new Error('只支持图片文件'));
+    else { error: { code: 'U0702', message: '不支持的文件类型' } };
   }
 }).single('file'), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: '未上传文件' });
+    if (!req.file) return res.status(400).json({ error: { code: 'U0701', message: '未上传文件或文件为空' } });
 
     const isBurnAfterRead = req.body.isBurnAfterRead === 'true' || req.body.isBurnAfterRead === true;
     const isFlashImage = req.body.isFlashImage === 'true' || req.body.isFlashImage === true;
@@ -80,7 +80,7 @@ router.post('/image', authMiddleware, multer({
     });
   } catch (err) {
     console.error('[Upload] image error:', err);
-    res.status(500).json({ error: '上传失败' });
+    res.status(500).json({ error: { code: 'U0703', message: '上传失败' } });
   }
 });
 
@@ -90,11 +90,11 @@ router.post('/video', authMiddleware, multer({
   limits: { fileSize: 100 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('video/')) cb(null, true);
-    else cb(new Error('只支持视频文件'));
+    else cb(new Error('不支持的视频类型'));
   }
 }).single('file'), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: '未上传文件' });
+    if (!req.file) return res.status(400).json({ error: { code: 'U0701', message: '未上传文件或文件为空' } });
 
     const isBurnAfterRead = req.body.isBurnAfterRead === 'true' || req.body.isBurnAfterRead === true;
     const isFlashImage = req.body.isFlashImage === 'true' || req.body.isFlashImage === true;
@@ -124,7 +124,7 @@ router.post('/video', authMiddleware, multer({
     });
   } catch (err) {
     console.error('[Upload] video error:', err);
-    res.status(500).json({ error: '上传失败' });
+    res.status(500).json({ error: { code: 'U0703', message: '上传失败' } });
   }
 });
 
@@ -138,7 +138,7 @@ router.post('/audio', authMiddleware, multer({
   }
 }).single('file'), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: '未上传文件' });
+    if (!req.file) return res.status(400).json({ error: { code: 'U0701', message: '未上传文件或文件为空' } });
 
     // 音频暂不加密（聊天文字记录本身就是明文，音频加密意义不大）
     const ossPath = generateOssPath('audio', req.file.originalname, false);
@@ -153,7 +153,7 @@ router.post('/audio', authMiddleware, multer({
     });
   } catch (err) {
     console.error('[Upload] audio error:', err);
-    res.status(500).json({ error: '上传失败' });
+    res.status(500).json({ error: { code: 'U0703', message: '上传失败' } });
   }
 });
 

@@ -120,13 +120,13 @@ async function runAsyncFeedbackAnalysis({ girlId, clientId, operatorId, logId, r
 const authMiddleware = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   const token = authHeader?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: '未登录' });
+  if (!token) return res.status(401).json({ error: { code: 'A0101', message: '未登录' } });
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
     next();
   } catch {
-    res.status(401).json({ error: 'token无效' });
+    res.status(401).json({ error: { code: 'A0102', message: '认证令牌无效' } });
   }
 };
 
@@ -150,7 +150,7 @@ function getTensionEmoji(score) {
 router.post('/optimize-message', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     // 试用限制检查
@@ -164,7 +164,7 @@ router.post('/optimize-message', authMiddleware, async (req, res) => {
     const { girlId, myMessage, history = [] } = req.body;
 
     if (!myMessage) {
-      return res.status(400).json({ error: '消息内容是必需的' });
+      return res.status(400).json({ error: { code: 'S0803', message: '消息内容是必需的' } });
     }
 
     const context = girlId
@@ -294,7 +294,7 @@ ${historyString || '（暂无历史记录）'}
 
   } catch (error) {
     console.error('[ChatPartner] 话术优化失败:', error);
-    res.status(500).json({ error: '话术优化失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '话术优化失败，请稍后重试' } });
   }
 });
 
@@ -310,13 +310,13 @@ ${historyString || '（暂无历史记录）'}
 router.post('/analyze', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { girlId, message, history = [], operatorNotes } = req.body;
 
     if (!message) {
-      return res.status(400).json({ error: '消息内容是必需的' });
+      return res.status(400).json({ error: { code: 'S0803', message: '消息内容是必需的' } });
     }
 
     // 使用 contextBuilder 构建完整上下文
@@ -540,7 +540,7 @@ ${operatorNotes || '无'}
 
   } catch (error) {
     console.error('[ChatPartner] 分析失败:', error);
-    res.status(500).json({ error: '分析失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '分析失败，请稍后重试' } });
   }
 });
 
@@ -557,24 +557,24 @@ ${operatorNotes || '无'}
 router.post('/feedback', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { girlId, receiverName, chosenReply, originalGirlMessage, style, intention,
       profilePendingId, selectedProfileFields } = req.body;
 
     if (!girlId || !chosenReply) {
-      return res.status(400).json({ error: '参数不完整' });
+      return res.status(400).json({ error: { code: 'S0803', message: '参数不完整' } });
     }
 
     // 安全：从女生记录获取 clientId，防止操作不属于自己的客户数据
     const girl = await prisma.girl.findUnique({ where: { id: girlId } });
     if (!girl) {
-      return res.status(404).json({ error: '女生不存在' });
+      return res.status(404).json({ error: { code: 'G0301', message: '女生不存在' } });
     }
     // 客户端只能操作自己的女生
     if (req.user.role === 'client' && girl.clientId !== req.user.id) {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
     const clientId = girl.clientId;
 
@@ -638,7 +638,7 @@ router.post('/feedback', authMiddleware, async (req, res) => {
 
   } catch (error) {
     console.error('[ChatPartner] 反馈保存失败:', error);
-    res.status(500).json({ error: '反馈保存失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '反馈保存失败，请稍后重试' } });
   }
 });
 
@@ -649,7 +649,7 @@ router.post('/feedback', authMiddleware, async (req, res) => {
 router.get('/pending-updates/:girlId', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { girlId } = req.params;
@@ -657,11 +657,11 @@ router.get('/pending-updates/:girlId', authMiddleware, async (req, res) => {
     // 安全：操盘手只能访问自己负责的客户的女生
     if (req.user.role === 'admin') {
       const girl = await prisma.girl.findUnique({ where: { id: girlId } });
-      if (!girl) return res.status(404).json({ error: '女生不存在' });
+      if (!girl) return res.status(404).json({ error: { code: 'G0301', message: '女生不存在' } });
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: girl.clientId }
       });
-      if (!session) return res.status(403).json({ error: '无权限访问此女生数据' });
+      if (!session) return res.status(403).json({ error: { code: 'A0108', message: '无权限访问此女生数据' } });
     }
 
     // 从数据库查询待审核记录（包括 chat_feedback 和 chat_analyze 等来源）
@@ -711,7 +711,7 @@ router.get('/pending-updates/:girlId', authMiddleware, async (req, res) => {
 
   } catch (error) {
     console.error('[ChatPartner] 获取待审核更新失败:', error);
-    res.status(500).json({ error: '获取待审核更新失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取待审核更新失败，请稍后重试' } });
   }
 });
 
@@ -722,13 +722,13 @@ router.get('/pending-updates/:girlId', authMiddleware, async (req, res) => {
 router.post('/approve-updates', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { updateIds, approve } = req.body;
 
     if (!Array.isArray(updateIds)) {
-      return res.status(400).json({ error: 'updateIds 必须是数组' });
+      return res.status(400).json({ error: { code: 'S0803', message: 'updateIds必须是数组' } });
     }
 
     const results = [];
@@ -799,7 +799,7 @@ router.post('/approve-updates', authMiddleware, async (req, res) => {
 
   } catch (error) {
     console.error('[ChatPartner] 审核更新失败:', error);
-    res.status(500).json({ error: '审核更新失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '审核更新失败，请稍后重试' } });
   }
 });
 
@@ -810,7 +810,7 @@ router.post('/approve-updates', authMiddleware, async (req, res) => {
 router.post('/apply-update/:updateId', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { updateId } = req.params;
@@ -821,7 +821,7 @@ router.post('/apply-update/:updateId', authMiddleware, async (req, res) => {
     });
 
     if (!pending) {
-      return res.status(404).json({ error: '未找到待审核更新' });
+      return res.status(404).json({ error: { code: 'S0804', message: '未找到待审核更新' } });
     }
 
     // 安全：操盘手只能操作自己负责的客户的更新
@@ -829,7 +829,7 @@ router.post('/apply-update/:updateId', authMiddleware, async (req, res) => {
       let targetClientId = null;
       if (pending.targetType === 'girl') {
         const girl = await prisma.girl.findUnique({ where: { id: pending.targetId } });
-        if (!girl) return res.status(404).json({ error: '女生不存在' });
+        if (!girl) return res.status(404).json({ error: { code: 'G0301', message: '女生不存在' } });
         targetClientId = girl.clientId;
       } else {
         targetClientId = pending.targetId;
@@ -837,7 +837,7 @@ router.post('/apply-update/:updateId', authMiddleware, async (req, res) => {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: targetClientId }
       });
-      if (!session) return res.status(403).json({ error: '无权限操作此更新' });
+      if (!session) return res.status(403).json({ error: { code: 'A0108', message: '无权限操作此更新' } });
     }
 
     // 更新数据库状态
@@ -870,7 +870,7 @@ router.post('/apply-update/:updateId', authMiddleware, async (req, res) => {
 
   } catch (error) {
     console.error('[ChatPartner] 采纳更新失败:', error);
-    res.status(500).json({ error: '采纳更新失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '采纳更新失败，请稍后重试' } });
   }
 });
 
@@ -881,7 +881,7 @@ router.post('/apply-update/:updateId', authMiddleware, async (req, res) => {
 router.get('/history/:girlId', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { girlId } = req.params;
@@ -890,11 +890,11 @@ router.get('/history/:girlId', authMiddleware, async (req, res) => {
     // 安全：操盘手只能访问自己负责的客户的女生
     if (req.user.role === 'admin') {
       const girl = await prisma.girl.findUnique({ where: { id: girlId } });
-      if (!girl) return res.status(404).json({ error: '女生不存在' });
+      if (!girl) return res.status(404).json({ error: { code: 'G0301', message: '女生不存在' } });
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: girl.clientId }
       });
-      if (!session) return res.status(403).json({ error: '无权限访问此女生历史记录' });
+      if (!session) return res.status(403).json({ error: { code: 'A0108', message: '无权限访问此女生历史记录' } });
     }
 
     const logs = await prisma.chatLog.findMany({
@@ -915,7 +915,7 @@ router.get('/history/:girlId', authMiddleware, async (req, res) => {
 
   } catch (error) {
     console.error('[ChatPartner] 获取历史失败:', error);
-    res.status(500).json({ error: '获取历史失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取历史失败，请稍后重试' } });
   }
 });
 
@@ -926,23 +926,23 @@ router.get('/history/:girlId', authMiddleware, async (req, res) => {
 router.post('/send', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { girlId, receiverName, content, aiAdopted = false, originalMessage } = req.body;
 
     if (!girlId || !content) {
-      return res.status(400).json({ error: '参数不完整' });
+      return res.status(400).json({ error: { code: 'S0803', message: '参数不完整' } });
     }
 
     // 安全：从女生记录获取 clientId，防止操作不属于自己的客户数据
     const girl = await prisma.girl.findUnique({ where: { id: girlId } });
     if (!girl) {
-      return res.status(404).json({ error: '女生不存在' });
+      return res.status(404).json({ error: { code: 'G0301', message: '女生不存在' } });
     }
     // 客户端只能操作自己的女生
     if (req.user.role === 'client' && girl.clientId !== req.user.id) {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
     const clientId = girl.clientId;
 
@@ -970,7 +970,7 @@ router.post('/send', authMiddleware, async (req, res) => {
 
   } catch (error) {
     console.error('[ChatPartner] 保存失败:', error);
-    res.status(500).json({ error: '保存失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '保存失败，请稍后重试' } });
   }
 });
 
@@ -986,7 +986,7 @@ router.post('/send', authMiddleware, async (req, res) => {
 router.post('/client-analyze', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     // 试用限制检查
@@ -1000,10 +1000,10 @@ router.post('/client-analyze', authMiddleware, async (req, res) => {
     const { clientId, message, history = [] } = req.body;
 
     if (!message) {
-      return res.status(400).json({ error: '消息内容是必需的' });
+      return res.status(400).json({ error: { code: 'S0803', message: '消息内容是必需的' } });
     }
     if (!clientId) {
-      return res.status(400).json({ error: 'clientId 是必需的' });
+      return res.status(400).json({ error: { code: 'S0803', message: 'clientId是必需的' } });
     }
 
     // 安全校验：验证 clientId 属于当前操盘手（通过会话关联校验）
@@ -1011,13 +1011,13 @@ router.post('/client-analyze', authMiddleware, async (req, res) => {
       where: { clientId, operatorId: req.user.id }
     });
     if (!operatorSession) {
-      return res.status(403).json({ error: '无权操作此客户' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无权操作此客户' } });
     }
 
     // 获取客户档案
     const client = await prisma.user.findUnique({ where: { id: clientId, role: 'client' } });
     if (!client) {
-      return res.status(404).json({ error: '客户不存在' });
+      return res.status(404).json({ error: { code: 'C0201', message: '客户不存在' } });
     }
 
     // 获取与该客户的聊天历史
@@ -1211,7 +1211,7 @@ ${historyString}
 
   } catch (error) {
     console.error('[ChatPartner] 客户聊天分析失败:', error);
-    res.status(500).json({ error: '客户聊天分析失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '客户聊天分析失败，请稍后重试' } });
   }
 });
 
@@ -1222,7 +1222,7 @@ ${historyString}
 router.post('/client-optimize', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     // 试用限制检查
@@ -1236,7 +1236,7 @@ router.post('/client-optimize', authMiddleware, async (req, res) => {
     const { clientId, myMessage, history = [] } = req.body;
 
     if (!myMessage) {
-      return res.status(400).json({ error: '消息内容是必需的' });
+      return res.status(400).json({ error: { code: 'S0803', message: '消息内容是必需的' } });
     }
 
     // 安全：操盘手只能优化自己负责的客户的消息
@@ -1244,14 +1244,14 @@ router.post('/client-optimize', authMiddleware, async (req, res) => {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId }
       });
-      if (!session) return res.status(403).json({ error: '无权限优化该客户的消息' });
+      if (!session) return res.status(403).json({ error: { code: 'A0108', message: '无权限优化该客户的消息' } });
     }
 
     const context = await buildAICoachContext(req.user.id, null);
     const { client } = context;
 
     if (!client || client.role !== 'client') {
-      return res.status(404).json({ error: '客户不存在' });
+      return res.status(404).json({ error: { code: 'C0201', message: '客户不存在' } });
     }
 
     const communicationStyle = client.communicationStyle || '含蓄';
@@ -1381,7 +1381,7 @@ ${historyString || '（暂无历史记录）'}
 
   } catch (error) {
     console.error('[ChatPartner] 客户话术优化失败:', error);
-    res.status(500).json({ error: '客户话术优化失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '客户话术优化失败，请稍后重试' } });
   }
 });
 
@@ -1396,7 +1396,7 @@ ${historyString || '（暂无历史记录）'}
 router.get('/girl-profile/pending/:girlId', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { girlId } = req.params;
@@ -1404,11 +1404,11 @@ router.get('/girl-profile/pending/:girlId', authMiddleware, async (req, res) => 
     // 安全：操盘手只能访问自己负责的客户的女生
     if (req.user.role === 'admin') {
       const girl = await prisma.girl.findUnique({ where: { id: girlId } });
-      if (!girl) return res.status(404).json({ error: '女生不存在' });
+      if (!girl) return res.status(404).json({ error: { code: 'G0301', message: '女生不存在' } });
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: girl.clientId }
       });
-      if (!session) return res.status(403).json({ error: '无权限访问此女生数据' });
+      if (!session) return res.status(403).json({ error: { code: 'A0108', message: '无权限访问此女生数据' } });
     }
 
     const { getPendingUpdates } = require('../services/girlProfileExtractor');
@@ -1417,7 +1417,7 @@ router.get('/girl-profile/pending/:girlId', authMiddleware, async (req, res) => 
     res.json({ success: true, updates });
   } catch (error) {
     console.error('[ChatPartner] 获取女生待确认更新失败:', error);
-    res.status(500).json({ error: '获取失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取待确认更新失败，请稍后重试' } });
   }
 });
 
@@ -1428,22 +1428,22 @@ router.get('/girl-profile/pending/:girlId', authMiddleware, async (req, res) => 
 router.post('/girl-profile/confirm', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { girlId, pendingId, selectedFields } = req.body;
     if (!girlId || !pendingId) {
-      return res.status(400).json({ error: '参数不完整' });
+      return res.status(400).json({ error: { code: 'S0803', message: '参数不完整' } });
     }
 
     // 安全：操盘手只能操作自己负责的客户的女生
     if (req.user.role === 'admin') {
       const girl = await prisma.girl.findUnique({ where: { id: girlId } });
-      if (!girl) return res.status(404).json({ error: '女生不存在' });
+      if (!girl) return res.status(404).json({ error: { code: 'G0301', message: '女生不存在' } });
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: girl.clientId }
       });
-      if (!session) return res.status(403).json({ error: '无权限操作此女生数据' });
+      if (!session) return res.status(403).json({ error: { code: 'A0108', message: '无权限操作此女生数据' } });
     }
 
     const { confirmProfileUpdate } = require('../services/girlProfileExtractor');
@@ -1456,7 +1456,7 @@ router.post('/girl-profile/confirm', authMiddleware, async (req, res) => {
     res.json({ success: true, ...result });
   } catch (error) {
     console.error('[ChatPartner] 确认女生档案更新失败:', error);
-    res.status(500).json({ error: '确认失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '确认失败，请稍后重试' } });
   }
 });
 
@@ -1467,22 +1467,22 @@ router.post('/girl-profile/confirm', authMiddleware, async (req, res) => {
 router.post('/girl-profile/reject', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { girlId, pendingId } = req.body;
     if (!girlId || !pendingId) {
-      return res.status(400).json({ error: '参数不完整' });
+      return res.status(400).json({ error: { code: 'S0803', message: '参数不完整' } });
     }
 
     // 安全：操盘手只能操作自己负责的客户的女生
     if (req.user.role === 'admin') {
       const girl = await prisma.girl.findUnique({ where: { id: girlId } });
-      if (!girl) return res.status(404).json({ error: '女生不存在' });
+      if (!girl) return res.status(404).json({ error: { code: 'G0301', message: '女生不存在' } });
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: girl.clientId }
       });
-      if (!session) return res.status(403).json({ error: '无权限操作此女生数据' });
+      if (!session) return res.status(403).json({ error: { code: 'A0108', message: '无权限操作此女生数据' } });
     }
 
     const { rejectProfileUpdate } = require('../services/girlProfileExtractor');
@@ -1495,7 +1495,7 @@ router.post('/girl-profile/reject', authMiddleware, async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error('[ChatPartner] 驳回女生档案更新失败:', error);
-    res.status(500).json({ error: '驳回失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '驳回失败，请稍后重试' } });
   }
 });
 
@@ -1510,7 +1510,7 @@ router.post('/girl-profile/reject', authMiddleware, async (req, res) => {
 router.get('/client-profile/pending/:clientId', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { clientId } = req.params;
@@ -1520,7 +1520,7 @@ router.get('/client-profile/pending/:clientId', authMiddleware, async (req, res)
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId }
       });
-      if (!session) return res.status(403).json({ error: '无权限访问此客户数据' });
+      if (!session) return res.status(403).json({ error: { code: 'A0108', message: '无权限访问此客户数据' } });
     }
 
     const { getPendingUpdates } = require('../services/clientProfileExtractor');
@@ -1529,7 +1529,7 @@ router.get('/client-profile/pending/:clientId', authMiddleware, async (req, res)
     res.json({ success: true, updates });
   } catch (error) {
     console.error('[ChatPartner] 获取客户待确认更新失败:', error);
-    res.status(500).json({ error: '获取失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取待确认更新失败，请稍后重试' } });
   }
 });
 
@@ -1540,12 +1540,12 @@ router.get('/client-profile/pending/:clientId', authMiddleware, async (req, res)
 router.post('/client-profile/confirm', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { clientId, pendingId, selectedFields } = req.body;
     if (!clientId || !pendingId) {
-      return res.status(400).json({ error: '参数不完整' });
+      return res.status(400).json({ error: { code: 'S0803', message: '参数不完整' } });
     }
 
     // 安全：操盘手只能操作自己负责的客户的数据，admin 可以操作所有客户数据
@@ -1553,7 +1553,7 @@ router.post('/client-profile/confirm', authMiddleware, async (req, res) => {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId }
       });
-      if (!session) return res.status(403).json({ error: '无权限操作此客户数据' });
+      if (!session) return res.status(403).json({ error: { code: 'A0108', message: '无权限操作此客户数据' } });
     }
 
     const { confirmProfileUpdate } = require('../services/clientProfileExtractor');
@@ -1566,7 +1566,7 @@ router.post('/client-profile/confirm', authMiddleware, async (req, res) => {
     res.json({ success: true, ...result });
   } catch (error) {
     console.error('[ChatPartner] 确认客户档案更新失败:', error);
-    res.status(500).json({ error: '确认失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '确认失败，请稍后重试' } });
   }
 });
 
@@ -1577,12 +1577,12 @@ router.post('/client-profile/confirm', authMiddleware, async (req, res) => {
 router.post('/client-profile/reject', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { clientId, pendingId } = req.body;
     if (!clientId || !pendingId) {
-      return res.status(400).json({ error: '参数不完整' });
+      return res.status(400).json({ error: { code: 'S0803', message: '参数不完整' } });
     }
 
     // 安全：操盘手只能操作自己负责的客户的数据，admin 可以操作所有客户数据
@@ -1590,7 +1590,7 @@ router.post('/client-profile/reject', authMiddleware, async (req, res) => {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId }
       });
-      if (!session) return res.status(403).json({ error: '无权限操作此客户数据' });
+      if (!session) return res.status(403).json({ error: { code: 'A0108', message: '无权限操作此客户数据' } });
     }
 
     const { rejectProfileUpdate } = require('../services/clientProfileExtractor');
@@ -1603,7 +1603,7 @@ router.post('/client-profile/reject', authMiddleware, async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error('[ChatPartner] 驳回客户档案更新失败:', error);
-    res.status(500).json({ error: '驳回失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '驳回失败，请稍后重试' } });
   }
 });
 
@@ -1620,23 +1620,23 @@ router.post('/client-profile/reject', authMiddleware, async (req, res) => {
 router.post('/analyze-moment', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { girlId, momentText, momentImage, operatorNotes } = req.body;
 
     if (!momentText && !momentImage) {
-      return res.status(400).json({ error: '朋友圈文字或图片至少需要提供一个' });
+      return res.status(400).json({ error: { code: 'S0803', message: '朋友圈文字或图片至少需要提供一个' } });
     }
 
     // 安全：操盘手只能分析自己负责的客户的女生朋友圈
     if (girlId && req.user.role === 'admin') {
       const girl = await prisma.girl.findUnique({ where: { id: girlId } });
-      if (!girl) return res.status(404).json({ error: '女生不存在' });
+      if (!girl) return res.status(404).json({ error: { code: 'G0301', message: '女生不存在' } });
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: girl.clientId }
       });
-      if (!session) return res.status(403).json({ error: '无权限分析此女生朋友圈' });
+      if (!session) return res.status(403).json({ error: { code: 'A0108', message: '无权限分析此女生朋友圈' } });
     }
 
     // 构建上下文
@@ -1863,7 +1863,7 @@ ${contentDescription}
 
   } catch (error) {
     console.error('[ChatPartner] 朋友圈分析失败:', error);
-    res.status(500).json({ error: '朋友圈分析失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '朋友圈分析失败，请稍后重试' } });
   }
 });
 
@@ -1877,18 +1877,18 @@ ${contentDescription}
 router.post('/moment-feedback', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { girlId, chosenReply, replyType, momentText, momentImageUrl, style, intention } = req.body;
 
     if (!girlId || !chosenReply) {
-      return res.status(400).json({ error: '参数不完整' });
+      return res.status(400).json({ error: { code: 'S0803', message: '参数不完整' } });
     }
 
     const girl = await prisma.girl.findUnique({ where: { id: girlId } });
     if (!girl) {
-      return res.status(404).json({ error: '女生不存在' });
+      return res.status(404).json({ error: { code: 'G0301', message: '女生不存在' } });
     }
 
     // 安全：操盘手只能操作自己负责的客户的女生
@@ -1896,7 +1896,7 @@ router.post('/moment-feedback', authMiddleware, async (req, res) => {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: girl.clientId }
       });
-      if (!session) return res.status(403).json({ error: '无权限操作此女生数据' });
+      if (!session) return res.status(403).json({ error: { code: 'A0108', message: '无权限操作此女生数据' } });
     }
 
     // 保存到 ChatLog
@@ -1942,7 +1942,7 @@ router.post('/moment-feedback', authMiddleware, async (req, res) => {
 
   } catch (error) {
     console.error('[ChatPartner] 朋友圈反馈失败:', error);
-    res.status(500).json({ error: '朋友圈反馈失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '朋友圈反馈失败，请稍后重试' } });
   }
 });
 

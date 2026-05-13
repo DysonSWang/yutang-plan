@@ -8,6 +8,8 @@ const jwt = require('jsonwebtoken');
 
 const { JWT_SECRET } = require('../config');
 const prisma = require('../prisma');
+const AppError = require('../errors/AppError');
+const { ErrorCodes } = require('../errors/errorCodes');
 
 // Auth middleware
 const authMiddleware = async (req, res, next) => {
@@ -15,7 +17,7 @@ const authMiddleware = async (req, res, next) => {
   const token = authHeader?.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ error: '未登录' });
+    return res.status(401).json({ error: { code: 'A0101', message: '未登录' } });
   }
 
   try {
@@ -23,7 +25,7 @@ const authMiddleware = async (req, res, next) => {
     req.user = decoded;
     next();
   } catch (err) {
-    res.status(401).json({ error: 'token无效' });
+    res.status(401).json({ error: { code: 'A0102', message: '认证令牌无效' } });
   }
 };
 
@@ -41,7 +43,7 @@ router.get('/', authMiddleware, async (req, res) => {
         where: { operatorId: req.user.id, clientId }
       });
       if (!session) {
-        return res.status(403).json({ error: '无权限访问此客户的数据' });
+        return res.status(403).json({ error: { code: 'A0108', message: '无权限访问此客户的数据' } });
       }
       where.userId = clientId;
     }
@@ -54,7 +56,7 @@ router.get('/', authMiddleware, async (req, res) => {
     res.json({ success: true, payments });
   } catch (error) {
     console.error('[Payments] 获取付款记录失败:', error);
-    res.status(500).json({ error: '获取失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取付款记录失败，请稍后重试' } });
   }
 });
 
@@ -62,13 +64,13 @@ router.get('/', authMiddleware, async (req, res) => {
 router.post('/', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { clientId, stage, amount } = req.body;
 
     if (!clientId || stage === undefined || !amount) {
-      return res.status(400).json({ error: '参数不完整' });
+      return res.status(400).json({ error: { code: 'S0803', message: '缺少必填字段：clientId、stage、amount' } });
     }
 
     // 安全：操盘手只能为自己的客户创建付款记录
@@ -76,7 +78,7 @@ router.post('/', authMiddleware, async (req, res) => {
       where: { operatorId: req.user.id, clientId }
     });
     if (!session) {
-      return res.status(403).json({ error: '无权限为该客户创建付款记录' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无权为该客户创建付款记录' } });
     }
 
     const payment = await prisma.payment.create({
@@ -98,7 +100,7 @@ router.post('/', authMiddleware, async (req, res) => {
     res.json({ success: true, payment });
   } catch (error) {
     console.error('[Payments] 创建付款记录失败:', error);
-    res.status(500).json({ error: '创建失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '创建付款记录失败，请稍后重试' } });
   }
 });
 

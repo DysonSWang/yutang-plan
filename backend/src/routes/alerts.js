@@ -24,20 +24,20 @@ module.exports = function(io) {
   const authMiddleware = async (req, res, next) => {
     const authHeader = req.headers.authorization;
     const token = authHeader?.split(' ')[1];
-    if (!token) return res.status(401).json({ error: '未登录' });
+    if (!token) return res.status(401).json({ error: { code: 'A0101', message: '未提供认证令牌' } });
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
       req.user = decoded;
       next();
     } catch {
-      res.status(401).json({ error: 'token无效' });
+      res.status(401).json({ error: { code: 'A0102', message: '认证令牌无效' } });
     }
   };
 
   // 仅 admin 可访问
   const operatorOnly = (req, res, next) => {
     if (!['admin'].includes(req.user.role)) {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
     next();
   };
@@ -52,7 +52,7 @@ module.exports = function(io) {
     const session = await prisma.chatSession.findFirst({
       where: { operatorId: req.user.id, clientId }
     });
-    if (!session) return res.status(403).json({ error: '无权访问此客户的预警' });
+    if (!session) return res.status(403).json({ error: { code: 'A0108', message: '无权访问此客户的预警' } });
     next();
   };
 
@@ -83,7 +83,7 @@ module.exports = function(io) {
       res.json({ success: true, alerts, unreadCount, total: alerts.length });
     } catch (error) {
       console.error('[Alerts] 获取预警列表失败:', error);
-      res.status(500).json({ error: '获取失败' });
+      res.status(500).json({ error: { code: 'S0802', message: '获取预警列表失败，请稍后重试' } });
     }
   });
 
@@ -99,7 +99,7 @@ module.exports = function(io) {
       res.json({ success: true, stats });
     } catch (error) {
       console.error('[Alerts] 获取统计失败:', error);
-      res.status(500).json({ error: '获取失败' });
+      res.status(500).json({ error: { code: 'S0802', message: '获取预警列表失败，请稍后重试' } });
     }
   });
 
@@ -117,7 +117,7 @@ module.exports = function(io) {
         const session = await prisma.chatSession.findFirst({
           where: { operatorId: req.user.id, clientId }
         });
-        if (!session) return res.status(403).json({ error: '无权访问此客户的预警' });
+        if (!session) return res.status(403).json({ error: { code: 'A0108', message: '无权访问此客户的预警' } });
       }
 
       // 评估所有女生
@@ -138,7 +138,7 @@ module.exports = function(io) {
       });
     } catch (error) {
       console.error('[Alerts] 评估失败:', error);
-      res.status(500).json({ error: '评估失败' });
+      res.status(500).json({ error: { code: 'S0802', message: '预警评估失败，请稍后重试' } });
     }
   });
 
@@ -152,13 +152,13 @@ module.exports = function(io) {
       res.json({ success: true, alert });
     } catch (error) {
       if (error.message === '预警不存在') {
-        return res.status(404).json({ error: '预警不存在' });
+        return res.status(404).json({ error: { code: 'S0804', message: '预警不存在' } });
       }
       if (error.message === '无权操作此预警') {
-        return res.status(403).json({ error: '无权操作此预警' });
+        return res.status(403).json({ error: { code: 'A0108', message: '无权操作此预警' } });
       }
       console.error('[Alerts] 标记已读失败:', error);
-      res.status(500).json({ error: '操作失败' });
+      res.status(500).json({ error: { code: 'S0802', message: '标记已读失败，请稍后重试' } });
     }
   });
 
@@ -172,13 +172,13 @@ module.exports = function(io) {
       res.json({ success: true, alert });
     } catch (error) {
       if (error.message === '预警不存在') {
-        return res.status(404).json({ error: '预警不存在' });
+        return res.status(404).json({ error: { code: 'S0804', message: '预警不存在' } });
       }
       if (error.message === '无权操作此预警') {
-        return res.status(403).json({ error: '无权操作此预警' });
+        return res.status(403).json({ error: { code: 'A0108', message: '无权操作此预警' } });
       }
       console.error('[Alerts] 关闭预警失败:', error);
-      res.status(500).json({ error: '操作失败' });
+      res.status(500).json({ error: { code: 'S0802', message: '关闭预警失败，请稍后重试' } });
     }
   });
 
@@ -194,13 +194,13 @@ module.exports = function(io) {
       res.json({ success: true, alert });
     } catch (error) {
       if (error.message === '预警不存在') {
-        return res.status(404).json({ error: '预警不存在' });
+        return res.status(404).json({ error: { code: 'S0804', message: '预警不存在' } });
       }
       if (error.message === '无权操作此预警') {
-        return res.status(403).json({ error: '无权操作此预警' });
+        return res.status(403).json({ error: { code: 'A0108', message: '无权操作此预警' } });
       }
       console.error('[Alerts] 标记已处理失败:', error);
-      res.status(500).json({ error: '操作失败' });
+      res.status(500).json({ error: { code: 'S0802', message: '标记已处理失败，请稍后重试' } });
     }
   });
 

@@ -16,6 +16,7 @@ const ErrorCodes = {
   AUTH_USER_EXISTS:          { code: 'A0106', status: 409, message: '用户名已存在' },
   AUTH_PASSWORD_TOO_SHORT:   { code: 'A0107', status: 400, message: '密码至少8位' },
   AUTH_PERMISSION_DENIED:    { code: 'A0108', status: 403, message: '无此操作权限' },
+  AUTH_TOKEN_REVOKED:        { code: 'A0103', status: 401, message: 'Token 已失效，请重新登录' },
   AUTH_PASSWORD_MISMATCH:    { code: 'A0109', status: 400, message: '两次输入的新密码不一致' },
   AUTH_OLD_PASSWORD_WRONG:   { code: 'A0110', status: 400, message: '旧密码错误' },
 
@@ -61,6 +62,10 @@ const ErrorCodes = {
   DATABASE_ERROR:            { code: 'S0802', status: 500, message: '数据库操作失败' },
   VALIDATION_ERROR:          { code: 'S0803', status: 400, message: '参数校验失败' },
   RESOURCE_NOT_FOUND:        { code: 'S0804', status: 404, message: '请求的资源不存在' },
+  VALIDATION_SPECIFIC:       { code: 'S0805', status: 400, message: '{field}不能为空' },
+  NETWORK_ERROR:             { code: 'S0806', status: 0, message: '网络连接失败' },
+  TIMEOUT_ERROR:             { code: 'S0807', status: 0, message: '请求超时，请重试' },
+  RATE_LIMIT:                { code: 'S0808', status: 429, message: '请求过于频繁，请稍后再试' },
   VALIDATION_SPECIFIC:        { code: 'S0805', status: 400, message: '{field}不能为空' },
   NETWORK_ERROR:            { code: 'S0806', status: 0, message: '网络连接失败' },
   TIMEOUT_ERROR:            { code: 'S0807', status: 0, message: '请求超时，请重试' },

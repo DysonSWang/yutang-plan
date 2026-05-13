@@ -24,7 +24,7 @@ if (!fs.existsSync(LOG_DIR)) {
 router.get('/files', (req, res) => {
   fs.readdir(LOG_DIR, (err, files) => {
     if (err) {
-      return res.status(500).json({ error: '无法读取日志目录' });
+      return res.status(500).json({ error: { code: 'S0802', message: '无法读取日志目录，请稍后重试' } });
     }
 
     const fileList = files
@@ -287,7 +287,7 @@ router.post('/frontend-error', (req, res) => {
 
   fs.appendFile(filePath, line, (err) => {
     if (err) {
-      return res.status(500).json({ error: '写入日志失败' });
+      return res.status(500).json({ error: { code: 'S0802', message: '写入日志失败，请稍后重试' } });
     }
     res.json({ success: true });
   });

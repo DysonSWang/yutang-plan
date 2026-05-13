@@ -17,7 +17,7 @@ const authMiddleware = async (req, res, next) => {
   const token = authHeader?.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ error: '未登录' });
+    return res.status(401).json({ error: { code: 'A0101', message: '未登录' } });
   }
 
   try {
@@ -25,7 +25,7 @@ const authMiddleware = async (req, res, next) => {
     req.user = decoded;
     next();
   } catch (err) {
-    res.status(401).json({ error: 'token无效' });
+    res.status(401).json({ error: { code: 'A0102', message: '认证令牌无效' } });
   }
 };
 
@@ -52,7 +52,7 @@ router.get('/', authMiddleware, async (req, res) => {
     res.json({ success: true, notifications, unreadCount });
   } catch (error) {
     console.error('[Notifications] 获取通知失败:', error);
-    res.status(500).json({ error: '获取失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取通知列表失败，请稍后重试' } });
   }
 });
 
@@ -60,13 +60,13 @@ router.get('/', authMiddleware, async (req, res) => {
 router.post('/', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { userId, type, title, content, metadata } = req.body;
 
     if (!userId || !type || !title || !content) {
-      return res.status(400).json({ error: '参数不完整' });
+      return res.status(400).json({ error: { code: 'S0803', message: 'userId、type、title、content是必需的' } });
     }
 
     // 安全：操盘手只能给其负责的客户发送通知
@@ -74,7 +74,7 @@ router.post('/', authMiddleware, async (req, res) => {
       where: { operatorId: req.user.id, clientId: userId }
     });
     if (!session) {
-      return res.status(403).json({ error: '无权限向此用户发送通知' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无权限向此用户发送通知' } });
     }
 
     const notification = await prisma.notification.create({
@@ -95,7 +95,7 @@ router.post('/', authMiddleware, async (req, res) => {
     res.json({ success: true, notification });
   } catch (error) {
     console.error('[Notifications] 创建通知失败:', error);
-    res.status(500).json({ error: '创建失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '创建通知失败，请稍后重试' } });
   }
 });
 
@@ -104,9 +104,9 @@ router.post('/:id/read', authMiddleware, async (req, res) => {
   try {
     // 安全：验证通知属于当前用户（防止操作他人通知）
     const existing = await prisma.notification.findUnique({ where: { id: req.params.id } });
-    if (!existing) return res.status(404).json({ error: '通知不存在' });
+    if (!existing) return res.status(404).json({ error: { code: 'S0804', message: '通知不存在' } });
     if (existing.userId !== req.user.id) {
-      return res.status(403).json({ error: '无权操作此通知' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无权操作此通知' } });
     }
 
     const notification = await prisma.notification.update({
@@ -117,7 +117,7 @@ router.post('/:id/read', authMiddleware, async (req, res) => {
     res.json({ success: true, notification });
   } catch (error) {
     console.error('[Notifications] 标记已读失败:', error);
-    res.status(500).json({ error: '操作失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '标记已读失败，请稍后重试' } });
   }
 });
 
@@ -132,7 +132,7 @@ router.post('/read-all', authMiddleware, async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error('[Notifications] 标记全部已读失败:', error);
-    res.status(500).json({ error: '操作失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '标记全部已读失败，请稍后重试' } });
   }
 });
 

@@ -7,6 +7,7 @@ const jwt = require('jsonwebtoken');
 
 const { JWT_SECRET } = require('../config');
 const prisma = require('../prisma');
+const { ErrorCodes } = require('../errors/errorCodes');
 const { encrypt, decrypt } = require('../services/encryption');
 const { downloadBuffer, deleteFile, uploadBuffer } = require('../services/ossClient');
 const { embedWatermarkToBuffer } = require('../services/watermark');
@@ -26,7 +27,7 @@ module.exports = function(io) {
     const token = authHeader?.split(' ')[1] || req.query.token;
 
     if (!token) {
-      return res.status(401).json({ error: '未登录' });
+      return res.status(401).json({ error: { code: 'A0101', message: '未提供认证令牌' } });
     }
 
     try {
@@ -34,7 +35,7 @@ module.exports = function(io) {
       req.user = decoded;
       next();
     } catch (err) {
-      res.status(401).json({ error: 'token无效' });
+      res.status(401).json({ error: { code: 'A0102', message: '认证令牌无效' } });
     }
   };
 
@@ -62,7 +63,7 @@ module.exports = function(io) {
   router.get('/sessions', authMiddleware, async (req, res) => {
     try {
       if (req.user.role !== 'admin') {
-        return res.status(403).json({ error: '无权限' });
+        return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
       }
 
       // admin 可以查看所有 sessions，否则只查看自己的
@@ -91,7 +92,7 @@ module.exports = function(io) {
       res.json({ success: true, sessions: sessionsWithClients });
     } catch (error) {
       console.error('[Chat] 获取会话列表失败:', error);
-      res.status(500).json({ error: '获取失败' });
+      res.status(500).json({ error: { code: 'S0802', message: '获取会话列表失败，请稍后重试' } });
     }
   });
 
@@ -116,7 +117,7 @@ module.exports = function(io) {
       res.json({ success: true, sessions: sessionsWithOperators });
     } catch (error) {
       console.error('[Chat] 获取客户会话列表失败:', error);
-      res.status(500).json({ error: '获取失败' });
+      res.status(500).json({ error: { code: 'S0802', message: '获取会话列表失败，请稍后重试' } });
     }
   });
 
@@ -132,12 +133,12 @@ module.exports = function(io) {
   router.post('/sessions', authMiddleware, async (req, res) => {
     try {
       if (req.user.role !== 'admin') {
-        return res.status(403).json({ error: '无权限' });
+        return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
       }
 
       const { clientId } = req.body;
       if (!clientId) {
-        return res.status(400).json({ error: '客户ID是必需的' });
+        return res.status(400).json({ error: { code: 'S0803', message: '客户ID是必需的' } });
       }
 
       // 查找或创建会话
@@ -162,7 +163,7 @@ module.exports = function(io) {
       res.json({ success: true, session });
     } catch (error) {
       console.error('[Chat] 创建会话失败:', error);
-      res.status(500).json({ error: '创建失败' });
+      res.status(500).json({ error: { code: 'S0802', message: '创建会话失败，请稍后重试' } });
     }
   });
 
@@ -170,7 +171,7 @@ module.exports = function(io) {
   router.post('/my-session', authMiddleware, async (req, res) => {
     try {
       if (req.user.role !== 'client') {
-        return res.status(403).json({ error: '无权限' });
+        return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
       }
 
       // 查找一个可用的操作员
@@ -189,7 +190,7 @@ module.exports = function(io) {
       }
 
       if (operators.length === 0) {
-        return res.status(400).json({ error: '暂无可用客服，请稍后再试' });
+        return res.status(400).json({ error: { code: 'A0602', message: '暂无可用客服，请稍后再试' } });
       }
 
       const operatorId = operators[0].id;
@@ -216,7 +217,7 @@ module.exports = function(io) {
       res.json({ success: true, session });
     } catch (error) {
       console.error('[Chat] 客户端创建会话失败:', error);
-      res.status(500).json({ error: '创建失败' });
+      res.status(500).json({ error: { code: 'S0802', message: '创建会话失败，请稍后重试' } });
     }
   });
 
@@ -231,12 +232,12 @@ module.exports = function(io) {
       });
 
       if (!session) {
-        return res.status(404).json({ error: '会话不存在' });
+        return res.status(404).json({ error: { code: 'H0401', message: '会话不存在' } });
       }
 
       // 验证权限 - admin 可以访问所有会话
       if (req.user.role !== 'admin' && session.operatorId !== req.user.id && session.clientId !== req.user.id) {
-        return res.status(403).json({ error: '无权限' });
+        return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
       }
 
       const where = { sessionId };
@@ -318,7 +319,7 @@ module.exports = function(io) {
       res.json({ success: true, messages: enrichedMessages.reverse() });
     } catch (error) {
       console.error('[Chat] 获取消息失败:', error);
-      res.status(500).json({ error: '获取失败' });
+      res.status(500).json({ error: { code: 'S0802', message: '获取会话列表失败，请稍后重试' } });
     }
   });
 
@@ -332,12 +333,12 @@ module.exports = function(io) {
       });
 
       if (!session) {
-        return res.status(404).json({ error: '会话不存在' });
+        return res.status(404).json({ error: { code: 'H0401', message: '会话不存在' } });
       }
 
       // 验证权限 - admin 可以访问所有会话
       if (req.user.role !== 'admin' && session.operatorId !== req.user.id && session.clientId !== req.user.id) {
-        return res.status(403).json({ error: '无权限' });
+        return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
       }
 
       // 确定发送者角色：admin 发送时为 'admin'
@@ -444,7 +445,7 @@ module.exports = function(io) {
       res.json({ success: true, message });
     } catch (error) {
       console.error('[Chat] 发送消息失败:', error);
-      res.status(500).json({ error: '发送失败' });
+      res.status(500).json({ error: { code: 'S0802', message: '发送消息失败，请稍后重试' } });
     }
   });
 
@@ -456,11 +457,11 @@ module.exports = function(io) {
       });
 
       if (!message) {
-        return res.status(404).json({ error: '消息不存在' });
+        return res.status(404).json({ error: { code: 'H0402', message: '消息不存在' } });
       }
 
       if (message.burnedAt) {
-        return res.status(400).json({ error: '消息已被销毁' });
+        return res.status(400).json({ error: { code: 'H0403', message: '消息已被销毁' } });
       }
 
       // 授权检查
@@ -472,7 +473,7 @@ module.exports = function(io) {
       );
       const isAdmin = req.user.role === 'admin';
       if (!isAdmin && message.senderId !== req.user.id && !isParticipant) {
-        return res.status(403).json({ error: '无权限' });
+        return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
       }
 
       if (message.isFlashImage) {
@@ -542,7 +543,7 @@ module.exports = function(io) {
       // 阅后即焚（非闪图）：全局销毁
       if (!message.isBurnAfterRead) {
         // 非阅后即焚消息不支持此销毁接口
-        return res.status(400).json({ error: '该消息不支持销毁' });
+        return res.status(400).json({ error: { code: 'H0403', message: '该消息不支持销毁' } });
       }
 
       if (message.mediaUrl && (message.mediaUrl.startsWith('/encrypted/') || message.mediaUrl.startsWith('/public/'))) {
@@ -579,7 +580,7 @@ module.exports = function(io) {
       res.json({ success: true, message: updated });
     } catch (error) {
       console.error('[Chat] 销毁消息失败:', error);
-      res.status(500).json({ error: '操作失败' });
+      res.status(500).json({ error: { code: 'S0802', message: '销毁消息失败，请稍后重试' } });
     }
   });
 
@@ -593,15 +594,15 @@ module.exports = function(io) {
 
       console.log(`[Media] 查询结果: message=${JSON.stringify(message ? { id: message.id, mediaUrl: message.mediaUrl, type: message.type } : null)}`);
       if (!message) {
-        return res.status(404).json({ error: '消息不存在' });
+        return res.status(404).json({ error: { code: 'H0402', message: '消息不存在' } });
       }
 
       if (!message.mediaUrl) {
-        return res.status(404).json({ error: '无媒体文件' });
+        return res.status(404).json({ error: { code: 'H0402', message: '消息不存在' } });
       }
 
       if (message.burnedAt) {
-        return res.status(410).json({ error: '内容已销毁' });
+        return res.status(410).json({ error: { code: 'H0404', message: '内容已销毁' } });
       }
 
       // 闪图：检查当前用户是否已销毁
@@ -615,7 +616,7 @@ module.exports = function(io) {
           }
         });
         if (userBurned) {
-          return res.status(410).json({ error: '闪图已销毁' });
+          return res.status(410).json({ error: { code: 'H0404', message: '闪图已销毁' } });
         }
       }
 
@@ -627,7 +628,7 @@ module.exports = function(io) {
         session.operatorId === req.user.id || session.clientId === req.user.id
       );
       if (message.senderId !== req.user.id && !isParticipant) {
-        return res.status(403).json({ error: '无权限' });
+        return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
       }
 
       // 根据消息标志判断是否需要解密，而不是根据路径
@@ -704,7 +705,7 @@ module.exports = function(io) {
       res.end(plaintext);
     } catch (error) {
       console.error('[Chat] 流媒体获取失败:', error);
-      res.status(500).json({ error: '获取失败' });
+      res.status(500).json({ error: { code: 'S0802', message: '获取会话列表失败，请稍后重试' } });
     }
   });
 
@@ -722,7 +723,7 @@ module.exports = function(io) {
       res.json({ success: true, message });
     } catch (error) {
       console.error('[Chat] 标记已读失败:', error);
-      res.status(500).json({ error: '操作失败' });
+      res.status(500).json({ error: { code: 'S0802', message: '销毁消息失败，请稍后重试' } });
     }
   });
 
@@ -734,15 +735,15 @@ module.exports = function(io) {
       });
 
       if (!message) {
-        return res.status(404).json({ error: '消息不存在' });
+        return res.status(404).json({ error: { code: 'H0402', message: '消息不存在' } });
       }
 
       if (message.recalledAt) {
-        return res.status(400).json({ error: '消息已被撤回' });
+        return res.status(400).json({ error: { code: 'H0402', message: '消息已被撤回' } });
       }
 
       if (message.senderId !== req.user.id) {
-        return res.status(403).json({ error: '只能撤回自己的消息' });
+        return res.status(403).json({ error: { code: 'H0402', message: '只能撤回自己的消息' } });
       }
 
       // 删除OSS文件（撤回也清理媒体文件）
@@ -779,7 +780,7 @@ module.exports = function(io) {
       res.json({ success: true, message: updated });
     } catch (error) {
       console.error('[Chat] 撤回消息失败:', error);
-      res.status(500).json({ error: '操作失败' });
+      res.status(500).json({ error: { code: 'S0802', message: '销毁消息失败，请稍后重试' } });
     }
   });
 
@@ -789,7 +790,7 @@ module.exports = function(io) {
   router.get('/profile/:clientId', authMiddleware, async (req, res) => {
     try {
       if (req.user.role !== 'admin') {
-        return res.status(403).json({ error: '无权限' });
+        return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
       }
 
       const { clientId } = req.params;
@@ -799,7 +800,7 @@ module.exports = function(io) {
         where: { operatorId: req.user.id, clientId }
       }) : true;
       if (!session) {
-        return res.status(403).json({ error: '无权限查看此客户档案' });
+        return res.status(403).json({ error: { code: 'A0108', message: '无权限查看此客户档案' } });
       }
 
       const user = await prisma.user.findUnique({
@@ -832,13 +833,13 @@ module.exports = function(io) {
       });
 
       if (!user) {
-        return res.status(404).json({ error: '客户不存在' });
+        return res.status(404).json({ error: { code: 'C0201', message: '客户不存在' } });
       }
 
       res.json({ success: true, profile: user });
     } catch (error) {
       console.error('[Chat] 获取客户档案失败:', error);
-      res.status(500).json({ error: '获取失败' });
+      res.status(500).json({ error: { code: 'S0802', message: '获取会话列表失败，请稍后重试' } });
     }
   });
 
@@ -846,7 +847,7 @@ module.exports = function(io) {
   router.post('/profile/:clientId/suggest', authMiddleware, async (req, res) => {
     try {
       if (req.user.role !== 'admin') {
-        return res.status(403).json({ error: '无权限' });
+        return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
       }
 
       const { clientId } = req.params;
@@ -858,7 +859,7 @@ module.exports = function(io) {
         where: { clientId }
       });
       if (!session) {
-        return res.status(403).json({ error: '无权限' });
+        return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
       }
 
       const messages = await prisma.message.findMany({
@@ -1097,7 +1098,7 @@ module.exports = function(io) {
       res.json({ success: true, suggestions, chatSummary, messageCount: messages.length });
     } catch (error) {
       console.error('[Chat] 分析聊天记录失败:', error);
-      res.status(500).json({ error: '分析失败' });
+      res.status(500).json({ error: { code: 'S0802', message: '分析聊天记录失败，请稍后重试' } });
     }
   });
 
@@ -1105,7 +1106,7 @@ module.exports = function(io) {
   router.patch('/profile/:clientId', authMiddleware, async (req, res) => {
     try {
       if (req.user.role !== 'admin') {
-        return res.status(403).json({ error: '无权限' });
+        return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
       }
 
       const { clientId } = req.params;
@@ -1115,12 +1116,12 @@ module.exports = function(io) {
         where: { operatorId: req.user.id, clientId }
       }) : true;
       if (!session) {
-        return res.status(403).json({ error: '无权限更新此档案' });
+        return res.status(403).json({ error: { code: 'A0108', message: '无权限更新此档案' } });
       }
 
       const user = await prisma.user.findUnique({ where: { id: clientId } });
       if (!user) {
-        return res.status(404).json({ error: '客户不存在' });
+        return res.status(404).json({ error: { code: 'C0201', message: '客户不存在' } });
       }
 
       const allowedFields = [
@@ -1150,7 +1151,7 @@ module.exports = function(io) {
       }
 
       if (Object.keys(updates).length === 0) {
-        return res.status(400).json({ error: '无可更新字段' });
+        return res.status(400).json({ error: { code: 'S0803', message: '无可更新字段' } });
       }
 
       const updated = await prisma.user.update({
@@ -1161,7 +1162,7 @@ module.exports = function(io) {
       res.json({ success: true, profile: updated });
     } catch (error) {
       console.error('[Chat] 更新客户档案失败:', error);
-      res.status(500).json({ error: '更新失败' });
+      res.status(500).json({ error: { code: 'S0802', message: '更新客户档案失败，请稍后重试' } });
     }
   });
 

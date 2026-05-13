@@ -20,7 +20,7 @@ const authMiddleware = async (req, res, next) => {
   const token = authHeader?.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ error: '未登录' });
+    return res.status(401).json({ error: { code: 'A0101', message: '未提供认证令牌' } });
   }
 
   try {
@@ -28,14 +28,14 @@ const authMiddleware = async (req, res, next) => {
     req.user = decoded;
     next();
   } catch (err) {
-    res.status(401).json({ error: 'token无效' });
+    res.status(401).json({ error: { code: 'A0102', message: '认证令牌无效' } });
   }
 };
 
 // 仅 admin 可访问
 const operatorOnly = (req, res, next) => {
   if (!['admin'].includes(req.user.role)) {
-    return res.status(403).json({ error: '无权限' });
+    return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
   }
   next();
 };
@@ -51,13 +51,13 @@ router.get('/stats', authMiddleware, operatorOnly, async (req, res) => {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId }
       });
-      if (!session) return res.status(403).json({ error: '无权限访问此客户的数据' });
+      if (!session) return res.status(403).json({ error: { code: 'A0108', message: '无权限访问此客户的数据' } });
     }
     const stats = await getDashboardStats(clientId);
     res.json({ success: true, ...stats });
   } catch (error) {
     console.error('[Dashboard] 获取统计失败:', error);
-    res.status(500).json({ error: '获取失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取统计数据失败，请稍后重试' } });
   }
 });
 
@@ -72,7 +72,7 @@ router.get('/brief', authMiddleware, operatorOnly, async (req, res) => {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId }
       });
-      if (!session) return res.status(403).json({ error: '无权限访问此客户的数据' });
+      if (!session) return res.status(403).json({ error: { code: 'A0108', message: '无权限访问此客户的数据' } });
     }
     const brief = await generateDailyBrief(clientId);
     res.json({
@@ -84,7 +84,7 @@ router.get('/brief', authMiddleware, operatorOnly, async (req, res) => {
     });
   } catch (error) {
     console.error('[Dashboard] 获取简报失败:', error);
-    res.status(500).json({ error: '获取失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取统计数据失败，请稍后重试' } });
   }
 });
 
@@ -99,13 +99,13 @@ router.get('/today-tasks', authMiddleware, operatorOnly, async (req, res) => {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId }
       });
-      if (!session) return res.status(403).json({ error: '无权限访问此客户的数据' });
+      if (!session) return res.status(403).json({ error: { code: 'A0108', message: '无权限访问此客户的数据' } });
     }
     const brief = await generateDailyBrief(clientId);
     res.json({ success: true, tasks: brief.todayTasks || [] });
   } catch (error) {
     console.error('[Dashboard] 获取今日待办失败:', error);
-    res.status(500).json({ error: '获取失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取统计数据失败，请稍后重试' } });
   }
 });
 
@@ -120,13 +120,13 @@ router.get('/week-tasks', authMiddleware, operatorOnly, async (req, res) => {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId }
       });
-      if (!session) return res.status(403).json({ error: '无权限访问此客户的数据' });
+      if (!session) return res.status(403).json({ error: { code: 'A0108', message: '无权限访问此客户的数据' } });
     }
     const brief = await generateDailyBrief(clientId);
     res.json({ success: true, tasks: brief.weekTasks || [] });
   } catch (error) {
     console.error('[Dashboard] 获取本周待办失败:', error);
-    res.status(500).json({ error: '获取失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取统计数据失败，请稍后重试' } });
   }
 });
 
@@ -141,13 +141,13 @@ router.get('/alerts', authMiddleware, operatorOnly, async (req, res) => {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId }
       });
-      if (!session) return res.status(403).json({ error: '无权限访问此客户的数据' });
+      if (!session) return res.status(403).json({ error: { code: 'A0108', message: '无权限访问此客户的数据' } });
     }
     const brief = await generateDailyBrief(clientId);
     res.json({ success: true, alerts: brief.alerts || [] });
   } catch (error) {
     console.error('[Dashboard] 获取提醒失败:', error);
-    res.status(500).json({ error: '获取失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取统计数据失败，请稍后重试' } });
   }
 });
 
@@ -163,7 +163,7 @@ router.post('/analyze-all', authMiddleware, operatorOnly, async (req, res) => {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId }
       });
-      if (!session) return res.status(403).json({ error: '无权限访问此客户的数据' });
+      if (!session) return res.status(403).json({ error: { code: 'A0108', message: '无权限访问此客户的数据' } });
     }
     const jobId = `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -195,7 +195,7 @@ router.post('/analyze-all', authMiddleware, operatorOnly, async (req, res) => {
     asyncAnalyze().catch(err => console.error(`[Dashboard] asyncAnalyze 未捕获错误 job=${jobId}:`, err));
   } catch (error) {
     console.error('[Dashboard] 启动分析失败:', error);
-    res.status(500).json({ error: '启动分析失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '启动分析失败，请稍后重试' } });
   }
 });
 
@@ -211,7 +211,7 @@ router.get('/analyze-result/:jobId', authMiddleware, operatorOnly, async (req, r
     console.log(`[Dashboard] 查询结果 job=${jobId}, exists=${!!job}, jobs.size=${analysisJobs.size}`);
 
     if (!job) {
-      return res.status(404).json({ error: '任务不存在或已过期' });
+      return res.status(404).json({ error: { code: 'S0804', message: '任务不存在或已过期' } });
     }
 
     res.json({
@@ -223,7 +223,7 @@ router.get('/analyze-result/:jobId', authMiddleware, operatorOnly, async (req, r
     });
   } catch (error) {
     console.error('[Dashboard] 获取分析结果失败:', error);
-    res.status(500).json({ error: '获取结果失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取分析结果失败，请稍后重试' } });
   }
 });
 

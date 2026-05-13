@@ -17,7 +17,7 @@ const authMiddleware = async (req, res, next) => {
   const token = authHeader?.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ error: '未登录' });
+    return res.status(401).json({ error: { code: 'A0101', message: '未提供认证令牌' } });
   }
 
   try {
@@ -25,7 +25,7 @@ const authMiddleware = async (req, res, next) => {
     req.user = decoded;
     next();
   } catch (err) {
-    res.status(401).json({ error: 'token无效' });
+    res.status(401).json({ error: { code: 'A0102', message: '认证令牌无效' } });
   }
 };
 
@@ -43,7 +43,7 @@ router.get('/', authMiddleware, async (req, res) => {
         where: { operatorId: req.user.id, clientId }
       });
       if (!session) {
-        return res.status(403).json({ error: '无权限访问此客户的数据' });
+        return res.status(403).json({ error: { code: 'A0108', message: '无权限访问此客户的数据' } });
       }
       where.userId = clientId;
     }
@@ -56,7 +56,7 @@ router.get('/', authMiddleware, async (req, res) => {
     res.json({ success: true, progress });
   } catch (error) {
     console.error('[Progress] 获取服务进度失败:', error);
-    res.status(500).json({ error: '获取失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取服务进度失败，请稍后重试' } });
   }
 });
 
@@ -64,13 +64,13 @@ router.get('/', authMiddleware, async (req, res) => {
 router.post('/', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { clientId, stage, stageName, status = 'in_progress', amountPaid } = req.body;
 
     if (!clientId || stage === undefined || !stageName) {
-      return res.status(400).json({ error: '参数不完整' });
+      return res.status(400).json({ error: { code: 'S0803', message: '缺少必填字段：clientId、stage、stageName' } });
     }
 
     // 安全：操盘手只能为自己的客户创建进度
@@ -78,7 +78,7 @@ router.post('/', authMiddleware, async (req, res) => {
       where: { operatorId: req.user.id, clientId }
     });
     if (!session) {
-      return res.status(403).json({ error: '无权限为该客户创建服务进度' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无权为该客户创建服务进度' } });
     }
 
     // 查找是否已存在该阶段
@@ -139,7 +139,7 @@ router.post('/', authMiddleware, async (req, res) => {
     res.json({ success: true, progress });
   } catch (error) {
     console.error('[Progress] 创建/更新服务进度失败:', error);
-    res.status(500).json({ error: '操作失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '操作失败，请稍后重试' } });
   }
 });
 
@@ -154,7 +154,7 @@ router.get('/report/:clientId', authMiddleware, async (req, res) => {
         where: { operatorId: req.user.id, clientId }
       });
       if (!session) {
-        return res.status(403).json({ error: '无权限访问此客户的数据' });
+        return res.status(403).json({ error: { code: 'A0108', message: '无权限访问此客户的数据' } });
       }
     }
 
@@ -191,7 +191,7 @@ router.get('/report/:clientId', authMiddleware, async (req, res) => {
     });
   } catch (error) {
     console.error('[Progress] 获取进度报告失败:', error);
-    res.status(500).json({ error: '获取失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取服务进度失败，请稍后重试' } });
   }
 });
 

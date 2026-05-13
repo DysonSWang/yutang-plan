@@ -15,7 +15,7 @@ const authMiddleware = async (req, res, next) => {
   const token = authHeader?.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ error: '未登录' });
+    return res.status(401).json({ error: { code: 'A0101', message: '未登录' } });
   }
 
   try {
@@ -23,7 +23,7 @@ const authMiddleware = async (req, res, next) => {
     req.user = decoded;
     next();
   } catch (err) {
-    res.status(401).json({ error: 'token无效' });
+    res.status(401).json({ error: { code: 'A0102', message: '认证令牌无效' } });
   }
 };
 
@@ -31,7 +31,7 @@ const authMiddleware = async (req, res, next) => {
 router.get('/girl/:girlId', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { girlId } = req.params;
@@ -40,13 +40,13 @@ router.get('/girl/:girlId', authMiddleware, async (req, res) => {
     // 安全：验证女生存在且属于操盘手负责的客户
     const girl = await prisma.girl.findUnique({ where: { id: girlId } });
     if (!girl) {
-      return res.status(404).json({ error: '女生不存在' });
+      return res.status(404).json({ error: { code: 'G0301', message: '女生不存在' } });
     }
     const session = await prisma.chatSession.findFirst({
       where: { operatorId: req.user.id, clientId: girl.clientId }
     });
     if (!session) {
-      return res.status(403).json({ error: '无权限访问此女生数据' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无权限访问此女生数据' } });
     }
 
     const logs = await prisma.chatLog.findMany({
@@ -58,7 +58,7 @@ router.get('/girl/:girlId', authMiddleware, async (req, res) => {
     res.json({ success: true, logs });
   } catch (error) {
     console.error('[ChatLog] 获取代聊记录失败:', error);
-    res.status(500).json({ error: '获取失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取代聊记录失败，请稍后重试' } });
   }
 });
 
@@ -66,7 +66,7 @@ router.get('/girl/:girlId', authMiddleware, async (req, res) => {
 router.patch('/:id/visibility', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { id } = req.params;
@@ -75,13 +75,13 @@ router.patch('/:id/visibility', authMiddleware, async (req, res) => {
     // 安全：验证记录存在且属于操盘手负责的客户
     const existing = await prisma.chatLog.findUnique({ where: { id } });
     if (!existing) {
-      return res.status(404).json({ error: '记录不存在' });
+      return res.status(404).json({ error: { code: 'S0804', message: '记录不存在' } });
     }
     const session = await prisma.chatSession.findFirst({
       where: { operatorId: req.user.id, clientId: existing.clientId }
     });
     if (!session) {
-      return res.status(403).json({ error: '无权限操作此记录' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无权限操作此记录' } });
     }
 
     const log = await prisma.chatLog.update({
@@ -92,7 +92,7 @@ router.patch('/:id/visibility', authMiddleware, async (req, res) => {
     res.json({ success: true, log });
   } catch (error) {
     console.error('[ChatLog] 更新可见性失败:', error);
-    res.status(500).json({ error: '更新失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '更新可见性失败，请稍后重试' } });
   }
 });
 
@@ -124,7 +124,7 @@ router.get('/client/me', authMiddleware, async (req, res) => {
     res.json({ success: true, logs });
   } catch (error) {
     console.error('[ChatLog] 获取代聊记录失败:', error);
-    res.status(500).json({ error: '获取失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取代聊记录失败，请稍后重试' } });
   }
 });
 
@@ -132,19 +132,19 @@ router.get('/client/me', authMiddleware, async (req, res) => {
 router.post('/', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { girlId, receiverName, content, type = 'text', aiAnalysis, aiSuggestions, aiAdopted = false } = req.body;
 
     if (!girlId || !content) {
-      return res.status(400).json({ error: '参数不完整' });
+      return res.status(400).json({ error: { code: 'S0803', message: 'girlId和content是必需的' } });
     }
 
     // 安全：验证女生存在并获取其 clientId，防止操作不属于自己的客户数据
     const girl = await prisma.girl.findUnique({ where: { id: girlId } });
     if (!girl) {
-      return res.status(404).json({ error: '女生不存在' });
+      return res.status(404).json({ error: { code: 'G0301', message: '女生不存在' } });
     }
     const clientId = girl.clientId;
 
@@ -171,7 +171,7 @@ router.post('/', authMiddleware, async (req, res) => {
     res.json({ success: true, log });
   } catch (error) {
     console.error('[ChatLog] 创建代聊记录失败:', error);
-    res.status(500).json({ error: '创建失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '创建代聊记录失败，请稍后重试' } });
   }
 });
 

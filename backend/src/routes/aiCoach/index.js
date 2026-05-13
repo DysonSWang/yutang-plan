@@ -338,7 +338,7 @@ const authMiddleware = async (req, res, next) => {
   const token = authHeader?.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ error: '未登录' });
+    return res.status(401).json({ error: { code: 'A0101', message: '未登录' } });
   }
 
   try {
@@ -346,7 +346,7 @@ const authMiddleware = async (req, res, next) => {
     req.user = decoded;
     next();
   } catch (err) {
-    res.status(401).json({ error: 'token无效' });
+    res.status(401).json({ error: { code: 'A0102', message: '认证令牌无效' } });
   }
 };
 
@@ -366,7 +366,7 @@ registerSituationRoute(router, authMiddleware);
 router.post('/new-session', authMiddleware, async (req, res) => {
   try {
     if (!['admin', 'client'].includes(req.user.role)) {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
     if (req.user.role === 'client') {
       try {
@@ -383,14 +383,14 @@ router.post('/new-session', authMiddleware, async (req, res) => {
     if (girlId) {
       const girl = await prisma.girl.findUnique({ where: { id: girlId } });
       if (!girl) {
-        return res.status(404).json({ error: '女生不存在' });
+        return res.status(404).json({ error: { code: 'G0301', message: '女生不存在' } });
       }
       if (req.user.role === 'admin') {
         const session = await prisma.chatSession.findFirst({
           where: { operatorId: req.user.id, clientId: girl.clientId }
         });
         if (!session) {
-          return res.status(403).json({ error: '无权限访问此女生数据' });
+          return res.status(403).json({ error: { code: 'G0302', message: '无权限访问此女生数据' } });
         }
       }
     }
@@ -420,7 +420,7 @@ router.post('/new-session', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: error.message });
     }
     logger.error(`[AICoach] 新建对话失败: ${error.message}`, { error: error.message });
-    res.status(500).json({ error: '新建对话失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '新建对话失败' } });
   }
 });
 
@@ -432,7 +432,7 @@ router.post('/new-session', authMiddleware, async (req, res) => {
 router.delete('/session/:sessionId', authMiddleware, async (req, res) => {
   try {
     if (!['admin', 'client'].includes(req.user.role)) {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
     if (req.user.role === 'client') {
       try {
@@ -450,12 +450,12 @@ router.delete('/session/:sessionId', authMiddleware, async (req, res) => {
     });
 
     if (!session) {
-      return res.status(404).json({ error: '会话不存在' });
+      return res.status(404).json({ error: { code: 'H0401', message: '会话不存在' } });
     }
 
     // 验证权限：只能删除自己的会话
     if (session.clientId !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限删除此会话' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无权限删除此会话' } });
     }
 
     // 删除会话及其关联的反馈记录（Cascade）
@@ -469,7 +469,7 @@ router.delete('/session/:sessionId', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: error.message });
     }
     logger.error(`[AICoach] 删除会话失败: ${error.message}`, { error: error.message });
-    res.status(500).json({ error: '删除会话失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '删除会话失败' } });
   }
 });
 
@@ -481,7 +481,7 @@ router.delete('/session/:sessionId', authMiddleware, async (req, res) => {
 router.get('/girl-context/:girlId', authMiddleware, async (req, res) => {
   try {
     if (!['admin', 'client'].includes(req.user.role)) {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { girlId } = req.params;
@@ -489,15 +489,15 @@ router.get('/girl-context/:girlId', authMiddleware, async (req, res) => {
 
     // 安全验证
     const girl = await prisma.girl.findUnique({ where: { id: girlId } });
-    if (!girl) return res.status(404).json({ error: '女生不存在' });
+    if (!girl) return res.status(404).json({ error: { code: 'G0301', message: '女生不存在' } });
 
     if (req.user.role === 'admin') {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: girl.clientId }
       });
-      if (!session) return res.status(403).json({ error: '无权限访问此女生数据' });
+      if (!session) return res.status(403).json({ error: { code: 'G0302', message: '无权限访问此女生数据' } });
     } else if (req.user.role === 'client' && girl.clientId !== req.user.id) {
-      return res.status(403).json({ error: '无权限访问此女生数据' });
+      return res.status(403).json({ error: { code: 'G0302', message: '无权限访问此女生数据' } });
     }
 
     const clientId = girl.clientId;
@@ -563,7 +563,7 @@ router.get('/girl-context/:girlId', authMiddleware, async (req, res) => {
     res.json(result);
   } catch (error) {
     logger.error(`[girl-context] failed: ${error.message}`, { error: error.message });
-    res.status(500).json({ error: '获取失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取失败' } });
   }
 });
 
@@ -574,7 +574,7 @@ router.get('/girl-context/:girlId', authMiddleware, async (req, res) => {
 router.post('/reply-suggestions', authMiddleware, async (req, res) => {
   try {
     if (!['admin', 'client'].includes(req.user.role)) {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
     if (req.user.role === 'client') {
       try {
@@ -587,11 +587,11 @@ router.post('/reply-suggestions', authMiddleware, async (req, res) => {
     const { girlId, lastMessage, context, style, hiddenContext } = req.body;
 
     if (!lastMessage) {
-      return res.status(400).json({ error: '对方消息是必需的' });
+      return res.status(400).json({ error: { code: 'S0803', message: '对方消息是必需的' } });
     }
 
     if (lastMessage.length > 2000) {
-      return res.status(400).json({ error: '消息内容不能超过2000字' });
+      return res.status(400).json({ error: { code: 'S0803', message: '消息内容不能超过2000字' } });
     }
 
     // 安全：验证女生归属权
@@ -599,14 +599,14 @@ router.post('/reply-suggestions', authMiddleware, async (req, res) => {
     if (girlId) {
       const girl = await prisma.girl.findUnique({ where: { id: girlId } });
       if (!girl) {
-        return res.status(404).json({ error: '女生不存在' });
+        return res.status(404).json({ error: { code: 'G0301', message: '女生不存在' } });
       }
       if (req.user.role === 'admin') {
         const session = await prisma.chatSession.findFirst({
           where: { operatorId: req.user.id, clientId: girl.clientId }
         });
         if (!session) {
-          return res.status(403).json({ error: '无权限为该客户女生生成建议' });
+          return res.status(403).json({ error: { code: 'A0108', message: '无权限为该客户女生生成建议' } });
         }
       }
       // M007 S06: 加载客户人格画像
@@ -802,7 +802,7 @@ ${styleOptions}
       return res.status(403).json({ error: error.message });
     }
     logger.error(`[AICoach] 回复建议失败: ${error.message}`, { error: error.message });
-    res.status(500).json({ error: '生成失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '生成失败' } });
   }
 });
 
@@ -813,7 +813,7 @@ ${styleOptions}
 router.post('/optimize-reply', authMiddleware, async (req, res) => {
   try {
     if (!['admin', 'client'].includes(req.user.role)) {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
     if (req.user.role === 'client') {
       try {
@@ -826,11 +826,11 @@ router.post('/optimize-reply', authMiddleware, async (req, res) => {
     const { originalReply, girlId, goal, hiddenContext } = req.body;
 
     if (!originalReply) {
-      return res.status(400).json({ error: '原始回复是必需的' });
+      return res.status(400).json({ error: { code: 'S0803', message: '原始回复是必需的' } });
     }
 
     if (originalReply.length > 1000) {
-      return res.status(400).json({ error: '回复内容不能超过1000字' });
+      return res.status(400).json({ error: { code: 'S0803', message: '回复内容不能超过1000字' } });
     }
 
     // 安全：验证女生归属权
@@ -838,14 +838,14 @@ router.post('/optimize-reply', authMiddleware, async (req, res) => {
     if (girlId) {
       const girl = await prisma.girl.findUnique({ where: { id: girlId } });
       if (!girl) {
-        return res.status(404).json({ error: '女生不存在' });
+        return res.status(404).json({ error: { code: 'G0301', message: '女生不存在' } });
       }
       if (req.user.role === 'admin') {
         const session = await prisma.chatSession.findFirst({
           where: { operatorId: req.user.id, clientId: girl.clientId }
         });
         if (!session) {
-          return res.status(403).json({ error: '无权限优化该女生的回复' });
+          return res.status(403).json({ error: { code: 'A0108', message: '无权限优化该女生的回复' } });
         }
       }
       // M007 S06: 加载客户人格画像
@@ -1039,7 +1039,7 @@ ${goal ? `用户指定了优化方向「${goal}」，请按该方向给出3个�
       return res.status(403).json({ error: error.message });
     }
     logger.error(`[AICoach] 话术优化失败: ${error.message}`, { error: error.message });
-    res.status(500).json({ error: '优化失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '优化失败' } });
   }
 });
 
@@ -1078,7 +1078,7 @@ router.get('/combat-history/:girlId', authMiddleware, async (req, res) => {
     });
   } catch (error) {
     logger.error(`[AICoach] 获取聊天实战历史失败: ${error.message}`);
-    res.status(500).json({ error: '获取历史失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取历史失败' } });
   }
 });
 
@@ -1093,7 +1093,7 @@ router.post('/combat-history/:girlId', authMiddleware, async (req, res) => {
     const { messages } = req.body; // [{ role, content }]
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      return res.status(400).json({ error: '消息数组不能为空' });
+      return res.status(400).json({ error: { code: 'S0803', message: '消息数组不能为空' } });
     }
 
     const created = await Promise.all(
@@ -1110,7 +1110,7 @@ router.post('/combat-history/:girlId', authMiddleware, async (req, res) => {
     });
   } catch (error) {
     logger.error(`[AICoach] 保存聊天实战历史失败: ${error.message}`);
-    res.status(500).json({ error: '保存失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '保存失败' } });
   }
 });
 
@@ -1128,11 +1128,11 @@ router.delete('/combat-message/:girlId/:messageId', authMiddleware, async (req, 
     });
 
     if (!message) {
-      return res.status(404).json({ error: '消息不存在' });
+      return res.status(404).json({ error: { code: 'S0804', message: '消息不存在' } });
     }
 
     if (message.userId !== userId) {
-      return res.status(403).json({ error: '无权删除此消息' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无权删除此消息' } });
     }
 
     await prisma.girlCombatMessage.delete({
@@ -1142,7 +1142,7 @@ router.delete('/combat-message/:girlId/:messageId', authMiddleware, async (req, 
     res.json({ success: true });
   } catch (error) {
     logger.error(`[AICoach] 删除聊天实战消息失败: ${error.message}`);
-    res.status(500).json({ error: '删除失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '删除失败' } });
   }
 });
 
@@ -1157,17 +1157,17 @@ router.post('/import-chat-screenshots', authMiddleware, chatImportUpload.array('
     const { girlId, chatDate } = req.body;
 
     if (!girlId) {
-      return res.status(400).json({ error: '缺少 girlId' });
+      return res.status(400).json({ error: { code: 'S0803', message: '缺少 girlId' } });
     }
 
     if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ error: '请上传至少一张截图' });
+      return res.status(400).json({ error: { code: 'U0701', message: '请上传至少一张截图' } });
     }
 
     // 检查 VL 模型配置
     const vlConfig = getVLModelConfig();
     if (!vlConfig) {
-      return res.status(400).json({ error: '视觉模型未配置，无法识别截图' });
+      return res.status(400).json({ error: { code: 'A0603', message: '视觉模型未配置，无法识别截图' } });
     }
 
     // 验证女生归属
@@ -1175,7 +1175,7 @@ router.post('/import-chat-screenshots', authMiddleware, chatImportUpload.array('
       where: { id: girlId },
       select: { id: true, name: true, clientId: true }
     });
-    if (!girl) return res.status(404).json({ error: '女生不存在' });
+    if (!girl) return res.status(404).json({ error: { code: 'G0301', message: '女生不存在' } });
 
     const allMessages = [];
 
@@ -1303,7 +1303,7 @@ JSON格式：
         try { fs.unlinkSync(path.join(chatImportUploadDir, file.filename)); } catch (_) {}
       }
     }
-    res.status(500).json({ error: '识别失败，请重试' });
+    res.status(500).json({ error: { code: 'S0802', message: '识别失败，请重试' } });
   }
 });
 
@@ -1318,7 +1318,7 @@ router.post('/analyze-chat-history', authMiddleware, async (req, res) => {
     const { messages, girlProfile } = req.body;
 
     if (!messages || !Array.isArray(messages)) {
-      return res.status(400).json({ error: '请提供有效的聊天记录' });
+      return res.status(400).json({ error: { code: 'S0803', message: '请提供有效的聊天记录' } });
     }
 
     const result = await analyzeChatHistory(messages, girlProfile);
@@ -1326,7 +1326,7 @@ router.post('/analyze-chat-history', authMiddleware, async (req, res) => {
     res.json(result);
   } catch (error) {
     logger.error(`[AnalyzeChatHistory] 分析失败: ${error.message}`);
-    res.status(500).json({ error: '分析失败，请重试' });
+    res.status(500).json({ error: { code: 'S0802', message: '分析失败，请重试' } });
   }
 });
 
@@ -1339,7 +1339,7 @@ router.post('/analyze-chat-history', authMiddleware, async (req, res) => {
  */
 router.post('/analyze-image', authMiddleware, chatImportUpload.single('image'), async (req, res) => {
   if (!req.file) {
-    return res.status(400).json({ error: '请上传图片' });
+    return res.status(400).json({ error: { code: 'U0701', message: '请上传图片' } });
   }
 
   const mime = req.file.mimetype;
@@ -1448,12 +1448,12 @@ router.get('/analysis-status/:taskId', authMiddleware, async (req, res) => {
   const task = analysisTasks.get(taskId);
 
   if (!task) {
-    return res.status(404).json({ error: '任务不存在或已过期' });
+    return res.status(404).json({ error: { code: 'S0804', message: '任务不存在或已过期' } });
   }
 
   // 验证任务属于当前用户
   if (task.userId !== req.user.id) {
-    return res.status(403).json({ error: '无权访问此任务' });
+    return res.status(403).json({ error: { code: 'A0108', message: '无权访问此任务' } });
   }
 
   res.json({
@@ -1477,14 +1477,14 @@ router.get('/analysis-status/:taskId', authMiddleware, async (req, res) => {
 router.get('/monitoring/stats', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const stats = await getSystemStats();
     res.json({ success: true, data: stats });
   } catch (error) {
     logger.error(`[AICoach] 监控统计失败: ${error.message}`, { error: error.message });
-    res.status(500).json({ error: '获取监控数据失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取监控数据失败' } });
   }
 });
 
@@ -1495,7 +1495,7 @@ router.get('/monitoring/stats', authMiddleware, async (req, res) => {
 router.get('/monitoring/sessions', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const {
@@ -1514,14 +1514,14 @@ router.get('/monitoring/sessions', authMiddleware, async (req, res) => {
         const session = await prisma.chatSession.findFirst({
           where: { operatorId: req.user.id, clientId }
         });
-        if (!session) return res.status(403).json({ error: '无权限访问此客户数据' });
+        if (!session) return res.status(403).json({ error: { code: 'A0108', message: '无权限访问此客户数据' } });
       } else if (girlId) {
         const girl = await prisma.girl.findUnique({ where: { id: girlId } });
-        if (!girl) return res.status(404).json({ error: '女生不存在' });
+        if (!girl) return res.status(404).json({ error: { code: 'G0301', message: '女生不存在' } });
         const session = await prisma.chatSession.findFirst({
           where: { operatorId: req.user.id, clientId: girl.clientId }
         });
-        if (!session) return res.status(403).json({ error: '无权限访问此女生数据' });
+        if (!session) return res.status(403).json({ error: { code: 'G0302', message: '无权限访问此女生数据' } });
       }
     }
 
@@ -1538,7 +1538,7 @@ router.get('/monitoring/sessions', authMiddleware, async (req, res) => {
     res.json({ success: true, data: result });
   } catch (error) {
     logger.error(`[AICoach] 会话列表失败: ${error.message}`, { error: error.message });
-    res.status(500).json({ error: '获取会话列表失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取会话列表失败' } });
   }
 });
 
@@ -1549,7 +1549,7 @@ router.get('/monitoring/sessions', authMiddleware, async (req, res) => {
 router.get('/monitoring/client/:clientId', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { clientId } = req.params;
@@ -1559,14 +1559,14 @@ router.get('/monitoring/client/:clientId', authMiddleware, async (req, res) => {
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId }
       });
-      if (!session) return res.status(403).json({ error: '无权限访问此客户的数据' });
+      if (!session) return res.status(403).json({ error: { code: 'A0108', message: '无权限访问此客户的数据' } });
     }
 
     const data = await getClientSessions(clientId);
     res.json({ success: true, data });
   } catch (error) {
     logger.error(`[AICoach] 客户会话详情失败: ${error.message}`, { error: error.message });
-    res.status(500).json({ error: '获取客户会话详情失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取客户会话详情失败' } });
   }
 });
 
@@ -1577,31 +1577,31 @@ router.get('/monitoring/client/:clientId', authMiddleware, async (req, res) => {
 router.get('/monitoring/session/:memoryId', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { memoryId } = req.params;
     const detail = await getSessionDetail(memoryId);
 
     if (!detail) {
-      return res.status(404).json({ error: '会话不存在' });
+      return res.status(404).json({ error: { code: 'H0401', message: '会话不存在' } });
     }
 
     // 安全：操盘手只能访问自己负责的客户的会话
     if (req.user.role === 'admin') {
       // 从 MemorySession 找到关联的 clientId
       const memorySession = await prisma.memorySession.findUnique({ where: { id: memoryId } });
-      if (!memorySession) return res.status(404).json({ error: '会话不存在' });
+      if (!memorySession) return res.status(404).json({ error: { code: 'H0401', message: '会话不存在' } });
       const session = await prisma.chatSession.findFirst({
         where: { operatorId: req.user.id, clientId: memorySession.clientId }
       });
-      if (!session) return res.status(403).json({ error: '无权限访问此会话' });
+      if (!session) return res.status(403).json({ error: { code: 'A0108', message: '无权限访问此会话' } });
     }
 
     res.json({ success: true, data: detail });
   } catch (error) {
     logger.error(`[AICoach] 会话详情失败: ${error.message}`, { error: error.message });
-    res.status(500).json({ error: '获取会话详情失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取会话详情失败' } });
   }
 });
 
@@ -1614,7 +1614,7 @@ router.get('/monitoring/session/:memoryId', authMiddleware, async (req, res) => 
 router.post('/moment', authMiddleware, async (req, res) => {
   try {
     if (!['admin', 'client'].includes(req.user.role)) {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
     if (req.user.role === 'client') {
       try {
@@ -1627,7 +1627,7 @@ router.post('/moment', authMiddleware, async (req, res) => {
     const { girlId, momentText, momentImage, stream = true } = req.body;
 
     if (!momentText && !momentImage) {
-      return res.status(400).json({ error: '朋友圈文字或图片至少需要提供一个' });
+      return res.status(400).json({ error: { code: 'S0803', message: '朋友圈文字或图片至少需要提供一个' } });
     }
 
     // 安全：验证女生归属权
@@ -1636,14 +1636,14 @@ router.post('/moment', authMiddleware, async (req, res) => {
     if (girlId) {
       const girl = await prisma.girl.findUnique({ where: { id: girlId } });
       if (!girl) {
-        return res.status(404).json({ error: '女生不存在' });
+        return res.status(404).json({ error: { code: 'G0301', message: '女生不存在' } });
       }
       if (req.user.role === 'admin') {
         const session = await prisma.chatSession.findFirst({
           where: { operatorId: req.user.id, clientId: girl.clientId }
         });
         if (!session) {
-          return res.status(403).json({ error: '无权限分析此女生朋友圈' });
+          return res.status(403).json({ error: { code: 'A0108', message: '无权限分析此女生朋友圈' } });
         }
       }
       actualClientId = girl.clientId;
@@ -1763,7 +1763,7 @@ ${stageContext}
           res.write('data: [DONE]\n\n');
           res.end();
         } else {
-          res.status(400).json({ success: false, error: reason || '输入检查未通过', guardrailFailed: true });
+          res.status(400).json({ success: false, error: { code: 'S0803', message: reason || '输入检查未通过' }, guardrailFailed: true });
         }
         return;
       }
@@ -1791,7 +1791,7 @@ ${stageContext}
       if (momentImage) {
         const vlConfig = getVLModelConfig();
         if (!vlConfig) {
-          res.write(`data: ${JSON.stringify({ error: '当前配置不支持图片分析' })}\n\n`);
+          res.write(`data: ${JSON.stringify({ error: { code: 'A0602', message: '当前配置不支持图片分析' } })}\n\n`);
           res.end();
           return;
         }
@@ -1808,7 +1808,7 @@ ${stageContext}
             const mime = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
             imageUrl = `data:${mime};base64,${buffer.toString('base64')}`;
           } catch (e) {
-            res.write(`data: ${JSON.stringify({ error: '图片读取失败' })}\n\n`);
+            res.write(`data: ${JSON.stringify({ error: { code: 'A0602', message: '图片读取失败' } })}\n\n`);
             res.end();
             return;
           }
@@ -1913,7 +1913,7 @@ ${stageContext}
         });
       } catch (error) {
         logger.error(`[AICoach] 朋友圈分析失败: ${error.message}`, { error: error.message });
-        res.status(500).json({ error: '分析失败' });
+        res.status(500).json({ error: { code: 'S0802', message: '分析失败' } });
       }
     }
   } catch (error) {
@@ -1921,7 +1921,7 @@ ${stageContext}
       return res.status(403).json({ error: error.message });
     }
     logger.error(`[AICoach] 朋友圈分析失败: ${error.message}`, { error: error.message });
-    res.status(500).json({ error: '分析失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '分析失败' } });
   }
 });
 
@@ -1936,7 +1936,7 @@ ${stageContext}
 router.post('/feedback', authMiddleware, async (req, res) => {
   try {
     if (!['admin', 'client'].includes(req.user.role)) {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
     if (req.user.role === 'client') {
       try {
@@ -1949,7 +1949,7 @@ router.post('/feedback', authMiddleware, async (req, res) => {
     const { memoryId, type, reason, routedType, coachesUsed, coachId, questionType } = req.body;
 
     if (!type) {
-      return res.status(400).json({ error: 'type 是必需的' });
+      return res.status(400).json({ error: { code: 'S0803', message: 'type 是必需的' } });
     }
 
     // memoryId 为可选；不传时从该客户的最近会话中查找
@@ -1963,7 +1963,7 @@ router.post('/feedback', authMiddleware, async (req, res) => {
     }
 
     if (!['helpful', 'not_helpful'].includes(type)) {
-      return res.status(400).json({ error: 'type 必须是 helpful 或 not_helpful' });
+      return res.status(400).json({ error: { code: 'S0803', message: 'type 必须是 helpful 或 not_helpful' } });
     }
 
     // 验证 memory 归属权（仅当传入 memoryId 时验证）
@@ -1971,10 +1971,10 @@ router.post('/feedback', authMiddleware, async (req, res) => {
     if (memoryId) {
       memory = await prisma.conversationMemory.findUnique({ where: { id: memoryId } });
       if (!memory) {
-        return res.status(404).json({ error: '会话不存在' });
+        return res.status(404).json({ error: { code: 'H0401', message: '会话不存在' } });
       }
       if (memory.clientId !== req.user.id && req.user.role === 'client') {
-        return res.status(403).json({ error: '无权评价此会话' });
+        return res.status(403).json({ error: { code: 'A0108', message: '无权评价此会话' } });
       }
     }
 
@@ -2003,7 +2003,7 @@ router.post('/feedback', authMiddleware, async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     logger.error(`[AICoach] 反馈记录失败: ${error.message}`, { error: error.message });
-    res.status(500).json({ error: '记录反馈失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '记录反馈失败' } });
   }
 });
 
@@ -2014,7 +2014,7 @@ router.post('/feedback', authMiddleware, async (req, res) => {
 router.get('/coach-profile', authMiddleware, async (req, res) => {
   try {
     if (!['admin', 'client'].includes(req.user.role)) {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
     if (req.user.role === 'client') {
       try {
@@ -2045,7 +2045,7 @@ router.get('/coach-profile', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: error.message });
     }
     logger.error(`[AICoach] 获取教练偏好失败: ${error.message}`, { error: error.message });
-    res.status(500).json({ error: '获取教练偏好失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取教练偏好失败' } });
   }
 });
 
@@ -2056,7 +2056,7 @@ router.get('/coach-profile', authMiddleware, async (req, res) => {
 router.get('/history', authMiddleware, async (req, res) => {
   try {
     if (!['admin', 'client'].includes(req.user.role)) {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
     if (req.user.role === 'client') {
       try {
@@ -2107,7 +2107,7 @@ router.get('/history', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: error.message });
     }
     logger.error(`[AICoach] 获取聊天历史失败: ${error.message}`, { error: error.message });
-    res.status(500).json({ error: '获取聊天历史失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取聊天历史失败' } });
   }
 });
 
@@ -2118,7 +2118,7 @@ router.get('/history', authMiddleware, async (req, res) => {
 router.get('/feedback-stats', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { startDate, endDate } = req.query;
@@ -2128,7 +2128,7 @@ router.get('/feedback-stats', authMiddleware, async (req, res) => {
     res.json({ success: true, data: stats });
   } catch (error) {
     logger.error(`[AICoach] 反馈统计失败: ${error.message}`, { error: error.message });
-    res.status(500).json({ error: '获取统计失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取统计失败' } });
   }
 });
 
@@ -2139,7 +2139,7 @@ router.get('/feedback-stats', authMiddleware, async (req, res) => {
 router.get('/guardrail-stats', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { startDate, endDate, days = '7' } = req.query;
@@ -2242,7 +2242,7 @@ router.get('/guardrail-stats', authMiddleware, async (req, res) => {
     });
   } catch (error) {
     logger.error(`[AICoach] Guardrail 统计失败: ${error.message}`, { error: error.message });
-    res.status(500).json({ error: '获取统计失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取统计失败' } });
   }
 });
 
@@ -2259,7 +2259,7 @@ router.get('/guardrail-stats', authMiddleware, async (req, res) => {
 router.get('/overview', authMiddleware, async (req, res) => {
   try {
     if (!['admin'].includes(req.user.role)) {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const operatorId = req.user.id;
@@ -2444,12 +2444,12 @@ ${girlsSummary}
       }
     } catch (error) {
       logger.error(`[AICoach] 全局概览失败: ${error.message}`, { error: error.message });
-      res.write(`data: ${JSON.stringify({ error: '分析失败' })}\n\n`);
+      res.write(`data: ${JSON.stringify({ error: { code: 'S0802', message: '分析失败' } })}\n\n`);
       res.end();
     }
   } catch (error) {
     logger.error(`[AICoach] 全局概览失败: ${error.message}`, { error: error.message });
-    res.status(500).json({ error: '获取概览失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取概览失败' } });
   }
 });
 
@@ -2462,7 +2462,7 @@ ${girlsSummary}
 router.get('/client-pool/:clientId', authMiddleware, async (req, res) => {
   try {
     if (!['admin'].includes(req.user.role)) {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { clientId } = req.params;
@@ -2474,7 +2474,7 @@ router.get('/client-pool/:clientId', authMiddleware, async (req, res) => {
         where: { operatorId: req.user.id, clientId }
       });
       if (!session) {
-        return res.status(403).json({ error: '无权限访问此客户的数据' });
+        return res.status(403).json({ error: { code: 'A0108', message: '无权限访问此客户的数据' } });
       }
     }
 
@@ -2628,12 +2628,12 @@ ${poolSummary}
       }
     } catch (error) {
       logger.error(`[AICoach] 客户池分析失败: ${error.message}`, { error: error.message });
-      res.write(`data: ${JSON.stringify({ error: '分析失败' })}\n\n`);
+      res.write(`data: ${JSON.stringify({ error: { code: 'S0802', message: '分析失败' } })}\n\n`);
       res.end();
     }
   } catch (error) {
     logger.error(`[AICoach] 客户池分析失败: ${error.message}`, { error: error.message });
-    res.status(500).json({ error: '获取客户池分析失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取客户池分析失败' } });
   }
 });
 
@@ -2685,7 +2685,7 @@ async function setClientPoolCache(operatorId, clientId, data) {
 router.get('/girl-summary/:girlId', authMiddleware, async (req, res) => {
   try {
     if (!['admin', 'client'].includes(req.user.role)) {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { girlId } = req.params;
@@ -2701,7 +2701,7 @@ router.get('/girl-summary/:girlId', authMiddleware, async (req, res) => {
     });
 
     if (!girl) {
-      return res.status(404).json({ error: '女生不存在' });
+      return res.status(404).json({ error: { code: 'G0301', message: '女生不存在' } });
     }
 
     // 安全：操盘手只能访问自己负责的客户的女生
@@ -2710,10 +2710,10 @@ router.get('/girl-summary/:girlId', authMiddleware, async (req, res) => {
         where: { operatorId: req.user.id, clientId: girl.clientId }
       });
       if (!session) {
-        return res.status(403).json({ error: '无权限访问此女生数据' });
+        return res.status(403).json({ error: { code: 'G0302', message: '无权限访问此女生数据' } });
       }
     } else if (req.user.role === 'client' && girl.clientId !== req.user.id) {
-      return res.status(403).json({ error: '无权限访问此女生数据' });
+      return res.status(403).json({ error: { code: 'G0302', message: '无权限访问此女生数据' } });
     }
 
     const clientId = girl.clientId;
@@ -2949,12 +2949,12 @@ ${girl.notes || '暂无'}
       }
     } catch (error) {
       logger.error(`[AICoach] 女生专项分析失败: ${error.message}`, { error: error.message });
-      res.write(`data: ${JSON.stringify({ error: '分析失败' })}\n\n`);
+      res.write(`data: ${JSON.stringify({ error: { code: 'S0802', message: '分析失败' } })}\n\n`);
       res.end();
     }
   } catch (error) {
     logger.error(`[AICoach] 女生专项分析失败: ${error.message}`, { error: error.message });
-    res.status(500).json({ error: '获取女生分析失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取女生分析失败' } });
   }
 });
 
@@ -3134,7 +3134,7 @@ function getProfileFreshnessInfo(girlInfo) {
 router.post('/agent-chat', authMiddleware, async (req, res) => {
   try {
     if (!['admin', 'client'].includes(req.user.role)) {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     // 试用限制检查
@@ -3148,7 +3148,7 @@ router.post('/agent-chat', authMiddleware, async (req, res) => {
     const { message, girlId, sessionMemoryId, conversationHistory: providedHistory, stream = true } = req.body;
 
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
-      return res.status(400).json({ error: '消息内容是必需的' });
+      return res.status(400).json({ error: { code: 'S0803', message: '消息内容是必需的' } });
     }
 
     const trimmedMessage = message.trim();
@@ -3156,12 +3156,12 @@ router.post('/agent-chat', authMiddleware, async (req, res) => {
     // 安全：验证女生归属权
     if (girlId) {
       const girl = await prisma.girl.findUnique({ where: { id: girlId } });
-      if (!girl) return res.status(404).json({ error: '女生不存在' });
+      if (!girl) return res.status(404).json({ error: { code: 'G0301', message: '女生不存在' } });
       if (req.user.role === 'admin') {
         const session = await prisma.chatSession.findFirst({
           where: { operatorId: req.user.id, clientId: girl.clientId }
         });
-        if (!session) return res.status(403).json({ error: '无权限访问此女生数据' });
+        if (!session) return res.status(403).json({ error: { code: 'G0302', message: '无权限访问此女生数据' } });
       }
     }
 
@@ -3343,7 +3343,7 @@ router.post('/agent-chat', authMiddleware, async (req, res) => {
       });
 
       if (!response.ok) {
-        return res.status(502).json({ error: 'AI 服务请求失败' });
+        return res.status(502).json({ error: { code: 'A0601', message: 'AI 服务请求失败' } });
       }
 
       const data = await response.json();
@@ -3372,7 +3372,7 @@ router.post('/agent-chat', authMiddleware, async (req, res) => {
     }
   } catch (error) {
     logger.error(`[AICoach] agent-chat 异常: ${error.message}`, { error: error.message });
-    res.status(500).json({ error: '服务暂时不可用' });
+    res.status(500).json({ error: { code: 'A0601', message: '服务暂时不可用' } });
   }
 });
 
@@ -3431,7 +3431,7 @@ async function buildAgentPrompt(routeType, message, context, opts) {
 router.get('/triage-stats', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { days = '7' } = req.query;
@@ -3538,7 +3538,7 @@ router.get('/triage-stats', authMiddleware, async (req, res) => {
     });
   } catch (error) {
     logger.error(`[AICoach] Triage 统计失败: ${error.message}`, { error: error.message });
-    res.status(500).json({ error: '获取统计失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取统计失败' } });
   }
 });
 

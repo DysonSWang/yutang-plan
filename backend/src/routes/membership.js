@@ -48,18 +48,18 @@ async function geocode(address) {
 const authMiddleware = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   const token = authHeader?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: '未登录' });
+  if (!token) return res.status(401).json({ error: { code: 'A0101', message: '未提供认证令牌' } });
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
     next();
-  } catch { res.status(401).json({ error: 'token无效' }); }
+  } catch { res.status(401).json({ error: { code: 'A0102', message: '认证令牌无效' } }); }
 };
 
 // Operator-only middleware
 const operatorOnly = (req, res, next) => {
   if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: '无权限' });
+    return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
   }
   next();
 };
@@ -93,7 +93,7 @@ router.get('/profile-completeness', authMiddleware, async (req, res) => {
       where: { id: req.user.id },
       select: personalizationEngine.USER_PROFILE_SELECT,
     });
-    if (!user) return res.status(404).json({ error: '用户不存在' });
+    if (!user) return res.status(404).json({ error: { code: 'C0201', message: '用户不存在' } });
     const completeness = personalizationEngine.calculateCompleteness(user);
     res.json({ success: true, completeness });
   } catch (err) {
@@ -206,7 +206,7 @@ router.post('/admin/set', authMiddleware, operatorOnly, async (req, res) => {
       });
       return res.json({ success: true });
     }
-    res.status(400).json({ error: '无效操作' });
+    res.status(400).json({ error: { code: 'S0803', message: '无效操作' } });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -467,7 +467,7 @@ router.post('/learning/generate-all', authMiddleware, async (req, res) => {
     });
 
     if (!user.personalizationEnabled) {
-      return res.status(403).json({ error: '个性化学习功能已禁用' });
+      return res.status(403).json({ error: { code: 'S0803', message: '个性化学习功能已禁用' } });
     }
 
     const chapters = await prisma.learningChapter.findMany({
@@ -476,7 +476,7 @@ router.post('/learning/generate-all', authMiddleware, async (req, res) => {
     });
 
     if (chapters.length === 0) {
-      return res.status(400).json({ error: '暂无已上架章节' });
+      return res.status(400).json({ error: { code: 'S0803', message: '暂无已上架章节' } });
     }
 
     const batch = await personalizationEngine.generateAllChapters(
@@ -499,9 +499,9 @@ router.get('/learning/generate-status/:batchId', authMiddleware, async (req, res
       where: { id: req.params.batchId },
     });
 
-    if (!batch) return res.status(404).json({ error: '任务不存在' });
+    if (!batch) return res.status(404).json({ error: { code: 'S0804', message: '任务不存在' } });
     if (batch.userId !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权访问' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无权访问' } });
     }
 
     res.json({ success: true, batch });
@@ -528,7 +528,7 @@ router.post('/learning/regenerate', authMiddleware, async (req, res) => {
     });
 
     if (!user.personalizationEnabled) {
-      return res.status(403).json({ error: '个性化学习功能已禁用' });
+      return res.status(403).json({ error: { code: 'S0803', message: '个性化学习功能已禁用' } });
     }
 
     const chapters = await prisma.learningChapter.findMany({
@@ -537,7 +537,7 @@ router.post('/learning/regenerate', authMiddleware, async (req, res) => {
     });
 
     if (chapters.length === 0) {
-      return res.status(400).json({ error: '暂无已上架章节' });
+      return res.status(400).json({ error: { code: 'S0803', message: '暂无已上架章节' } });
     }
 
     const batch = await personalizationEngine.generateAllChapters(
@@ -573,13 +573,13 @@ router.post('/learning/regenerate/:chapterId', authMiddleware, async (req, res) 
     });
 
     if (!user.personalizationEnabled) {
-      return res.status(403).json({ error: '个性化学习功能已禁用' });
+      return res.status(403).json({ error: { code: 'S0803', message: '个性化学习功能已禁用' } });
     }
 
     const chapter = await prisma.learningChapter.findUnique({
       where: { chapterId, status: 'published' },
     });
-    if (!chapter) return res.status(404).json({ error: '章节不存在' });
+    if (!chapter) return res.status(404).json({ error: { code: 'S0804', message: '章节不存在' } });
 
     const result = await personalizationEngine.regenerateChapter(
       req.user.id, chapterId, user, chapter, prisma, req.app.get('io')
@@ -607,7 +607,7 @@ router.get('/learning/:chapterId', authMiddleware, async (req, res) => {
       const chapter = await prisma.learningChapter.findUnique({
         where: { chapterId, status: 'published' }
       });
-      if (!chapter) return res.status(404).json({ error: '章节不存在' });
+      if (!chapter) return res.status(404).json({ error: { code: 'S0804', message: '章节不存在' } });
 
       // 记录事件
       await prisma.personalizationEvent.create({
@@ -638,7 +638,7 @@ router.get('/learning/:chapterId', authMiddleware, async (req, res) => {
     const chapter = await prisma.learningChapter.findUnique({
       where: { chapterId, status: 'published' }
     });
-    if (!chapter) return res.status(404).json({ error: '章节不存在' });
+    if (!chapter) return res.status(404).json({ error: { code: 'S0804', message: '章节不存在' } });
 
     const personalized = await prisma.personalizedChapter.findUnique({
       where: { userId_chapterId: { userId: req.user.id, chapterId } }
@@ -721,7 +721,7 @@ router.post('/admin/learning/chapters', authMiddleware, operatorOnly, async (req
 
     // 验证
     if (!title || typeof title !== 'string' || title.trim() === '') {
-      return res.status(400).json({ error: '标题不能为空' });
+      return res.status(400).json({ error: { code: 'S0803', message: '标题不能为空' } });
     }
     const chapterStatus = (status === 'published') ? 'published' : 'draft';
 
@@ -769,7 +769,7 @@ router.get('/admin/learning/chapters/:chapterId', authMiddleware, operatorOnly, 
     const chapter = await prisma.learningChapter.findUnique({
       where: { chapterId: req.params.chapterId }
     });
-    if (!chapter) return res.status(404).json({ error: '章节不存在' });
+    if (!chapter) return res.status(404).json({ error: { code: 'S0804', message: '章节不存在' } });
     res.json({ success: true, chapter });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -783,11 +783,11 @@ router.put('/admin/learning/chapters/:chapterId/publish', authMiddleware, operat
     const { status } = req.body;
 
     if (status !== 'published' && status !== 'draft') {
-      return res.status(400).json({ error: 'status 必须为 published 或 draft' });
+      return res.status(400).json({ error: { code: 'S0803', message: 'status 必须为 published 或 draft' } });
     }
 
     const existing = await prisma.learningChapter.findUnique({ where: { chapterId } });
-    if (!existing) return res.status(404).json({ error: '章节不存在' });
+    if (!existing) return res.status(404).json({ error: { code: 'S0804', message: '章节不存在' } });
 
     const chapter = await prisma.learningChapter.update({
       where: { chapterId },
@@ -806,7 +806,7 @@ router.put('/admin/learning/chapters/reorder', authMiddleware, operatorOnly, asy
     const { orderedIds } = req.body;
 
     if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
-      return res.status(400).json({ error: 'orderedIds 必须是非空数组' });
+      return res.status(400).json({ error: { code: 'S0803', message: 'orderedIds 必须是非空数组' } });
     }
 
     await prisma.$transaction(
@@ -832,11 +832,11 @@ router.put('/admin/learning/chapters/:chapterId', authMiddleware, operatorOnly, 
 
     // 验证
     if (!title || typeof title !== 'string' || title.trim() === '') {
-      return res.status(400).json({ error: '标题不能为空' });
+      return res.status(400).json({ error: { code: 'S0803', message: '标题不能为空' } });
     }
 
     const existing = await prisma.learningChapter.findUnique({ where: { chapterId } });
-    if (!existing) return res.status(404).json({ error: '章节不存在' });
+    if (!existing) return res.status(404).json({ error: { code: 'S0804', message: '章节不存在' } });
 
     const updateData = {
       title: title.trim(),
@@ -867,7 +867,7 @@ router.delete('/admin/learning/chapters/:chapterId', authMiddleware, operatorOnl
     const { chapterId } = req.params;
 
     const existing = await prisma.learningChapter.findUnique({ where: { chapterId } });
-    if (!existing) return res.status(404).json({ error: '章节不存在' });
+    if (!existing) return res.status(404).json({ error: { code: 'S0804', message: '章节不存在' } });
 
     await prisma.$transaction([
       prisma.learningProgress.deleteMany({ where: { chapterId } }),
@@ -983,7 +983,7 @@ router.post('/admin/learning/scan',
           // 单个 md 文件
           fs.writeFileSync(path.join(tempDir, req.file.originalname || 'content.md'), req.file.buffer);
         } else {
-          return res.status(400).json({ error: '只支持 .md 或 .zip 文件' });
+          return res.status(400).json({ error: { code: 'S0803', message: '只支持 .md 或 .zip 文件' } });
         }
         dir = tempDir;
       }
@@ -1091,7 +1091,7 @@ router.post('/admin/learning/scan',
 router.get('/admin/learning/drafts/:batchId', authMiddleware, operatorOnly, async (req, res) => {
   try {
     const batch = await prisma.importBatch.findUnique({ where: { id: req.params.batchId } });
-    if (!batch) return res.status(404).json({ error: '批次不存在' });
+    if (!batch) return res.status(404).json({ error: { code: 'S0804', message: '批次不存在' } });
 
     const drafts = await prisma.learningChapterDraft.findMany({
       where: { batchId: batch.id },
@@ -1110,7 +1110,7 @@ router.get('/admin/learning/drafts/:batchId/:chapterId/diff', authMiddleware, op
     const draft = await prisma.learningChapterDraft.findUnique({
       where: { batchId_chapterId: { batchId: req.params.batchId, chapterId: req.params.chapterId } }
     });
-    if (!draft) return res.status(404).json({ error: '草稿不存在' });
+    if (!draft) return res.status(404).json({ error: { code: 'S0804', message: '草稿不存在' } });
 
     let oldContent = null;
     if (!draft.isNew) {
@@ -1129,7 +1129,7 @@ router.post('/admin/learning/drafts/:batchId/confirm', authMiddleware, operatorO
   try {
     const { chapterIds, confirmed } = req.body;
     if (!Array.isArray(chapterIds) || typeof confirmed !== 'boolean') {
-      return res.status(400).json({ error: '参数错误' });
+      return res.status(400).json({ error: { code: 'S0803', message: '参数错误' } });
     }
 
     await prisma.learningChapterDraft.updateMany({
@@ -1348,7 +1348,7 @@ router.get('/admin/learning/versions/:id', authMiddleware, operatorOnly, async (
     const version = await prisma.contentVersion.findUnique({
       where: { id: req.params.id }
     });
-    if (!version) return res.status(404).json({ error: '版本不存在' });
+    if (!version) return res.status(404).json({ error: { code: 'S0804', message: '版本不存在' } });
     res.json({ success: true, version });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1359,14 +1359,14 @@ router.get('/admin/learning/versions/:id', authMiddleware, operatorOnly, async (
 router.post('/learning/acknowledge-update', authMiddleware, async (req, res) => {
   try {
     const { chapterId } = req.body;
-    if (!chapterId) return res.status(400).json({ error: 'chapterId 必填' });
+    if (!chapterId) return res.status(400).json({ error: { code: 'S0803', message: 'chapterId 必填' } });
 
     const progress = await prisma.learningProgress.findUnique({
       where: { userId_chapterId: { userId: req.user.id, chapterId } }
     });
 
     if (!progress) {
-      return res.status(404).json({ error: '该章节无学习记录，无法标记已读' });
+      return res.status(404).json({ error: { code: 'S0804', message: '该章节无学习记录，无法标记已读' } });
     }
 
     await prisma.learningProgress.update({
@@ -1438,7 +1438,7 @@ router.post('/admin/personalization/toggle', authMiddleware, operatorOnly, async
   try {
     const { userId, enabled } = req.body;
     if (!userId || typeof enabled !== 'boolean') {
-      return res.status(400).json({ error: '参数错误' });
+      return res.status(400).json({ error: { code: 'S0803', message: '参数错误' } });
     }
 
     await prisma.user.update({
@@ -2092,7 +2092,7 @@ router.get('/dating-plan/:id', authMiddleware, async (req, res) => {
       }
     });
     if (!plan || plan.userId !== req.user.id) {
-      return res.status(404).json({ error: '方案不存在' });
+      return res.status(404).json({ error: { code: 'S0804', message: '方案不存在' } });
     }
     res.json({ success: true, plan });
   } catch (err) {

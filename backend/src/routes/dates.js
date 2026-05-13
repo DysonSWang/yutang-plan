@@ -578,7 +578,7 @@ router.get('/checklist-template', authMiddleware, async (req, res) => {
 router.get('/client-pending', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'client') {
-      return res.status(403).json({ error: '仅客户可访问' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限，仅客户可访问' } });
     }
 
     const dates = await prisma.date.findMany({
@@ -603,7 +603,7 @@ router.get('/client-pending', authMiddleware, async (req, res) => {
 // ========== 客户获取待填写的访谈 ==========
 router.get('/client-interviews', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'client') return res.status(403).json({ error: '仅客户可访问' });
+    if (req.user.role !== 'client') return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限，仅客户可访问' } });
 
     // 查找已推送但未回答的访谈
     const completedDates = await prisma.date.findMany({
@@ -885,7 +885,7 @@ router.post('/:id/generate-plan', authMiddleware, async (req, res) => {
             send({ done: true, plan, date: updated });
           } catch (dbErr) {
             console.error('[Dates] 保存方案失败:', dbErr);
-            send({ error: '保存方案失败' });
+            send({ error: { code: 'S0802', message: '保存约会方案失败，请稍后重试' } });
           }
           res.end();
         },
@@ -902,7 +902,7 @@ router.post('/:id/generate-plan', authMiddleware, async (req, res) => {
     );
   } catch (error) {
     console.error('[Dates] AI策划失败:', error);
-    try { send({ error: '策划失败' }); } catch {}
+    try { send({ error: { code: 'A0602', message: 'AI策划失败，请稍后重试' } }); } catch {}
     res.end();
   }
 });
@@ -1224,7 +1224,7 @@ router.post('/:id/client-feedback', authMiddleware, async (req, res) => {
     res.json({ success: true, message: '调整建议已提交，操盘手会优化方案' });
   } catch (error) {
     console.error('[Dates] 提交反馈失败:', error);
-    res.status(500).json({ error: '提交失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '提交反馈失败，请稍后重试' } });
   }
 });
 
@@ -1232,14 +1232,14 @@ router.post('/:id/client-feedback', authMiddleware, async (req, res) => {
 router.post('/:id/client-confirm', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'client') {
-      return res.status(403).json({ error: '仅客户可确认' });
+      return res.status(403).json({ error: { code: 'A0108', message: '仅客户可确认' } });
     }
 
     const date = await prisma.date.findUnique({ where: { id: req.params.id } });
-    if (!date) return res.status(404).json({ error: '约会不存在' });
-    if (date.userId !== req.user.id) return res.status(403).json({ error: '无权操作此约会' });
+    if (!date) return res.status(404).json({ error: { code: 'D0501', message: '约会不存在' } });
+    if (date.userId !== req.user.id) return res.status(403).json({ error: { code: 'A0108', message: '无权操作此约会' } });
     if (date.status !== 'pending_client_confirm') {
-      return res.status(400).json({ error: '当前不在确认阶段' });
+      return res.status(400).json({ error: { code: 'D0503', message: '当前不在确认阶段' } });
     }
 
     await prisma.date.update({
@@ -1255,7 +1255,7 @@ router.post('/:id/client-confirm', authMiddleware, async (req, res) => {
     res.json({ success: true, message: '方案已确认，祝约会顺利！' });
   } catch (error) {
     console.error('[Dates] 确认方案失败:', error);
-    res.status(500).json({ error: '确认失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '确认方案失败，请稍后重试' } });
   }
 });
 
@@ -1263,17 +1263,17 @@ router.post('/:id/client-confirm', authMiddleware, async (req, res) => {
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const existing = await prisma.date.findUnique({ where: { id: req.params.id } });
-    if (!existing) return res.status(404).json({ error: '约会不存在' });
+    if (!existing) return res.status(404).json({ error: { code: 'D0501', message: '约会不存在' } });
 
     if (req.user.role === 'admin') {
       const ok = await verifyIsClient(existing.userId);
-      if (!ok) return res.status(403).json({ error: '无权删除此约会' });
+      if (!ok) return res.status(403).json({ error: { code: 'A0108', message: '无权删除此约会' } });
     } else if (req.user.role === 'client') {
       if (existing.userId !== req.user.id) {
-        return res.status(403).json({ error: '无权删除此约会' });
+        return res.status(403).json({ error: { code: 'A0108', message: '无权删除此约会' } });
       }
     } else {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     // 同时删除关联的日历事件
@@ -1283,7 +1283,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error('[Dates] 删除约会失败:', error);
-    res.status(500).json({ error: '删除失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '删除约会失败，请稍后重试' } });
   }
 });
 
@@ -1291,13 +1291,13 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 router.delete('/:id/plan', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const existing = await prisma.date.findUnique({ where: { id: req.params.id } });
-    if (!existing) return res.status(404).json({ error: '约会不存在' });
+    if (!existing) return res.status(404).json({ error: { code: 'D0501', message: '约会不存在' } });
     const ok = await verifyIsClient(existing.userId);
-    if (!ok) return res.status(403).json({ error: '无权操作此约会' });
+    if (!ok) return res.status(403).json({ error: { code: 'A0108', message: '无权操作此约会' } });
 
     await prisma.date.update({
       where: { id: req.params.id },
@@ -1314,7 +1314,7 @@ router.delete('/:id/plan', authMiddleware, async (req, res) => {
     res.json({ success: true, message: '方案已删除' });
   } catch (error) {
     console.error('[Dates] 删除方案失败:', error);
-    res.status(500).json({ error: '删除失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '删除方案失败，请稍后重试' } });
   }
 });
 
@@ -1322,7 +1322,7 @@ router.delete('/:id/plan', authMiddleware, async (req, res) => {
 router.post('/:id/generate-interview', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const date = await prisma.date.findUnique({
@@ -1365,12 +1365,12 @@ router.post('/:id/generate-interview', authMiddleware, async (req, res) => {
         }
       }
     });
-    if (!date) return res.status(404).json({ error: '约会不存在' });
+    if (!date) return res.status(404).json({ error: { code: 'D0501', message: '约会不存在' } });
     if (req.user.role === 'admin') {
       const ok = await verifyIsClient(date.userId);
-      if (!ok) return res.status(403).json({ error: '无权操作此约会' });
+      if (!ok) return res.status(403).json({ error: { code: 'A0108', message: '无权操作此约会' } });
     }
-    if (date.status !== 'completed') return res.status(400).json({ error: '请先完成约会后评价' });
+    if (date.status !== 'completed') return res.status(400).json({ error: { code: 'D0503', message: '请先完成约会后评价' } });
 
     // 检查是否已有访谈问题
     if (date.postDateInterview) {
@@ -1447,11 +1447,11 @@ F. 下次约会预期（如：是否愿意再见、下次怎么改进）
     }
 
     const jsonMatch = reply.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return res.status(500).json({ error: 'AI返回格式异常' });
+    if (!jsonMatch) return res.status(500).json({ error: { code: 'A0603', message: 'AI返回格式异常，请稍后重试' } });
 
     const { questions, interviewOverview } = JSON.parse(jsonMatch[0]);
     if (!questions || !Array.isArray(questions)) {
-      return res.status(500).json({ error: 'AI返回问题格式异常' });
+      return res.status(500).json({ error: { code: 'A0603', message: 'AI返回问题格式异常，请稍后重试' } });
     }
 
     // 保存到 postDateInterview
@@ -1471,7 +1471,7 @@ F. 下次约会预期（如：是否愿意再见、下次怎么改进）
     res.json({ success: true, questions, interviewOverview, alreadyGenerated: false });
   } catch (error) {
     console.error('[Dates] 生成访谈问题失败:', error);
-    res.status(500).json({ error: '生成失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '生成访谈问题失败，请稍后重试' } });
   }
 });
 
@@ -1479,22 +1479,22 @@ F. 下次约会预期（如：是否愿意再见、下次怎么改进）
 router.post('/:id/push-interview', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const date = await prisma.date.findUnique({ where: { id: req.params.id } });
-    if (!date) return res.status(404).json({ error: '约会不存在' });
+    if (!date) return res.status(404).json({ error: { code: 'D0501', message: '约会不存在' } });
     if (req.user.role === 'admin') {
       const ok = await verifyIsClient(date.userId);
-      if (!ok) return res.status(403).json({ error: '无权操作此约会' });
+      if (!ok) return res.status(403).json({ error: { code: 'A0108', message: '无权操作此约会' } });
     }
 
     const interview = date.postDateInterview ? JSON.parse(date.postDateInterview) : {};
     if (!interview.generatedQuestions || interview.generatedQuestions.length === 0) {
-      return res.status(400).json({ error: '请先生成访谈问题' });
+      return res.status(400).json({ error: { code: 'D0503', message: '请先生成访谈问题' } });
     }
     if (interview.questionStatus === 'answered') {
-      return res.status(400).json({ error: '访谈已完成，请勿重复推送' });
+      return res.status(400).json({ error: { code: 'D0503', message: '访谈已完成，请勿重复推送' } });
     }
 
     interview.questionStatus = 'pending';
@@ -1519,18 +1519,18 @@ router.post('/:id/push-interview', authMiddleware, async (req, res) => {
     res.json({ success: true, message: '访谈已推送给客户' });
   } catch (error) {
     console.error('[Dates] 推送访谈失败:', error);
-    res.status(500).json({ error: '推送失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '推送访谈失败，请稍后重试' } });
   }
 });
 
 // ========== 客户提交访谈回答 ==========
 router.post('/:id/submit-interview', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'client') return res.status(403).json({ error: '仅客户可提交' });
+    if (req.user.role !== 'client') return res.status(403).json({ error: { code: 'A0108', message: '仅客户可提交' } });
 
     const { answers } = req.body;
     if (!answers || !Array.isArray(answers)) {
-      return res.status(400).json({ error: '答案格式错误' });
+      return res.status(400).json({ error: { code: 'S0803', message: '答案格式错误' } });
     }
 
     const date = await prisma.date.findUnique({
@@ -1573,12 +1573,12 @@ router.post('/:id/submit-interview', authMiddleware, async (req, res) => {
         }
       }
     });
-    if (!date) return res.status(404).json({ error: '约会不存在' });
-    if (date.userId !== req.user.id) return res.status(403).json({ error: '无权操作' });
+    if (!date) return res.status(404).json({ error: { code: 'D0501', message: '约会不存在' } });
+    if (date.userId !== req.user.id) return res.status(403).json({ error: { code: 'A0108', message: '无权操作此约会' } });
 
     const interview = date.postDateInterview ? JSON.parse(date.postDateInterview) : {};
     if (interview.questionStatus === 'answered') {
-      return res.status(400).json({ error: '访谈已回答，请勿重复提交' });
+      return res.status(400).json({ error: { code: 'D0503', message: '访谈已回答，请勿重复提交' } });
     }
 
     // 保存客户回答
@@ -1605,7 +1605,7 @@ router.post('/:id/submit-interview', authMiddleware, async (req, res) => {
     res.json({ success: true, message: '访谈已提交，复盘分析生成中...' });
   } catch (error) {
     console.error('[Dates] 提交访谈失败:', error);
-    res.status(500).json({ error: '提交失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '提交访谈失败，请稍后重试' } });
   }
 });
 
@@ -1613,7 +1613,7 @@ router.post('/:id/submit-interview', authMiddleware, async (req, res) => {
 router.post('/:id/generate-review-report', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const date = await prisma.date.findUnique({
@@ -1656,15 +1656,15 @@ router.post('/:id/generate-review-report', authMiddleware, async (req, res) => {
         }
       }
     });
-    if (!date) return res.status(404).json({ error: '约会不存在' });
+    if (!date) return res.status(404).json({ error: { code: 'D0501', message: '约会不存在' } });
     if (req.user.role === 'admin') {
       const ok = await verifyIsClient(date.userId);
-      if (!ok) return res.status(403).json({ error: '无权操作此约会' });
+      if (!ok) return res.status(403).json({ error: { code: 'A0108', message: '无权操作此约会' } });
     }
 
     const interview = date.postDateInterview ? JSON.parse(date.postDateInterview) : {};
     if (!interview.clientAnswers || interview.questionStatus !== 'answered') {
-      return res.status(400).json({ error: '客户尚未回答访谈' });
+      return res.status(400).json({ error: { code: 'D0503', message: '客户尚未回答访谈' } });
     }
 
     const postDateData = {
@@ -1771,7 +1771,7 @@ ${postDateData.clientAnswers.map(a => `Q${a.id}: ${a.question}\n回答: ${a.answ
     }
 
     const jsonMatch = reply.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return res.status(500).json({ error: 'AI返回格式异常' });
+    if (!jsonMatch) return res.status(500).json({ error: { code: 'A0603', message: 'AI返回格式异常，请稍后重试' } });
 
     const report = JSON.parse(jsonMatch[0]);
 
@@ -1827,7 +1827,7 @@ ${postDateData.clientAnswers.map(a => `Q${a.id}: ${a.question}\n回答: ${a.answ
     res.json({ success: true, report });
   } catch (error) {
     console.error('[Dates] 生成复盘报告失败:', error);
-    res.status(500).json({ error: '生成失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '生成复盘报告失败，请稍后重试' } });
   }
 });
 

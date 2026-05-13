@@ -287,7 +287,7 @@ function registerSituationRoute(router, authMiddleware) {
     try {
       // 允许 admin、client 访问
       if (!['admin', 'client'].includes(req.user.role)) {
-        return res.status(403).json({ error: '无权限' });
+        return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
       }
 
       // 试用限制检查（仅限 client）
@@ -303,21 +303,21 @@ function registerSituationRoute(router, authMiddleware) {
       const { girlId, situation, stream = true, mode = 'pro' } = req.body;
 
       if (!situation) {
-        return res.status(400).json({ error: '情况描述是必需的' });
+        return res.status(400).json({ error: { code: 'S0803', message: '情况描述是必需的' } });
       }
 
       // 安全：验证女生归属权
       if (girlId) {
         const girl = await prisma.girl.findUnique({ where: { id: girlId } });
         if (!girl) {
-          return res.status(404).json({ error: '女生不存在' });
+          return res.status(404).json({ error: { code: 'G0301', message: '女生不存在' } });
         }
         if (req.user.role === 'admin') {
           const session = await prisma.chatSession.findFirst({
             where: { operatorId: req.user.id, clientId: girl.clientId }
           });
           if (!session) {
-            return res.status(403).json({ error: '无权限访问此女生数据' });
+            return res.status(403).json({ error: { code: 'A0108', message: '无权限访问此女生数据' } });
           }
         }
       }
@@ -570,12 +570,12 @@ function registerSituationRoute(router, authMiddleware) {
           });
         } catch (error) {
           logger.error(`[AICoach] 非流式咨询失败: ${error.message}`, { error: error.message, stack: error.stack });
-          res.status(500).json({ error: '分析失败' });
+          res.status(500).json({ error: { code: 'S0802', message: 'AI分析失败，请稍后重试' } });
         }
       }
     } catch (error) {
       logger.error(`[AICoach] 情况咨询失败: ${error.message}`, { error: error.message, stack: error.stack });
-      res.status(500).json({ error: '分析失败' });
+      res.status(500).json({ error: { code: 'S0802', message: 'AI分析失败，请稍后重试' } });
     }
   });
 }

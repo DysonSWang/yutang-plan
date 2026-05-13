@@ -13,18 +13,18 @@ const activityService = require('../services/activityService');
 const authMiddleware = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   const token = authHeader?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: '未登录' });
+  if (!token) return res.status(401).json({ error: { code: 'A0101', message: '未登录' } });
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
     next();
-  } catch { res.status(401).json({ error: 'token无效' }); }
+  } catch { res.status(401).json({ error: { code: 'A0102', message: '认证令牌无效' } }); }
 };
 
 // 管理员权限校验中间件
 function operatorOnly(req, res, next) {
   if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: '需要管理员权限' });
+    return res.status(403).json({ error: { code: 'A0108', message: '需要管理员权限' } });
   }
   next();
 }
@@ -51,7 +51,7 @@ router.get('/clients', authMiddleware, operatorOnly, async (req, res) => {
     });
   } catch (error) {
     console.error('[Activity] 获取客户活跃数据失败:', error);
-    res.status(500).json({ error: '获取数据失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取客户活跃详情失败，请稍后重试' } });
   }
 });
 
@@ -80,7 +80,7 @@ router.get('/clients/:id', authMiddleware, operatorOnly, async (req, res) => {
     });
 
     if (!user) {
-      return res.status(404).json({ error: '用户不存在' });
+      return res.status(404).json({ error: { code: 'C0201', message: '客户不存在' } });
     }
 
     res.json({
@@ -101,7 +101,7 @@ router.get('/clients/:id', authMiddleware, operatorOnly, async (req, res) => {
     });
   } catch (error) {
     console.error('[Activity] 获取客户活跃详情失败:', error);
-    res.status(500).json({ error: '获取数据失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取客户活跃详情失败，请稍后重试' } });
   }
 });
 
@@ -118,7 +118,7 @@ router.get('/dashboard', authMiddleware, operatorOnly, async (req, res) => {
     });
   } catch (error) {
     console.error('[Activity] 获取看板数据失败:', error);
-    res.status(500).json({ error: '获取数据失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取客户活跃详情失败，请稍后重试' } });
   }
 });
 
@@ -134,7 +134,7 @@ router.get('/dormant-users', authMiddleware, operatorOnly, async (req, res) => {
     });
   } catch (error) {
     console.error('[Activity] 获取沉睡用户列表失败:', error);
-    res.status(500).json({ error: '获取数据失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取客户活跃详情失败，请稍后重试' } });
   }
 });
 
@@ -150,7 +150,7 @@ router.get('/trend', authMiddleware, operatorOnly, async (req, res) => {
     });
   } catch (error) {
     console.error('[Activity] 获取活跃趋势失败:', error);
-    res.status(500).json({ error: '获取数据失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取客户活跃详情失败，请稍后重试' } });
   }
 });
 
@@ -166,7 +166,7 @@ router.get('/growth', authMiddleware, operatorOnly, async (req, res) => {
     });
   } catch (error) {
     console.error('[Activity] 获取增长趋势失败:', error);
-    res.status(500).json({ error: '获取数据失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取客户活跃详情失败，请稍后重试' } });
   }
 });
 

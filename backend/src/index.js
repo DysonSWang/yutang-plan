@@ -156,7 +156,7 @@ const globalLimiter = rateLimit({
   max: 1000, // 限制每个IP 15分钟内最多1000请求
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: '请求过于频繁，请稍后再试' }
+  message: { error: { code: 'S0808', message: '请求过于频繁，请稍后再试' } }
 });
 app.use(globalLimiter);
 
@@ -166,7 +166,7 @@ const authLimiter = rateLimit({
   max: 30, // 登录/注册等操作每IP最多30次
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: '认证请求过于频繁，请15分钟后再试' }
+  message: { error: { code: 'S0808', message: '认证请求过于频繁，请15分钟后再试' } }
 });
 
 app.use(requestIdMiddleware);
@@ -207,7 +207,7 @@ app.get('/public/*', async (req, res) => {
     return res.redirect(url);
   } catch (err) {
     logger.error('[Public] OSS redirect error', { err: err.message });
-    return res.status(404).json({ error: '文件不存在' });
+    return res.status(404).json({ error: { code: 'S0804', message: '文件不存在' } });
   }
 });
 

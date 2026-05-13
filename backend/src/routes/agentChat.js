@@ -40,12 +40,12 @@ const { buildAICoachContext } = require('../services/contextBuilder');
 // Auth middleware
 const authMiddleware = async (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: '未登录' });
+  if (!token) return res.status(401).json({ error: { code: 'A0101', message: '未提供认证令牌' } });
   try {
     req.user = jwt.verify(token, JWT_SECRET);
     next();
   } catch {
-    res.status(401).json({ error: 'token无效' });
+    res.status(401).json({ error: { code: 'A0102', message: '认证令牌无效' } });
   }
 };
 
@@ -249,7 +249,7 @@ async function handleSituation(input, ctx, res) {
         res.end();
       },
       onError: (msg) => {
-        res.write(`data: ${JSON.stringify({ error: msg })}\n\n`);
+        res.write(`data: ${JSON.stringify({ error: { code: 'S0802', message: msg } })}\n\n`);
         res.end();
       }
     }
@@ -649,7 +649,7 @@ ${personaSection}`;
         res.end();
       },
       onError: (msg) => {
-        res.write(`data: ${JSON.stringify({ error: msg })}\n\n`);
+        res.write(`data: ${JSON.stringify({ error: { code: 'S0802', message: msg } })}\n\n`);
         res.end();
       }
     }
@@ -677,13 +677,13 @@ router.post('/chat', authMiddleware, async (req, res) => {
   try {
     // Role check
     if (!['admin', 'client'].includes(req.user.role)) {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { message, girlId, chatHistory, mode } = req.body;
 
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
-      return res.status(400).json({ error: 'message 是必需的' });
+      return res.status(400).json({ error: { code: 'S0803', message: 'message 是必需的' } });
     }
 
     const userId = req.user.id;
@@ -801,7 +801,7 @@ router.post('/chat', authMiddleware, async (req, res) => {
 
   } catch (error) {
     console.error('[AgentChat] 处理失败:', error);
-    res.write(`data: ${JSON.stringify({ error: '服务暂时不可用' })}\n\n`);
+    res.write(`data: ${JSON.stringify({ error: { code: 'A0601', message: 'AI服务暂时不可用' } })}\n\n`);
     res.end();
   }
 });

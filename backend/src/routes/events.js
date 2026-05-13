@@ -67,7 +67,7 @@ router.get('/', authMiddleware, async (req, res) => {
 router.post('/', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'client') {
-      return res.status(403).json({ error: '无权限' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { clientId, girlId, title, content, eventTime, endTime, type, source, aiContext, dateId, chatLogId, color, notes, metadata } = req.body;

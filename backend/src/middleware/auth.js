@@ -35,20 +35,14 @@ function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({
-      code: 'AUTH_TOKEN_MISSING',
-      error: '未提供认证 token'
-    });
+    return res.status(401).json({ error: { code: 'A0101', message: '未提供认证 token' } });
   }
 
   const token = authHeader.split(' ')[1];
 
   // 检查是否已撤销
   if (isTokenRevoked(token)) {
-    return res.status(401).json({
-      code: 'AUTH_TOKEN_REVOKED',
-      error: 'Token 已失效，请重新登录'
-    });
+    return res.status(401).json({ error: { code: 'A0103', message: 'Token 已失效，请重新登录' } });
   }
 
   try {
@@ -61,15 +55,9 @@ function authMiddleware(req, res, next) {
     next();
   } catch (err) {
     if (err.name === 'TokenExpiredError') {
-      return res.status(401).json({
-        code: 'AUTH_TOKEN_EXPIRED',
-        error: 'Token 已过期，请重新登录'
-      });
+      return res.status(401).json({ error: { code: 'A0104', message: 'Token 已过期，请重新登录' } });
     }
-    return res.status(401).json({
-      code: 'AUTH_TOKEN_INVALID',
-      error: 'Token 无效'
-    });
+    return res.status(401).json({ error: { code: 'A0102', message: 'Token 无效' } });
   }
 }
 
@@ -79,17 +67,11 @@ function authMiddleware(req, res, next) {
  */
 function adminMiddleware(req, res, next) {
   if (!req.user) {
-    return res.status(401).json({
-      code: 'AUTH_REQUIRED',
-      error: '需要登录'
-    });
+    return res.status(401).json({ error: { code: 'A0101', message: '需要登录' } });
   }
 
   if (req.user.role !== 'admin') {
-    return res.status(403).json({
-      code: 'AUTH_FORBIDDEN',
-      error: '需要管理员权限'
-    });
+    return res.status(403).json({ error: { code: 'A0108', message: '需要管理员权限' } });
   }
 
   next();
