@@ -7,18 +7,20 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../config');
 const prisma = require('../prisma');
+const AppError = require('../errors/AppError');
+const { ErrorCodes } = require('../errors/errorCodes');
 
 // Auth middleware
 const authMiddleware = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   const token = authHeader?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: '未登录' });
+  if (!token) return res.status(401).json({ error: { code: 'A0101', message: '未登录' } });
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
     next();
   } catch {
-    res.status(401).json({ error: 'token无效' });
+    res.status(401).json({ error: { code: 'A0102', message: '认证令牌无效' } });
   }
 };
 
@@ -36,7 +38,7 @@ router.get('/', authMiddleware, async (req, res) => {
         where: { operatorId: req.user.id, clientId }
       });
       if (!session) {
-        return res.status(403).json({ error: '无权限访问此客户的数据' });
+        return res.status(403).json({ error: { code: 'A0108', message: '无权限访问此客户的数据' } });
       }
       where.clientId = clientId;
     }
@@ -57,7 +59,7 @@ router.get('/', authMiddleware, async (req, res) => {
     res.json({ success: true, events });
   } catch (error) {
     console.error('[Events] 获取事件列表失败:', error);
-    res.status(500).json({ error: '获取失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取事件列表失败，请稍后重试' } });
   }
 });
 
@@ -71,7 +73,7 @@ router.post('/', authMiddleware, async (req, res) => {
     const { clientId, girlId, title, content, eventTime, endTime, type, source, aiContext, dateId, chatLogId, color, notes, metadata } = req.body;
 
     if (!clientId || !title || !eventTime) {
-      return res.status(400).json({ error: '缺少必填字段（clientId、title、eventTime）' });
+      return res.status(400).json({ error: { code: 'S0803', message: '缺少必填字段：clientId、title、eventTime' } });
     }
 
     // 安全：操盘手只能为自己的客户创建事件（客户可为自身创建）
@@ -80,7 +82,7 @@ router.post('/', authMiddleware, async (req, res) => {
         where: { operatorId: req.user.id, clientId }
       });
       if (!session) {
-        return res.status(403).json({ error: '无权限为该客户创建事件' });
+        return res.status(403).json({ error: { code: 'A0108', message: '无权为此客户创建事件' } });
       }
     }
 
@@ -107,7 +109,7 @@ router.post('/', authMiddleware, async (req, res) => {
     res.json({ success: true, event });
   } catch (error) {
     console.error('[Events] 创建事件失败:', error);
-    res.status(500).json({ error: '创建失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '创建事件失败，请稍后重试' } });
   }
 });
 
@@ -121,10 +123,10 @@ router.get('/:id', authMiddleware, async (req, res) => {
       }
     });
 
-    if (!event) return res.status(404).json({ error: '事件不存在' });
+    if (!event) return res.status(404).json({ error: { code: 'S0804', message: '事件不存在' } });
 
     if (req.user.role === 'client' && event.clientId !== req.user.id) {
-      return res.status(403).json({ error: '无权访问' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无权访问此事件' } });
     }
 
     // 安全：操盘手只能访问自己负责的客户的事件
@@ -133,14 +135,14 @@ router.get('/:id', authMiddleware, async (req, res) => {
         where: { operatorId: req.user.id, clientId: event.clientId }
       });
       if (!session) {
-        return res.status(403).json({ error: '无权访问' });
+        return res.status(403).json({ error: { code: 'A0108', message: '无权访问此事件' } });
       }
     }
 
     res.json({ success: true, event });
   } catch (error) {
     console.error('[Events] 获取事件失败:', error);
-    res.status(500).json({ error: '获取失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取事件列表失败，请稍后重试' } });
   }
 });
 
@@ -148,13 +150,13 @@ router.get('/:id', authMiddleware, async (req, res) => {
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const existing = await prisma.event.findUnique({ where: { id: req.params.id } });
-    if (!existing) return res.status(404).json({ error: '事件不存在' });
+    if (!existing) return res.status(404).json({ error: { code: 'S0804', message: '事件不存在' } });
 
     if (req.user.role === 'client' && existing.clientId !== req.user.id) {
-      return res.status(403).json({ error: '无权修改' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无权修改此事件' } });
     }
     if (req.user.role === 'client' && existing.type === 'date') {
-      return res.status(403).json({ error: '约会由操盘手管理' });
+      return res.status(403).json({ error: { code: 'A0108', message: '约会由操盘手管理' } });
     }
     // 安全：操盘手只能操作自己负责的客户的事件
     if (req.user.role === 'admin') {
@@ -162,7 +164,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
         where: { operatorId: req.user.id, clientId: existing.clientId }
       });
       if (!session) {
-        return res.status(403).json({ error: '无权修改此事件' });
+        return res.status(403).json({ error: { code: 'A0108', message: '无权修改此事件' } });
       }
     }
 
@@ -188,7 +190,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     res.json({ success: true, event });
   } catch (error) {
     console.error('[Events] 更新事件失败:', error);
-    res.status(500).json({ error: '更新失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '更新事件失败，请稍后重试' } });
   }
 });
 
@@ -197,19 +199,19 @@ router.patch('/:id/status', authMiddleware, async (req, res) => {
   try {
     const { status } = req.body;
     if (!status || !['pending', 'completed', 'cancelled'].includes(status)) {
-      return res.status(400).json({ error: '无效的状态值' });
+      return res.status(400).json({ error: { code: 'S0803', message: '无效的状态值，仅支持 pending/completed/cancelled' } });
     }
 
     const existing = await prisma.event.findUnique({ where: { id: req.params.id } });
-    if (!existing) return res.status(404).json({ error: '事件不存在' });
+    if (!existing) return res.status(404).json({ error: { code: 'S0804', message: '事件不存在' } });
 
     // 客户只能修改自己的事件
     if (req.user.role === 'client' && existing.clientId !== req.user.id) {
-      return res.status(403).json({ error: '无权修改' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无权修改此事件' } });
     }
     // 客户不能修改约会类型
     if (req.user.role === 'client' && existing.type === 'date') {
-      return res.status(403).json({ error: '约会由操盘手管理' });
+      return res.status(403).json({ error: { code: 'A0108', message: '约会由操盘手管理' } });
     }
 
     const event = await prisma.event.update({
@@ -221,7 +223,7 @@ router.patch('/:id/status', authMiddleware, async (req, res) => {
     res.json({ success: true, event });
   } catch (error) {
     console.error('[Events] 更新状态失败:', error);
-    res.status(500).json({ error: '更新失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '更新事件状态失败，请稍后重试' } });
   }
 });
 
@@ -229,13 +231,13 @@ router.patch('/:id/status', authMiddleware, async (req, res) => {
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const existing = await prisma.event.findUnique({ where: { id: req.params.id } });
-    if (!existing) return res.status(404).json({ error: '事件不存在' });
+    if (!existing) return res.status(404).json({ error: { code: 'S0804', message: '事件不存在' } });
 
     if (req.user.role === 'client' && existing.clientId !== req.user.id) {
-      return res.status(403).json({ error: '无权删除' });
+      return res.status(403).json({ error: { code: 'A0108', message: '无权删除此事件' } });
     }
     if (req.user.role === 'client' && existing.type === 'date') {
-      return res.status(403).json({ error: '约会由操盘手管理' });
+      return res.status(403).json({ error: { code: 'A0108', message: '约会由操盘手管理' } });
     }
     // 安全：操盘手只能操作自己负责的客户的事件
     if (req.user.role === 'admin') {
@@ -243,7 +245,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
         where: { operatorId: req.user.id, clientId: existing.clientId }
       });
       if (!session) {
-        return res.status(403).json({ error: '无权删除此事件' });
+        return res.status(403).json({ error: { code: 'A0108', message: '无权删除此事件' } });
       }
     }
 
@@ -251,43 +253,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error('[Events] 删除事件失败:', error);
-    res.status(500).json({ error: '删除失败' });
-  }
-});
-
-// 标记完成/取消
-router.patch('/:id/status', authMiddleware, async (req, res) => {
-  try {
-    const existing = await prisma.event.findUnique({ where: { id: req.params.id } });
-    if (!existing) return res.status(404).json({ error: '事件不存在' });
-
-    if (req.user.role === 'client' && existing.clientId !== req.user.id) {
-      return res.status(403).json({ error: '无权修改' });
-    }
-    // 安全：操盘手只能操作自己负责的客户的事件
-    if (req.user.role === 'admin') {
-      const session = await prisma.chatSession.findFirst({
-        where: { operatorId: req.user.id, clientId: existing.clientId }
-      });
-      if (!session) {
-        return res.status(403).json({ error: '无权修改此事件' });
-      }
-    }
-
-    const { status } = req.body;
-    if (!['pending', 'completed', 'cancelled'].includes(status)) {
-      return res.status(400).json({ error: '无效状态' });
-    }
-
-    const event = await prisma.event.update({
-      where: { id: req.params.id },
-      data: { status }
-    });
-
-    res.json({ success: true, event });
-  } catch (error) {
-    console.error('[Events] 更新状态失败:', error);
-    res.status(500).json({ error: '更新失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '删除事件失败，请稍后重试' } });
   }
 });
 
@@ -296,7 +262,7 @@ router.post('/batch', authMiddleware, async (req, res) => {
   try {
     const { clientId, startDate, endDate } = req.body;
 
-    if (!clientId) return res.status(400).json({ error: 'clientId 是必需的' });
+    if (!clientId) return res.status(400).json({ error: { code: 'S0803', message: 'clientId 是必需的' } });
 
     // 安全：操盘手只能查询自己负责的客户
     if (req.user.role !== 'client' && req.user.role !== 'admin') {
@@ -304,7 +270,7 @@ router.post('/batch', authMiddleware, async (req, res) => {
         where: { operatorId: req.user.id, clientId }
       });
       if (!session) {
-        return res.status(403).json({ error: '无权限访问此客户的数据' });
+        return res.status(403).json({ error: { code: 'A0108', message: '无权限访问此客户的数据' } });
       }
     }
 
@@ -372,7 +338,7 @@ router.post('/batch', authMiddleware, async (req, res) => {
     res.json({ success: true, events: all });
   } catch (error) {
     console.error('[Events] 批量获取失败:', error);
-    res.status(500).json({ error: '获取失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取事件列表失败，请稍后重试' } });
   }
 });
 

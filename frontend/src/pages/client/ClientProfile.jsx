@@ -25,11 +25,6 @@ function EmptyValue({ children, ...props }) {
   return <Text color="rgba(245,240,232,0.45)" fontSize="sm" {...props}>去完善</Text>;
 }
 
-const PRICING_DATA = [
-  { type: 'monthly', label: '普惠月付', price: 999, period: '月', perMonth: 999, features: ['全功能AI教练', '约会方案生成', '学习中心', '缘分管理'] },
-  { type: 'yearly', label: '普惠年付', price: 8888, period: '年', perMonth: 741, features: ['全功能AI教练', '约会方案生成', '学习中心', '缘分管理', '年付专属优惠'] },
-  { type: 'premium', label: '高端会员', price: 50000, period: '年', perMonth: 4167, features: ['全功能AI教练', '约会方案生成', '学习中心', '缘分管理', '优先人工顾问', '专属定制服务'] }
-];
 
 const STAGE_COLORS = {
   '背调': 'gray',
@@ -272,13 +267,9 @@ export default function ClientProfile() {
   const { logout } = useAuth();
   const [saving, setSaving] = useState(false);
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const { isOpen: isPricingOpen, onOpen: onPricingOpen, onClose: onPricingClose } = useDisclosure();
-  const { isOpen: isVersionOpen, onOpen: onVersionOpen, onClose: onVersionClose } = useDisclosure();
+    const { isOpen: isVersionOpen, onOpen: onVersionOpen, onClose: onVersionClose } = useDisclosure();
   const { isOpen: isPwdOpen, onOpen: onPwdOpen, onClose: onPwdClose } = useDisclosure();
-  const { isOpen: isRenewalOpen, onOpen: onRenewalOpen, onClose: onRenewalClose } = useDisclosure();
-  const [renewalType, setRenewalType] = useState('monthly');
-  const [renewing, setRenewing] = useState(false);
-  const [updateInfo, setUpdateInfo] = useState(null);
+        const [updateInfo, setUpdateInfo] = useState(null);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -336,9 +327,7 @@ export default function ClientProfile() {
   const profile = data?.profile;
   const memberStatus = data?.memberStatus;
   const completeness = data?.completeness;
-  const renewalPrice = memberStatus?.prices?.[renewalType] || PRICING_DATA.find(p => p.type === renewalType)?.price || 0;
-  const renewalPointsInsufficient = (memberStatus?.points || 0) < renewalPrice;
-  // editData 用本地 state，方便表单修改
+      // editData 用本地 state，方便表单修改
   const [editData, setEditData] = useState(data?.editData ?? {});
   useEffect(() => {
     if (data?.editData) setEditData(data.editData);
@@ -665,24 +654,7 @@ export default function ClientProfile() {
     }
   };
 
-  const handleRenewalSubmit = async () => {
-    setRenewing(true);
-    try {
-      const res = await membershipApi.purchase(renewalType, renewalPrice);
-      if (res.success) {
-        toast({ title: '续费成功', description: '会员有效期已延长', status: 'success', duration: 3000 });
-        onRenewalClose();
-        await refresh();
-        setRenewalType('monthly');
-      } else {
-        toast({ title: res.error?.message || '续费失败', status: 'error', duration: 4000 });
-      }
-    } catch (e) {
-      toast({ title: e.message || '续费失败', status: 'error', duration: 4000 });
-    } finally {
-      setRenewing(false);
-    }
-  };
+  ;
 
   const handleAvatarFileChange = (e) => {
     const file = e.target.files?.[0];
@@ -805,11 +777,7 @@ export default function ClientProfile() {
                       <Text color="teal.300" fontSize="xs">{memberStatus.invitedBy}</Text>
                     </HStack>
                   )}
-                  <HStack spacing={2} pt={1}>
-                    <Button size="xs" colorScheme="gold" onClick={onRenewalOpen}>续费</Button>
-                    <Button size="xs" variant="link" color="teal.400" onClick={onPricingOpen}>定价</Button>
-                  </HStack>
-                </VStack>
+                                  </VStack>
               ) : (
                 <VStack spacing={1.5} align="stretch">
                   <HStack justify="space-between">
@@ -828,11 +796,7 @@ export default function ClientProfile() {
                       <Text color="teal.300" fontSize="xs">{memberStatus.invitedBy}</Text>
                     </HStack>
                   )}
-                  <HStack spacing={2} pt={1}>
-                    <Button size="xs" colorScheme="gold" variant="outline" leftIcon={<Icon as={CrownIcon} />} onClick={onRenewalOpen}>开通</Button>
-                    <Button size="xs" variant="link" color="teal.400" onClick={onPricingOpen}>定价</Button>
-                  </HStack>
-                </VStack>
+                                  </VStack>
               )}
             </Box>
           </HStack>
@@ -1400,183 +1364,6 @@ export default function ClientProfile() {
               </HStack>
             </VStack>
           </Box>
-        </ModalContent>
-      </Modal>
-
-      {/* 定价方案弹窗 */}
-      <Modal isOpen={isPricingOpen} onClose={onPricingClose} size="2xl">
-        <ModalOverlay backdropFilter="blur(4px)" />
-        <ModalContent bg="warm.800" color="white" borderRadius="xl" maxH="90vh" overflowY="auto">
-          <ModalHeader textAlign="center" pb={2}>
-            <Icon as={CrownIcon} w={6} h={6} color="gold.400" mb={2} />
-            <Text color="white">选择专属方案</Text>
-            <Text color="rgba(245,240,232,0.4)" fontSize="sm" fontWeight="normal" mt={1}>联系客服，获取您的专属定制方案</Text>
-          </ModalHeader>
-          <ModalCloseButton />
-          <ModalBody pb={6} ref={editModalBodyRef} style={{ overflowY: 'auto', maxHeight: '70vh' }}>
-            <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
-              {PRICING_DATA.map(plan => (
-                <Card
-                  key={plan.type}
-                  bg="warm.700"
-                  border="1px solid"
-                  borderColor={plan.type === 'premium' ? 'purple.500' : plan.type === 'yearly' ? 'blue.500' : 'warm.600'}
-                  borderRadius="xl"
-                  position="relative"
-                  overflow="hidden"
-                >
-                  {plan.type === 'premium' && (
-                    <Box position="absolute" top={0} left={0} right={0} bg="purple.600" textAlign="center" py={1} fontSize="xs" fontWeight="bold">
-                      最高端
-                    </Box>
-                  )}
-                  {plan.type === 'yearly' && (
-                    <Box position="absolute" top={0} left={0} right={0} bg="blue.600" textAlign="center" py={1} fontSize="xs" fontWeight="bold">
-                      最受欢迎
-                    </Box>
-                  )}
-                  <CardBody pt={plan.type !== 'monthly' ? 8 : 4}>
-                    <VStack spacing={2} mb={4}>
-                      <Text color="white" fontWeight="bold" fontSize="lg">{plan.label}</Text>
-                      <HStack spacing={1} align="baseline">
-                        {plan.type === 'monthly' && memberStatus?.isFirstPurchase ? (
-                          <>
-                            <Text color="rgba(245,240,232,0.4)" fontSize="xl" fontWeight="bold" textDecoration="line-through">¥999</Text>
-                            <Text color="gold.400" fontSize="3xl" fontWeight="bold">¥799</Text>
-                            <Badge colorScheme="green" fontSize="xs">首单8折</Badge>
-                          </>
-                        ) : (
-                          <Text color="gold.400" fontSize="3xl" fontWeight="bold">¥{plan.price}</Text>
-                        )}
-                        <Text color="rgba(245,240,232,0.4)" fontSize="sm">/{plan.period}</Text>
-                      </HStack>
-                      <Text color="rgba(245,240,232,0.55)" fontSize="xs">约¥{plan.perMonth}/月</Text>
-                    </VStack>
-                    <VStack spacing={2} align="stretch">
-                      {plan.features.map((f, i) => (
-                        <HStack key={i} spacing={2}>
-                          <Icon as={CheckIcon} color="teal.400" boxSize={4} />
-                          <Text color="gray.300" fontSize="sm">{f}</Text>
-                        </HStack>
-                      ))}
-                    </VStack>
-                  </CardBody>
-                </Card>
-              ))}
-            </SimpleGrid>
-            <Box mt={4} p={3} bg="warm.800" borderRadius="md">
-              <Text color="rgba(245,240,232,0.4)" fontSize="sm" mb={2}>邀请有礼</Text>
-              <SimpleGrid columns={3} spacing={2}>
-                <Box textAlign="center" p={2} bg="warm.600" borderRadius="md">
-                  <Text color="gold.400" fontWeight="600">500</Text>
-                  <Text color="rgba(245,240,232,0.4)" fontSize="xs">普惠月付邀请积分</Text>
-                </Box>
-                <Box textAlign="center" p={2} bg="warm.600" borderRadius="md">
-                  <Text color="blue.400" fontWeight="600">4444</Text>
-                  <Text color="rgba(245,240,232,0.4)" fontSize="xs">普惠年付邀请积分</Text>
-                </Box>
-                <Box textAlign="center" p={2} bg="warm.600" borderRadius="md">
-                  <Text color="purple.400" fontWeight="600">25000</Text>
-                  <Text color="rgba(245,240,232,0.4)" fontSize="xs">高端会员邀请积分</Text>
-                </Box>
-              </SimpleGrid>
-              <Text color="rgba(245,240,232,0.55)" fontSize="xs" mt={2}>
-                积分只能用于续费抵扣，无有效期限制。被邀请人首单可享8折优惠
-              </Text>
-            </Box>
-          </ModalBody>
-        </ModalContent>
-      </Modal>
-
-      {/* 续费弹窗 */}
-      <Modal isOpen={isRenewalOpen} onClose={onRenewalClose} size="md">
-        <ModalOverlay bg="blackAlpha.700" />
-        <ModalContent bg="warm.800" color="white">
-          <ModalHeader>{memberStatus?.membership ? '积分续费' : '开通会员'}</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody pb={6} ref={editModalBodyRef} style={{ overflowY: 'auto', maxHeight: '70vh' }}>
-            {memberStatus?.membership && (
-              <Box mb={4} p={3} bg="warm.700" borderRadius="md">
-                <Text color="gray.300" fontSize="sm">
-                  当前有效期至: {formatDate(memberStatus.membership.endDate)}
-                </Text>
-              </Box>
-            )}
-
-            <Text color="rgba(245,240,232,0.4)" fontSize="sm" mb={2}>选择套餐</Text>
-            <SimpleGrid columns={3} spacing={2} mb={4}>
-              {PRICING_DATA.map(plan => (
-                <Box
-                  key={plan.type}
-                  p={3}
-                  bg={renewalType === plan.type ? 'teal.700' : 'warm.700'}
-                  borderRadius="md"
-                  cursor="pointer"
-                  border="2px solid"
-                  borderColor={renewalType === plan.type ? 'teal.500' : 'transparent'}
-                  onClick={() => { setRenewalType(plan.type); }}
-                  _hover={{ borderColor: 'teal.400' }}
-                  textAlign="center"
-                  transition="all 0.15s"
-                >
-                  <Text fontSize="sm" fontWeight="bold">{plan.label}</Text>
-                  <Text color="gold.300" fontSize="lg" fontWeight="bold">¥{plan.price}</Text>
-                  <Text color="rgba(245,240,232,0.4)" fontSize="xs">/{plan.period}</Text>
-                </Box>
-              ))}
-            </SimpleGrid>
-
-            <Box p={3} bg="warm.700" borderRadius="md">
-              {(() => {
-                const price = renewalPrice;
-                const balance = memberStatus?.points || 0;
-                const insufficient = balance < price;
-                return (
-                  <>
-                    <HStack justify="space-between" mb={3}>
-                      <HStack>
-                        <Text color="gray.300" fontSize="sm">需要积分</Text>
-                        <Badge colorScheme="gold" fontSize="md">{price}</Badge>
-                      </HStack>
-                      <HStack>
-                        <Text color="gray.300" fontSize="sm">可用积分</Text>
-                        <Badge colorScheme={insufficient ? 'red' : 'orange'} fontSize="md">{balance}</Badge>
-                      </HStack>
-                    </HStack>
-                    {insufficient && (
-                      <Text color="red.300" fontSize="sm" mb={3}>
-                        积分不足，还差 {price - balance} 积分。邀请好友购买会员可获得积分。
-                      </Text>
-                    )}
-                    {memberStatus?.membership && (() => {
-                      const d = new Date(memberStatus.membership.endDate);
-                      if (renewalType === 'monthly') d.setMonth(d.getMonth() + 1);
-                      else d.setFullYear(d.getFullYear() + 1);
-                      return (
-                        <Text color="rgba(245,240,232,0.4)" fontSize="xs" mb={2}>
-                          续费后有效期至: {formatDate(d.toISOString())}
-                        </Text>
-                      );
-                    })()}
-                  </>
-                );
-              })()}
-            </Box>
-
-            <Text color="rgba(245,240,232,0.55)" fontSize="xs" mt={3}>
-              系统仅支持积分支付，1积分=1元。
-              {memberStatus?.membership
-                ? '续费后有效期将在现有基础上累加。'
-                : '开通后即可享受全部会员功能。'}
-            </Text>
-          </ModalBody>
-
-          <ModalFooter>
-            <Button variant="ghost" color="rgba(245,240,232,0.4)" mr={3} onClick={onRenewalClose}>取消</Button>
-            <Button colorScheme="gold" onClick={handleRenewalSubmit} isLoading={renewing} loadingText="处理中" isDisabled={renewalPointsInsufficient}>
-              {renewalPointsInsufficient ? '积分不足' : (memberStatus?.membership ? '确认续费' : '确认开通')}
-            </Button>
-          </ModalFooter>
         </ModalContent>
       </Modal>
 

@@ -13,6 +13,8 @@ const fs = require('fs');
 const { JWT_SECRET, getAIConfig, getTextModelConfig, BASE_URL } = require('../config');
 const prisma = require('../prisma');
 const { callVisionModel } = require('../services/profileEngine');
+const AppError = require('../errors/AppError');
+const { ErrorCodes } = require('../errors/errorCodes');
 
 // 截图上传目录
 const SCREENSHOT_DIR = path.join(__dirname, '../../uploads/chat-screenshots');
@@ -45,7 +47,7 @@ const authMiddleware = async (req, res, next) => {
   const token = authHeader?.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ error: '未登录' });
+    return res.status(401).json({ error: { code: 'A0101', message: '未登录' } });
   }
 
   try {
@@ -53,7 +55,7 @@ const authMiddleware = async (req, res, next) => {
     req.user = decoded;
     next();
   } catch (err) {
-    res.status(401).json({ error: 'token无效' });
+    res.status(401).json({ error: { code: 'A0102', message: '认证令牌无效' } });
   }
 };
 
@@ -106,7 +108,7 @@ router.get('/', authMiddleware, async (req, res) => {
     res.json({ success: true, clients: clientsWithGirls });
   } catch (error) {
     console.error('[Clients] 获取客户列表失败:', error);
-    res.status(500).json({ error: '获取失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取失败，请稍后重试' } });
   }
 });
 
@@ -137,7 +139,7 @@ router.get('/me', authMiddleware, async (req, res) => {
     res.json({ success: true, client: { ...clientData, girls, dateCount } });
   } catch (error) {
     console.error('[Clients] 获取客户信息失败:', error);
-    res.status(500).json({ error: '获取失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取失败，请稍后重试' } });
   }
 });
 
@@ -211,7 +213,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
     res.json({ success: true, client: { ...clientData, clientGirls, dates, progress, learnings } });
   } catch (error) {
     console.error('[Clients] 获取客户详情失败:', error);
-    res.status(500).json({ error: '获取失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取失败，请稍后重试' } });
   }
 });
 
@@ -226,7 +228,7 @@ router.post('/', authMiddleware, async (req, res) => {
     const required = ['username', 'password'];
     for (const field of required) {
       if (!data[field]) {
-        return res.status(400).json({ error: `${field}是必需的` });
+        return res.status(400).json({ error: { code: 'S0803', message: `${field}是必需的` } });
       }
     }
 
@@ -869,7 +871,7 @@ router.get('/:id/learnings', authMiddleware, async (req, res) => {
     res.json({ success: true, learnings });
   } catch (error) {
     console.error('[Clients] 获取学习记录失败:', error);
-    res.status(500).json({ error: '获取失败' });
+    res.status(500).json({ error: { code: 'S0802', message: '获取失败，请稍后重试' } });
   }
 });
 

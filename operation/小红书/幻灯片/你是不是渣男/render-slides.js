@@ -33,7 +33,7 @@ async function renderSlides() {
   });
 
   const page = await browser.newPage();
-  await page.setViewportSize({ width: 540, height: 720 });
+  await page.setViewportSize({ width: 540, height: 720, deviceScaleFactor: 2 });
 
   for (let i = 0; i < slides.length; i++) {
     const htmlPath = path.join(SLIDES_DIR, slides[i]);

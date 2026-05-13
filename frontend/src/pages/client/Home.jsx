@@ -92,7 +92,7 @@ const QUICK_ENTRIES = [
 
 export default function ClientHome() {
   const navigate = useNavigate();
-  const { isOpen: isPricingOpen, onOpen: onPricingOpen, onClose: onPricingClose } = useDisclosure();
+  const { isOpen: isPricingOpen, onClose: onPricingClose } = useDisclosure();
 
   const { data, isInitialLoad, refresh } = useKeepAliveData(async () => {
     const [clientRes, memberRes] = await Promise.all([
@@ -227,70 +227,6 @@ export default function ClientHome() {
           ))}
         </SimpleGrid>
       </Box>
-
-      {/* ---- 定价方案弹窗 ---- */}
-      <Modal isOpen={isPricingOpen} onClose={onPricingClose} size="2xl">
-        <ModalOverlay backdropFilter="blur(4px)" />
-        <ModalContent bg="warm.900" color="white" borderRadius="xl">
-          <ModalHeader textAlign="center" pb={2}>
-            <Icon as={CrownIcon} w={6} h={6} color="gold.400" mb={2} />
-            <Text color="white">选择专属方案</Text>
-            <Text color="rgba(245,240,232,0.4)" fontSize="sm" fontWeight="normal" mt={1}>联系客服，获取您的专属定制方案</Text>
-          </ModalHeader>
-          <ModalCloseButton />
-          <ModalBody pb={6}>
-            <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
-              {PRICING_DATA.map(plan => (
-                <Card
-                  key={plan.type}
-                  bg="warm.800"
-                  border="1px solid"
-                  borderColor={plan.type === 'premium' || plan.type === 'yearly' ? 'gold.500' : 'rgba(245,240,232,0.08)'}
-                  borderRadius="xl" position="relative" overflow="hidden"
-                >
-                  {plan.type === 'premium' && (
-                    <Box position="absolute" top={0} left={0} right={0} bg="gold.600" textAlign="center" py={1} fontSize="xs" fontWeight="bold">最高端</Box>
-                  )}
-                  {plan.type === 'yearly' && (
-                    <Box position="absolute" top={0} left={0} right={0} bg="gold.500" textAlign="center" py={1} fontSize="xs" fontWeight="bold">推荐</Box>
-                  )}
-                  <CardBody pt={plan.type !== 'monthly' ? 8 : 4}>
-                    <VStack spacing={2} align="start">
-                      <Text color="rgba(245,240,232,0.6)" fontWeight="600">{plan.label}</Text>
-                      <HStack align="baseline" spacing={1}>
-                        <Text color="white" fontSize="3xl" fontWeight="700">{plan.price.toLocaleString()}</Text>
-                        <Text color="rgba(245,240,232,0.4)" fontSize="sm">元/{plan.period}</Text>
-                      </HStack>
-                      <Text color="rgba(245,240,232,0.55)" fontSize="xs">约{Math.round(plan.perMonth).toLocaleString()}元/月</Text>
-                      <Divider borderColor="rgba(245,240,232,0.08)" my={2} />
-                      {plan.features.map((f, i) => (
-                        <HStack key={i} spacing={2}>
-                          <Icon as={CheckIcon} color="gold.400" w={4} h={4} />
-                          <Text color="rgba(245,240,232,0.6)" fontSize="sm">{f}</Text>
-                        </HStack>
-                      ))}
-                    </VStack>
-                    <Button mt={4} w="full" colorScheme="gold" variant="outline" size="sm" onClick={onPricingClose}>联系客服获取方案</Button>
-                  </CardBody>
-                </Card>
-              ))}
-            </SimpleGrid>
-            <Box mt={5} p={4} bg="warm.800" borderRadius="lg">
-              <Text color="rgba(245,240,232,0.6)" fontWeight="600" mb={2}>邀请机制</Text>
-              <Text color="rgba(245,240,232,0.4)" fontSize="sm" mb={2}>每成功邀请一位新用户付费，双方均可获得优惠：</Text>
-              <SimpleGrid columns={3} spacing={3}>
-                {Object.entries(TYPE_POINTS).map(([type, pts]) => (
-                  <Box key={type} textAlign="center" p={2} bg="warm.700" borderRadius="md">
-                    <Text color="gold.400" fontSize="sm" fontWeight="600">{TYPE_LABEL[type]}</Text>
-                    <Text color="rgba(245,240,232,0.6)" fontSize="xs">邀请人得 {pts} 积分</Text>
-                  </Box>
-                ))}
-              </SimpleGrid>
-              <Text color="rgba(245,240,232,0.55)" fontSize="xs" mt={2}>积分只能用于续费抵扣，无有效期限制。被邀请人首单可享8折优惠</Text>
-            </Box>
-          </ModalBody>
-        </ModalContent>
-      </Modal>
     </Box>
   );
 }
