@@ -5,12 +5,12 @@
 <title>02 场景钩子</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto Serif+SC:wght@400;600;700;800&family=Noto Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
-  --coral: #C0392B;
+  --coral: #E74C3C;
   --ink: #2D2D2D;
   --ink-light: #6B6B6B;
   --gold: #A08020;
@@ -37,27 +37,26 @@ body {
   flex-direction: column;
 }
 
-.top { width: 100%; height: 56px; background: rgba(192,57,43,0.12); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(192,57,43,0.18); }
-.top span { color: white; font-size: 13px; font-weight: 700; letter-spacing: 2px; }
+.top { width: 100%; height: 56px; background: rgba(231,76,60,0.15); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(231,76,60,0.25); }
+.top span { color: #FF6B6B; font-size: 14px; font-weight: 700; letter-spacing: 2px; }
 
 .title { padding: 16px 30px 12px; text-align: center; }
 .title-text { font-family: 'Noto Serif SC', serif; font-size: 26px; font-weight: 800; color: white; margin-bottom: 6px; }
 .subtitle { font-size: 14px; color: rgba(255,255,255,0.6); }
 
 .card { margin: 10px 24px; background: rgba(255,255,255,0.06); border-radius: 14px; padding: 16px 18px; backdrop-filter: blur(10px); }
-.card-label { font-size: 13px; font-weight: 700; color: var(--coral); margin-bottom: 6px; letter-spacing: 1px; }
-.card-text { font-size: 14px; color: white; line-height: 1.5; margin-bottom: 4px; }
-.card-wrong { border-left: 3px solid rgba(192,57,43,0.5); }
-.card-right { border-left: 3px solid rgba(61,140,64,0.5); }
+.card-label { font-size: 14px; font-weight: 800; color: #FF6B6B; margin-bottom: 8px; letter-spacing: 1px; text-shadow: 0 0 10px rgba(255,107,107,0.3); }
+.card-text { font-size: 14px; color: white; line-height: 1.5; margin-bottom: 8px; }
+.card-wrong { border-left: 4px solid rgba(231,76,60,0.6); }
 
-.tag-row { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 24px; margin-top: 6px; }
-.tag { font-size: 13px; padding: 4px 10px; border-radius: 20px; font-weight: 600; }
-.tag-wrong { background: rgba(192,57,43,0.22); color: white; }
-.tag-note { font-size: 13px; color: rgba(255,255,255,0.5); text-align: center; margin-top: 12px; padding: 0 24px; }
+.tag-row { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 4px; }
+.tag { font-size: 12px; padding: 4px 12px; border-radius: 20px; font-weight: 700; }
+.tag-wrong { background: rgba(231,76,60,0.25); color: #FF8A8A; border: 1px solid rgba(255,107,107,0.3); }
+.tag-note { font-size: 13px; color: rgba(255,255,255,0.6); text-align: center; margin-top: 12px; padding: 0 24px; }
 
 .footer { position: absolute; bottom: 0; left: 0; right: 0; height: 120px; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 28px; }
 .footer-text { font-size: 15px; font-weight: 700; color: white; margin-bottom: 6px; }
-.footer-note { font-size: 12px; color: rgba(255,255,255,0.7); }
+.footer-note { font-size: 12px; color: rgba(255,255,255,0.6); }
 </style>
 </head>
 <body>
@@ -70,7 +69,7 @@ body {
   </div>
 
   <div class="card card-wrong">
-    <div class="card-label">X 方式1 · 否认型</div>
+    <div class="card-label">❌ 方式1 · 否认型</div>
     <div class="card-text">「我不是渣男啊，我对你很认真的」</div>
     <div class="tag-row">
       <span class="tag tag-wrong">越解释越像在心虚</span>
@@ -79,16 +78,16 @@ body {
   </div>
 
   <div class="card card-wrong">
-    <div class="card-label">X 方式2 · 反问型</div>
+    <div class="card-label">❌ 方式2 · 辩护型</div>
     <div class="card-text">「你为什么会这么问？」</div>
     <div class="tag-row">
-      <span class="tag tag-wrong">被问题带走</span>
-      <span class="tag tag-wrong">主动进框架</span>
+      <span class="tag tag-wrong">试图解释原因</span>
+      <span class="tag tag-wrong">进她的框架</span>
     </div>
   </div>
 
   <div class="card card-wrong">
-    <div class="card-label">X 方式3 · 讨好型</div>
+    <div class="card-label">❌ 方式3 · 讨好型</div>
     <div class="card-text">「我哪里渣了？我只对你好」</div>
     <div class="tag-row">
       <span class="tag tag-wrong">试图让她满意</span>

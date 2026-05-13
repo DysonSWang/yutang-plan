@@ -1,4 +1,4 @@
-package com.zhuiai.app.ScreenshotToggle;
+package com.zhuiai.app;
 
 import android.app.Activity;
 import android.content.SharedPreferences;

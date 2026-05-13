@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "NODE_ENV=production vite build",
-    "build:android": "NODE_ENV=production CAPACITOR_BUILD=true vite build --mode production && cap sync android && node scripts/rename-apk.js",
+    "build:android": "NODE_ENV=production CAPACITOR_BUILD=true vite build --mode production && cap sync android && node scripts/patch-capacitor-plugins.js && node scripts/rename-apk.js",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",

@@ -10,7 +10,6 @@ import android.view.WindowManager;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
-import com.zhuiai.app.ScreenshotToggle.ScreenshotTogglePlugin;
 
 public class MainActivity extends BridgeActivity {
     private static final String PREFS_NAME = "zhuiai_secure";
@@ -20,7 +19,7 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         // 注册截屏切换插件
-        registerPlugin(ScreenshotTogglePlugin.class);
+        registerPlugin(com.zhuiai.app.ScreenshotTogglePlugin.class);
         // 根据 SharedPreferences 决定是否启用截屏限制
         applyScreenshotProtection();
 
