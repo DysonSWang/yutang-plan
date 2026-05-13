@@ -353,9 +353,9 @@ function DatesTab({ datesList, allDates, pendingInterviews, isInitialLoad, onRef
 }
 
 /** ===================== 日历 Tab ===================== */
-function CalendarTab({ clientId, girlList, refreshKey }) {
+function CalendarTab({ clientId, girlList, refreshKey, onDateDetail }) {
   if (!clientId) return <Flex justify="center" py={12}><Skeleton h="200px" w="100%" borderRadius="lg" /></Flex>;
-  return <ClientCalendar clientId={clientId} girlList={girlList} refreshKey={refreshKey} />;
+  return <ClientCalendar clientId={clientId} girlList={girlList} refreshKey={refreshKey} onDateDetail={onDateDetail} />;
 }
 
 /** ===================== 主页面 ===================== */
@@ -376,6 +376,8 @@ export default function MyPond() {
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [showAiFields, setShowAiFields] = useState(false);
+  const aiFieldsRef = useRef(null);
+  const addModalRef = useRef(null);
   const [filterGirlId, setFilterGirlId] = useState('');
   const toast = useToast();
 
@@ -489,14 +491,19 @@ export default function MyPond() {
             />
           </TabPanel>
           <TabPanel px={0}>
-            <CalendarTab clientId={clientId} girlList={girlList} refreshKey={isInitialLoad} />
+            <CalendarTab clientId={clientId} girlList={girlList} refreshKey={isInitialLoad}
+              onDateDetail={(dateId) => {
+                const dateItem = allDates.find(d => d.id === dateId);
+                if (dateItem) openDateDetail(dateItem);
+              }}
+            />
           </TabPanel>
         </TabPanels>
       </Tabs>
 
       {/* 添加约会 Modal */}
       <Modal isOpen={showAddModal} onClose={() => { setShowAddModal(false); resetDateForm(); }} size="lg">
-        <ModalOverlay /><ModalContent bg="warm.800" maxH="85vh" overflow="auto">
+        <ModalOverlay /><ModalContent bg="warm.800" maxH="85vh" overflow="auto" ref={addModalRef}>
           <ModalHeader color="white">{addStep === 1 ? '选择约会对象' : '填写约会信息'}</ModalHeader>
           <ModalCloseButton onClick={() => { setShowAddModal(false); resetDateForm(); }} />
           <ModalBody pb={6}>
@@ -519,7 +526,7 @@ export default function MyPond() {
                       bg={selectedGirlForDate?.id === girl.id ? 'rgba(0,212,170,0.15)' : 'warm.800'}
                       border="2px solid"
                       borderColor={selectedGirlForDate?.id === girl.id ? 'gold.500' : 'warm.600'}
-                      onClick={() => { setSelectedGirlForDate(girl); setAddStep(2); }}
+                      onClick={() => { setSelectedGirlForDate(girl); setAddStep(2); setTimeout(() => addModalRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 50); }}
                       _hover={{ borderColor: 'gold.400' }} transition="all 0.2s">
                       <CardBody py={3} px={4}>
                         <HStack spacing={3}>
@@ -537,7 +544,7 @@ export default function MyPond() {
                     </Card>
                   ))}
                 </VStack>
-                <Button colorScheme="gold" size="lg" mt={4} isDisabled={!selectedGirlForDate} onClick={() => setAddStep(2)}>下一步</Button>
+                <Button colorScheme="gold" size="lg" mt={4} isDisabled={!selectedGirlForDate} onClick={() => { setAddStep(2); setTimeout(() => addModalRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 50); }}>下一步</Button>
               </VStack>
             )}
 
@@ -576,10 +583,29 @@ export default function MyPond() {
                 </FormControl>
                 <HStack mt={4} spacing={3}>
                   <Button colorScheme="green" flex={1} size="lg" isLoading={saving} onClick={handleSaveDate}>保存约会</Button>
-                  <Button variant={showAiFields ? 'solid' : 'outline'} colorScheme={showAiFields ? 'brand' : 'gray'} leftIcon={<SparklesIcon />} flex={1} size="lg" onClick={() => setShowAiFields(!showAiFields)}>
-                    {showAiFields ? '收起' : 'AI 策划'}
+                  <Button variant={showAiFields ? 'solid' : 'outline'} colorScheme={showAiFields ? 'brand' : 'gray'} leftIcon={<SparklesIcon />} flex={1} size="lg" onClick={() => {
+                    const willShow = !showAiFields;
+                    setShowAiFields(willShow);
+                    if (willShow) {
+                      setTimeout(() => aiFieldsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                    }
+                  }}>
+                    {showAiFields ? '收起 AI 策划' : 'AI 智能策划'}
                   </Button>
                 </HStack>
+
+                {/* AI 智能策划区域 */}
+                {showAiFields && (
+                  <VStack spacing={3} align="stretch" mt={2} ref={aiFieldsRef}>
+                    <Divider />
+                    <HStack spacing={2}><Icon as={SparklesIcon} boxSize={4} color="gold.400" /><Text color="gold.400" fontWeight="bold" fontSize="sm">AI 精细化方案（基于上方已填写的偏好）</Text></HStack>
+                    <Text color="rgba(245,240,232,0.4)" fontSize="xs">填写上方"更多选项"后，AI 将生成更精准的时间表、场地推荐和聊天话题</Text>
+                    <Button colorScheme="gold" leftIcon={<SparklesIcon />} size="lg" onClick={() => { setGenerating(true); toast({ title: 'AI 正在精心策划中...', status: 'info', duration: 2000 }); handleGeneratePlan?.(); }} isLoading={generating} loadingText="策划中...">
+                      生成精细化方案
+                    </Button>
+                  </VStack>
+                )}
+
                 <Button variant="outline" colorScheme="gray" onClick={() => setAddStep(1)} mt={2}>上一步</Button>
               </VStack>
             )}

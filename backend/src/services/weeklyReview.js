@@ -190,7 +190,14 @@ async function generateAIInsights(data, girls) {
 【女生列表】
 ${JSON.stringify(girlsList, null, 2)}
 
-请输出 JSON：
+请输出 JSON。只输出 JSON，不要其他内容。
+
+overallScore 评分标准：
+- 1-3：多数女生无进展，预警堆积
+- 4-6：有进展但存在明显短板
+- 7-8：运营良好，多数女生有推进
+- 9-10：卓越运营，关键节点全部把握
+
 {
   "overallScore": 1-10的评分,
   "overallComment": "一句话总结本周运营情况",
@@ -199,9 +206,7 @@ ${JSON.stringify(girlsList, null, 2)}
   "nextWeekPriorities": [
     { "girlName": "女生名或ALL", "priority": "优先级描述", "reason": "原因" }
   ]
-}
-
-只输出 JSON。`;
+}`;
 
   try {
     const controller = new AbortController();

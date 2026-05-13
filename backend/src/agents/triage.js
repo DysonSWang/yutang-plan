@@ -112,6 +112,9 @@ function coachRoute(input, context) {
     '沟通问题': ROUTE_TYPES.SITUATION,
     '情绪调动': ROUTE_TYPES.SITUATION,
     '社交软件': ROUTE_TYPES.SITUATION,
+    '轨道判断': ROUTE_TYPES.SITUATION,
+    '阶段诊断': ROUTE_TYPES.SITUATION,
+    'OS战略': ROUTE_TYPES.SITUATION,
     '通用': ROUTE_TYPES.SITUATION,
   };
 

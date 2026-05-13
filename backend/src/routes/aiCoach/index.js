@@ -426,6 +426,55 @@ router.post('/new-session', authMiddleware, async (req, res) => {
 
 
 /**
+ * 删除会话
+ * DELETE /api/ai-coach/session/:sessionId
+ */
+router.delete('/session/:sessionId', authMiddleware, async (req, res) => {
+  try {
+    if (!['admin', 'client'].includes(req.user.role)) {
+      return res.status(403).json({ error: '无权限' });
+    }
+    if (req.user.role === 'client') {
+      try {
+        await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
+      } catch (e) {
+        return res.status(403).json({ error: e.message });
+      }
+    }
+
+    const { sessionId } = req.params;
+
+    // 获取会话信息验证所有权
+    const session = await prisma.conversationMemory.findUnique({
+      where: { id: sessionId }
+    });
+
+    if (!session) {
+      return res.status(404).json({ error: '会话不存在' });
+    }
+
+    // 验证权限：只能删除自己的会话
+    if (session.clientId !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: '无权限删除此会话' });
+    }
+
+    // 删除会话及其关联的反馈记录（Cascade）
+    await prisma.coachFeedback.deleteMany({ where: { memoryId: sessionId } });
+    await prisma.conversationMemory.delete({ where: { id: sessionId } });
+
+    logger.info(`[AICoach] 删除会话 ${sessionId} by user ${req.user.id}`);
+    res.json({ success: true, message: '会话已删除' });
+  } catch (error) {
+    if (error.message && error.message.includes('无会员权限')) {
+      return res.status(403).json({ error: error.message });
+    }
+    logger.error(`[AICoach] 删除会话失败: ${error.message}`, { error: error.message });
+    res.status(500).json({ error: '删除会话失败' });
+  }
+});
+
+
+/**
  * 侧边栏上下文数据（结构化 JSON，供前端女生上下文面板使用）
  * GET /api/ai-coach/girl-context/:girlId
  */

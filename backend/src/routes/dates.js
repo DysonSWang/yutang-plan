@@ -681,15 +681,20 @@ router.get('/:id', authMiddleware, async (req, res) => {
 // 更新约会
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== 'admin' && req.user.role !== 'client') {
       return res.status(403).json({ error: '无权限' });
     }
 
     const existing = await prisma.date.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: '约会不存在' });
-    // 安全：操盘手可操作所有客户的约会
-    const ok = await verifyIsClient(existing.userId);
-    if (!ok) return res.status(403).json({ error: '无权操作此约会' });
+    // 安全：客户只能操作自己的约会，操盘手可操作所有客户的约会
+    if (req.user.role === 'client' && existing.userId !== req.user.id) {
+      return res.status(403).json({ error: '无权操作此约会' });
+    }
+    if (req.user.role === 'admin') {
+      const ok = await verifyIsClient(existing.userId);
+      if (!ok) return res.status(403).json({ error: '无权操作此约会' });
+    }
 
     const {
       dateTime, location, status, notes, nextAction,

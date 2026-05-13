@@ -9,9 +9,9 @@ import {
 import { AddIcon } from '@chakra-ui/icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSocket } from '../../contexts/SocketContext';
-import { girls as girlsApi, analyzeChatHistory, deleteCombatMessage } from '../../utils/api';
+import { girls as girlsApi, analyzeChatHistory, deleteCombatMessage, aiCoach } from '../../utils/api';
 import { captureError } from '../../utils/frontendErrorCapture';
-import { FireIcon, SnowIcon, SparklesIcon, BrainIcon, InboxIcon } from '../../components/Icons';
+import { FireIcon, SnowIcon, SparklesIcon, BrainIcon, InboxIcon, DeleteIcon } from '../../components/Icons';
 import { marked } from 'marked';
 
 // marked 配置：GFM 支持，链接新窗口打开
@@ -69,32 +69,76 @@ const reasoningMarkdownComponents = {
 
 /**
  * 修正 AI 产出的不规范 Markdown 格式
- * 只处理行首格式问题，避免破坏正常文本内容
+ * 处理行首格式、结构缺失、未闭合标记等问题
  */
 function fixMarkdown(text) {
   if (!text || typeof text !== 'string') return text;
   let fixed = text;
 
-  // ---- 行首格式修复（只有行首才修，安全可靠）----
+  // ---- 1. 行首格式修复 ----
   // 标题：###text → ### text
   fixed = fixed.replace(/^(#{1,4})([^\s#\n])/gm, '$1 $2');
-
   // 引用：>text → > text
   fixed = fixed.replace(/^(>{1,2})([^\s>\n])/gm, '$1 $2');
-
   // 无序列表：-text → - text（不匹配 --- 分隔线）
   fixed = fixed.replace(/^-(?=[^\s-])([^\s\n])/gm, '- $1');
-
   // 有序列表：1.text → 1. text
   fixed = fixed.replace(/^(\d+\.)([^\s\n])/gm, '$1 $2');
 
-  // ---- 粗体格式修复 ----
+  // ---- 2. 粗体/斜体格式修复 ----
   // ** text ** → **text**
   fixed = fixed.replace(/\*\*\s+([^*]+?)\s+\*\*/g, '**$1**');
   // __ text __ → __text__
   fixed = fixed.replace(/__\s+([^_]+?)\s+__/g, '__$1__');
 
-  // ---- 清理多余空行 ----
+  // ---- 3. 标题/列表前补空行（marked 需要空行才能正确解析块级元素）----
+  // 段落后紧跟标题
+  fixed = fixed.replace(/([^\n])\n(#{1,4}\s)/g, '$1\n\n$2');
+  // 段落后紧跟无序列表（- 或 * 开头）
+  fixed = fixed.replace(/([^\n])\n([-*]\s[^\n])/g, (match, p1, p2) => {
+    // 排除 --- 分隔线
+    if (/^[-*]{3,}\s*$/.test(p2)) return match;
+    return `${p1}\n\n${p2}`;
+  });
+  // 段落后紧跟有序列表
+  fixed = fixed.replace(/([^\n])\n(\d+\.\s[^\n])/g, '$1\n\n$2');
+  // 段落后紧跟引用块
+  fixed = fixed.replace(/([^\n])\n(>\s[^\n])/g, '$1\n\n$2');
+
+  // ---- 4. 未闭合的代码块修复 ----
+  const tripleBacktickCount = (fixed.match(/```/g) || []).length;
+  if (tripleBacktickCount % 2 !== 0) {
+    // 奇数个 ``` 说明有未闭合的代码块，在末尾补上
+    fixed = fixed.trimEnd() + '\n```';
+  }
+
+  // ---- 5. 未闭合的粗体/斜体修复 ----
+  // 未闭合 ** （奇数对）
+  const doubleStarPairs = (fixed.match(/\*\*/g) || []).length;
+  if (doubleStarPairs % 2 !== 0) {
+    // 在最后一个 ** 后面补上闭合
+    const lastIdx = fixed.lastIndexOf('**');
+    fixed = fixed.slice(0, lastIdx + 2) + '**' + fixed.slice(lastIdx + 2);
+  }
+  // 未闭合 * （奇数个，排除列表行首的 *）
+  const singleStars = fixed.split('\n').reduce((count, line) => {
+    if (/^\s*[*]\s/.test(line)) return count; // 跳过列表行
+    return count + (line.match(/(?<!\*)\*(?!\*)/g) || []).length;
+  }, 0);
+  if (singleStars % 2 !== 0) {
+    const lastIdx = fixed.lastIndexOf('*');
+    // 确保不是 ** 的一部分
+    if (lastIdx > 0 && fixed[lastIdx - 1] !== '*' && fixed[lastIdx + 1] !== '*') {
+      fixed = fixed.slice(0, lastIdx + 1) + '*' + fixed.slice(lastIdx + 1);
+    }
+  }
+
+  // ---- 6. 多余转义符清理 ----
+  // \* \_ 在显示时多余（AI 有时会过度转义）
+  fixed = fixed.replace(/\\\*/g, '*');
+  fixed = fixed.replace(/\\_/g, '_');
+
+  // ---- 7. 清理多余空行 ----
   fixed = fixed.replace(/\n{3,}/g, '\n\n');
 
   return fixed;
@@ -303,7 +347,7 @@ const InputArea = memo(({ onSubmit, onImageSubmit, onStop, loading, deepMode, on
 // ====== 会话选择栏（模块级组件） ======
 const SessionBar = memo(({
   sessions, activeSessionId, selectedGirlId, loading,
-  onSelectSession, onNewSession, deepMode, onDeepModeToggle
+  onSelectSession, onNewSession, onDeleteSession, deepMode, onDeepModeToggle
 }) => {
   const displaySessions = useMemo(() => {
     if (!selectedGirlId) return (sessions || []).filter(s => !s.girlId);
@@ -357,6 +401,18 @@ const SessionBar = memo(({
         aria-label="新建会话"
         flexShrink={0}
       />
+      {onDeleteSession && activeSessionId ? (
+        <IconButton
+          icon={<DeleteIcon />}
+          size="xs"
+          variant="ghost"
+          colorScheme="red"
+          onClick={() => onDeleteSession(activeSessionId)}
+          isLoading={loading}
+          aria-label="删除会话"
+          flexShrink={0}
+        />
+      ) : null}
       {onDeepModeToggle ? (
         <Flex align="center" gap={1} flexShrink={0} ml={1}>
           <Text fontSize="9px" color={deepMode ? 'gold.300' : 'warm.300'} fontWeight="bold">
@@ -2132,6 +2188,25 @@ export default function AICoach() {
     }, 100);
   }, [sessions]);
 
+  const handleDeleteSession = useCallback(async (sessionId) => {
+    if (!sessionId) return;
+    if (!window.confirm('确定要删除此会话吗？删除后无法恢复。')) return;
+    try {
+      await aiCoach.deleteSession(sessionId);
+      // 如果删除的是当前会话，清空并切换
+      if (activeSessionId === sessionId) {
+        setMessages([]);
+        setActiveSessionId(null);
+      }
+      // 刷新会话列表
+      await loadHistory(selectedGirlId ? selectedGirlId : '');
+      toast({ title: '会话已删除', status: 'success', duration: 2000 });
+    } catch (e) {
+      captureError(e, { context: '[AICoach] delete session failed:' });
+      toast({ title: '删除失败', description: e.message, status: 'error', duration: 3000 });
+    }
+  }, [activeSessionId, selectedGirlId, toast]);
+
   const handleCopy = useCallback(async (content, messageId) => {
     try {
       await Clipboard.write({ string: content });
@@ -3536,6 +3611,7 @@ export default function AICoach() {
         loading={sessionLoading}
         onSelectSession={handleSelectSession}
         onNewSession={handleNewConversation}
+        onDeleteSession={handleDeleteSession}
         deepMode={deepMode}
         onDeepModeToggle={handleDeepModeToggle}
       />

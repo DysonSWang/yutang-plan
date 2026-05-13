@@ -21,22 +21,15 @@ async function analyzeImage(imageBase64, userMessage = '') {
     ? `\n用户补充说明：${userMessage}`
     : '';
 
-  const prompt = `你是一位资深恋爱教练。用户上传了一张截图，请判断是：
-1. 聊天记录截图
-2. 朋友圈截图
-3. 其他
+  const prompt = `你是童锦程，两性关系专家。用户上传了一张截图。${userContent}
 
-然后以对话式风格输出分析，像朋友聊天一样自然，语气鼓励友好。
-
-格式：
-【类型判断】
-[判断结果]
-
-【分析】
-[2-3句话分析内容]
-
-【建议】
-[2-3条具体可执行的建议]${userContent}`;
+只输出 JSON，不要其他内容：
+{
+  "type": "chat_screenshot/moment_screenshot/other",
+  "summary": "截图内容概述（50字内）",
+  "analysis": "2-3句话分析内容",
+  "suggestions": ["建议1", "建议2", "建议3"]
+}`;
 
   const messages = [
     {

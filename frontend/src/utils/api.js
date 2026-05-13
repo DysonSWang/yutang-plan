@@ -712,6 +712,16 @@ moment: (data) => api.post('/api/ai-coach/moment', data),
     });
     if (!res.ok) throw new Error('删除失败');
     return res.json();
+  },
+  // 删除AI教练会话
+  deleteSession: async (sessionId) => {
+    const token = api.getToken();
+    const res = await fetch(`${api.baseUrl}/api/ai-coach/session/${sessionId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('删除会话失败');
+    return res.json();
   }
 };
 

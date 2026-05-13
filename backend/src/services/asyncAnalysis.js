@@ -88,7 +88,7 @@ moneyDatingPattern: AA/请客/轮流/看情况
 humorStyle: 冷幽默/自嘲/调侃/正经
 selfEsteemLevel: 高/中/低
 pacePreference: 快节奏/稳健型/慢热型
-assetsLevel: A6/A7/A8/A9/A10/A10+
+assetsLevel: A6(百万级)/A7(千万级)/A8(亿级)/A9(十亿级)/A10(百亿级)/A10+(千亿以上)
 clientType: 执行型/质疑型/自主型
 empathy: 1-10数字
 communication: 1-10数字

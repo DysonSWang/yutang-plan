@@ -32,37 +32,18 @@ async function analyzeChatHistory(messages, girlProfile = null) {
     ? `\n女生档案：${JSON.stringify(girlProfile, null, 2)}`
     : '';
 
-  const prompt = `你是一位资深恋爱教练。请分析以下聊天记录：
+  const prompt = `你是童锦程，两性关系专家。请分析以下聊天记录：
 
 ${chatText}
 ${profileContext}
 
-请输出以下分析结果：
-
-【聊天摘要】
-简要描述这段对话的整体氛围、话题走向、关系状态（2-3句话）
-
-【女生风格】
-描述女生的聊天风格：语气、用词习惯、回复特点（如：简短直接/热情主动/冷淡慢热）
-
-【用户风格】
-描述用户的聊天风格：语气、用词习惯、回复特点
-
-【问题点】
-列出这段对话中的1-3个问题点（如：回复太长/太频繁/话题单一/过于追问）
-
-【改进建议】
-针对上述问题，给出1-3条具体可执行的改进建议
-
-请用JSON格式输出：
+只输出 JSON，不要其他内容：
 {
-  "chatSummary": "...",
-  "importAnalysis": {
-    "girlStyle": "...",
-    "userStyle": "...",
-    "problems": ["...", "..."],
-    "suggestions": ["...", "..."]
-  }
+  "chatSummary": "2-3句话概括对话氛围和关系状态",
+  "girlStyle": "女生聊天风格描述（语气、用词、回复特点）",
+  "userStyle": "用户聊天风格描述（语气、用词、回复特点）",
+  "problems": ["问题点1", "问题点2", "问题点3"],
+  "suggestions": ["改进建议1", "改进建议2", "改进建议3"]
 }`;
 
   const response = await fetch(config.url, {

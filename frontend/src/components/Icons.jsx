@@ -447,3 +447,12 @@ export const CreditCardIcon = createIcon({
     <line key="3" x1="6" y1="15" x2="10" y2="15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
   ]
 });
+
+// Delete/Trash 图标
+export const DeleteIcon = createIcon({
+  displayName: 'DeleteIcon',
+  viewBox: '0 0 24 24',
+  path: [
+    <path key="1" d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+  ]
+});
