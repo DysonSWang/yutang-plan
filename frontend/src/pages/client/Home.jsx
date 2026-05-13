@@ -1,21 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 import { Box, Heading, Text, SimpleGrid, Card, CardBody, Icon, HStack, Badge, Button, VStack, Divider, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, Skeleton, SkeletonCircle, Center, Image } from '@chakra-ui/react';
 import { ChatIcon, SparklesIcon, FishIcon, BookIcon, GiftIcon, CrownIcon, CheckIcon, CalendarIcon } from '../../components/Icons';
-import { clients, girls, membership as membershipApi } from '../../utils/api';
 import useKeepAliveData from '../../hooks/useKeepAliveData';
+import { clients, girls } from '../../utils/api';
 import ServiceProgressBoard from '../../components/client/ServiceProgressBoard';
 import AnimatedNumber from '../../components/AnimatedNumber';
 import EmptyState from '../../components/EmptyState';
 
-const TYPE_LABEL = { monthly: '普惠月付', yearly: '普惠年付', premium: '高端会员' };
-const TYPE_BADGE_COLOR = { monthly: 'green', yearly: 'blue', premium: 'purple' };
-const TYPE_POINTS = { monthly: 500, yearly: 4444, premium: 25000 };
 
-const PRICING_DATA = [
-  { type: 'monthly', label: '普惠月付', price: 999, period: '月', perMonth: 999, features: ['全功能AI教练', '约会方案生成', '学习中心', '缘分管理'] },
-  { type: 'yearly', label: '普惠年付', price: 8888, period: '年', perMonth: 741, features: ['全功能AI教练', '约会方案生成', '学习中心', '缘分管理', '年付专属优惠'] },
-  { type: 'premium', label: '高端会员', price: 50000, period: '年', perMonth: 4167, features: ['全功能AI教练', '约会方案生成', '学习中心', '缘分管理', '优先人工顾问', '专属定制服务'] }
-];
 
 const STAGE_MAP = {
   '背调': 1, '建池': 2, '约会': 3, '锁定': 4, '维护': 5, '未开始': 0
@@ -95,10 +87,7 @@ export default function ClientHome() {
   const { isOpen: isPricingOpen, onClose: onPricingClose } = useDisclosure();
 
   const { data, isInitialLoad, refresh } = useKeepAliveData(async () => {
-    const [clientRes, memberRes] = await Promise.all([
-      clients.me(),
-      membershipApi.status().catch(() => ({ success: false }))
-    ]);
+    const [clientRes, girlsRes] = await Promise.all([clients.me(), girls.list()]);
     let stats = {
       girlCount: 0, dateCount: 0, serviceStage: '', currentStage: 0,
       intimacyCount: 0, longTermCount: 0
@@ -110,22 +99,20 @@ export default function ClientHome() {
       stats.serviceStage = client.serviceStage || '未开始';
       stats.currentStage = STAGE_MAP[stats.serviceStage] || 0;
       try {
-        const girlsRes = await girls.list();
         if (girlsRes.success) {
           stats.intimacyCount = girlsRes.girls.filter(g => g.stage === '暧昧').length;
           stats.longTermCount = girlsRes.girls.filter(g => g.stage === '长期').length;
         }
       } catch { /* ignore */ }
     }
-    const memberStatus = memberRes.success ? memberRes : null;
-    return { stats, memberStatus };
+    
+    return { stats };
   }, { key: '/home' });
 
   const stats = data?.stats ?? {
     girlCount: 0, dateCount: 0, serviceStage: '', currentStage: 0,
     intimacyCount: 0, longTermCount: 0
   };
-  const memberStatus = data?.memberStatus;
 
   if (isInitialLoad) {
     return (
@@ -186,7 +173,7 @@ export default function ClientHome() {
       )}
 
       {/* ---- 高端用户进度看板 ---- */}
-      {memberStatus?.membership?.type === 'premium' && (
+      {false && (
         <Box className="stagger-3" mb={10}>
           <ServiceProgressBoard
             currentStage={stats.currentStage}
@@ -226,6 +213,34 @@ export default function ClientHome() {
             </Card>
           ))}
         </SimpleGrid>
+      </Box>
+
+      {/* ---- Mo哥联系方式（支持长按保存二维码） ---- */}
+      <Box className="stagger-5" mt={10} p={5} bg="rgba(255,255,255,0.03)" borderRadius="2xl" border="1px solid rgba(255,255,255,0.08)">
+        <HStack spacing={4} align="start">
+          <Box borderRadius="xl" overflow="hidden" flexShrink={0} userSelect="none">
+            {/* 支持 iOS 长按保存 / Android 长按保存 */}
+            <Image
+              src="/mo-qr-contact.jpg"
+              alt="Mo哥微信"
+              width="120px"
+              height="120px"
+              objectFit="cover"
+              draggable={false}
+              htmlWidth={120}
+              htmlHeight={120}
+            />
+          </Box>
+          <VStack align="start" spacing={1} flex={1}>
+            <Text color="white" fontWeight="600" fontSize="md">联系 Mo哥</Text>
+            <Text color="rgba(245,240,232,0.55)" fontSize="sm">
+              扫码加微信，获取专属追爱方案
+            </Text>
+            <Text color="rgba(245,240,232,0.35)" fontSize="xs" mt={1}>
+              长按图片可保存到相册
+            </Text>
+          </VStack>
+        </HStack>
       </Box>
     </Box>
   );
