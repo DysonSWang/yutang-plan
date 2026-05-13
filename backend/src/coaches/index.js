@@ -11,25 +11,11 @@ const loader = require('./loader');
 const router = require('./router');
 const promptBuilder = require('./promptBuilder');
 
-// 向后兼容：保留原有教练配置加载
-const fs = require('fs');
-const path = require('path');
-
-const coachesDir = path.join(__dirname, 'configs');
-let coaches = {};
-
-try {
-  const coachFiles = fs.readdirSync(coachesDir).filter(f => f.endsWith('.js'));
-  for (const file of coachFiles) {
-    const coach = require(path.join(coachesDir, file));
-    coaches[coach.id] = coach;
-  }
-} catch (e) {
-  console.warn('[Coaches] 加载教练配置失败:', e.message);
-}
+// coaches/ 目录已废弃（configs/ 删除），保留空对象保证模块接口完整
+const coaches = {};
 
 module.exports = {
-  // 新模块：Skill数据加载
+  // Loader
   loadSkill: loader.loadSkill,
   loadSkills: loader.loadSkills,
   loadAllSkills: loader.loadAllSkills,
@@ -37,28 +23,21 @@ module.exports = {
   safeLoadSkill: loader.safeLoadSkill,
   clearCache: loader.clearCache,
 
-  // 新模块：问题路由
+  // Router
   routeQuestion: router.routeQuestion,
   getSkillsForQuestion: router.getSkillsForQuestion,
   getMultiDimensionalSkills: router.getMultiDimensionalSkills,
   getMultiDimensionalSkillsWithMeta: router.getMultiDimensionalSkillsWithMeta,
   adjustPriority: router.adjustPriority,
 
-  // 新模块：Prompt构建
+  // Prompt Builder
   buildMasterPrompt: promptBuilder.buildMasterPrompt,
   buildChatAnalysisPrompt: promptBuilder.buildChatAnalysisPrompt,
 
-  // 向后兼容：原有教练配置
+  // 向后兼容（已废弃）
   coaches,
-  getCoach: (coachId) => coaches[coachId] || coaches.general,
-  listCoaches: () => Object.values(coaches).map(c => ({
-    id: c.id,
-    name: c.name,
-    description: c.description
-  })),
-  getSystemPrompt: (coachId) => {
-    const coach = coaches[coachId] || coaches.general;
-    return coach?.systemPrompt;
-  },
-  getCoachConfig: (coachId) => coaches[coachId] || coaches.general
+  getCoach: () => null,
+  listCoaches: () => [],
+  getSystemPrompt: () => null,
+  getCoachConfig: () => null,
 };

@@ -361,6 +361,7 @@ function registerSituationRoute(router, authMiddleware) {
       const turnCount = history.length;
       const compactionCount = sessionMemory.compactionCount || 0;
 
+      // 先构建无 wiki 的基础 context（此时尚无 routingMeta）
       const context = await buildAICoachContext(req.user.id, girlId, situation, {
         maxContextChars: contextBudget,
         turnCount,
@@ -368,6 +369,7 @@ function registerSituationRoute(router, authMiddleware) {
         clientProfile
       });
 
+      // 从 context 提取女生画像，再路由获取 routingMeta（含 coachIds）
       const girlProfile = context.girlInfo ? {
         tensionScore: context.girlInfo.tensionScore || 5.0,
         intimacyLevel: context.girlInfo.intimacyLevel || 1,
@@ -382,6 +384,7 @@ function registerSituationRoute(router, authMiddleware) {
         girlProfile
       });
 
+      // 重新调用注入 wiki 知识库（此时有 routingMeta）
       const updatedContext = await buildAICoachContext(req.user.id, girlId, situation, {
         maxContextChars: contextBudget,
         turnCount,

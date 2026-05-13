@@ -384,8 +384,10 @@ async function buildAICoachContext(clientId, girlId, userMessage, opts = {}) {
 
       // 从 contextBuilder 的调用方获取 routingMeta（通过 opts 传入）
       const routingMeta = opts.routingMeta || {};
+      // coachIds（router.js返回）兼容 coachIdsUsed（部分调用方传入）
+      const coachesUsed = routingMeta.coachesUsed || routingMeta.coachIds || [];
       const wikiResults = wikiRag.retrieve(userMessage, routingMeta.routedType, {
-        coachesUsed: routingMeta.coachesUsed,
+        coachesUsed,
         scene: girlInfo?.preferredScene
       });
 
