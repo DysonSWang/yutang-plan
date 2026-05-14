@@ -29,6 +29,9 @@ export default function ClientChat() {
   const scrollRef = useRef();
   const shouldAutoScrollRef = useRef(true);
   const [userScrolledUp, setUserScrolledUp] = useState(false); // 用户是否上滑离开了底部
+  const autoFollowRef = useRef(true);
+  const screenWasFilledRef = useRef(false);
+  const scrollHeightSnapshotRef = useRef(0);
   const fileInputRef = useRef();
   const inputRef = useRef();
   const mediaRecorderRef = useRef();
@@ -283,7 +286,7 @@ export default function ClientChat() {
   }, [session, flashViewer.messageId, on, startBurnTimer]);
 
   useEffect(() => {
-    if (shouldAutoScrollRef.current) {
+    if (shouldAutoScrollRef.current && autoFollowRef.current) {
       virtualizer.scrollToIndex(messages.length - 1, { align: 'end' });
     }
   }, [messages, virtualizer]);
@@ -530,6 +533,14 @@ export default function ClientChat() {
 
   const sendMessage = async () => {
     if (!input.trim() || sending) return;
+
+    // 重置滚动追随状态（新消息 → 新的一轮）
+    autoFollowRef.current = true;
+    screenWasFilledRef.current = false;
+    setUserScrolledUp(false);
+    const scrollContainer = scrollRef.current;
+    scrollHeightSnapshotRef.current = scrollContainer ? scrollContainer.scrollHeight : 0;
+
     if (!session) {
       // 没有会话时，先创建会话
       try {
@@ -1032,9 +1043,25 @@ export default function ClientChat() {
           onScroll={() => {
             if (!scrollRef.current) return;
             const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-            const near = scrollHeight - scrollTop - clientHeight < 120;
+            const near = scrollHeight - scrollTop - clientHeight < 80;
             shouldAutoScrollRef.current = near;
-            setUserScrolledUp(!near);
+
+            // 首次填满屏幕时，停止自动追随（每轮流式只触发一次）
+            // 用流式开始时的快照对比，避免历史加载误触发
+            if (!screenWasFilledRef.current && autoFollowRef.current
+                && scrollHeightSnapshotRef.current > 0
+                && scrollHeight - scrollHeightSnapshotRef.current > clientHeight) {
+              autoFollowRef.current = false;
+              screenWasFilledRef.current = true;
+              setUserScrolledUp(true);
+            }
+
+            // 用户手动滚到底部 → 恢复追随
+            if (near && !autoFollowRef.current) {
+              autoFollowRef.current = true;
+              setUserScrolledUp(false);
+            }
+
             // 滚动到顶部时加载更多
             if (scrollTop < 100 && hasMore && !loadingMore && session) {
               loadMessages(session.id, true);
@@ -1166,7 +1193,11 @@ export default function ClientChat() {
               size="sm"
               boxShadow="lg"
               _hover={{ bg: "gold.600" }}
-              onClick={forceScrollToBottom}
+              onClick={() => {
+                forceScrollToBottom();
+                autoFollowRef.current = true;
+                setUserScrolledUp(false);
+              }}
             />
           )}
 

@@ -1801,6 +1801,9 @@ export default function AICoach() {
   const savedScrollPositionRef = useRef(0);
   const [userScrolledUp, setUserScrolledUp] = useState(false); // 用户是否上滑离开了底部
   const nearBottomRef = useRef(true); // 用于流式回调中判断是否自动跟随
+  const autoFollowRef = useRef(true);       // 是否允许自动追随（屏幕填满后变为 false）
+  const screenWasFilledRef = useRef(false);  // 本轮流式是否已触发过「填满停止」
+  const scrollHeightSnapshotRef = useRef(0); // 流式开始时的 scrollHeight 快照
   const toast = useToast();
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3005';
 
@@ -1953,9 +1956,32 @@ export default function AICoach() {
     return container.scrollHeight - container.scrollTop - container.clientHeight < 80;
   }, []);
 
+  const handleScroll = useCallback(() => {
+    const container = document.getElementById('chat-scroll-container');
+    if (!container) return;
+    const near = container.scrollHeight - container.scrollTop - container.clientHeight < 80;
+    nearBottomRef.current = near;
+
+    // 首次填满屏幕时，停止自动追随（每轮流式只触发一次）
+    // 用流式开始时的快照对比，避免历史加载误触发
+    if (!screenWasFilledRef.current && autoFollowRef.current
+        && scrollHeightSnapshotRef.current > 0
+        && container.scrollHeight - scrollHeightSnapshotRef.current > container.clientHeight) {
+      autoFollowRef.current = false;
+      screenWasFilledRef.current = true;
+      setUserScrolledUp(true);
+    }
+
+    // 用户手动滚到底部 → 恢复追随
+    if (near && !autoFollowRef.current) {
+      autoFollowRef.current = true;
+      setUserScrolledUp(false);
+    }
+  }, []);
+
   const scrollToBottom = useCallback(() => {
     // 只有用户在底部附近时才自动跟随（ChatGPT/豆包级体验）
-    if (!nearBottomRef.current) return;
+    if (!nearBottomRef.current || !autoFollowRef.current) return;
     const doScroll = () => {
       const container = document.getElementById('chat-scroll-container');
       if (container) {
@@ -2011,14 +2037,12 @@ export default function AICoach() {
   const lastMessageId = lastMessage?.id || null;
   const lastContentLen = lastMessage?.content?.length || 0;
   const reasoningLen = reasoningContent?.length || 0;
-  useLayoutEffect(() => {
-    const c = document.getElementById('chat-scroll-container');
-    if (c) c.scrollTop = c.scrollHeight;
-  }, [lastMessageId, lastContentLen, reasoningLen]);
+  // 流式滚动统一走 scrollToBottom()（已被 autoFollowRef + nearBottomRef 门控）
+  // 删除了原来无条件滚动的 useLayoutEffect
 
-  // loading 结束后确保在底部（兜底）
+  // loading 结束后确保在底部（兜底，但尊重 autoFollowRef）
   useLayoutEffect(() => {
-    if (!loading) {
+    if (!loading && autoFollowRef.current) {
       const c = document.getElementById('chat-scroll-container');
       if (c) c.scrollTop = c.scrollHeight;
     }
@@ -2877,6 +2901,13 @@ export default function AICoach() {
       }
     ]);
 
+    // 重置滚动追随状态（新消息 → 新的一轮）
+    autoFollowRef.current = true;
+    screenWasFilledRef.current = false;
+    setUserScrolledUp(false);
+    const scrollContainer = document.getElementById('chat-scroll-container');
+    scrollHeightSnapshotRef.current = scrollContainer ? scrollContainer.scrollHeight : 0;
+
     forceScrollToBottom();
     setLoading(true);
     setError('');
@@ -3018,7 +3049,6 @@ export default function AICoach() {
       setLoading(false);
       isStreamingRef.current = false;
       abortControllerRef.current = null;
-      forceScrollToBottom();
     }
   }, [loading, selectedGirlId, deepMode, apiUrl, forceScrollToBottom]);
 
@@ -3039,6 +3069,13 @@ export default function AICoach() {
         createdAt: new Date().toISOString()
       }
     ]);
+
+    // 重置滚动追随状态（新消息 → 新的一轮）
+    autoFollowRef.current = true;
+    screenWasFilledRef.current = false;
+    setUserScrolledUp(false);
+    const scrollContainer2 = document.getElementById('chat-scroll-container');
+    scrollHeightSnapshotRef.current = scrollContainer2 ? scrollContainer2.scrollHeight : 0;
 
     // 立即滚动到底部（用户消息添加后）
     forceScrollToBottom();
@@ -3199,8 +3236,6 @@ export default function AICoach() {
       setLoading(false);
       isStreamingRef.current = false;
       abortControllerRef.current = null;
-      // 确保最终滚动到底部
-      forceScrollToBottom();
     }
   };
 
@@ -3267,13 +3302,7 @@ export default function AICoach() {
       <>
         <Box flex="1" minH="0" display="flex" flexDirection="column" bg="warm.800" borderRadius="md" mb={2} overflow="hidden">
           <Box id="chat-scroll-container" flex="1" overflowY="auto" p={4} ref={scrollContainerRef} sx={{ overflowAnchor: 'none', position: 'relative' }}
-            onScroll={() => {
-              const container = document.getElementById('chat-scroll-container');
-              if (!container) return;
-              const near = container.scrollHeight - container.scrollTop - container.clientHeight < 80;
-              nearBottomRef.current = near;
-              setUserScrolledUp(!near);
-            }}
+            onScroll={handleScroll}
           >
             {/* 加载状态 */}
             {loadingHistory ? (
@@ -3437,7 +3466,11 @@ export default function AICoach() {
               size="sm"
               boxShadow="lg"
               _hover={{ bg: "gold.600" }}
-              onClick={forceScrollToBottom}
+              onClick={() => {
+                forceScrollToBottom();
+                autoFollowRef.current = true;
+                setUserScrolledUp(false);
+              }}
             />
           )}
 
@@ -3640,13 +3673,7 @@ export default function AICoach() {
       <Box flex="1" minH="0" display="flex" flexDirection="column" bg="warm.800" borderRadius="md" mb={2} overflow="hidden">
         {/* 消息列表区域 - 可滚动 */}
         <Box id="chat-scroll-container" flex="1" overflowY="auto" p={4} ref={scrollContainerRef} sx={{ overflowAnchor: 'none', position: 'relative' }}
-              onScroll={() => {
-                const container = document.getElementById('chat-scroll-container');
-                if (!container) return;
-                const near = container.scrollHeight - container.scrollTop - container.clientHeight < 80;
-                nearBottomRef.current = near;
-                setUserScrolledUp(!near);
-              }}
+              onScroll={handleScroll}
             >
           {loadingHistory ? (
             <VStack spacing={4} py={8} justify="center" minH="200px">
@@ -3725,7 +3752,11 @@ export default function AICoach() {
               size="sm"
               boxShadow="lg"
               _hover={{ bg: "gold.600" }}
-              onClick={forceScrollToBottom}
+              onClick={() => {
+                forceScrollToBottom();
+                autoFollowRef.current = true;
+                setUserScrolledUp(false);
+              }}
             />
           )}
 
