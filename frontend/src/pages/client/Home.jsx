@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Box, Heading, Text, SimpleGrid, Card, CardBody, Icon, HStack, Badge, Button, VStack, Divider, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, Skeleton, SkeletonCircle, Center, Image } from '@chakra-ui/react';
+import { Box, Heading, Text, SimpleGrid, Card, CardBody, Icon, HStack, Badge, Button, VStack, Divider, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, Skeleton, SkeletonCircle, Center } from '@chakra-ui/react';
 import { ChatIcon, SparklesIcon, FishIcon, BookIcon, GiftIcon, CrownIcon, CheckIcon, CalendarIcon } from '../../components/Icons';
 import useKeepAliveData from '../../hooks/useKeepAliveData';
 import { clients, girls } from '../../utils/api';
@@ -215,33 +215,6 @@ export default function ClientHome() {
         </SimpleGrid>
       </Box>
 
-      {/* ---- Mo哥联系方式（支持长按保存二维码） ---- */}
-      <Box className="stagger-5" mt={10} p={5} bg="rgba(255,255,255,0.03)" borderRadius="2xl" border="1px solid rgba(255,255,255,0.08)">
-        <HStack spacing={4} align="start">
-          <Box borderRadius="xl" overflow="hidden" flexShrink={0} userSelect="none">
-            {/* 支持 iOS 长按保存 / Android 长按保存 */}
-            <Image
-              src="/mo-qr-contact.jpg"
-              alt="Mo哥微信"
-              width="120px"
-              height="120px"
-              objectFit="cover"
-              draggable={false}
-              htmlWidth={120}
-              htmlHeight={120}
-            />
-          </Box>
-          <VStack align="start" spacing={1} flex={1}>
-            <Text color="white" fontWeight="600" fontSize="md">联系 Mo哥</Text>
-            <Text color="rgba(245,240,232,0.55)" fontSize="sm">
-              扫码加微信，获取专属追爱方案
-            </Text>
-            <Text color="rgba(245,240,232,0.35)" fontSize="xs" mt={1}>
-              长按图片可保存到相册
-            </Text>
-          </VStack>
-        </HStack>
-      </Box>
     </Box>
   );
 }

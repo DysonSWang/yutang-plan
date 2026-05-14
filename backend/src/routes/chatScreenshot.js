@@ -64,7 +64,6 @@ const authMiddleware = async (req, res, next) => {
     res.status(401).json({ error: { code: 'A0102', message: '认证令牌无效' } });
   }
 };
-};
 
 // 获取女生的截图记录列表
 router.get('/girl/:girlId', authMiddleware, async (req, res) => {
@@ -108,7 +107,7 @@ router.post('/', authMiddleware, async (req, res) => {
 
     upload.single('image')(req, res, async (err) => {
       if (err) {
-        return res.status(400).json({ error: err.message });
+        return res.status(400).json({ error: { code: 'S0802', message: err.message } });
       }
 
       if (!req.file) {
@@ -218,7 +217,7 @@ router.post('/confirm-fields', authMiddleware, async (req, res) => {
     const result = await confirmAnalysis(girlId, pendingId, selectedFields);
 
     if (!result.success) {
-      return res.status(404).json({ error: result.reason });
+      return res.status(404).json({ error: { code: 'S0802', message: result.reason } });
     }
 
     res.json({ success: true, ...result });

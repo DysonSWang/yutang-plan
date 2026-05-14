@@ -1082,7 +1082,7 @@ router.post('/extract-from-screenshot', authMiddleware, screenshotUpload.single(
   } catch (error) {
     console.error('[Clients] 截图提取失败:', error);
     if (error.message === '仅支持图片格式') {
-      return res.status(400).json({ error: error.message });
+      return res.status(400).json({ error: { code: 'S0803', message: error.message } });
     }
     res.status(500).json({ error: { code: 'S0802', message: '提取客户档案失败，请稍后重试' } });
   }

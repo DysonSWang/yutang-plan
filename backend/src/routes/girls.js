@@ -519,10 +519,7 @@ router.post('/client-add', authMiddleware, async (req, res) => {
 
     if (currentCount >= quota) {
       return res.status(403).json({
-        error: `额度已用完（${currentCount}/${quota}人）`,
-        code: 'QUOTA_EXCEEDED',
-        quota,
-        currentCount
+        error: { code: 'C0202', message: `额度已用完（${currentCount}/${quota}人）`, currentCount, quota },
       });
     }
 

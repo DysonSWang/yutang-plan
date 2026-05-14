@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, VStack, HStack, Stack, Input, Button, Text, Flex, IconButton, Image, Badge, useToast, Center, Spinner, Icon, Switch, FormControl, FormLabel, Tooltip, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure } from '@chakra-ui/react';
-import { WarningIcon } from '@chakra-ui/icons';
+import { WarningIcon, CloseIcon } from '@chakra-ui/icons';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { api, chat, upload } from '../../utils/api';
 import { captureError } from '../../utils/frontendErrorCapture';
@@ -49,8 +49,8 @@ export default function ClientChat() {
   const longPressTimerRef = useRef(null);
   const [longPressMsgId, setLongPressMsgId] = useState(null);
   // 语音录制（微信式按住说话）
-  const [voiceMode, setVoiceMode] = useState(false);
   const [voiceState, setVoiceState] = useState('idle'); // idle | recording | preview
+  const [showVoiceOverlay, setShowVoiceOverlay] = useState(false);
   const [slideCancel, setSlideCancel] = useState(false);
   const startYRef = useRef(0);
   const messagesEndRef = useRef(null);
@@ -682,7 +682,15 @@ export default function ClientChat() {
       recorder.start(100);
       setVoiceState('recording');
       setRecordTime(0);
-      recordTimerRef.current = setInterval(() => setRecordTime(prev => prev + 1), 1000);
+      recordTimerRef.current = setInterval(() => {
+        setRecordTime(prev => {
+          if (prev >= 59) {
+            voiceStopRecording();
+            return 60;
+          }
+          return prev + 1;
+        });
+      }, 1000);
     } catch (e) {
       captureError(e, { context: '无法访问麦克风' });
       setVoiceState('idle');
@@ -694,6 +702,20 @@ export default function ClientChat() {
   useEffect(() => {
     recordTimeRef.current = recordTime;
   }, [recordTime]);
+
+  // 录音完成后自动发送（≥1秒）
+  useEffect(() => {
+    if (voiceState === 'preview' && previewFile && previewFile.type === 'audio' && !uploading) {
+      const dur = previewFile.duration || 0;
+      if (dur < 1) {
+        cancelPreview();
+        setVoiceState('idle');
+        toast({ title: '录音太短', status: 'warning', duration: 1500 });
+        return;
+      }
+      voiceSendPreview();
+    }
+  }, [voiceState, previewFile]);
 
   const voiceStopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
@@ -732,6 +754,7 @@ export default function ClientChat() {
       setUploading(false);
       cancelPreview();
       setVoiceState('idle');
+      setShowVoiceOverlay(false);
     }
   };
 
@@ -980,12 +1003,12 @@ export default function ClientChat() {
   return (
     <Flex h="calc(100vh - 120px)" direction="column" gap={4}>
       {/* 聊天区域 */}
-      <Box flex={1} bg="rgba(255,255,255,0.02)" border="1px solid rgba(255,255,255,0.06)" borderRadius="xl" display="flex" flexDirection="column" overflow="hidden">
+      <Box flex={1} bg="rgba(255,255,255,0.02)" border="1px solid rgba(255,255,255,0.06)" borderRadius="xl" display="flex" flexDirection="column" overflow="hidden" position="relative">
         {/* 聊天头部 - 固定 */}
         <Box p={4} borderBottom="1px solid rgba(255,255,255,0.06)" flexShrink={0}>
           <HStack spacing={3}>
             <Box w="40px" h="40px" borderRadius="full" bg="gold.500" display="flex" alignItems="center" justifyContent="center" overflow="hidden">
-              <Image src="/logo.png" alt="Mo哥" w="28px" h="28px" objectFit="contain" />
+              <Image src={`${import.meta.env.BASE_URL}logo.png`} alt="Mo哥" w="28px" h="28px" objectFit="contain" />
             </Box>
             <Box>
               <Text color="white" fontWeight="bold">Mo哥</Text>
@@ -1120,71 +1143,138 @@ export default function ClientChat() {
           )}
         </Box>
 
+        {/* 全屏语音浮层 */}
+        {showVoiceOverlay && (
+          <Box
+            position="absolute"
+            inset={0}
+            bg="rgba(17,17,16,0.97)"
+            zIndex={50}
+            display="flex"
+            flexDirection="column"
+            alignItems="center"
+            justifyContent="center"
+            borderRadius="xl"
+          >
+            {/* 关闭按钮 */}
+            <IconButton
+              icon={<Icon as={CloseIcon} boxSize={4} />}
+              position="absolute"
+              top={4}
+              right={4}
+              variant="ghost"
+              color="rgba(245,240,232,0.5)"
+              onClick={() => { voiceCancelRecording(); setShowVoiceOverlay(false); }}
+              aria-label="关闭"
+              size="sm"
+            />
+
+            {/* 录音状态区域 */}
+            {voiceState === 'recording' ? (
+              <>
+                {/* 脉动麦克风 */}
+                <Box position="relative" mb={6}>
+                  {[0, 1, 2].map(i => (
+                    <Box
+                      key={i}
+                      position="absolute"
+                      inset={`${-14 * (i + 1)}px`}
+                      borderRadius="full"
+                      border={slideCancel ? '2px solid rgba(239,68,68,0.3)' : '2px solid rgba(226,176,68,0.3)'}
+                      animation={`voicePulse 1.5s ${i * 0.3}s infinite`}
+                      transition="border-color 0.2s"
+                    />
+                  ))}
+                  <Box
+                    w="80px" h="80px"
+                    borderRadius="full"
+                    bg={slideCancel ? 'rgba(239,68,68,0.15)' : 'rgba(226,176,68,0.15)'}
+                    border={slideCancel ? '3px solid rgba(239,68,68,0.5)' : '3px solid rgba(226,176,68,0.5)'}
+                    display="flex" alignItems="center" justifyContent="center"
+                    transition="all 0.2s"
+                  >
+                    <Icon as={MicIcon} boxSize={8} color={slideCancel ? 'red.400' : 'gold.400'} />
+                  </Box>
+                </Box>
+                <Text color={slideCancel ? 'red.400' : 'gold.400'} fontSize="2xl" fontWeight="bold" mb={2} fontFamily="mono">
+                  {slideCancel ? '松开取消' : `${recordTime}"`}
+                </Text>
+                <Text color="rgba(245,240,232,0.4)" fontSize="sm" mb={1}>
+                  {slideCancel ? '上滑取消发送' : '松开发送 · 上滑取消'}
+                </Text>
+                {recordTime >= 50 && !slideCancel && (
+                  <Text color="orange.400" fontSize="xs" mt={1}>还剩 {60 - recordTime} 秒</Text>
+                )}
+              </>
+            ) : (
+              /* 空闲状态：按住说话按钮 */
+              <>
+                <Box
+                  w="100px"
+                  h="100px"
+                  borderRadius="full"
+                  bg="rgba(226,176,68,0.12)"
+                  border="3px solid rgba(226,176,68,0.3)"
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  mb={6}
+                  cursor="pointer"
+                  userSelect="none"
+                  touchAction="none"
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    e.target.setPointerCapture(e.pointerId);
+                    startYRef.current = e.clientY;
+                    setSlideCancel(false);
+                    if (navigator.vibrate) navigator.vibrate(10);
+                    voiceStartRecording();
+                  }}
+                  onPointerMove={(e) => {
+                    if (voiceState !== 'recording') return;
+                    const dy = startYRef.current - e.clientY;
+                    setSlideCancel(dy > 80);
+                  }}
+                  onPointerUp={() => {
+                    if (voiceState !== 'recording') return;
+                    if (slideCancel) {
+                      voiceCancelRecording();
+                    } else {
+                      voiceStopRecording();
+                    }
+                    setSlideCancel(false);
+                  }}
+                  _active={{ bg: 'rgba(226,176,68,0.25)', transform: 'scale(0.95)' }}
+                  transition="all 0.15s"
+                >
+                  <Icon as={MicIcon} boxSize={10} color="gold.400" />
+                </Box>
+                <Text color="rgba(245,240,232,0.6)" fontSize="sm">按住说话</Text>
+              </>
+            )}
+
+            {/* 脉动动画 keyframes */}
+            <style>{`
+              @keyframes voicePulse {
+                0% { transform: scale(1); opacity: 0.6; }
+                100% { transform: scale(1.6); opacity: 0; }
+              }
+            `}</style>
+          </Box>
+        )}
+
         {/* 输入区域 */}
         <Box p={4} borderTop="1px solid rgba(255,255,255,0.06)" bg="rgba(255,255,255,0.02)" position="relative">
-          {/* 语音录制遮罩（按住说话时显示） */}
-          {voiceState === 'recording' && (
-            <Box
-              position="absolute"
-              inset={0}
-              bg="rgba(17,17,16,0.97)"
-              zIndex={10}
-              display="flex"
-              flexDirection="column"
-              alignItems="center"
-              justifyContent="center"
-              borderRadius="md"
-            >
-              <Box
-                w="80px" h="80px"
-                borderRadius="full"
-                bg={slideCancel ? 'rgba(255,255,255,0.1)' : 'rgba(226,176,68,0.15)'}
-                border={slideCancel ? '3px solid rgba(255,255,255,0.3)' : '3px solid rgba(226,176,68,0.5)'}
-                display="flex" alignItems="center" justifyContent="center"
-                mb={4}
-                transition="all 0.2s"
-              >
-                <Icon as={MicIcon} boxSize={8} color={slideCancel ? 'white' : 'gold.400'} />
-              </Box>
-              <Text color={slideCancel ? 'red.400' : 'gold.400'} fontSize="lg" fontWeight="bold" mb={2}>
-                {slideCancel ? '松开取消' : `${recordTime}"`}
-              </Text>
-              <Text color="rgba(245,240,232,0.5)" fontSize="sm">
-                {slideCancel ? '上滑取消发送' : '松开发送 · 上滑取消'}
-              </Text>
-            </Box>
-          )}
 
-          {/* 语音预览（录音完成后） */}
-          {voiceState === 'preview' && previewFile && (
-            <Box mb={3} p={4} bg="rgba(255,255,255,0.05)" borderRadius="xl" border="1px solid rgba(255,255,255,0.08)">
-              <VStack spacing={3}>
-                <HStack w="full" justify="space-between">
-                  <HStack spacing={3}>
-                    <Box w="40px" h="40px" borderRadius="full" bg="rgba(226,176,68,0.15)" display="flex" alignItems="center" justifyContent="center">
-                      <Icon as={MicIcon} boxSize={5} color="gold.400" />
-                    </Box>
-                    <VStack align="start" spacing={0}>
-                      <Text color="white" fontSize="sm" fontWeight="bold">语音消息</Text>
-                      <Text color="rgba(245,240,232,0.5)" fontSize="xs">{previewFile.duration || 0}"</Text>
-                    </VStack>
-                  </HStack>
-                  <audio src={previewFile.preview} style={{ height: '32px', maxWidth: '150px' }} controls />
-                </HStack>
-                <HStack w="full" spacing={3}>
-                  <Button flex={1} variant="outline" borderColor="rgba(255,255,255,0.1)" color="rgba(245,240,232,0.6)" size="md" borderRadius="xl" onClick={() => { cancelPreview(); setVoiceState('idle'); }} isDisabled={uploading}>
-                    取消
-                  </Button>
-                  <Button flex={1} colorScheme="gold" size="md" borderRadius="xl" isLoading={uploading} loadingText="发送中" onClick={voiceSendPreview}>
-                    发送
-                  </Button>
-                </HStack>
-              </VStack>
-            </Box>
+          {/* 语音自动发送中 */}
+          {voiceState === 'preview' && uploading && (
+            <HStack mb={3} p={3} bg="rgba(226,176,68,0.1)" borderRadius="xl" border="1px solid rgba(226,176,68,0.2)" justify="center" spacing={2}>
+              <Spinner size="sm" color="gold.400" />
+              <Text color="gold.400" fontSize="sm">发送语音中...</Text>
+            </HStack>
           )}
 
           {/* 工具栏 */}
-          {voiceState !== 'recording' && (
             <Stack direction={{ base: 'column', md: 'row' }} spacing={{ base: 2, md: 2 }} w="full">
               <HStack spacing={2} justify={{ base: 'space-around', md: 'start' }}>
                 <IconButton
@@ -1198,16 +1288,15 @@ export default function ClientChat() {
                   title="发送图片"
                 />
                 <input type="file" accept="image/*,video/*" multiple style={{ display: 'none' }} ref={fileInputRef} onChange={handleFileSelect} />
-                {/* 语音模式切换 */}
+                {/* 语音录音 */}
                 <IconButton
                   icon={<Icon as={MicIcon} boxSize={4} />}
-                  variant={voiceMode ? 'solid' : 'ghost'}
+                  variant="ghost"
                   size="sm"
-                  colorScheme={voiceMode ? 'gold' : undefined}
-                  color={voiceMode ? undefined : 'rgba(245,240,232,0.4)'}
-                  onClick={() => { setVoiceMode(v => !v); setVoiceState('idle'); }}
+                  color="rgba(245,240,232,0.4)"
+                  onClick={() => setShowVoiceOverlay(true)}
                   aria-label="语音输入"
-                  isDisabled={sending}
+                  isDisabled={sending || uploading}
                 />
                 {/* 阅后即焚 */}
                 <Button
@@ -1226,75 +1315,25 @@ export default function ClientChat() {
                 </Button>
                 <EmojiPanel onSelect={handleEmojiSelect} isDisabled={sending || voiceState === 'preview'} variant="client" />
               </HStack>
-              {/* 输入框 + 发送 / 按住说话 */}
+              {/* 输入框 + 发送 */}
               <HStack flex={1} spacing={1}>
-                {!voiceMode ? (
-                  <>
-                    <Input
-                      ref={inputRef}
-                      value={input}
-                      onChange={e => setInput(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && sendMessage()}
-                      placeholder="输入消息..."
-                      flex={1} minW="0"
-                      bg="warm.800"
-                      border="1px solid rgba(255,255,255,0.08)"
-                      borderRadius="xl"
-                      color="white"
-                      _placeholder={{ color: 'rgba(245,240,232,0.4)' }}
-                      _focus={{ borderColor: 'gold.500', boxShadow: '0 0 0 3px rgba(226,176,68,0.12)' }}
-                    />
-                    <Button colorScheme="gold" onClick={sendMessage} isLoading={sending} isDisabled={!input.trim()} size="sm">发送</Button>
-                  </>
-                ) : (
-                  <Box
-                    flex={1}
-                    h="40px"
-                    bg={voiceState === 'recording' ? 'rgba(226,176,68,0.2)' : 'rgba(255,255,255,0.06)'}
-                    border="1px solid rgba(226,176,68,0.3)"
-                    borderRadius="xl"
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="center"
-                    cursor="pointer"
-                    userSelect="none"
-                    touchAction="none"
-                    onPointerDown={(e) => {
-                      if (voiceState === 'preview' || sending) return;
-                      e.preventDefault();
-                      startYRef.current = e.clientY;
-                      setSlideCancel(false);
-                      voiceStartRecording();
-                    }}
-                    onPointerMove={(e) => {
-                      if (voiceState !== 'recording') return;
-                      const dy = startYRef.current - e.clientY;
-                      setSlideCancel(dy > 80);
-                    }}
-                    onPointerUp={() => {
-                      if (voiceState !== 'recording') return;
-                      if (slideCancel) {
-                        voiceCancelRecording();
-                      } else {
-                        voiceStopRecording();
-                      }
-                      setSlideCancel(false);
-                    }}
-                    onPointerLeave={() => {
-                      if (voiceState !== 'recording') return;
-                      voiceCancelRecording();
-                      setSlideCancel(false);
-                    }}
-                    _active={{ bg: 'rgba(226,176,68,0.15)' }}
-                  >
-                    <Text color={voiceState === 'recording' ? 'gold.400' : 'rgba(245,240,232,0.6)'} fontSize="sm" fontWeight="500">
-                      {voiceState === 'recording' ? '松开发送' : '按住说话'}
-                    </Text>
-                  </Box>
-                )}
+                <Input
+                  ref={inputRef}
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && sendMessage()}
+                  placeholder="输入消息..."
+                  flex={1} minW="0"
+                  bg="warm.800"
+                  border="1px solid rgba(255,255,255,0.08)"
+                  borderRadius="xl"
+                  color="white"
+                  _placeholder={{ color: 'rgba(245,240,232,0.4)' }}
+                  _focus={{ borderColor: 'gold.500', boxShadow: '0 0 0 3px rgba(226,176,68,0.12)' }}
+                />
+                <Button colorScheme="gold" onClick={sendMessage} isLoading={sending} isDisabled={!input.trim()} size="sm">发送</Button>
               </HStack>
             </Stack>
-          )}
         </Box>
       </Box>
       <FlashImageViewer

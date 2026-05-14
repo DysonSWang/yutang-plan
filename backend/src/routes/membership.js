@@ -74,7 +74,7 @@ router.get('/status', authMiddleware, async (req, res) => {
     const status = await membershipService.getMembershipStatus(req.user.id);
     res.json({ success: true, ...status });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -97,7 +97,7 @@ router.get('/profile-completeness', authMiddleware, async (req, res) => {
     const completeness = personalizationEngine.calculateCompleteness(user);
     res.json({ success: true, completeness });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -125,7 +125,7 @@ router.post('/trial/activate', authMiddleware, async (req, res) => {
     const membership = await membershipService.activateTrial(req.user.id);
     res.json({ success: true, membership });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(400).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -135,7 +135,7 @@ router.get('/trial/config', authMiddleware, async (req, res) => {
     const config = await membershipService.getTrialConfig();
     res.json({ success: true, config });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -151,7 +151,7 @@ router.put('/trial/config', authMiddleware, operatorOnly, async (req, res) => {
     });
     res.json({ success: true, config });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(400).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -177,7 +177,7 @@ router.get('/admin/list', authMiddleware, operatorOnly, async (req, res) => {
 
     res.json({ success: true, clients: clientsWithStatus });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -208,7 +208,7 @@ router.post('/admin/set', authMiddleware, operatorOnly, async (req, res) => {
     }
     res.status(400).json({ error: { code: 'S0803', message: '无效操作' } });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -219,7 +219,7 @@ router.post('/admin/trial', authMiddleware, operatorOnly, async (req, res) => {
     const membership = await membershipService.activateTrial(userId);
     res.json({ success: true, membership });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(400).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -234,7 +234,7 @@ router.get('/points', authMiddleware, async (req, res) => {
     const history = await membershipService.getPointsHistory(req.user.id, 50, 0);
     res.json({ success: true, balance, history: history.records, total: history.total });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -245,7 +245,7 @@ router.post('/points/recharge', authMiddleware, operatorOnly, async (req, res) =
     const record = await membershipService.rechargePoints(req.user.id, userId, parseInt(amount), note);
     res.json({ success: true, record });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(400).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -256,7 +256,7 @@ router.post('/points/deduct', authMiddleware, operatorOnly, async (req, res) => 
     const record = await membershipService.deductPoints(req.user.id, userId, parseInt(amount), note);
     res.json({ success: true, record });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(400).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -266,7 +266,7 @@ router.get('/coupons', authMiddleware, async (req, res) => {
     const coupons = await membershipService.getAvailableCoupons(req.user.id);
     res.json({ success: true, coupons });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -277,7 +277,7 @@ router.post('/coupons/grant', authMiddleware, operatorOnly, async (req, res) => 
     const record = await membershipService.grantCoupon(req.user.id, userId, parseInt(value), note);
     res.json({ success: true, record });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(400).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -291,7 +291,7 @@ router.post('/invitation/create', authMiddleware, async (req, res) => {
     const invitation = await membershipService.createInviteCode(req.user.id);
     res.json({ success: true, invitation });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -301,7 +301,7 @@ router.get('/invitation/my-stats', authMiddleware, async (req, res) => {
     const stats = await membershipService.getMyInvitationStats(req.user.id);
     res.json({ success: true, ...stats });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -332,7 +332,7 @@ router.get('/learning/chapters', authMiddleware, async (req, res) => {
     });
     res.json({ success: true, chapters });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -344,7 +344,7 @@ router.get('/learning/progress', authMiddleware, async (req, res) => {
     });
     res.json({ success: true, progress });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -391,7 +391,7 @@ router.put('/learning/progress/:chapterId', authMiddleware, async (req, res) => 
 
     res.json({ success: true, progress: record });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -445,7 +445,7 @@ router.get('/learning/personalized-status', authMiddleware, async (req, res) => 
       personalizationEnabled: user.personalizationEnabled,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -457,7 +457,7 @@ router.post('/learning/generate-all', authMiddleware, async (req, res) => {
       try {
         await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
       } catch (e) {
-        return res.status(403).json({ error: e.message });
+        return res.status(403).json({ error: { code: 'A0108', message: e.message } });
       }
     }
 
@@ -486,9 +486,9 @@ router.post('/learning/generate-all', authMiddleware, async (req, res) => {
     res.json({ success: true, batchId: batch.id });
   } catch (err) {
     if (err.message.includes('完善度不足')) {
-      return res.status(400).json({ error: err.message });
+      return res.status(400).json({ error: { code: 'S0802', message: err.message } });
     }
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -506,7 +506,7 @@ router.get('/learning/generate-status/:batchId', authMiddleware, async (req, res
 
     res.json({ success: true, batch });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -518,7 +518,7 @@ router.post('/learning/regenerate', authMiddleware, async (req, res) => {
       try {
         await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
       } catch (e) {
-        return res.status(403).json({ error: e.message });
+        return res.status(403).json({ error: { code: 'A0108', message: e.message } });
       }
     }
 
@@ -547,9 +547,9 @@ router.post('/learning/regenerate', authMiddleware, async (req, res) => {
     res.json({ success: true, batchId: batch.id });
   } catch (err) {
     if (err.message.includes('完善度不足')) {
-      return res.status(400).json({ error: err.message });
+      return res.status(400).json({ error: { code: 'S0802', message: err.message } });
     }
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -563,7 +563,7 @@ router.post('/learning/regenerate/:chapterId', authMiddleware, async (req, res) 
       try {
         await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
       } catch (e) {
-        return res.status(403).json({ error: e.message });
+        return res.status(403).json({ error: { code: 'A0108', message: e.message } });
       }
     }
 
@@ -591,7 +591,7 @@ router.post('/learning/regenerate/:chapterId', authMiddleware, async (req, res) 
 
     res.json({ success: true, chapterId });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -685,7 +685,7 @@ router.get('/learning/:chapterId', authMiddleware, async (req, res) => {
       },
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -710,7 +710,7 @@ router.get('/admin/learning/chapters', authMiddleware, operatorOnly, async (req,
     });
     res.json({ success: true, chapters });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -759,7 +759,7 @@ router.post('/admin/learning/chapters', authMiddleware, operatorOnly, async (req
 
     res.status(201).json({ success: true, chapter });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -772,7 +772,7 @@ router.get('/admin/learning/chapters/:chapterId', authMiddleware, operatorOnly, 
     if (!chapter) return res.status(404).json({ error: { code: 'S0804', message: '章节不存在' } });
     res.json({ success: true, chapter });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -796,7 +796,7 @@ router.put('/admin/learning/chapters/:chapterId/publish', authMiddleware, operat
 
     res.json({ success: true, chapter });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -820,7 +820,7 @@ router.put('/admin/learning/chapters/reorder', authMiddleware, operatorOnly, asy
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -857,7 +857,7 @@ router.put('/admin/learning/chapters/:chapterId', authMiddleware, operatorOnly, 
 
     res.json({ success: true, chapter });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -876,7 +876,7 @@ router.delete('/admin/learning/chapters/:chapterId', authMiddleware, operatorOnl
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -1083,7 +1083,7 @@ router.post('/admin/learning/scan',
 
     res.json({ success: true, batch, drafts });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -1100,7 +1100,7 @@ router.get('/admin/learning/drafts/:batchId', authMiddleware, operatorOnly, asyn
 
     res.json({ success: true, batch, drafts });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -1120,7 +1120,7 @@ router.get('/admin/learning/drafts/:batchId/:chapterId/diff', authMiddleware, op
 
     res.json({ success: true, draft, oldContent });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -1139,7 +1139,7 @@ router.post('/admin/learning/drafts/:batchId/confirm', authMiddleware, operatorO
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -1184,7 +1184,7 @@ router.post('/admin/learning/batches/:batchId/impact', authMiddleware, operatorO
       userImpact,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -1326,7 +1326,7 @@ router.post('/admin/learning/batches/:batchId/publish', authMiddleware, operator
       affectedUserCount: result.affectedUserIds.length,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -1338,7 +1338,7 @@ router.get('/admin/learning/versions', authMiddleware, operatorOnly, async (req,
     });
     res.json({ success: true, versions });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -1351,7 +1351,7 @@ router.get('/admin/learning/versions/:id', authMiddleware, operatorOnly, async (
     if (!version) return res.status(404).json({ error: { code: 'S0804', message: '版本不存在' } });
     res.json({ success: true, version });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -1376,7 +1376,7 @@ router.post('/learning/acknowledge-update', authMiddleware, async (req, res) => 
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -1429,7 +1429,7 @@ router.get('/admin/personalization/users', authMiddleware, operatorOnly, async (
 
     res.json({ success: true, users: result });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -1456,7 +1456,7 @@ router.post('/admin/personalization/toggle', authMiddleware, operatorOnly, async
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -1494,7 +1494,7 @@ router.get('/admin/personalization/users/:userId/chapters', authMiddleware, oper
 
     res.json({ success: true, chapters: result });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -1724,7 +1724,7 @@ router.post('/dating-plan/generate', authMiddleware, async (req, res) => {
       await membershipService.checkTrialLimit(req.user.id, 'date_plan');
       await membershipService.useTrialCount(req.user.id);
     } catch (e) {
-      return res.status(403).json({ error: e.message });
+      return res.status(403).json({ error: { code: 'A0108', message: e.message } });
     }
 
     const { title, scene, budget, duration, location, dateTime, girlId, optimize, previousContent, girl, transportMode, relationshipStage, specialRequirements } = req.body;
@@ -2062,7 +2062,7 @@ ${optimize ? '\n要求：内容专业、实用，在原有方案基础上进一�
     })();
     // ===== 后台异步生成结束 =====
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -2078,7 +2078,7 @@ router.get('/dating-plan', authMiddleware, async (req, res) => {
     });
     res.json({ success: true, plans });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -2096,7 +2096,7 @@ router.get('/dating-plan/:id', authMiddleware, async (req, res) => {
     }
     res.json({ success: true, plan });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -2140,7 +2140,7 @@ router.post('/screenshot/upload', authMiddleware, operatorOnly, upload.single('i
     );
     res.json({ success: true, profile });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -2157,7 +2157,7 @@ router.get('/screenshot/profiles', authMiddleware, operatorOnly, async (req, res
     });
     res.json({ success: true, profiles });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 
@@ -2173,7 +2173,7 @@ router.post('/screenshot/profile/:id/confirm', authMiddleware, operatorOnly, asy
     );
     res.json({ success: true, result });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(400).json({ error: { code: 'S0802', message: err.message } });
   }
 });
 

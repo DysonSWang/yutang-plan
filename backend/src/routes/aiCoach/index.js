@@ -372,7 +372,7 @@ router.post('/new-session', authMiddleware, async (req, res) => {
       try {
         await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
       } catch (e) {
-        return res.status(403).json({ error: e.message });
+        return res.status(403).json({ error: { code: 'A0108', message: e.message } });
       }
     }
 
@@ -417,9 +417,9 @@ router.post('/new-session', authMiddleware, async (req, res) => {
     res.json({ success: true, message: '已开始新对话' });
   } catch (error) {
     if (error.message && error.message.includes('无会员权限')) {
-      return res.status(403).json({ error: error.message });
+      return res.status(403).json({ error: { code: 'A0108', message: error.message } });
     }
-    logger.error(`[AICoach] 新建对话失败: ${error.message}`, { error: error.message });
+    logger.error(`[AICoach] 新建对话失败: ${error.message}`, { error: { code: 'A0108', message: error.message } });
     res.status(500).json({ error: { code: 'S0802', message: '新建对话失败' } });
   }
 });
@@ -438,7 +438,7 @@ router.delete('/session/:sessionId', authMiddleware, async (req, res) => {
       try {
         await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
       } catch (e) {
-        return res.status(403).json({ error: e.message });
+        return res.status(403).json({ error: { code: 'A0108', message: e.message } });
       }
     }
 
@@ -466,9 +466,9 @@ router.delete('/session/:sessionId', authMiddleware, async (req, res) => {
     res.json({ success: true, message: '会话已删除' });
   } catch (error) {
     if (error.message && error.message.includes('无会员权限')) {
-      return res.status(403).json({ error: error.message });
+      return res.status(403).json({ error: { code: 'A0108', message: error.message } });
     }
-    logger.error(`[AICoach] 删除会话失败: ${error.message}`, { error: error.message });
+    logger.error(`[AICoach] 删除会话失败: ${error.message}`, { error: { code: 'A0108', message: error.message } });
     res.status(500).json({ error: { code: 'S0802', message: '删除会话失败' } });
   }
 });
@@ -562,7 +562,7 @@ router.get('/girl-context/:girlId', authMiddleware, async (req, res) => {
 
     res.json(result);
   } catch (error) {
-    logger.error(`[girl-context] failed: ${error.message}`, { error: error.message });
+    logger.error(`[girl-context] failed: ${error.message}`, { error: { code: 'A0108', message: error.message } });
     res.status(500).json({ error: { code: 'S0802', message: '获取失败' } });
   }
 });
@@ -580,7 +580,7 @@ router.post('/reply-suggestions', authMiddleware, async (req, res) => {
       try {
         await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
       } catch (e) {
-        return res.status(403).json({ error: e.message });
+        return res.status(403).json({ error: { code: 'A0108', message: e.message } });
       }
     }
 
@@ -799,9 +799,9 @@ ${styleOptions}
     });
   } catch (error) {
     if (error.message && error.message.includes('无会员权限')) {
-      return res.status(403).json({ error: error.message });
+      return res.status(403).json({ error: { code: 'A0108', message: error.message } });
     }
-    logger.error(`[AICoach] 回复建议失败: ${error.message}`, { error: error.message });
+    logger.error(`[AICoach] 回复建议失败: ${error.message}`, { error: { code: 'A0108', message: error.message } });
     res.status(500).json({ error: { code: 'S0802', message: '生成失败' } });
   }
 });
@@ -819,7 +819,7 @@ router.post('/optimize-reply', authMiddleware, async (req, res) => {
       try {
         await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
       } catch (e) {
-        return res.status(403).json({ error: e.message });
+        return res.status(403).json({ error: { code: 'A0108', message: e.message } });
       }
     }
 
@@ -874,9 +874,9 @@ router.post('/optimize-reply', authMiddleware, async (req, res) => {
     // 解析 personality
     let personality = {};
     if (fullContext?.girlInfo?.personality) {
-      try { personality = typeof fullContext.girlInfo.personality === 'string' ? JSON.parse(fullContext.girlInfo.personality) : fullContext.girlInfo.personality; } catch (e) { logger.warn(`[AICoach] personality 解析失败: ${e.message}`, { error: e.message }); }
+      try { personality = typeof fullContext.girlInfo.personality === 'string' ? JSON.parse(fullContext.girlInfo.personality) : fullContext.girlInfo.personality; } catch (e) { logger.warn(`[AICoach] personality 解析失败: ${e.message}`, { error: { code: 'A0108', message: e.message } }); }
       if (typeof personality === 'string') {
-        try { personality = JSON.parse(personality); } catch (e) { logger.warn(`[AICoach] personality 二次解析失败: ${e.message}`, { error: e.message }); personality = {}; }
+        try { personality = JSON.parse(personality); } catch (e) { logger.warn(`[AICoach] personality 二次解析失败: ${e.message}`, { error: { code: 'A0108', message: e.message } }); personality = {}; }
       }
     }
 
@@ -1036,9 +1036,9 @@ ${goal ? `用户指定了优化方向「${goal}」，请按该方向给出3个�
     });
   } catch (error) {
     if (error.message && error.message.includes('无会员权限')) {
-      return res.status(403).json({ error: error.message });
+      return res.status(403).json({ error: { code: 'A0108', message: error.message } });
     }
-    logger.error(`[AICoach] 话术优化失败: ${error.message}`, { error: error.message });
+    logger.error(`[AICoach] 话术优化失败: ${error.message}`, { error: { code: 'A0108', message: error.message } });
     res.status(500).json({ error: { code: 'S0802', message: '优化失败' } });
   }
 });
@@ -1483,7 +1483,7 @@ router.get('/monitoring/stats', authMiddleware, async (req, res) => {
     const stats = await getSystemStats();
     res.json({ success: true, data: stats });
   } catch (error) {
-    logger.error(`[AICoach] 监控统计失败: ${error.message}`, { error: error.message });
+    logger.error(`[AICoach] 监控统计失败: ${error.message}`, { error: { code: 'A0108', message: error.message } });
     res.status(500).json({ error: { code: 'S0802', message: '获取监控数据失败' } });
   }
 });
@@ -1537,7 +1537,7 @@ router.get('/monitoring/sessions', authMiddleware, async (req, res) => {
 
     res.json({ success: true, data: result });
   } catch (error) {
-    logger.error(`[AICoach] 会话列表失败: ${error.message}`, { error: error.message });
+    logger.error(`[AICoach] 会话列表失败: ${error.message}`, { error: { code: 'A0108', message: error.message } });
     res.status(500).json({ error: { code: 'S0802', message: '获取会话列表失败' } });
   }
 });
@@ -1565,7 +1565,7 @@ router.get('/monitoring/client/:clientId', authMiddleware, async (req, res) => {
     const data = await getClientSessions(clientId);
     res.json({ success: true, data });
   } catch (error) {
-    logger.error(`[AICoach] 客户会话详情失败: ${error.message}`, { error: error.message });
+    logger.error(`[AICoach] 客户会话详情失败: ${error.message}`, { error: { code: 'A0108', message: error.message } });
     res.status(500).json({ error: { code: 'S0802', message: '获取客户会话详情失败' } });
   }
 });
@@ -1600,7 +1600,7 @@ router.get('/monitoring/session/:memoryId', authMiddleware, async (req, res) => 
 
     res.json({ success: true, data: detail });
   } catch (error) {
-    logger.error(`[AICoach] 会话详情失败: ${error.message}`, { error: error.message });
+    logger.error(`[AICoach] 会话详情失败: ${error.message}`, { error: { code: 'A0108', message: error.message } });
     res.status(500).json({ error: { code: 'S0802', message: '获取会话详情失败' } });
   }
 });
@@ -1620,7 +1620,7 @@ router.post('/moment', authMiddleware, async (req, res) => {
       try {
         await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
       } catch (e) {
-        return res.status(403).json({ error: e.message });
+        return res.status(403).json({ error: { code: 'A0108', message: e.message } });
       }
     }
 
@@ -1672,9 +1672,9 @@ router.post('/moment', authMiddleware, async (req, res) => {
     // 解析 personality
     let personality = {};
     if (girlInfo?.personality) {
-      try { personality = typeof girlInfo.personality === 'string' ? JSON.parse(girlInfo.personality) : girlInfo.personality; } catch (e) { logger.warn(`[AICoach] personality 解析失败: ${e.message}`, { error: e.message }); }
+      try { personality = typeof girlInfo.personality === 'string' ? JSON.parse(girlInfo.personality) : girlInfo.personality; } catch (e) { logger.warn(`[AICoach] personality 解析失败: ${e.message}`, { error: { code: 'A0108', message: e.message } }); }
       if (typeof personality === 'string') {
-        try { personality = JSON.parse(personality); } catch (e) { logger.warn(`[AICoach] personality 二次解析失败: ${e.message}`, { error: e.message }); personality = {}; }
+        try { personality = JSON.parse(personality); } catch (e) { logger.warn(`[AICoach] personality 二次解析失败: ${e.message}`, { error: { code: 'A0108', message: e.message } }); personality = {}; }
       }
     }
 
@@ -1847,7 +1847,7 @@ ${stageContext}
         deduplicator,
         onChunk: (content) => res.write(`data: ${JSON.stringify({ content })}\n\n`),
         onDone: () => { res.write('data: [DONE]\n\n'); res.end(); },
-        onError: (msg) => { logger.error(`[AICoach] 朋友圈分析失败: ${msg}`); res.write(`data: ${JSON.stringify({ error: msg })}\n\n`); res.end(); }
+        onError: (msg) => { logger.error(`[AICoach] 朋友圈分析失败: ${msg}`); res.write(`data: ${JSON.stringify({ error: { code: 'S0802', message: msg } })}\n\n`); res.end(); }
       });
     } else {
       // 非流式模式
@@ -1912,15 +1912,15 @@ ${stageContext}
           relationshipStageLabel: relStageLabel
         });
       } catch (error) {
-        logger.error(`[AICoach] 朋友圈分析失败: ${error.message}`, { error: error.message });
+        logger.error(`[AICoach] 朋友圈分析失败: ${error.message}`, { error: { code: 'A0108', message: error.message } });
         res.status(500).json({ error: { code: 'S0802', message: '分析失败' } });
       }
     }
   } catch (error) {
     if (error.message && error.message.includes('无会员权限')) {
-      return res.status(403).json({ error: error.message });
+      return res.status(403).json({ error: { code: 'A0108', message: error.message } });
     }
-    logger.error(`[AICoach] 朋友圈分析失败: ${error.message}`, { error: error.message });
+    logger.error(`[AICoach] 朋友圈分析失败: ${error.message}`, { error: { code: 'A0108', message: error.message } });
     res.status(500).json({ error: { code: 'S0802', message: '分析失败' } });
   }
 });
@@ -1942,7 +1942,7 @@ router.post('/feedback', authMiddleware, async (req, res) => {
       try {
         await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
       } catch (e) {
-        return res.status(403).json({ error: e.message });
+        return res.status(403).json({ error: { code: 'A0108', message: e.message } });
       }
     }
 
@@ -2002,7 +2002,7 @@ router.post('/feedback', authMiddleware, async (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    logger.error(`[AICoach] 反馈记录失败: ${error.message}`, { error: error.message });
+    logger.error(`[AICoach] 反馈记录失败: ${error.message}`, { error: { code: 'A0108', message: error.message } });
     res.status(500).json({ error: { code: 'S0802', message: '记录反馈失败' } });
   }
 });
@@ -2020,7 +2020,7 @@ router.get('/coach-profile', authMiddleware, async (req, res) => {
       try {
         await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
       } catch (e) {
-        return res.status(403).json({ error: e.message });
+        return res.status(403).json({ error: { code: 'A0108', message: e.message } });
       }
     }
 
@@ -2042,9 +2042,9 @@ router.get('/coach-profile', authMiddleware, async (req, res) => {
     });
   } catch (error) {
     if (error.message && error.message.includes('无会员权限')) {
-      return res.status(403).json({ error: error.message });
+      return res.status(403).json({ error: { code: 'A0108', message: error.message } });
     }
-    logger.error(`[AICoach] 获取教练偏好失败: ${error.message}`, { error: error.message });
+    logger.error(`[AICoach] 获取教练偏好失败: ${error.message}`, { error: { code: 'A0108', message: error.message } });
     res.status(500).json({ error: { code: 'S0802', message: '获取教练偏好失败' } });
   }
 });
@@ -2062,7 +2062,7 @@ router.get('/history', authMiddleware, async (req, res) => {
       try {
         await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
       } catch (e) {
-        return res.status(403).json({ error: e.message });
+        return res.status(403).json({ error: { code: 'A0108', message: e.message } });
       }
     }
 
@@ -2104,9 +2104,9 @@ router.get('/history', authMiddleware, async (req, res) => {
     res.json({ success: true, sessions: sessionsWithMessages });
   } catch (error) {
     if (error.message && error.message.includes('无会员权限')) {
-      return res.status(403).json({ error: error.message });
+      return res.status(403).json({ error: { code: 'A0108', message: error.message } });
     }
-    logger.error(`[AICoach] 获取聊天历史失败: ${error.message}`, { error: error.message });
+    logger.error(`[AICoach] 获取聊天历史失败: ${error.message}`, { error: { code: 'A0108', message: error.message } });
     res.status(500).json({ error: { code: 'S0802', message: '获取聊天历史失败' } });
   }
 });
@@ -2127,7 +2127,7 @@ router.get('/feedback-stats', authMiddleware, async (req, res) => {
 
     res.json({ success: true, data: stats });
   } catch (error) {
-    logger.error(`[AICoach] 反馈统计失败: ${error.message}`, { error: error.message });
+    logger.error(`[AICoach] 反馈统计失败: ${error.message}`, { error: { code: 'A0108', message: error.message } });
     res.status(500).json({ error: { code: 'S0802', message: '获取统计失败' } });
   }
 });
@@ -2241,7 +2241,7 @@ router.get('/guardrail-stats', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    logger.error(`[AICoach] Guardrail 统计失败: ${error.message}`, { error: error.message });
+    logger.error(`[AICoach] Guardrail 统计失败: ${error.message}`, { error: { code: 'A0108', message: error.message } });
     res.status(500).json({ error: { code: 'S0802', message: '获取统计失败' } });
   }
 });
@@ -2431,7 +2431,7 @@ ${girlsSummary}
         deduplicator,
         onChunk: (content) => { fullContent += content; res.write(`data: ${JSON.stringify({ content })}\n\n`); },
         onDone: () => { res.write('data: [DONE]\n\n'); res.end(); },
-        onError: (msg) => { logger.error(`[AICoach] 全局概览失败: ${msg}`); res.write(`data: ${JSON.stringify({ error: msg })}\n\n`); res.end(); }
+        onError: (msg) => { logger.error(`[AICoach] 全局概览失败: ${msg}`); res.write(`data: ${JSON.stringify({ error: { code: 'S0802', message: msg } })}\n\n`); res.end(); }
       });
 
       // 写缓存
@@ -2443,12 +2443,12 @@ ${girlsSummary}
         }).catch(err => logger.error(`[overview] cache write failed: ${err.message}`, { error: err.message }));
       }
     } catch (error) {
-      logger.error(`[AICoach] 全局概览失败: ${error.message}`, { error: error.message });
+      logger.error(`[AICoach] 全局概览失败: ${error.message}`, { error: { code: 'A0108', message: error.message } });
       res.write(`data: ${JSON.stringify({ error: { code: 'S0802', message: '分析失败' } })}\n\n`);
       res.end();
     }
   } catch (error) {
-    logger.error(`[AICoach] 全局概览失败: ${error.message}`, { error: error.message });
+    logger.error(`[AICoach] 全局概览失败: ${error.message}`, { error: { code: 'A0108', message: error.message } });
     res.status(500).json({ error: { code: 'S0802', message: '获取概览失败' } });
   }
 });
@@ -2617,7 +2617,7 @@ ${poolSummary}
         deduplicator,
         onChunk: (content) => { fullContent += content; res.write(`data: ${JSON.stringify({ content })}\n\n`); },
         onDone: () => { res.write('data: [DONE]\n\n'); res.end(); },
-        onError: (msg) => { logger.error(`[AICoach] 客户池分析失败: ${msg}`); res.write(`data: ${JSON.stringify({ error: msg })}\n\n`); res.end(); }
+        onError: (msg) => { logger.error(`[AICoach] 客户池分析失败: ${msg}`); res.write(`data: ${JSON.stringify({ error: { code: 'S0802', message: msg } })}\n\n`); res.end(); }
       });
 
       if (fullContent) {
@@ -2627,12 +2627,12 @@ ${poolSummary}
         }).catch(err => logger.error(`[client-pool] cache write failed: ${err.message}`, { error: err.message }));
       }
     } catch (error) {
-      logger.error(`[AICoach] 客户池分析失败: ${error.message}`, { error: error.message });
+      logger.error(`[AICoach] 客户池分析失败: ${error.message}`, { error: { code: 'A0108', message: error.message } });
       res.write(`data: ${JSON.stringify({ error: { code: 'S0802', message: '分析失败' } })}\n\n`);
       res.end();
     }
   } catch (error) {
-    logger.error(`[AICoach] 客户池分析失败: ${error.message}`, { error: error.message });
+    logger.error(`[AICoach] 客户池分析失败: ${error.message}`, { error: { code: 'A0108', message: error.message } });
     res.status(500).json({ error: { code: 'S0802', message: '获取客户池分析失败' } });
   }
 });
@@ -2665,7 +2665,7 @@ async function setClientPoolCache(operatorId, clientId, data) {
         girlDataHash: data.clientDataHash
       }
     });
-  } catch (e) { logger.error(`[client-pool] cache write error: ${e.message}`, { error: e.message }); }
+  } catch (e) { logger.error(`[client-pool] cache write error: ${e.message}`, { error: { code: 'A0108', message: e.message } }); }
 }
 
 /**
@@ -2929,7 +2929,7 @@ ${girl.notes || '暂无'}
         onChunk: (content) => { fullContent += content; res.write(`data: ${JSON.stringify({ content })}\n\n`); },
         onReasoning: (reasoning) => { res.write(`data: ${JSON.stringify({ reasoning })}\n\n`); },
         onDone: () => { res.write('data: [DONE]\n\n'); res.end(); },
-        onError: (msg) => { logger.error(`[AICoach] 女生专项分析失败: ${msg}`); res.write(`data: ${JSON.stringify({ error: msg })}\n\n`); res.end(); }
+        onError: (msg) => { logger.error(`[AICoach] 女生专项分析失败: ${msg}`); res.write(`data: ${JSON.stringify({ error: { code: 'S0802', message: msg } })}\n\n`); res.end(); }
       });
 
       // 写缓存（异步，不阻塞响应）
@@ -2948,12 +2948,12 @@ ${girl.notes || '暂无'}
         }).catch(err => logger.error(`[girl-summary] cache write failed: ${err.message}`, { error: err.message }));
       }
     } catch (error) {
-      logger.error(`[AICoach] 女生专项分析失败: ${error.message}`, { error: error.message });
+      logger.error(`[AICoach] 女生专项分析失败: ${error.message}`, { error: { code: 'A0108', message: error.message } });
       res.write(`data: ${JSON.stringify({ error: { code: 'S0802', message: '分析失败' } })}\n\n`);
       res.end();
     }
   } catch (error) {
-    logger.error(`[AICoach] 女生专项分析失败: ${error.message}`, { error: error.message });
+    logger.error(`[AICoach] 女生专项分析失败: ${error.message}`, { error: { code: 'A0108', message: error.message } });
     res.status(500).json({ error: { code: 'S0802', message: '获取女生分析失败' } });
   }
 });
@@ -3142,7 +3142,7 @@ router.post('/agent-chat', authMiddleware, async (req, res) => {
       await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
       await membershipService.useTrialCount(req.user.id);
     } catch (e) {
-      return res.status(403).json({ error: e.message });
+      return res.status(403).json({ error: { code: 'A0108', message: e.message } });
     }
 
     const { message, girlId, sessionMemoryId, conversationHistory: providedHistory, stream = true } = req.body;
@@ -3310,7 +3310,7 @@ router.post('/agent-chat', authMiddleware, async (req, res) => {
             res.end();
           },
           onError: (err) => {
-            res.write(`data: ${JSON.stringify({ error: err })}\n\n`);
+            res.write(`data: ${JSON.stringify({ error: { code: 'S0802', message: err?.message || String(err) } })}\n\n`);
             res.write('data: [DONE]\n\n');
             res.end();
           }
@@ -3371,7 +3371,7 @@ router.post('/agent-chat', authMiddleware, async (req, res) => {
       });
     }
   } catch (error) {
-    logger.error(`[AICoach] agent-chat 异常: ${error.message}`, { error: error.message });
+    logger.error(`[AICoach] agent-chat 异常: ${error.message}`, { error: { code: 'A0108', message: error.message } });
     res.status(500).json({ error: { code: 'A0601', message: '服务暂时不可用' } });
   }
 });
@@ -3537,7 +3537,7 @@ router.get('/triage-stats', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    logger.error(`[AICoach] Triage 统计失败: ${error.message}`, { error: error.message });
+    logger.error(`[AICoach] Triage 统计失败: ${error.message}`, { error: { code: 'A0108', message: error.message } });
     res.status(500).json({ error: { code: 'S0802', message: '获取统计失败' } });
   }
 });

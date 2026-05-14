@@ -158,7 +158,7 @@ router.post('/optimize-message', authMiddleware, async (req, res) => {
       await membershipService.checkTrialLimit(req.user.id, 'chat_optimize');
       await membershipService.useTrialCount(req.user.id);
     } catch (e) {
-      return res.status(403).json({ error: e.message });
+      return res.status(403).json({ error: { code: 'A0108', message: e.message } });
     }
 
     const { girlId, myMessage, history = [] } = req.body;
@@ -994,7 +994,7 @@ router.post('/client-analyze', authMiddleware, async (req, res) => {
       await membershipService.checkTrialLimit(req.user.id, 'reply_suggest');
       await membershipService.useTrialCount(req.user.id);
     } catch (e) {
-      return res.status(403).json({ error: e.message });
+      return res.status(403).json({ error: { code: 'A0108', message: e.message } });
     }
 
     const { clientId, message, history = [] } = req.body;
@@ -1230,7 +1230,7 @@ router.post('/client-optimize', authMiddleware, async (req, res) => {
       await membershipService.checkTrialLimit(req.user.id, 'chat_optimize');
       await membershipService.useTrialCount(req.user.id);
     } catch (e) {
-      return res.status(403).json({ error: e.message });
+      return res.status(403).json({ error: { code: 'A0108', message: e.message } });
     }
 
     const { clientId, myMessage, history = [] } = req.body;
@@ -1450,7 +1450,7 @@ router.post('/girl-profile/confirm', authMiddleware, async (req, res) => {
     const result = await confirmProfileUpdate(girlId, pendingId, selectedFields);
 
     if (!result.success) {
-      return res.status(404).json({ error: result.reason });
+      return res.status(404).json({ error: { code: 'S0802', message: result.reason } });
     }
 
     res.json({ success: true, ...result });
@@ -1489,7 +1489,7 @@ router.post('/girl-profile/reject', authMiddleware, async (req, res) => {
     const result = await rejectProfileUpdate(girlId, pendingId);
 
     if (!result.success) {
-      return res.status(404).json({ error: result.reason });
+      return res.status(404).json({ error: { code: 'S0802', message: result.reason } });
     }
 
     res.json({ success: true });
@@ -1560,7 +1560,7 @@ router.post('/client-profile/confirm', authMiddleware, async (req, res) => {
     const result = await confirmProfileUpdate(clientId, pendingId, selectedFields);
 
     if (!result.success) {
-      return res.status(404).json({ error: result.reason });
+      return res.status(404).json({ error: { code: 'S0802', message: result.reason } });
     }
 
     res.json({ success: true, ...result });
@@ -1597,7 +1597,7 @@ router.post('/client-profile/reject', authMiddleware, async (req, res) => {
     const result = await rejectProfileUpdate(clientId, pendingId);
 
     if (!result.success) {
-      return res.status(404).json({ error: result.reason });
+      return res.status(404).json({ error: { code: 'S0802', message: result.reason } });
     }
 
     res.json({ success: true });

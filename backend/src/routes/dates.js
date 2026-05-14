@@ -895,7 +895,7 @@ router.post('/:id/generate-plan', authMiddleware, async (req, res) => {
             where: { id: req.params.id },
             data: { planStatus: 'pending' }
           }).catch(() => {});
-          send({ error: msg });
+          send({ error: { code: 'A0602', message: msg } });
           res.end();
         }
       }

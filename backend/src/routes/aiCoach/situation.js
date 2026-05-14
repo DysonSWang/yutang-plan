@@ -296,7 +296,7 @@ function registerSituationRoute(router, authMiddleware) {
           await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
           await membershipService.useTrialCount(req.user.id);
         } catch (e) {
-          return res.status(403).json({ error: e.message });
+          return res.status(403).json({ error: { code: 'A0108', message: e.message } });
         }
       }
 
@@ -536,7 +536,7 @@ function registerSituationRoute(router, authMiddleware) {
             },
             onError: (msg) => {
               logger.error(`[AICoach] 流式咨询失败: ${msg}`);
-              res.write(`data: ${JSON.stringify({ error: msg })}\n\n`);
+              res.write(`data: ${JSON.stringify({ error: { code: 'S0802', message: msg } })}\n\n`);
               res.end();
             }
           }

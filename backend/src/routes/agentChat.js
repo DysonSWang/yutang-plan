@@ -390,7 +390,7 @@ ${personaSection}
     res.write('data: [DONE]\n\n');
     res.end();
   } catch (err) {
-    res.write(`data: ${JSON.stringify({ error: `分析失败: ${err.message}` })}\n\n`);
+    res.write(`data: ${JSON.stringify({ error: { code: 'S0802', message: `分析失败: ${err.message}` } })}\n\n`);
     res.end();
   }
 }
@@ -549,7 +549,7 @@ ${remainingInput}
     res.write('data: [DONE]\n\n');
     res.end();
   } catch (err) {
-    res.write(`data: ${JSON.stringify({ error: `生成失败: ${err.message}` })}\n\n`);
+    res.write(`data: ${JSON.stringify({ error: { code: 'S0802', message: `生成失败: ${err.message}` } })}\n\n`);
     res.end();
   }
 }

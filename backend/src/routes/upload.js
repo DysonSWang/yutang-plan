@@ -45,7 +45,7 @@ router.post('/image', authMiddleware, multer({
   limits: { fileSize: 20 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) cb(null, true);
-    else { error: { code: 'U0702', message: '不支持的文件类型' } };
+    else cb(new Error('不支持的文件类型，仅允许图片上传'), false);
   }
 }).single('file'), async (req, res) => {
   try {
@@ -160,10 +160,10 @@ router.post('/audio', authMiddleware, multer({
 // 错误处理
 router.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
-    return res.status(400).json({ error: err.message });
+    return res.status(400).json({ error: { code: 'U0703', message: err.message } });
   }
   if (err) {
-    return res.status(400).json({ error: err.message });
+    return res.status(400).json({ error: { code: 'U0703', message: err.message } });
   }
   next();
 });

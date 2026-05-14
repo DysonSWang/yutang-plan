@@ -32,7 +32,9 @@ function GirlsTab({ girlsList, isInitialLoad, onAddGirl, onGirlClick }) {
   const [addForm, setAddForm] = useState({ name: '', age: '', occupation: '' });
   const [adding, setAdding] = useState(false);
   const [showMore, setShowMore] = useState(false);
+  const [quotaExceeded, setQuotaExceeded] = useState(null);
   const toast = useToast();
+  const navigate = useNavigate();
 
   const handleAdd = async () => {
     if (!addForm.name.trim()) { toast({ title: '请输入昵称', status: 'warning', duration: 3000 }); return; }
@@ -45,13 +47,15 @@ function GirlsTab({ girlsList, isInitialLoad, onAddGirl, onGirlClick }) {
         setShowMore(false);
         onClose();
         onAddGirl();
-      } else if (res.code === 'QUOTA_EXCEEDED') {
-        toast({ title: `额度已用完，请联系操盘手升级`, status: 'warning', duration: 3000, duration: 4000 });
       } else {
-        toast({ title: res.error || '添加失败', status: 'error', duration: 4000 });
+        toast({ title: res.error?.message || '添加失败', status: 'error', duration: 4000 });
       }
     } catch (e) {
-      toast({ title: '添加失败', status: 'error', duration: 4000 });
+      if (e?.code === 'C0202') {
+        setQuotaExceeded({ currentCount: e.currentCount, quota: e.quota });
+      } else {
+        toast({ title: e?.message || '添加失败，请稍后重试', status: 'error', duration: 4000 });
+      }
     } finally { setAdding(false); }
   };
 
@@ -95,50 +99,69 @@ function GirlsTab({ girlsList, isInitialLoad, onAddGirl, onGirlClick }) {
         </SimpleGrid>
       )}
 
-      <Modal isOpen={isOpen} onClose={onClose} size="md">
+      <Modal isOpen={isOpen} onClose={() => { setQuotaExceeded(null); onClose(); }} size="md">
         <ModalOverlay /><ModalContent bg="warm.800">
           <ModalHeader color="white">添加女生</ModalHeader><ModalCloseButton />
           <ModalBody pb={6}>
-            <VStack spacing={4}>
-              <FormControl isRequired>
-                <FormLabel color="rgba(245,240,232,0.4)">昵称</FormLabel>
-                <Input value={addForm.name} onChange={e => setAddForm({...addForm, name: e.target.value})}
-                  placeholder="输入昵称" bg="warm.700" color="white"
-                  onKeyDown={e => { if (e.key === 'Enter') handleAdd(); }} />
-              </FormControl>
-              <Button
-                size="sm"
-                variant="ghost"
-                color="rgba(245,240,232,0.45)"
-                onClick={() => setShowMore(!showMore)}
-                _hover={{ color: 'rgba(245,240,232,0.7)' }}
-              >
-                {showMore ? '收起更多信息' : '+ 更多（年龄、职业）'}
-              </Button>
-              {showMore && (
-                <HStack spacing={4}>
-                  <FormControl>
-                    <FormLabel color="rgba(245,240,232,0.4)">年龄</FormLabel>
-                    <NumberInput value={addForm.age} onChange={(_, v) => setAddForm({...addForm, age: v})} bg="warm.700" min={18} max={60}>
-                      <NumberInputField color="white" /><NumberInputStepper>
-                        <NumberIncrementStepper color="rgba(245,240,232,0.4)" />
-                        <NumberDecrementStepper color="rgba(245,240,232,0.4)" />
-                      </NumberInputStepper>
-                    </NumberInput>
-                  </FormControl>
-                  <FormControl>
-                    <FormLabel color="rgba(245,240,232,0.4)">职业</FormLabel>
-                    <Select value={addForm.occupation} onChange={e => setAddForm({...addForm, occupation: e.target.value})}
-                      bg="warm.700" color="white" placeholder="选择">
-                      {['学生', '上班族', '自由职业', '企业主', '公务员', '医生', '律师', '教师', '销售', '设计师', '程序员', '其他'].map(o => (
-                        <option key={o} value={o}>{o}</option>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </HStack>
-              )}
-              <Button colorScheme="gold" onClick={handleAdd} isLoading={adding} w="100%">添加</Button>
-            </VStack>
+            {quotaExceeded ? (
+              <VStack spacing={5} py={4}>
+                <Text fontSize="3xl">💔</Text>
+                <Heading size="md" color="white">名额已满</Heading>
+                <Text color="rgba(245,240,232,0.6)" textAlign="center">
+                  已添加 {quotaExceeded.currentCount}/{quotaExceeded.quota} 人，名额已用完
+                </Text>
+                <Text color="rgba(245,240,232,0.45)" fontSize="sm" textAlign="center">
+                  联系Mo哥，获取专属追爱方案
+                </Text>
+                <Button colorScheme="gold" w="100%" onClick={() => { setQuotaExceeded(null); onClose(); navigate('/chat'); }}>
+                  联系Mo哥
+                </Button>
+                <Button variant="ghost" color="rgba(245,240,232,0.45)" size="sm" onClick={() => { setQuotaExceeded(null); onClose(); }}>
+                  我再想想
+                </Button>
+              </VStack>
+            ) : (
+              <VStack spacing={4}>
+                <FormControl isRequired>
+                  <FormLabel color="rgba(245,240,232,0.4)">昵称</FormLabel>
+                  <Input value={addForm.name} onChange={e => setAddForm({...addForm, name: e.target.value})}
+                    placeholder="输入昵称" bg="warm.700" color="white"
+                    onKeyDown={e => { if (e.key === 'Enter') handleAdd(); }} />
+                </FormControl>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  color="rgba(245,240,232,0.45)"
+                  onClick={() => setShowMore(!showMore)}
+                  _hover={{ color: 'rgba(245,240,232,0.7)' }}
+                >
+                  {showMore ? '收起更多信息' : '+ 更多（年龄、职业）'}
+                </Button>
+                {showMore && (
+                  <HStack spacing={4}>
+                    <FormControl>
+                      <FormLabel color="rgba(245,240,232,0.4)">年龄</FormLabel>
+                      <NumberInput value={addForm.age} onChange={(_, v) => setAddForm({...addForm, age: v})} bg="warm.700" min={18} max={60}>
+                        <NumberInputField color="white" /><NumberInputStepper>
+                          <NumberIncrementStepper color="rgba(245,240,232,0.4)" />
+                          <NumberDecrementStepper color="rgba(245,240,232,0.4)" />
+                        </NumberInputStepper>
+                      </NumberInput>
+                    </FormControl>
+                    <FormControl>
+                      <FormLabel color="rgba(245,240,232,0.4)">职业</FormLabel>
+                      <Select value={addForm.occupation} onChange={e => setAddForm({...addForm, occupation: e.target.value})}
+                        bg="warm.700" color="white" placeholder="选择">
+                        {['学生', '上班族', '自由职业', '企业主', '公务员', '医生', '律师', '教师', '销售', '设计师', '程序员', '其他'].map(o => (
+                          <option key={o} value={o}>{o}</option>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </HStack>
+                )}
+                <Button colorScheme="gold" onClick={handleAdd} isLoading={adding} w="100%">添加</Button>
+              </VStack>
+            )}
           </ModalBody>
         </ModalContent>
       </Modal>

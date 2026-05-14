@@ -77,7 +77,7 @@ export default function Login() {
     setDisplay(prev => prev === '0' ? num : prev + num);
   }, []);
 
-  const handleOperator = useCallback((operator) => {
+  const handleOperator = useCallback(async (operator) => {
     if (operator === 'C') {
       setExpr('');
       setDisplay('0');
@@ -100,10 +100,11 @@ export default function Login() {
         return;
       }
       if (fullExpr === '5577' || display === '5577') {
-        // 5577 → 切换截屏
+        // 5577 → 切换截屏保护
         try {
-          ScreenshotToggle.toggle();
-          toast({ title: '截屏权限已切换', status: 'info', duration: 2000 });
+          await ScreenshotToggle.toggle();
+          const { enabled } = await ScreenshotToggle.isEnabled();
+          toast({ title: enabled ? '已允许截屏' : '已禁止截屏', status: 'info', duration: 2000 });
         } catch (e) {
           toast({ title: '截屏切换失败', status: 'error', duration: 2000 });
         }

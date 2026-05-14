@@ -47,6 +47,7 @@ export function parseErrorResponse(response, data) {
       };
     }
     return {
+      ...errDef,
       type: StatusToType[response.status] || ErrorType.UNKNOWN,
       code: errDef.code || 'UNKNOWN',
       message: errDef.message || '未知错误',
