@@ -32,7 +32,33 @@ const { analyzeChatHistory } = require('../../services/chatAnalyzer');
 const analysisTasks = new Map();
 
 const multer = require('multer');
-const { JWT_SECRET, getAIConfig, getVLModelConfig } = require('../../config');
+const { JWT_SECRET, BASE_URL, getAIConfig, getVLModelConfig } = require('../../config');
+
+// 截图导入常量
+const IMPORT_VISION_TIMEOUT = 45000;  // 45秒超时
+const IMPORT_MAX_RETRIES = 1;
+const IMPORT_RETRY_DELAY = 2000;
+
+/**
+ * 压缩图片并转为 base64（复用 profileEngine 的策略）
+ * 最长边 1920px、JPEG 80%
+ */
+function compressImageForImport(imagePath) {
+  try {
+    const sharp = require('sharp');
+    const buffer = fs.readFileSync(imagePath);
+    return sharp(buffer)
+      .resize(1920, 1920, { fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality: 80 })
+      .toBuffer()
+      .then(compressed => `data:image/jpeg;base64,${compressed.toString('base64')}`);
+  } catch {
+    const buffer = fs.readFileSync(imagePath);
+    const ext = path.extname(imagePath).toLowerCase().replace('.', '') || 'jpg';
+    const mime = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
+    return Promise.resolve(`data:${mime};base64,${buffer.toString('base64')}`);
+  }
+}
 const prisma = require('../../prisma');
 
 // 截图上传配置
@@ -1178,15 +1204,15 @@ router.post('/import-chat-screenshots', authMiddleware, chatImportUpload.array('
     if (!girl) return res.status(404).json({ error: { code: 'G0301', message: '女生不存在' } });
 
     const allMessages = [];
+    const failedScreenshots = [];
 
     // 逐张识别截图
-    for (const file of req.files) {
+    for (let i = 0; i < req.files.length; i++) {
+      const file = req.files[i];
       const filePath = path.join(chatImportUploadDir, file.filename);
       try {
-        const buffer = fs.readFileSync(filePath);
-        const ext = path.extname(file.filename).toLowerCase().replace('.', '') || 'jpg';
-        const mime = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
-        const base64Image = `data:${mime};base64,${buffer.toString('base64')}`;
+        // 压缩图片（最长边 1920px, JPEG 80%）
+        const base64Image = await compressImageForImport(filePath);
 
         const prompt = `你是截图识别专家。请仔细识别这张截图。
 
@@ -1207,35 +1233,84 @@ JSON格式：
 
 只输出JSON，不要其他说明文字。`;
 
-        const response = await fetch(vlConfig.url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${vlConfig.key}`
-          },
-          body: JSON.stringify({
-            model: vlConfig.model,
-            temperature: 0.3,
-            max_tokens: 2000,
-            messages: [{
-              role: 'user',
-              content: [
-                { type: 'text', text: prompt },
-                { type: 'image_url', image_url: { url: base64Image } }
-              ]
-            }]
-          })
-        });
+        // 带超时和重试的 API 调用
+        let data = null;
+        let lastError = null;
+        for (let attempt = 0; attempt <= IMPORT_MAX_RETRIES; attempt++) {
+          if (attempt > 0) {
+            logger.info(`[ImportChat] 重试第 ${attempt} 次，等待 ${IMPORT_RETRY_DELAY}ms`);
+            await new Promise(r => setTimeout(r, IMPORT_RETRY_DELAY));
+          }
 
-        const data = await response.json();
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), IMPORT_VISION_TIMEOUT);
+
+          try {
+            const response = await fetch(vlConfig.url, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${vlConfig.key}`
+              },
+              body: JSON.stringify({
+                model: vlConfig.model,
+                temperature: 0.3,
+                max_tokens: 2000,
+                messages: [{
+                  role: 'user',
+                  content: [
+                    { type: 'text', text: prompt },
+                    { type: 'image_url', image_url: { url: base64Image } }
+                  ]
+                }]
+              }),
+              signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+              const errorText = await response.text();
+              const err = new Error(`API ${response.status}: ${errorText.substring(0, 200)}`);
+              if (response.status >= 400 && response.status < 500) throw err;
+              lastError = err;
+              continue;
+            }
+
+            data = await response.json();
+            break;
+          } catch (err) {
+            clearTimeout(timeoutId);
+            lastError = err;
+            if (err.name === 'AbortError') {
+              logger.warn(`[ImportChat] 第 ${i + 1} 张截图 API 超时 (${IMPORT_VISION_TIMEOUT}ms)`);
+              lastError = new Error('AI 识别超时，请稍后重试');
+              continue;
+            }
+            if (err.message?.includes('API 4')) throw err;
+            continue;
+          }
+        }
+
+        if (!data) {
+          const errMsg = lastError?.message || '未知错误';
+          logger.warn(`[ImportChat] 第 ${i + 1} 张截图识别失败: ${errMsg}`);
+          failedScreenshots.push({ index: i + 1, error: errMsg });
+          continue;
+        }
 
         if (data.error) {
-          logger.warn(`[ImportChat] VL模型调用失败: ${JSON.stringify(data.error)}`);
+          const errMsg = data.error.message || JSON.stringify(data.error);
+          logger.warn(`[ImportChat] VL模型返回错误: ${errMsg}`);
+          failedScreenshots.push({ index: i + 1, error: errMsg });
           continue;
         }
 
         const content = data.choices?.[0]?.message?.content?.trim();
-        if (!content) continue;
+        if (!content) {
+          failedScreenshots.push({ index: i + 1, error: 'AI 未返回内容' });
+          continue;
+        }
 
         // 尝试解析 JSON（兼容 markdown code block 包裹）
         let parsed;
@@ -1244,22 +1319,19 @@ JSON格式：
           parsed = JSON.parse(jsonStr);
         } catch (parseErr) {
           logger.warn(`[ImportChat] JSON 解析失败: ${content.substring(0, 200)}`);
+          failedScreenshots.push({ index: i + 1, error: 'AI 返回内容无法解析' });
           continue;
         }
 
         if (Array.isArray(parsed)) {
-          // 聊天记录：逐条提取
           for (const msg of parsed) {
             if (msg.role && msg.content && ['girl', 'user'].includes(msg.role)) {
               allMessages.push({ role: msg.role, content: msg.content, time: msg.time || null });
             }
           }
         } else if (parsed && parsed.type === 'moments') {
-          // 朋友圈：构建导入消息
           let momentContent = '';
-          if (parsed.content) {
-            momentContent += parsed.content;
-          }
+          if (parsed.content) momentContent += parsed.content;
           if (parsed.comments) {
             momentContent += momentContent ? `\n\n评论：${parsed.comments}` : `评论：${parsed.comments}`;
           }
@@ -1271,28 +1343,32 @@ JSON格式：
             });
           }
         } else if (parsed && parsed.type === 'chat' && parsed.messages) {
-          // 聊天记录（新版格式）
           for (const msg of parsed.messages) {
             if (msg.role && msg.content && ['girl', 'user'].includes(msg.role)) {
               allMessages.push({ role: msg.role, content: msg.content, time: msg.time || null });
             }
           }
         }
+      } catch (error) {
+        const errMsg = error.message || '未知错误';
+        logger.error(`[ImportChat] 第 ${i + 1} 张截图处理异常: ${errMsg}`);
+        failedScreenshots.push({ index: i + 1, error: errMsg });
       } finally {
-        // 清理上传的临时文件
         try { fs.unlinkSync(filePath); } catch (_) {}
       }
     }
 
-    logger.info(`[ImportChat] 识别完成: ${req.files.length} 张截图, ${allMessages.length} 条消息`, {
+    logger.info(`[ImportChat] 识别完成: ${req.files.length} 张截图, ${allMessages.length} 条消息, ${failedScreenshots.length} 张失败`, {
       girlId,
       userId: req.user.id,
-      messageCount: allMessages.length
+      messageCount: allMessages.length,
+      failedCount: failedScreenshots.length
     });
 
     res.json({
       success: true,
       messages: allMessages,
+      failedScreenshots: failedScreenshots.length > 0 ? failedScreenshots : undefined,
       chatDate: chatDate || new Date().toISOString().split('T')[0]
     });
   } catch (error) {

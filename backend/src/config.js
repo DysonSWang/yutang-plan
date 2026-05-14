@@ -56,7 +56,7 @@ function getVLModelConfig() {
     return {
       url: DASHSCOPE_API_URL,
       key: DASHSCOPE_API_KEY,
-      model: 'qwen3.6-plus'
+      model: 'qwen-vl-plus'
     };
   }
   return null;
