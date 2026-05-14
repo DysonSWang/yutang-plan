@@ -11,7 +11,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useSocket } from '../../contexts/SocketContext';
 import { girls as girlsApi, analyzeChatHistory, deleteCombatMessage, aiCoach } from '../../utils/api';
 import { captureError } from '../../utils/frontendErrorCapture';
-import { FireIcon, SnowIcon, SparklesIcon, BrainIcon, InboxIcon, DeleteIcon } from '../../components/Icons';
+import { FireIcon, SnowIcon, SparklesIcon, BrainIcon, InboxIcon, TrashIcon as DeleteIcon } from '../../components/Icons';
 import { marked } from 'marked';
 
 // marked 配置：GFM 支持，链接新窗口打开
