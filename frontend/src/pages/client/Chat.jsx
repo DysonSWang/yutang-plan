@@ -28,6 +28,7 @@ export default function ClientChat() {
   const { isOpen: isBurnOpen, onOpen: onBurnOpen, onClose: onBurnClose } = useDisclosure();
   const scrollRef = useRef();
   const shouldAutoScrollRef = useRef(true);
+  const [userScrolledUp, setUserScrolledUp] = useState(false); // 用户是否上滑离开了底部
   const fileInputRef = useRef();
   const inputRef = useRef();
   const mediaRecorderRef = useRef();
@@ -64,6 +65,10 @@ export default function ClientChat() {
     measureElement: (el) => Math.max(el.getBoundingClientRect().height, 60),
     overscan: 5,
   });
+
+  const forceScrollToBottom = useCallback(() => {
+    virtualizer.scrollToIndex(messages.length - 1, { align: 'end' });
+  }, [messages.length, virtualizer]);
 
   const getMediaUrl = (msg) => {
     // 统一通过媒体端点获取，确保后端处理 Range 请求和权限验证
@@ -1023,10 +1028,13 @@ export default function ClientChat() {
           flex={1}
           p={4}
           overflowY="auto"
+          position="relative"
           onScroll={() => {
             if (!scrollRef.current) return;
             const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-            shouldAutoScrollRef.current = scrollHeight - scrollTop - clientHeight < 120;
+            const near = scrollHeight - scrollTop - clientHeight < 120;
+            shouldAutoScrollRef.current = near;
+            setUserScrolledUp(!near);
             // 滚动到顶部时加载更多
             if (scrollTop < 100 && hasMore && !loadingMore && session) {
               loadMessages(session.id, true);
@@ -1141,6 +1149,27 @@ export default function ClientChat() {
               })}
             </Box>
           )}
+
+          {/* 跳到底部浮动按钮 */}
+          {userScrolledUp && (
+            <IconButton
+              aria-label="滚动到底部"
+              icon={<Text fontSize="lg">↓</Text>}
+              position="absolute"
+              bottom="20px"
+              left="50%"
+              transform="translateX(-50%)"
+              zIndex={10}
+              borderRadius="full"
+              bg="gold.500"
+              color="white"
+              size="sm"
+              boxShadow="lg"
+              _hover={{ bg: "gold.600" }}
+              onClick={forceScrollToBottom}
+            />
+          )}
+
         </Box>
 
         {/* 全屏语音浮层 */}

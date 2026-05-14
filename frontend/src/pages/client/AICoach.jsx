@@ -1799,6 +1799,8 @@ export default function AICoach() {
   const textareaRef = useRef(null);
   const scrollContainerRef = useRef(null);
   const savedScrollPositionRef = useRef(0);
+  const [userScrolledUp, setUserScrolledUp] = useState(false); // 用户是否上滑离开了底部
+  const nearBottomRef = useRef(true); // 用于流式回调中判断是否自动跟随
   const toast = useToast();
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3005';
 
@@ -1945,17 +1947,35 @@ export default function AICoach() {
   // 监听图片分析结果（异步 Socket.io 通知 + 轮询 fallback）
 
   // 滚动到底部 - 使用 document.getElementById 确保获取正确的容器
+  const isNearBottom = useCallback(() => {
+    const container = document.getElementById('chat-scroll-container');
+    if (!container) return true;
+    return container.scrollHeight - container.scrollTop - container.clientHeight < 80;
+  }, []);
+
   const scrollToBottom = useCallback(() => {
-    // 使用 requestAnimationFrame 确保在下一帧执行，此时 DOM 应该已更新
+    // 只有用户在底部附近时才自动跟随（ChatGPT/豆包级体验）
+    if (!nearBottomRef.current) return;
     const doScroll = () => {
       const container = document.getElementById('chat-scroll-container');
       if (container) {
-        // 设置 scrollTop 到最大值
         container.scrollTop = container.scrollHeight;
       }
     };
     requestAnimationFrame(doScroll);
-    // 双重保障：等待一帧后再执行一次
+    requestAnimationFrame(() => {
+      requestAnimationFrame(doScroll);
+    });
+  }, []);
+
+  const forceScrollToBottom = useCallback(() => {
+    const doScroll = () => {
+      const container = document.getElementById('chat-scroll-container');
+      if (container) {
+        container.scrollTop = container.scrollHeight;
+      }
+    };
+    requestAnimationFrame(doScroll);
     requestAnimationFrame(() => {
       requestAnimationFrame(doScroll);
     });
@@ -2857,7 +2877,7 @@ export default function AICoach() {
       }
     ]);
 
-    scrollToBottom();
+    forceScrollToBottom();
     setLoading(true);
     setError('');
     setThinkingLabel(null);
@@ -2883,7 +2903,7 @@ export default function AICoach() {
       }
     ]);
 
-    scrollToBottom();
+    forceScrollToBottom();
 
     try {
       const formData = new FormData();
@@ -2998,9 +3018,9 @@ export default function AICoach() {
       setLoading(false);
       isStreamingRef.current = false;
       abortControllerRef.current = null;
-      scrollToBottom();
+      forceScrollToBottom();
     }
-  }, [loading, selectedGirlId, deepMode, apiUrl, scrollToBottom]);
+  }, [loading, selectedGirlId, deepMode, apiUrl, forceScrollToBottom]);
 
   const handleSubmitInternal = async (questionText) => {
     if (!questionText.trim() || loading) return;
@@ -3021,7 +3041,7 @@ export default function AICoach() {
     ]);
 
     // 立即滚动到底部（用户消息添加后）
-    scrollToBottom();
+    forceScrollToBottom();
 
     setLoading(true);
     setError('');
@@ -3049,7 +3069,7 @@ export default function AICoach() {
     ]);
 
     // 助手消息添加后也滚动到底部
-    scrollToBottom();
+    forceScrollToBottom();
 
     try {
       const res = await fetch(`${apiUrl}/api/ai-coach/situation`, {
@@ -3082,7 +3102,7 @@ export default function AICoach() {
         setMessages(prev =>
           prev.map(m => m.id === assistantId ? { ...m, content: typeLabel + (data.content || '') } : m)
         );
-        scrollToBottom();
+        forceScrollToBottom();
       } else {
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
@@ -3180,7 +3200,7 @@ export default function AICoach() {
       isStreamingRef.current = false;
       abortControllerRef.current = null;
       // 确保最终滚动到底部
-      scrollToBottom();
+      forceScrollToBottom();
     }
   };
 
@@ -3246,7 +3266,15 @@ export default function AICoach() {
     const girlCoachChatContent = (
       <>
         <Box flex="1" minH="0" display="flex" flexDirection="column" bg="warm.800" borderRadius="md" mb={2} overflow="hidden">
-          <Box id="chat-scroll-container" flex="1" overflowY="auto" p={4} ref={scrollContainerRef} sx={{ overflowAnchor: 'none' }}>
+          <Box id="chat-scroll-container" flex="1" overflowY="auto" p={4} ref={scrollContainerRef} sx={{ overflowAnchor: 'none', position: 'relative' }}
+            onScroll={() => {
+              const container = document.getElementById('chat-scroll-container');
+              if (!container) return;
+              const near = container.scrollHeight - container.scrollTop - container.clientHeight < 80;
+              nearBottomRef.current = near;
+              setUserScrolledUp(!near);
+            }}
+          >
             {/* 加载状态 */}
             {loadingHistory ? (
               <VStack spacing={4} py={8} justify="center" minH="200px">
@@ -3391,6 +3419,26 @@ export default function AICoach() {
                 ))}
               </SimpleGrid>
             </Box>
+          )}
+
+          {/* 跳到底部浮动按钮 */}
+          {userScrolledUp && (
+            <IconButton
+              aria-label="滚动到底部"
+              icon={<Text fontSize="lg">↓</Text>}
+              position="absolute"
+              bottom="20px"
+              left="50%"
+              transform="translateX(-50%)"
+              zIndex={10}
+              borderRadius="full"
+              bg="gold.500"
+              color="white"
+              size="sm"
+              boxShadow="lg"
+              _hover={{ bg: "gold.600" }}
+              onClick={forceScrollToBottom}
+            />
           )}
 
           </Box>
@@ -3591,7 +3639,15 @@ export default function AICoach() {
       {/* 固定高度的消息容器，flex布局 */}
       <Box flex="1" minH="0" display="flex" flexDirection="column" bg="warm.800" borderRadius="md" mb={2} overflow="hidden">
         {/* 消息列表区域 - 可滚动 */}
-        <Box id="chat-scroll-container" flex="1" overflowY="auto" p={4} ref={scrollContainerRef} sx={{ overflowAnchor: 'none' }}>
+        <Box id="chat-scroll-container" flex="1" overflowY="auto" p={4} ref={scrollContainerRef} sx={{ overflowAnchor: 'none', position: 'relative' }}
+              onScroll={() => {
+                const container = document.getElementById('chat-scroll-container');
+                if (!container) return;
+                const near = container.scrollHeight - container.scrollTop - container.clientHeight < 80;
+                nearBottomRef.current = near;
+                setUserScrolledUp(!near);
+              }}
+            >
           {loadingHistory ? (
             <VStack spacing={4} py={8} justify="center" minH="200px">
               <Spinner size="xl" color="gold.400" />
@@ -3652,6 +3708,27 @@ export default function AICoach() {
               <Text color="red.200">{error}</Text>
             </Box>
           )}
+
+          {/* 跳到底部浮动按钮 */}
+          {userScrolledUp && (
+            <IconButton
+              aria-label="滚动到底部"
+              icon={<Text fontSize="lg">↓</Text>}
+              position="absolute"
+              bottom="20px"
+              left="50%"
+              transform="translateX(-50%)"
+              zIndex={10}
+              borderRadius="full"
+              bg="gold.500"
+              color="white"
+              size="sm"
+              boxShadow="lg"
+              _hover={{ bg: "gold.600" }}
+              onClick={forceScrollToBottom}
+            />
+          )}
+
         </Box>
       </Box>
       {/* 固定底部输入区域 - 使用独立组件避免重渲染导致失焦 */}
