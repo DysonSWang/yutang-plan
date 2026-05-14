@@ -1,7 +1,7 @@
 /**
  * 图片分析服务 - 调用千问多模态模型分析截图
  */
-const { getVLModelConfig } = require('../config');
+const { getTextModelConfig } = require('../config');
 
 const IMAGE_ANALYSIS_TIMEOUT = 90000; // 图片分析 90 秒超时
 
@@ -12,7 +12,7 @@ const IMAGE_ANALYSIS_TIMEOUT = 90000; // 图片分析 90 秒超时
  * @returns {Object} { type, content }
  */
 async function analyzeImage(imageBase64, userMessage = '') {
-  const config = getVLModelConfig();
+  const config = getTextModelConfig();
   if (!config) {
     throw new Error('多模态AI未配置');
   }
@@ -54,7 +54,7 @@ async function analyzeImage(imageBase64, userMessage = '') {
       body: JSON.stringify({
         model: config.model,
         messages,
-        max_tokens: 8000,
+        max_tokens: 20000,
         temperature: 0.7
       }),
       signal: controller.signal
