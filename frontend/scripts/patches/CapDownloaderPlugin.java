@@ -9,6 +9,7 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
+import androidx.core.content.FileProvider;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -80,10 +81,14 @@ public class CapDownloaderPlugin extends Plugin {
                         cursor.close();
 
                         if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                            // Build file URI
-                            Uri fileUri = Uri.parse(Environment.getExternalStoragePublicDirectory(
-                                Environment.DIRECTORY_DOWNLOADS).getAbsolutePath() + "/" + filename);
-                            Uri contentUri = dm.getUriForDownloadedFile(downloadId);
+                            // Use FileProvider for reliable content URI (dm.getUriForDownloadedFile fails on Huawei)
+                            java.io.File apkFile = new java.io.File(
+                                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                                filename);
+                            Uri contentUri = FileProvider.getUriForFile(
+                                context,
+                                context.getPackageName() + ".fileprovider",
+                                apkFile);
 
                             // Open APK for installation
                             Intent installIntent = new Intent(Intent.ACTION_VIEW);
