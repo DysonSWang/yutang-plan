@@ -54,7 +54,7 @@ async function analyzeImage(imageBase64, userMessage = '') {
       body: JSON.stringify({
         model: config.model,
         messages,
-        max_tokens: 20000,
+        max_tokens: 8000,
         temperature: 0.7
       }),
       signal: controller.signal
