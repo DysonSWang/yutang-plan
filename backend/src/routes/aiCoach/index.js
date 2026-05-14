@@ -25,11 +25,8 @@ const { recordFeedback, getClientCoachPreferences, getProfileSummary } = require
 const { extractLearningsFromConversation } = require('../../services/learning');
 const { buildDynamicPersona, buildPersonaSection, buildFullPersona } = require('../../services/coachPersona');
 const { addStageContext, appendStageWarning, STAGE_LABELS } = require('../../services/stageGuard');
-const { analyzeImage } = require('../../services/imageAnalyzer');
+const { describeImage } = require('../../services/imageAnalyzer');
 const { analyzeChatHistory } = require('../../services/chatAnalyzer');
-
-// 内存任务表：追踪异步图片分析任务
-const analysisTasks = new Map();
 
 const multer = require('multer');
 const { JWT_SECRET, BASE_URL, getAIConfig, getVLModelConfig } = require('../../config');
@@ -1413,133 +1410,222 @@ router.post('/analyze-chat-history', authMiddleware, async (req, res) => {
  * 分析图片（聊天记录/朋友圈截图）并给出建议
  * 异步模式：立即返回taskId，后台分析，通过Socket.io通知结果
  */
+/**
+ * POST /api/ai-coach/analyze-image
+ * 两步流式：VL快速识别图片 → 文本上下文流式输出
+ */
 router.post('/analyze-image', authMiddleware, chatImportUpload.single('image'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: { code: 'U0701', message: '请上传图片' } });
   }
 
-  const mime = req.file.mimetype;
   const filePath = path.join(chatImportUploadDir, req.file.filename);
-  const imageUrl = `/uploads/chat-imports/${req.file.filename}`;
+  const mime = req.file.mimetype;
   const userMessage = req.body.message || '';
-  const sessionId = req.body.sessionId || null;
-  const userId = req.user.id;
-  const io = req.app.get('io');
+  const girlId = req.body.girlId || null;
+  const mode = req.body.mode || 'pro';
 
-  // 生成任务ID，立即返回
-  const taskId = crypto.randomUUID();
-  analysisTasks.set(taskId, {
-    status: 'pending',
-    userId,
-    sessionId,
-    imageUrl,
-    userMessage,
-    filePath,
-    createdAt: Date.now()
-  });
+  try {
+    // ---- 设置 SSE 头 ----
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.setHeader('Content-Encoding', 'identity');
+    res.flushHeaders();
 
-  // 立即返回，让前端开始轮询/Socket.io监听
-  res.json({
-    success: true,
-    taskId,
-    imageUrl
-  });
-
-  // 后台异步分析
-  setImmediate(async () => {
-    const task = analysisTasks.get(taskId);
-    if (!task) return;
-
-    task.status = 'processing';
-    let fileBuffer;
+    // ---- Step 1: VL 快速识别图片内容 ----
+    let imageDescription = '';
     try {
-      fileBuffer = fs.readFileSync(filePath);
+      const fileBuffer = fs.readFileSync(filePath);
       const base64Image = `data:${mime};base64,${fileBuffer.toString('base64')}`;
+      imageDescription = await describeImage(base64Image);
+      logger.info(`[AnalyzeImage] 图片识别完成: ${imageDescription.length} 字符`);
+    } catch (describeErr) {
+      logger.warn(`[AnalyzeImage] 图片识别失败: ${describeErr.message}`);
+      imageDescription = '（图片识别失败，请根据用户文字描述进行分析）';
+    }
 
-      const { type, content } = await analyzeImage(base64Image, userMessage);
+    // 发送图片识别完成的 meta 帧
+    res.write(`data: ${JSON.stringify({
+      meta: {
+        step: 'image_recognition',
+        done: true,
+        imageDescription: imageDescription.substring(0, 200) + (imageDescription.length > 200 ? '...' : '')
+      }
+    })}\n\n`);
 
-      task.status = 'completed';
-      task.type = type;
-      task.content = content;
-      task.completedAt = Date.now();
+    // ---- Step 2: 组合 situation，走正常流式路径 ----
+    const situation = userMessage
+      ? `用户上传了一张图片并说：${userMessage}\n\n图片内容如下：\n${imageDescription}`
+      : `用户上传了一张图片，图片内容如下：\n${imageDescription}`;
 
-      // 通知前端
-      io.to(`client:${userId}`).emit('analysis:completed', {
-        taskId, type, content, imageUrl
-      });
-
-      // 如果有sessionId，保存到数据库
-      if (sessionId) {
-        try {
-          await prisma.message.create({
-            data: {
-              sessionId,
-              role: 'user',
-              content: userMessage || `[上传了图片]`,
-              imageUrl
-            }
-          });
-          const coachSession = await prisma.session.findFirst({
-            where: { id: sessionId, userId }
-          });
-          if (coachSession) {
-            await prisma.message.create({
-              data: {
-                sessionId,
-                role: 'assistant',
-                content
-              }
-            });
-          }
-        } catch (dbErr) {
-          console.error('[AI Coach] 保存消息失败:', dbErr);
+    // 安全验证
+    if (girlId) {
+      const girl = await prisma.girl.findUnique({ where: { id: girlId } });
+      if (!girl) {
+        res.write(`data: ${JSON.stringify({ error: { code: 'G0301', message: '女生不存在' } })}\n\n`);
+        res.write('data: [DONE]\n\n');
+        res.end();
+        return;
+      }
+      if (req.user.role === 'admin') {
+        const session = await prisma.chatSession.findFirst({
+          where: { operatorId: req.user.id, clientId: girl.clientId }
+        });
+        if (!session) {
+          res.write(`data: ${JSON.stringify({ error: { code: 'G0302', message: '无权限访问此女生数据' } })}\n\n`);
+          res.write('data: [DONE]\n\n');
+          res.end();
+          return;
         }
       }
-    } catch (err) {
-      task.status = 'failed';
-      task.error = err.message;
-      task.completedAt = Date.now();
-
-      const errorMsg = err.message === '图片分析超时（90秒），请尝试压缩图片后重试'
-        ? err.message
-        : '图片分析失败，请稍后重试';
-
-      // 通知前端错误
-      io.to(`client:${userId}`).emit('analysis:failed', { taskId, error: errorMsg });
-    } finally {
-      // 清理临时文件
-      try { fs.unlinkSync(filePath); } catch (_) {}
-      // 任务完成后从内存移除（保留10分钟防漏）
-      setTimeout(() => analysisTasks.delete(taskId), 10 * 60 * 1000);
     }
-  });
-});
 
-/**
- * GET /api/ai-coach/analysis-status/:taskId
- * 轮询接口：查询图片分析任务状态
- */
-router.get('/analysis-status/:taskId', authMiddleware, async (req, res) => {
-  const { taskId } = req.params;
-  const task = analysisTasks.get(taskId);
+    // 获取客户画像
+    const clientProfile = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: {
+        emotionalMaturity: true,
+        emotionalMaturityLevel: true,
+        antiFrustrationLevel: true,
+        pacePreference: true,
+        clientType: true,
+        coachCooperation: true,
+        coachCooperationLevel: true,
+        emotionalStable: true,
+        eqLevel: true,
+        learningAbility: true
+      }
+    });
 
-  if (!task) {
-    return res.status(404).json({ error: { code: 'S0804', message: '任务不存在或已过期' } });
+    // 会话记忆
+    const unifiedCoachId = girlId ? `girl-${girlId}` : 'unified';
+    const { memory: sessionMemory } = await getOrCreateSession(req.user.id, unifiedCoachId, girlId);
+    const history = await getConversationHistory(sessionMemory.id);
+    const turnCount = history.length;
+    const compactionCount = sessionMemory.compactionCount || 0;
+
+    // 添加用户消息到记忆
+    await addMessage(sessionMemory.id, 'user', situation);
+
+    // 构建上下文
+    const contextBudget = calcContextBudget('', situation, history.map(m => m.content).join(''));
+    let context = await buildAICoachContext(req.user.id, girlId, situation, {
+      maxContextChars: contextBudget,
+      turnCount,
+      compactionCount,
+      clientProfile
+    });
+
+    // 技能路由
+    const { skills, meta: routingMeta } = getMultiDimensionalSkillsWithMeta(situation, {
+      clientProfile,
+      girlProfile: context.girlInfo || null
+    });
+
+    // 注入 wiki 知识库
+    const updatedContext = await buildAICoachContext(req.user.id, girlId, situation, {
+      maxContextChars: contextBudget,
+      turnCount,
+      compactionCount,
+      clientProfile,
+      routingMeta
+    });
+    Object.assign(context, updatedContext);
+
+    // 构建 prompt
+    const basePrompt = await buildMasterPrompt(situation, context, {
+      girlInfo: context.girlInfo,
+      conversationHistory: history,
+      turnCount,
+      clientProfile,
+      clientId: req.user.id
+    });
+
+    const personaSection = await buildFullPersona({ clientProfile, clientId: req.user.id, girlId });
+    const systemPrompt = basePrompt + buildPersonaSection(personaSection);
+
+    // AI 模型配置
+    const aiConfig = getAIConfig(mode);
+    logger.info(`[AnalyzeImage] Step2 开始流式输出 | mode=${mode} → 模型: ${aiConfig?.model}`);
+
+    // 流式 AI 调用
+    const deduplicator = createChunkDeduplicator();
+
+    const streamParams = {
+      messages: [{ role: 'user', content: systemPrompt }],
+      temperature: 0.7,
+      max_tokens: 200000,
+      stream: true
+    };
+    if (aiConfig.model === 'deepseek-v4-pro') {
+      streamParams.thinking = { type: 'enabled' };
+    }
+
+    await callAIStream(
+      aiConfig,
+      streamParams,
+      {
+        deduplicator,
+        onMeta: () => {
+          const meta = {
+            routedType: routingMeta.routedType,
+            routedName: routingMeta.routedType === 'situation' ? '情况咨询'
+              : routingMeta.routedType === 'chat_analysis' ? '聊天分析'
+              : routingMeta.routedType === 'reply' ? '回复建议'
+              : routingMeta.routedType === 'moment' ? '朋友圈分析'
+              : routingMeta.routedType === 'overview' ? '全局概览'
+              : routingMeta.routedType === 'optimize_reply' ? '话术优化'
+              : '通用教练',
+            confidence: routingMeta.bestScore,
+            coachCount: routingMeta.coachCount
+          };
+          res.write(`data: ${JSON.stringify({ meta })}\n\n`);
+        },
+        onReasoning: (reasoning) => {
+          res.write(`data: ${JSON.stringify({ reasoning })}\n\n`);
+        },
+        onChunk: (content) => {
+          res.write(`data: ${JSON.stringify({ content })}\n\n`);
+        },
+        onDone: () => {
+          const fullResponse = deduplicator.getAccumulated();
+          if (fullResponse) {
+            addMessage(sessionMemory.id, 'assistant', fullResponse)
+              .catch(err => logger.error(`[AnalyzeImage] 保存记忆失败: ${err.message}`));
+            extractLearningsFromConversation(req.user.id, fullResponse, girlId)
+              .catch(err => logger.error(`[AnalyzeImage] 提取 learnings 失败: ${err.message}`));
+          }
+          if (req.user.role === 'client') {
+            activityService.recordActivity(req.user.id, 'ai_coach', {
+              routedType: routingMeta.routedType,
+            }).catch(() => {});
+          }
+          res.write('data: [DONE]\n\n');
+          res.end();
+        },
+        onError: (msg) => {
+          logger.error(`[AnalyzeImage] 流式输出错误: ${msg}`);
+          res.write(`data: ${JSON.stringify({ error: { code: 'S0802', message: msg } })}\n\n`);
+          res.write('data: [DONE]\n\n');
+          res.end();
+        }
+      }
+    );
+
+  } catch (err) {
+    logger.error(`[AnalyzeImage] 图片分析流程异常: ${err.message}`);
+    if (!res.headersSent) {
+      res.status(500).json({ error: { code: 'S0802', message: '图片分析失败，请稍后重试' } });
+    } else {
+      res.write(`data: ${JSON.stringify({ error: { code: 'S0802', message: err.message } })}\n\n`);
+      res.write('data: [DONE]\n\n');
+      res.end();
+    }
+  } finally {
+    try { fs.unlinkSync(filePath); } catch (_) {}
   }
-
-  // 验证任务属于当前用户
-  if (task.userId !== req.user.id) {
-    return res.status(403).json({ error: { code: 'A0108', message: '无权访问此任务' } });
-  }
-
-  res.json({
-    taskId,
-    status: task.status,
-    type: task.type || null,
-    content: task.content || null,
-    error: task.error || null,
-    imageUrl: task.imageUrl
-  });
 });
 
 // ============================================================
