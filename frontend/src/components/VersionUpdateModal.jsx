@@ -1,7 +1,7 @@
 import { Modal, ModalOverlay, ModalContent, ModalBody, ModalFooter, Button, Text, VStack, Flex, Progress, Box } from '@chakra-ui/react';
 import { useState } from 'react';
 import { CapDownloader } from '@bricks-soft/cap-downloader';
-import { FileOpener } from '@capawesome-team/capacitor-file-opener';
+
 import { Browser } from '@capacitor/browser';
 import { captureError } from '../utils/frontendErrorCapture';
 
@@ -30,21 +30,13 @@ export default function VersionUpdateModal({ isOpen, onClose, upgradeType, lates
     try {
       const filename = `zhuiai-${latestVersion}.apk`;
 
-      // 使用 Android DownloadManager 下载（应用内，不跳浏览器）
-      // CapDownloader.download() 返回 { id: downloadId }，文件保存到公共 Downloads 目录
-      await CapDownloader.download({
+      // 使用 Android DownloadManager 下载，等待下载完成后自动打开安装
+      // downloadAndInstall 内部用 BroadcastReceiver 监听 ACTION_DOWNLOAD_COMPLETE
+      await CapDownloader.downloadAndInstall({
         url: downloadUrl,
         filename: filename,
         title: '追AI 更新包',
         mimetype: 'application/vnd.android.package-archive',
-      });
-
-      // 下载完成，构建文件路径并打开 APK 安装
-      // DownloadManager 使用 Environment.DIRECTORY_DOWNLOADS 即 /storage/emulated/0/Download/
-      const filePath = `/storage/emulated/0/Download/${filename}`;
-      await FileOpener.openFile({
-        path: filePath,
-        contentType: 'application/vnd.android.package-archive',
       });
 
       setDownloading(false);
