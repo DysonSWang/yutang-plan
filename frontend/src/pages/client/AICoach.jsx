@@ -84,6 +84,11 @@ function fixMarkdown(text) {
   fixed = fixed.replace(/^-(?=[^\s-])([^\s\n])/gm, '- $1');
   // 有序列表：1.text → 1. text
   fixed = fixed.replace(/^(\d+\.)([^\s\n])/gm, '$1 $2');
+  // HR 紧贴标题：---### → ---（换行）###（marked 需要空行，且 ATX 标题需要空格）
+  // HR 本身一行，前面有空行（或文本），后面跟标题行
+  fixed = fixed.replace(/^(-{3,})([ \t]*)(#{1,4})([ \t]*)([^\n#])/gm, (match, hr, trail, hashes, space, next) => {
+    return `${hr}${trail}\n\n${hashes} ${next}`;
+  });
 
   // ---- 2. 粗体/斜体格式修复 ----
   // ** text ** → **text**
