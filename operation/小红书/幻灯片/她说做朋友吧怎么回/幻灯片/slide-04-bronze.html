@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>04 错误示范</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --coral: #E74C3C;
+  --gold: #F39C12;
+}
+
+body {
+  font-family: 'Noto Sans SC', sans-serif;
+  background: #1a1a2e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 0;
+}
+
+.slide {
+  width: 540px;
+  height: 720px;
+  background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 100%);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.top { width: 100%; height: 60px; background: rgba(231,76,60,0.2); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(231,76,60,0.35); }
+.top span { color: white; font-size: 18px; font-weight: 700; letter-spacing: 3px; }
+
+.content { flex: 1; padding: 20px 28px; display: flex; flex-direction: column; }
+
+.title { font-family: 'Noto Serif SC', serif; font-size: 30px; font-weight: 800; color: white; text-align: center; margin-bottom: 18px; line-height: 1.3; }
+.title-red { color: var(--coral); }
+
+.wrong-box { background: rgba(231,76,60,0.06); border: 1px solid rgba(231,76,60,0.15); border-radius: 14px; padding: 14px 18px; margin-bottom: 12px; }
+.wrong-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.wrong-label { font-size: 15px; font-weight: 700; color: var(--coral); }
+.wrong-what { font-size: 13px; color: rgba(255,255,255,0.35); }
+
+.wrong-dialogue { font-size: 15px; color: rgba(255,255,255,0.85); line-height: 1.6; margin-bottom: 6px; }
+.wrong-dialogue strong { color: white; }
+
+.wrong-why { font-size: 14px; color: var(--coral); line-height: 1.45; font-weight: 500; }
+
+.anti-insight { background: rgba(243,156,18,0.1); border-radius: 12px; padding: 14px 18px; margin-top: auto; text-align: center; }
+.anti-label { font-size: 13px; font-weight: 700; color: var(--gold); margin-bottom: 6px; }
+.anti-text { font-size: 18px; font-weight: 700; color: white; line-height: 1.5; }
+.anti-sub { font-size: 14px; color: rgba(255,255,255,0.5); margin-top: 6px; }
+
+.footer { height: 56px; display: flex; align-items: center; justify-content: center; }
+.footer-text { font-size: 16px; font-weight: 700; color: rgba(255,255,255,0.7); }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="top"><span>聊天诊断</span></div>
+
+  <div class="content">
+    <div class="title">收到朋友卡<span class="title-red">千万别这样回</span></div>
+
+    <div class="wrong-box">
+      <div class="wrong-head">
+        <span class="wrong-label">✕ 追问型</span>
+        <span class="wrong-what">→ 交白旗</span>
+      </div>
+      <div class="wrong-dialogue">
+        <strong>"为什么？我哪里做错了？你说，我改"</strong>
+      </div>
+      <div class="wrong-why">你在求她给你打分。她本来只是考虑撤退，现在确定你是低位。</div>
+    </div>
+
+    <div class="wrong-box">
+      <div class="wrong-head">
+        <span class="wrong-label">✕ 挽留型</span>
+        <span class="wrong-what">→ 乞求姿态</span>
+      </div>
+      <div class="wrong-dialogue">
+        <strong>"再给我一次机会，我真的会改"</strong>
+      </div>
+      <div class="wrong-why">越求越廉价。你越表现出"离不开她"，她越想离开你。</div>
+    </div>
+
+    <div class="wrong-box">
+      <div class="wrong-head">
+        <span class="wrong-label">✕ 接受型</span>
+        <span class="wrong-what">→ 坐实框架</span>
+      </div>
+      <div class="wrong-dialogue">
+        <strong>"好吧，那我们还是朋友吧"</strong>
+      </div>
+      <div class="wrong-why">你亲手签了朋友协议。一旦坐下这个位置，想翻盘需要十倍代价。</div>
+    </div>
+
+    <div class="anti-insight">
+      <div class="anti-label">反认知</div>
+      <div class="anti-text">她问"做朋友吧"，不是要你的答案</div>
+      <div class="anti-sub">她是在看你会不会为了她放弃自己的框架。你越解释，她越确定</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-text">◆ 正面回答 = 承认低位 = 再无翻盘机会</div>
+  </div>
+</div>
+</body>
+</html>

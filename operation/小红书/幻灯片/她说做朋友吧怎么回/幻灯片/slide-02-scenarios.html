@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>02 场景</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --coral: #E74C3C;
+  --gold: #F39C12;
+  --green: #27AE60;
+}
+
+body {
+  font-family: 'Noto Sans SC', sans-serif;
+  background: #1a1a2e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 0;
+}
+
+.slide {
+  width: 540px;
+  height: 720px;
+  background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.top { position: absolute; top: 0; left: 0; right: 0; height: 48px; background: rgba(231,76,60,0.2); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(231,76,60,0.35); }
+.top span { color: white; font-size: 16px; font-weight: 700; letter-spacing: 3px; }
+
+.content { position: absolute; top: 48px; bottom: 44px; left: 0; right: 0; overflow: hidden; padding: 10px 20px; display: flex; flex-direction: column; }
+
+.title { font-family: 'Noto Serif SC', serif; font-size: 26px; font-weight: 800; color: white; text-align: center; margin-bottom: 8px; line-height: 1.3; }
+.title-red { color: var(--coral); }
+
+.scene { background: rgba(255,255,255,0.06); border-radius: 14px; padding: 8px 14px; margin-bottom: 6px; border-left: 4px solid; }
+.scene-a { border-color: var(--coral); }
+.scene-b { border-color: var(--gold); }
+.scene-c { border-color: var(--green); }
+
+.scene-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.scene-label { font-size: 15px; font-weight: 700; }
+.scene-a .scene-label { color: var(--coral); }
+.scene-b .scene-label { color: var(--gold); }
+.scene-c .scene-label { color: var(--green); }
+.scene-emo { font-size: 14px; color: rgba(255,255,255,0.45); font-weight: 500; }
+
+.scene-moment { font-size: 15px; color: rgba(255,255,255,0.85); line-height: 1.45; margin-bottom: 2px; }
+.scene-moment strong { color: white; }
+
+.scene-sign { font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.4; }
+.scene-warn { font-size: 12.5px; color: var(--gold); line-height: 1.4; margin-top: 3px; font-weight: 500; }
+
+.identity-bar { background: rgba(243,156,18,0.1); border-radius: 12px; padding: 8px 14px; margin-top: auto; text-align: center; }
+.identity-q { font-size: 13px; color: rgba(255,255,255,0.5); margin-bottom: 3px; }
+.identity-label { font-size: 15px; color: var(--gold); font-weight: 700; }
+
+.footer { position: absolute; bottom: 0; left: 0; right: 0; height: 44px; display: flex; align-items: center; justify-content: center; }
+.footer-text { font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.7); }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="top"><span>聊天诊断</span></div>
+
+  <div class="content">
+    <div class="title">收到<span class="title-red">"做朋友吧"</span><br>先看你是哪种情况</div>
+
+    <div class="scene scene-a">
+      <div class="scene-head">
+        <span class="scene-label">A · 真没窗口</span>
+        <span class="scene-emo">她在撤退</span>
+      </div>
+      <div class="scene-moment">
+        消息发出去3天没回，但你看见她<strong>刚发了朋友圈</strong>。约她永远"最近很忙"——<strong>她不是没空，是不想给你空</strong>。
+      </div>
+      <div class="scene-sign">信号：回复越来越短 → 不再主动 → 约不出来</div>
+    </div>
+
+    <div class="scene scene-b">
+      <div class="scene-head">
+        <span class="scene-label">B · 在测试你</span>
+        <span class="scene-emo">她在观察</span>
+      </div>
+      <div class="scene-moment">
+        上周还聊到凌晨两点，她笑你的笑话，回你的每一条消息。<strong>今天突然一句"做朋友吧"</strong>——你懵了。她不是真的要撤退，<strong>她在看你慌不慌</strong>。
+      </div>
+      <div class="scene-sign">信号：之前互动不错 → 突然变脸 → 等你反应</div>
+    </div>
+
+    <div class="scene scene-c">
+      <div class="scene-head">
+        <span class="scene-label">C · 朋友框架</span>
+        <span class="scene-emo">她在利用</span>
+      </div>
+      <div class="scene-moment">
+        她失恋了找你哭，搬家了找你搬，车坏了找你接。<strong>但约会？"我们只是朋友啊"</strong>。你有男朋友的功能，没有男朋友的身份。
+      </div>
+      <div class="scene-sign">信号：需要帮忙就找你 → 从不主动推进关系</div>
+      <div class="scene-warn">⚠️ 如果她的需求永远是单向的，她不是在跟你做朋友——她是在消耗你。</div>
+    </div>
+
+    <div class="identity-bar">
+      <div class="identity-q">她不会跟毫无价值的人说"做朋友"</div>
+      <div class="identity-label">你还有用，但已经没有吸引力了</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-text">◆ 先判断你是哪种，再看怎么应对</div>
+  </div>
+</div>
+</body>
+</html>

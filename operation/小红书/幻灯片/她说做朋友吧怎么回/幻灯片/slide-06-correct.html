@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>06 正确回复</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --coral: #E74C3C;
+  --gold: #F39C12;
+  --green: #27AE60;
+}
+
+body {
+  font-family: 'Noto Sans SC', sans-serif;
+  background: #1a1a2e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 0;
+}
+
+.slide {
+  width: 540px;
+  height: 720px;
+  background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.top { position: absolute; top: 0; left: 0; right: 0; height: 48px; background: rgba(39,174,96,0.2); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(39,174,96,0.35); }
+.top span { color: white; font-size: 16px; font-weight: 700; letter-spacing: 3px; }
+
+.content { position: absolute; top: 48px; bottom: 44px; left: 0; right: 0; overflow: hidden; padding: 10px 20px; display: flex; flex-direction: column; }
+
+.title { font-family: 'Noto Serif SC', serif; font-size: 28px; font-weight: 800; color: white; text-align: center; margin-bottom: 12px; }
+.title-green { color: var(--green); }
+
+.reply-box { background: rgba(255,255,255,0.06); border-radius: 14px; padding: 12px 14px; margin-bottom: 8px; }
+.reply-her { font-size: 14px; color: rgba(255,255,255,0.5); margin-bottom: 5px; }
+.reply-her strong { color: white; font-weight: 600; }
+.reply-you { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 3px; }
+.reply-arrow { color: var(--green); font-size: 16px; font-weight: 800; flex-shrink: 0; margin-top: 1px; }
+.reply-text { font-size: 15px; color: white; font-weight: 600; line-height: 1.5; }
+.reply-effect { font-size: 13px; color: var(--gold); margin-top: 3px; padding-left: 24px; }
+
+.think-box { background: rgba(39,174,96,0.12); border-radius: 12px; padding: 10px 14px; margin-top: auto; }
+.think-label { font-size: 13px; font-weight: 700; color: var(--green); margin-bottom: 4px; }
+.think-text { font-size: 14px; color: rgba(255,255,255,0.85); line-height: 1.5; }
+
+.footer { position: absolute; bottom: 0; left: 0; right: 0; height: 44px; display: flex; align-items: center; justify-content: center; }
+.footer-text { font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.7); }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="top"><span>聊天诊断</span></div>
+
+  <div class="content">
+    <div class="title">收到朋友卡<span class="title-green">正确回复</span></div>
+
+    <div class="reply-box">
+      <div class="reply-her"><strong>她：</strong>我觉得我们还是做朋友吧</div>
+      <div class="reply-you">
+        <span class="reply-arrow">→</span>
+        <div class="reply-text">"谁跟你做朋友？我是男的"</div>
+      </div>
+      <div class="reply-effect">效果：直接打破朋友身份，不接受框架</div>
+    </div>
+
+    <div class="reply-box">
+      <div class="reply-her"><strong>她：</strong>我觉得我们还是做朋友吧</div>
+      <div class="reply-you">
+        <span class="reply-arrow">→</span>
+        <div class="reply-text">"好，那就先做朋友"</div>
+      </div>
+      <div class="reply-effect">效果：不争辩，不暴露需求感，先接受再观察</div>
+    </div>
+
+    <div class="reply-box">
+      <div class="reply-her"><strong>她：</strong>我觉得我们还是做朋友吧</div>
+      <div class="reply-you">
+        <span class="reply-arrow">→</span>
+        <div class="reply-text">"行，我先记上，反正我也没那么多时间"</div>
+      </div>
+      <div class="reply-effect">效果：降低粘度，不围着她转，让她意外</div>
+    </div>
+
+    <div class="reply-box">
+      <div class="reply-her"><strong>她：</strong>我觉得我们还是做朋友吧</div>
+      <div class="reply-you">
+        <span class="reply-arrow">→</span>
+        <div class="reply-text">"你这是在追我之前先发好人卡吗"</div>
+      </div>
+      <div class="reply-effect">效果：反抛+调侃，反转高低位</div>
+    </div>
+
+    <div class="think-box">
+      <div class="think-label">思维升级</div>
+      <div class="think-text">核心原则：不要回答她的问题，让她来回答她的问题。正面回答 = 承认低位。</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-text">◆ 不解释，不挽留，反抛回去</div>
+  </div>
+</div>
+</body>
+</html>
