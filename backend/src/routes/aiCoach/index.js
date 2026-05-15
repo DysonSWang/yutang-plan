@@ -1344,10 +1344,13 @@ JSON格式：
           continue;
         }
 
+        // VL 模型返回的角色与实际相反，需要翻转
+        const flipRole = (r) => r === 'girl' ? 'user' : 'girl';
+
         if (Array.isArray(parsed)) {
           for (const msg of parsed) {
             if (msg.role && msg.content && ['girl', 'user'].includes(msg.role)) {
-              allMessages.push({ role: msg.role, content: msg.content, time: msg.time || null });
+              allMessages.push({ role: flipRole(msg.role), content: msg.content, time: msg.time || null });
             }
           }
         } else if (parsed && parsed.type === 'moments') {
@@ -1366,7 +1369,7 @@ JSON格式：
         } else if (parsed && parsed.type === 'chat' && parsed.messages) {
           for (const msg of parsed.messages) {
             if (msg.role && msg.content && ['girl', 'user'].includes(msg.role)) {
-              allMessages.push({ role: msg.role, content: msg.content, time: msg.time || null });
+              allMessages.push({ role: flipRole(msg.role), content: msg.content, time: msg.time || null });
             }
           }
         }
