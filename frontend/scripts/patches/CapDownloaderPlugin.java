@@ -81,14 +81,36 @@ public class CapDownloaderPlugin extends Plugin {
                         cursor.close();
 
                         if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                            // Use FileProvider for reliable content URI (dm.getUriForDownloadedFile fails on Huawei)
-                            java.io.File apkFile = new java.io.File(
-                                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-                                filename);
-                            Uri contentUri = FileProvider.getUriForFile(
-                                context,
-                                context.getPackageName() + ".fileprovider",
-                                apkFile);
+                            // 优先用 DownloadManager 返回的真实 URI，避免文件路径猜错
+                            Uri contentUri = null;
+
+                            // 方法1：dm.getUriForDownloadedFile（大部分机型可用）
+                            try {
+                                Uri dmUri = dm.getUriForDownloadedFile(downloadId);
+                                if (dmUri != null) {
+                                    contentUri = dmUri;
+                                }
+                            } catch (Exception ignored) {}
+
+                            // 方法2：FileProvider（华为等机型 dm.getUriForDownloadedFile 失败时）
+                            if (contentUri == null) {
+                                try {
+                                    java.io.File apkFile = new java.io.File(
+                                        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                                        filename);
+                                    if (apkFile.exists()) {
+                                        contentUri = FileProvider.getUriForFile(
+                                            context,
+                                            context.getPackageName() + ".fileprovider",
+                                            apkFile);
+                                    }
+                                } catch (Exception ignored) {}
+                            }
+
+                            if (contentUri == null) {
+                                call.reject("无法获取下载文件 URI");
+                                return;
+                            }
 
                             // Open APK for installation
                             Intent installIntent = new Intent(Intent.ACTION_VIEW);

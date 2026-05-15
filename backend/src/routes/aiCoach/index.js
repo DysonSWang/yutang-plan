@@ -1236,9 +1236,9 @@ router.post('/import-chat-screenshots', authMiddleware, chatImportUpload.array('
 
 【如果是聊天记录】
 重要：在微信聊天截图中：
-- 左侧气泡 = 对方（女生），role设为"girl"
-- 右侧气泡 = 用户自己（我），role设为"user"
-请按此规则识别对话内容，JSON格式：
+- 右侧绿色气泡 = 用户自己（我），role设为"user"
+- 左侧白色气泡 = 对方（女生），role设为"girl"
+请严格按此规则识别。只输出JSON，不要其他说明文字。
 {"type":"chat","messages":[{"role":"girl"|"user","content":"消息文本","time":"时间戳"}]}
 
 【如果是朋友圈截图】
