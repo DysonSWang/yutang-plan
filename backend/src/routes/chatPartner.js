@@ -158,7 +158,15 @@ router.post('/optimize-message', authMiddleware, async (req, res) => {
       await membershipService.checkTrialLimit(req.user.id, 'chat_optimize');
       await membershipService.useTrialCount(req.user.id);
     } catch (e) {
-      return res.status(403).json({ error: { code: 'A0108', message: e.message } });
+      const msg = e.message || '';
+      if (msg.includes('无会员权限')) {
+        return res.status(403).json({ error: { code: 'T0904', message: msg } });
+      } else if (msg.includes('试用次数已用完')) {
+        return res.status(403).json({ error: { code: 'T0901', message: msg } });
+      } else if (msg.includes('已到期')) {
+        return res.status(403).json({ error: { code: 'T0902', message: msg } });
+      }
+      return res.status(403).json({ error: { code: 'A0108', message: msg || '无此操作权限' } });
     }
 
     const { girlId, myMessage, history = [] } = req.body;
@@ -994,7 +1002,15 @@ router.post('/client-analyze', authMiddleware, async (req, res) => {
       await membershipService.checkTrialLimit(req.user.id, 'reply_suggest');
       await membershipService.useTrialCount(req.user.id);
     } catch (e) {
-      return res.status(403).json({ error: { code: 'A0108', message: e.message } });
+      const msg = e.message || '';
+      if (msg.includes('无会员权限')) {
+        return res.status(403).json({ error: { code: 'T0904', message: msg } });
+      } else if (msg.includes('试用次数已用完')) {
+        return res.status(403).json({ error: { code: 'T0901', message: msg } });
+      } else if (msg.includes('已到期')) {
+        return res.status(403).json({ error: { code: 'T0902', message: msg } });
+      }
+      return res.status(403).json({ error: { code: 'A0108', message: msg || '无此操作权限' } });
     }
 
     const { clientId, message, history = [] } = req.body;
@@ -1230,7 +1246,15 @@ router.post('/client-optimize', authMiddleware, async (req, res) => {
       await membershipService.checkTrialLimit(req.user.id, 'chat_optimize');
       await membershipService.useTrialCount(req.user.id);
     } catch (e) {
-      return res.status(403).json({ error: { code: 'A0108', message: e.message } });
+      const msg = e.message || '';
+      if (msg.includes('无会员权限')) {
+        return res.status(403).json({ error: { code: 'T0904', message: msg } });
+      } else if (msg.includes('试用次数已用完')) {
+        return res.status(403).json({ error: { code: 'T0901', message: msg } });
+      } else if (msg.includes('已到期')) {
+        return res.status(403).json({ error: { code: 'T0902', message: msg } });
+      }
+      return res.status(403).json({ error: { code: 'A0108', message: msg || '无此操作权限' } });
     }
 
     const { clientId, myMessage, history = [] } = req.body;

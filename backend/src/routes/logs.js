@@ -293,4 +293,39 @@ router.post('/frontend-error', (req, res) => {
   });
 });
 
+// 接收 Android 原生 crash 上报
+router.post('/native-crash', (req, res) => {
+  const { message, stack, exceptionClass, thread, type, device, manufacturer, osVersion, sdkVersion, appVersion, appVersionCode } = req.body;
+
+  const entry = {
+    time: new Date().toISOString(),
+    level: 'fatal',
+    source: 'native',
+    type: type || 'nativeCrash',
+    exceptionClass: exceptionClass || '',
+    message: message || '未知原生错误',
+    stack: stack || '',
+    thread: thread || '',
+    device: device || '',
+    manufacturer: manufacturer || '',
+    osVersion: osVersion || '',
+    sdkVersion: sdkVersion || '',
+    appVersion: appVersion || '',
+    appVersionCode: appVersionCode || '',
+  };
+
+  const dateStr = logger.beijingDateStr();
+  const filePath = path.join(LOG_DIR, `native-crash-${dateStr}.json`);
+  const line = JSON.stringify(entry) + '\n';
+
+  fs.appendFile(filePath, line, (err) => {
+    if (err) {
+      logger.error('[Logs] 写入 native crash 日志失败:', err.message);
+      return res.status(500).json({ error: { code: 'S0802', message: '写入日志失败' } });
+    }
+    logger.info('[Logs] Native crash 已记录', { exceptionClass, device, osVersion });
+    res.json({ success: true });
+  });
+});
+
 module.exports = router;

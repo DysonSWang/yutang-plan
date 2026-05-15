@@ -395,7 +395,16 @@ router.post('/new-session', authMiddleware, async (req, res) => {
       try {
         await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
       } catch (e) {
-        return res.status(403).json({ error: { code: 'A0108', message: e.message } });
+        // 根据错误消息返回对应的规范化错误码
+        const msg = e.message || '';
+        if (msg.includes('无会员权限')) {
+          return res.status(403).json({ error: { code: 'T0904', message: msg } });
+        } else if (msg.includes('试用次数已用完')) {
+          return res.status(403).json({ error: { code: 'T0901', message: msg } });
+        } else if (msg.includes('已到期')) {
+          return res.status(403).json({ error: { code: 'T0902', message: msg } });
+        }
+        return res.status(403).json({ error: { code: 'A0108', message: msg } });
       }
     }
 
@@ -461,7 +470,15 @@ router.delete('/session/:sessionId', authMiddleware, async (req, res) => {
       try {
         await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
       } catch (e) {
-        return res.status(403).json({ error: { code: 'A0108', message: e.message } });
+        const msg = e.message || '';
+        if (msg.includes('无会员权限')) {
+          return res.status(403).json({ error: { code: 'T0904', message: msg } });
+        } else if (msg.includes('试用次数已用完')) {
+          return res.status(403).json({ error: { code: 'T0901', message: msg } });
+        } else if (msg.includes('已到期')) {
+          return res.status(403).json({ error: { code: 'T0902', message: msg } });
+        }
+        return res.status(403).json({ error: { code: 'A0108', message: msg || '无此操作权限' } });
       }
     }
 
@@ -1218,7 +1235,10 @@ router.post('/import-chat-screenshots', authMiddleware, chatImportUpload.array('
 2. 朋友圈截图（有小红点、评论等）
 
 【如果是聊天记录】
-请识别对话内容，JSON格式：
+重要：在微信聊天截图中：
+- 左侧气泡 = 对方（女生），role设为"girl"
+- 右侧气泡 = 用户自己（我），role设为"user"
+请按此规则识别对话内容，JSON格式：
 {"type":"chat","messages":[{"role":"girl"|"user","content":"消息文本","time":"时间戳"}]}
 
 【如果是朋友圈截图】

@@ -74,9 +74,10 @@ const ErrorCodes = {
   MEMBERSHIP_POINTS_INSUFFICIENT: { code: 'M1001', status: 400, message: '积分余额不足' },
 
   // ========== T09 试用会员 ==========
-  TRIAL_LIMIT_EXCEEDED:      { code: 'T0901', status: 403, message: '试用次数已用完' },
-  TRIAL_EXPIRED:             { code: 'T0902', status: 403, message: '试用已到期，请升级会员' },
+  TRIAL_LIMIT_EXCEEDED:      { code: 'T0901', status: 403, message: '试用次数已用完，联系 Mo哥 获取专属方案' },
+  TRIAL_EXPIRED:             { code: 'T0902', status: 403, message: '试用已到期，联系 Mo哥 获取专属方案' },
   TRIAL_ALREADY_ACTIVE:      { code: 'T0903', status: 400, message: '已有试用或有效会员' },
+  TRIAL_NO_MEMBERSHIP:       { code: 'T0904', status: 403, message: '无会员权限，联系 Mo哥 开通' },
 };
 
 module.exports = { ErrorCodes };

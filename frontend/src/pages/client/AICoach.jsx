@@ -144,6 +144,7 @@ function fixMarkdown(text) {
   fixed = fixed.replace(/\\_/g, '_');
 
   // ---- 7. 清理多余空行 ----
+  // 三个及以上换行 → 两个（保留段落间距，不留白）
   fixed = fixed.replace(/\n{3,}/g, '\n\n');
 
   return fixed;
@@ -716,8 +717,8 @@ const OptimizeReplyPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
 function filterReasoning(text) {
   if (!text) return '';
   // 不要分割文本，保持 Markdown 结构完整
-  // 直接返回原文，由 marked 负责渲染
-  return text;
+  // 清理过多的空行（3个及以上变2个，保持段落间距）
+  return text.replace(/\n{3,}/g, '\n\n');
 }
 
 // 分析思考过程组件 — 内嵌在女生分析气泡顶部，可折叠
@@ -1946,7 +1947,15 @@ export default function AICoach() {
   useEffect(() => {
     if (selectedGirlId) {
       const girl = girls.find(g => g.id === selectedGirlId);
-      setSelectedGirl(girl || null);
+      if (girl) {
+        setSelectedGirl(girl);
+      } else if (girls.length > 0) {
+        // 女生列表已加载但找不到关联的女生，清除无效的 selectedGirlId
+        setSelectedGirl(null);
+        setSelectedGirlId('');
+        try { localStorage.removeItem('zhuiai_last_girl_id'); } catch {}
+      }
+      // girls 还没加载完时不做处理，等下次 girls 更新再判断
     } else {
       setSelectedGirl(null);
     }

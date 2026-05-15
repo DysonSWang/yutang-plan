@@ -457,7 +457,15 @@ router.post('/learning/generate-all', authMiddleware, async (req, res) => {
       try {
         await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
       } catch (e) {
-        return res.status(403).json({ error: { code: 'A0108', message: e.message } });
+        const msg = e.message || '';
+        if (msg.includes('无会员权限')) {
+          return res.status(403).json({ error: { code: 'T0904', message: msg } });
+        } else if (msg.includes('试用次数已用完')) {
+          return res.status(403).json({ error: { code: 'T0901', message: msg } });
+        } else if (msg.includes('已到期')) {
+          return res.status(403).json({ error: { code: 'T0902', message: msg } });
+        }
+        return res.status(403).json({ error: { code: 'A0108', message: msg || '无此操作权限' } });
       }
     }
 
@@ -518,7 +526,15 @@ router.post('/learning/regenerate', authMiddleware, async (req, res) => {
       try {
         await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
       } catch (e) {
-        return res.status(403).json({ error: { code: 'A0108', message: e.message } });
+        const msg = e.message || '';
+        if (msg.includes('无会员权限')) {
+          return res.status(403).json({ error: { code: 'T0904', message: msg } });
+        } else if (msg.includes('试用次数已用完')) {
+          return res.status(403).json({ error: { code: 'T0901', message: msg } });
+        } else if (msg.includes('已到期')) {
+          return res.status(403).json({ error: { code: 'T0902', message: msg } });
+        }
+        return res.status(403).json({ error: { code: 'A0108', message: msg || '无此操作权限' } });
       }
     }
 
@@ -563,7 +579,15 @@ router.post('/learning/regenerate/:chapterId', authMiddleware, async (req, res) 
       try {
         await membershipService.checkTrialLimit(req.user.id, 'ai_coach');
       } catch (e) {
-        return res.status(403).json({ error: { code: 'A0108', message: e.message } });
+        const msg = e.message || '';
+        if (msg.includes('无会员权限')) {
+          return res.status(403).json({ error: { code: 'T0904', message: msg } });
+        } else if (msg.includes('试用次数已用完')) {
+          return res.status(403).json({ error: { code: 'T0901', message: msg } });
+        } else if (msg.includes('已到期')) {
+          return res.status(403).json({ error: { code: 'T0902', message: msg } });
+        }
+        return res.status(403).json({ error: { code: 'A0108', message: msg || '无此操作权限' } });
       }
     }
 
