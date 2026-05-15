@@ -1235,9 +1235,13 @@ router.post('/import-chat-screenshots', authMiddleware, chatImportUpload.array('
 2. 朋友圈截图（有小红点、评论等）
 
 【如果是聊天记录】
-重要：在微信聊天截图中：
-- 右侧绿色气泡 = 用户自己（我），role设为"user"
-- 左侧白色气泡 = 对方（女生），role设为"girl"
+【判断谁是"我"、谁是"对方"的规则】
+综合使用以下线索（按优先级）：
+1. 气泡位置：右侧 = 我（user），左侧 = 对方（girl）
+2. 气泡颜色：绿色/蓝色 = 我（user），白色/灰色 = 对方（girl）
+3. 头像：通常右侧是我的头像，左侧是对方头像
+4. 以上线索冲突时，以位置为准（右侧=user，左侧=girl）
+
 请严格按此规则识别。只输出JSON，不要其他说明文字。
 {"type":"chat","messages":[{"role":"girl"|"user","content":"消息文本","time":"时间戳"}]}
 

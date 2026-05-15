@@ -92,12 +92,19 @@ public class CapDownloaderPlugin extends Plugin {
                                 }
                             } catch (Exception ignored) {}
 
-                            // 方法2：FileProvider（华为等机型 dm.getUriForDownloadedFile 失败时）
+                            // 方法2：FileProvider（从 app 私有外部目录读取）
                             if (contentUri == null) {
                                 try {
+                                    // 优先从 app 私有外部目录读（setDestinationInExternalFilesDir 的目标）
                                     java.io.File apkFile = new java.io.File(
-                                        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                                        context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS),
                                         filename);
+                                    if (!apkFile.exists()) {
+                                        // 兜底：公共 Downloads 目录
+                                        apkFile = new java.io.File(
+                                            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                                            filename);
+                                    }
                                     if (apkFile.exists()) {
                                         contentUri = FileProvider.getUriForFile(
                                             context,
