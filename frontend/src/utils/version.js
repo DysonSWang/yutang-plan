@@ -6,8 +6,8 @@ import { captureError } from './frontendErrorCapture';
 import { api } from './api';
 
 // 降级版本号（浏览器环境用，实际 App 走 Capacitor 获取原生版本）
-const VERSION = '1.5.9';
-const BUILD = 51;
+const VERSION = '1.6.0';
+const BUILD = 52;
 
 export { VERSION, BUILD };
 
