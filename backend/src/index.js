@@ -48,6 +48,9 @@ const activityRoutes = require('./routes/activity');
 const app = express();
 const server = http.createServer(app);
 
+// 信任代理（解决 X-Forwarded-For 警告）
+app.set('trust proxy', 1);
+
 // Socket.io
 const io = new Server(server, {
   cors: {
