@@ -23,7 +23,8 @@ public class ScreenshotTogglePlugin extends Plugin {
             }
             SharedPreferences prefs = activity.getSharedPreferences(PREFS_NAME, Activity.MODE_PRIVATE);
             boolean next = !prefs.getBoolean(KEY_SCREENSHOT_ENABLED, false);
-            prefs.edit().putBoolean(KEY_SCREENSHOT_ENABLED, next).apply();
+            // 用 commit() 同步写入，确保立即可读
+            prefs.edit().putBoolean(KEY_SCREENSHOT_ENABLED, next).commit();
 
             if (activity instanceof com.zhuiai.app.MainActivity) {
                 ((com.zhuiai.app.MainActivity) activity).applyScreenshotProtection();
