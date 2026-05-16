@@ -308,7 +308,7 @@ function registerSituationRoute(router, authMiddleware) {
         }
       }
 
-      const { girlId, situation, stream = true, mode = 'pro' } = req.body;
+      const { girlId, situation, stream = true, mode = 'pro', combatMessages } = req.body;
 
       if (!situation) {
         return res.status(400).json({ error: { code: 'S0803', message: '情况描述是必需的' } });
@@ -411,7 +411,18 @@ function registerSituationRoute(router, authMiddleware) {
       });
 
       const personaSection = await buildFullPersona({ clientProfile, clientId: req.user.id, girlId });
-      const systemPrompt = basePrompt + buildPersonaSection(personaSection);
+      let systemPrompt = basePrompt + buildPersonaSection(personaSection);
+
+      // 注入实战聊天上下文
+      const hasCombatContext = Array.isArray(combatMessages) && combatMessages.length > 0;
+      if (hasCombatContext) {
+        const combatText = combatMessages.map(m => {
+          const ts = m.timestamp ? new Date(m.timestamp).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(/\//g, '-') : '';
+          const role = m.role === 'user' ? '用户' : '女生';
+          return ts ? `[${ts}] ${role}：${m.content}` : `${role}：${m.content}`;
+        }).join('\n');
+        systemPrompt += `\n【实战聊天记录（用户刚刚进行的实时对话）】\n${combatText}\n`;
+      }
 
       const promptChars = systemPrompt.length;
       const estimatedTokens = Math.round(promptChars / 2.5);

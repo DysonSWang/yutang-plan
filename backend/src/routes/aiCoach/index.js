@@ -624,7 +624,7 @@ router.post('/reply-suggestions', authMiddleware, async (req, res) => {
       }
     }
 
-    const { girlId, lastMessage, context, style, hiddenContext } = req.body;
+    const { girlId, lastMessage, context, style, hiddenContext, combatMessages } = req.body;
 
     if (!lastMessage) {
       return res.status(400).json({ error: { code: 'S0803', message: '对方消息是必需的' } });
@@ -673,48 +673,62 @@ router.post('/reply-suggestions', authMiddleware, async (req, res) => {
     const relStageLabel = relStage ? STAGE_LABELS[relStage] || relStage : null;
     const stageContext = addStageContext(relStage);
 
-    // M007: 构建对话历史上下文（支持 hiddenContext 优先）
+    // M007: 构建对话历史上下文
+    // combatMessages（带时间戳的实战聊天）优先于 hiddenContext.recentMessages
+    const hasCombatContext = Array.isArray(combatMessages) && combatMessages.length > 0;
     let contextSection = '';
-    if (hiddenContext?.chatSummary || hiddenContext?.recentMessages || hiddenContext?.importAnalysis) {
-      // 优先使用 hiddenContext（前端注入的上下文）
-      if (hiddenContext?.chatSummary) {
-        contextSection += `\n【聊天摘要】\n${hiddenContext.chatSummary}`;
+
+    // 实战聊天记录（带时间戳）
+    if (hasCombatContext) {
+      const combatText = combatMessages.map(m => {
+        const ts = m.timestamp ? new Date(m.timestamp).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(/\//g, '-') : '';
+        const role = m.role === 'user' ? '用户' : '女生';
+        return ts ? `[${ts}] ${role}：${m.content}` : `${role}：${m.content}`;
+      }).join('\n');
+      contextSection += `\n【实战聊天记录（用户刚刚进行的实时对话）】\n${combatText}`;
+    }
+
+    // hiddenContext: chatSummary 和 importAnalysis 仍保留（与 combatMessages 无冲突）
+    if (hiddenContext?.chatSummary) {
+      contextSection += `\n【聊天摘要】\n${hiddenContext.chatSummary}`;
+    }
+    if (hiddenContext?.importAnalysis) {
+      contextSection += `\n【对话分析】\n`;
+      contextSection += `- 女生风格: ${hiddenContext.importAnalysis.girlStyle || '未知'}\n`;
+      contextSection += `- 用户风格: ${hiddenContext.importAnalysis.userStyle || '未知'}\n`;
+      if (hiddenContext.importAnalysis.problems?.length > 0) {
+        contextSection += `- 问题点: ${hiddenContext.importAnalysis.problems.join(', ')}\n`;
       }
+      if (hiddenContext.importAnalysis.suggestions?.length > 0) {
+        contextSection += `- 改进建议: ${hiddenContext.importAnalysis.suggestions.join(', ')}\n`;
+      }
+    }
+
+    // 无 combatMessages 时，降级使用 hiddenContext.recentMessages 或数据库历史
+    if (!hasCombatContext) {
       if (hiddenContext?.recentMessages && hiddenContext.recentMessages.length > 0) {
         const recentChat = hiddenContext.recentMessages.map(m => {
           const role = m.role === 'girl' ? '女生' : '用户';
           return `${role}: ${m.content}`;
         }).join('\n');
         contextSection += `\n【最近聊天记录】\n${recentChat}`;
-      }
-      if (hiddenContext?.importAnalysis) {
-        contextSection += `\n【对话分析】\n`;
-        contextSection += `- 女生风格: ${hiddenContext.importAnalysis.girlStyle || '未知'}\n`;
-        contextSection += `- 用户风格: ${hiddenContext.importAnalysis.userStyle || '未知'}\n`;
-        if (hiddenContext.importAnalysis.problems?.length > 0) {
-          contextSection += `- 问题点: ${hiddenContext.importAnalysis.problems.join(', ')}\n`;
+      } else if (girlId) {
+        try {
+          const chatHistory = await prisma.chatMessage.findMany({
+            where: { girlId: girlId },
+            orderBy: { createdAt: 'desc' },
+            take: 20
+          });
+          if (chatHistory && chatHistory.length > 0) {
+            const reversed = chatHistory.reverse();
+            const historyText = reversed.map(m =>
+              `${m.isFromUser ? '用户' : '女生'}: ${m.content}`
+            ).join('\n');
+            contextSection += `\n【最近对话历史】\n${historyText}`;
+          }
+        } catch (e) {
+          logger.warn(`[reply-suggestions] 获取聊天历史失败: ${e.message}`);
         }
-        if (hiddenContext.importAnalysis.suggestions?.length > 0) {
-          contextSection += `- 改进建议: ${hiddenContext.importAnalysis.suggestions.join(', ')}\n`;
-        }
-      }
-    } else if (girlId) {
-      // 降级：从数据库加载聊天历史
-      try {
-        const chatHistory = await prisma.chatMessage.findMany({
-          where: { girlId: girlId },
-          orderBy: { createdAt: 'desc' },
-          take: 20
-        });
-        if (chatHistory && chatHistory.length > 0) {
-          const reversed = chatHistory.reverse();
-          contextSection = reversed.map(m =>
-            `${m.isFromUser ? '用户' : '女生'}: ${m.content}`
-          ).join('\n');
-          contextSection = `\n【最近对话历史】\n${contextSection}`;
-        }
-      } catch (e) {
-        logger.warn(`[reply-suggestions] 获取聊天历史失败: ${e.message}`);
       }
     }
 
@@ -863,7 +877,7 @@ router.post('/optimize-reply', authMiddleware, async (req, res) => {
       }
     }
 
-    const { originalReply, girlId, goal, hiddenContext } = req.body;
+    const { originalReply, girlId, goal, hiddenContext, combatMessages } = req.body;
 
     if (!originalReply) {
       return res.status(400).json({ error: { code: 'S0803', message: '原始回复是必需的' } });
@@ -923,48 +937,62 @@ router.post('/optimize-reply', authMiddleware, async (req, res) => {
 // 获取动态路由的多位大师视角（带调试meta）
     const { skills, meta: routingMeta } = getMultiDimensionalSkillsWithMeta(originalReply, { girlId, girlStage: fullContext?.girlInfo?.stage });
 
-    // M007: 构建对话历史上下文（Task 4 新增 - 支持 hiddenContext）
+    // M007: 构建对话历史上下文
+    // combatMessages（带时间戳的实战聊天）优先于 hiddenContext.recentMessages
+    const hasCombatContext = Array.isArray(combatMessages) && combatMessages.length > 0;
     let contextSection = '';
-    if (hiddenContext?.chatSummary || hiddenContext?.recentMessages || hiddenContext?.importAnalysis) {
-      // 优先使用 hiddenContext（前端注入的上下文）
-      if (hiddenContext?.chatSummary) {
-        contextSection += `\n【聊天摘要】\n${hiddenContext.chatSummary}`;
+
+    // 实战聊天记录（带时间戳）
+    if (hasCombatContext) {
+      const combatText = combatMessages.map(m => {
+        const ts = m.timestamp ? new Date(m.timestamp).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(/\//g, '-') : '';
+        const role = m.role === 'user' ? '用户' : '女生';
+        return ts ? `[${ts}] ${role}：${m.content}` : `${role}：${m.content}`;
+      }).join('\n');
+      contextSection += `\n【实战聊天记录（用户刚刚进行的实时对话）】\n${combatText}`;
+    }
+
+    // hiddenContext: chatSummary 和 importAnalysis 仍保留（与 combatMessages 无冲突）
+    if (hiddenContext?.chatSummary) {
+      contextSection += `\n【聊天摘要】\n${hiddenContext.chatSummary}`;
+    }
+    if (hiddenContext?.importAnalysis) {
+      contextSection += `\n【对话分析】\n`;
+      contextSection += `- 女生风格: ${hiddenContext.importAnalysis.girlStyle || '未知'}\n`;
+      contextSection += `- 用户风格: ${hiddenContext.importAnalysis.userStyle || '未知'}\n`;
+      if (hiddenContext.importAnalysis.problems?.length > 0) {
+        contextSection += `- 问题点: ${hiddenContext.importAnalysis.problems.join(', ')}\n`;
       }
+      if (hiddenContext.importAnalysis.suggestions?.length > 0) {
+        contextSection += `- 改进建议: ${hiddenContext.importAnalysis.suggestions.join(', ')}\n`;
+      }
+    }
+
+    // 无 combatMessages 时，降级使用 hiddenContext.recentMessages 或数据库历史
+    if (!hasCombatContext) {
       if (hiddenContext?.recentMessages && hiddenContext.recentMessages.length > 0) {
         const recentChat = hiddenContext.recentMessages.map(m => {
           const role = m.role === 'girl' ? '女生' : '用户';
           return `${role}: ${m.content}`;
         }).join('\n');
         contextSection += `\n【最近聊天记录】\n${recentChat}`;
-      }
-      if (hiddenContext?.importAnalysis) {
-        contextSection += `\n【对话分析】\n`;
-        contextSection += `- 女生风格: ${hiddenContext.importAnalysis.girlStyle || '未知'}\n`;
-        contextSection += `- 用户风格: ${hiddenContext.importAnalysis.userStyle || '未知'}\n`;
-        if (hiddenContext.importAnalysis.problems?.length > 0) {
-          contextSection += `- 问题点: ${hiddenContext.importAnalysis.problems.join(', ')}\n`;
+      } else if (girlId) {
+        try {
+          const chatHistory = await prisma.chatMessage.findMany({
+            where: { girlId: girlId },
+            orderBy: { createdAt: 'desc' },
+            take: 20
+          });
+          if (chatHistory && chatHistory.length > 0) {
+            const reversed = chatHistory.reverse();
+            const historyText = reversed.map(m =>
+              `${m.isFromUser ? '用户' : '女生'}: ${m.content}`
+            ).join('\n');
+            contextSection += `\n【最近对话历史】\n${historyText}`;
+          }
+        } catch (e) {
+          logger.warn(`[optimize-reply] 获取聊天历史失败: ${e.message}`);
         }
-        if (hiddenContext.importAnalysis.suggestions?.length > 0) {
-          contextSection += `- 改进建议: ${hiddenContext.importAnalysis.suggestions.join(', ')}\n`;
-        }
-      }
-    } else if (girlId) {
-      // 降级：从数据库加载聊天历史
-      try {
-        const chatHistory = await prisma.chatMessage.findMany({
-          where: { girlId: girlId },
-          orderBy: { createdAt: 'desc' },
-          take: 20
-        });
-        if (chatHistory && chatHistory.length > 0) {
-          const reversed = chatHistory.reverse();
-          contextSection = reversed.map(m =>
-            `${m.isFromUser ? '用户' : '女生'}: ${m.content}`
-          ).join('\n');
-          contextSection = `\n【最近对话历史】\n${contextSection}`;
-        }
-      } catch (e) {
-        logger.warn(`[optimize-reply] 获取聊天历史失败: ${e.message}`);
       }
     }
 
@@ -1344,13 +1372,10 @@ JSON格式：
           continue;
         }
 
-        // VL 模型返回的角色与实际相反，需要翻转
-        const flipRole = (r) => r === 'girl' ? 'user' : 'girl';
-
         if (Array.isArray(parsed)) {
           for (const msg of parsed) {
             if (msg.role && msg.content && ['girl', 'user'].includes(msg.role)) {
-              allMessages.push({ role: flipRole(msg.role), content: msg.content, time: msg.time || null });
+              allMessages.push({ role: msg.role, content: msg.content, time: msg.time || null });
             }
           }
         } else if (parsed && parsed.type === 'moments') {
@@ -1369,7 +1394,7 @@ JSON格式：
         } else if (parsed && parsed.type === 'chat' && parsed.messages) {
           for (const msg of parsed.messages) {
             if (msg.role && msg.content && ['girl', 'user'].includes(msg.role)) {
-              allMessages.push({ role: flipRole(msg.role), content: msg.content, time: msg.time || null });
+              allMessages.push({ role: msg.role, content: msg.content, time: msg.time || null });
             }
           }
         }
@@ -1451,6 +1476,8 @@ router.post('/analyze-image', authMiddleware, chatImportUpload.single('image'), 
   const userMessage = req.body.message || '';
   const girlId = req.body.girlId || null;
   const mode = req.body.mode || 'pro';
+  let combatMessages = null;
+  try { combatMessages = req.body.combatMessages ? JSON.parse(req.body.combatMessages) : null; } catch (e) { logger.warn('[AnalyzeImage] combatMessages parse failed'); }
 
   try {
     // ---- 设置 SSE 头 ----
@@ -1571,7 +1598,18 @@ router.post('/analyze-image', authMiddleware, chatImportUpload.single('image'), 
     });
 
     const personaSection = await buildFullPersona({ clientProfile, clientId: req.user.id, girlId });
-    const systemPrompt = basePrompt + buildPersonaSection(personaSection);
+    let systemPrompt = basePrompt + buildPersonaSection(personaSection);
+
+    // 注入实战聊天上下文
+    const hasCombatContext = Array.isArray(combatMessages) && combatMessages.length > 0;
+    if (hasCombatContext) {
+      const combatText = combatMessages.map(m => {
+        const ts = m.timestamp ? new Date(m.timestamp).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(/\//g, '-') : '';
+        const role = m.role === 'user' ? '用户' : '女生';
+        return ts ? `[${ts}] ${role}：${m.content}` : `${role}：${m.content}`;
+      }).join('\n');
+      systemPrompt += `\n【实战聊天记录（用户刚刚进行的实时对话）】\n${combatText}\n`;
+    }
 
     // AI 模型配置
     const aiConfig = getAIConfig(mode);
@@ -2871,14 +2909,14 @@ async function setClientPoolCache(operatorId, clientId, data) {
  *   1. 两 hash 都匹配 → { cached: true, content, girlDataHash, userDataHash }
  *   2. 任一不匹配 → 重新生成（附 changeReason 标签）→ 写缓存 → 流式返回
  */
-router.get('/girl-summary/:girlId', authMiddleware, async (req, res) => {
+router.post('/girl-summary/:girlId', authMiddleware, async (req, res) => {
   try {
     if (!['admin', 'client'].includes(req.user.role)) {
       return res.status(403).json({ error: { code: 'A0108', message: '无此操作权限' } });
     }
 
     const { girlId } = req.params;
-    const { cachedGirlHash, cachedUserHash } = req.query;
+    const { cachedGirlHash, cachedUserHash, combatMessages } = req.body || {};
 
     // 安全验证
     const girl = await prisma.girl.findUnique({
@@ -2921,8 +2959,8 @@ router.get('/girl-summary/:girlId', authMiddleware, async (req, res) => {
     const currentGirlHash = computeGirlDataHash(girl);
     const currentUserHash = user ? computeUserDataHash(user) : '';
 
-    // ---- 分支 1：缓存命中 ----
-    if (cachedGirlHash && cachedUserHash &&
+    // ---- 分支 1：缓存命中（有实战聊天上下文时跳过缓存） ----
+    if (!hasCombatContext && cachedGirlHash && cachedUserHash &&
         cachedGirlHash === currentGirlHash &&
         cachedUserHash === currentUserHash) {
       logger.debug(`[girl-summary] cache hit for girlId=${girlId}, clientId=${clientId}`);
@@ -3008,8 +3046,14 @@ router.get('/girl-summary/:girlId', authMiddleware, async (req, res) => {
 
     // 获取最近聊天
     const recentChats = girl.chatLogs.length > 0
-      ? girl.chatLogs.map(l => `${l.isFromUser ? '操盘手' : '女生'}：${l.content.slice(0, 50)}`).join('\n')
+      ? girl.chatLogs.map(l => `${l.isFromUser ? '用户' : '女生'}：${l.content.slice(0, 50)}`).join('\n')
       : '暂无聊天记录';
+
+    // 实战聊天上下文（前端传入的实时聊天记录）
+    const hasCombatContext = Array.isArray(combatMessages) && combatMessages.length > 0;
+    const combatText = hasCombatContext
+      ? combatMessages.map(m => `${m.role === 'user' ? '用户' : '女生'}：${m.content}`).join('\n')
+      : '';
 
     // 失联提醒（不参与 hash）
     const staleAlert = computeStaleAlert(girl);
@@ -3065,6 +3109,7 @@ ${signalsText}
 
 【最近聊天】
 ${recentChats}
+${hasCombatContext ? `\n【实战聊天记录（用户刚刚进行的实时对话）】\n${combatText}\n` : ''}
 
 【女生备注】
 ${girl.notes || '暂无'}

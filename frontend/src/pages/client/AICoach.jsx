@@ -463,7 +463,7 @@ const ReplySuggestionsPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
       const res = await fetch(`${apiUrl}/api/ai-coach/reply-suggestions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ girlId: selectedGirlId, lastMessage: replyInput, style: style || undefined })
+        body: JSON.stringify({ girlId: selectedGirlId, lastMessage: replyInput, style: style || undefined, combatMessages: getCombatContext() })
       });
       if (!res.ok) throw new Error(`回复建议请求失败 (${res.status})`);
       const data = await res.json();
@@ -474,7 +474,7 @@ const ReplySuggestionsPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
     } finally {
       setReplyLoading(false);
     }
-  }, [replyInput, replyStyle, replyStyleCustom, apiUrl, selectedGirlId, toast]);
+  }, [replyInput, replyStyle, replyStyleCustom, apiUrl, selectedGirlId, toast, getCombatContext]);
 
   const copyToClipboard = useCallback(async (text) => {
     try {
@@ -603,7 +603,7 @@ const OptimizeReplyPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
       const res = await fetch(`${apiUrl}/api/ai-coach/optimize-reply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ originalReply: optimizeInput, girlId: selectedGirlId, goal: goal || undefined })
+        body: JSON.stringify({ originalReply: optimizeInput, girlId: selectedGirlId, goal: goal || undefined, combatMessages: getCombatContext() })
       });
       if (!res.ok) throw new Error(`话术优化请求失败 (${res.status})`);
       const data = await res.json();
@@ -614,7 +614,7 @@ const OptimizeReplyPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
     } finally {
       setOptimizeLoading(false);
     }
-  }, [optimizeInput, optimizeGoal, optimizeGoalCustom, apiUrl, selectedGirlId, toast]);
+  }, [optimizeInput, optimizeGoal, optimizeGoalCustom, apiUrl, selectedGirlId, toast, getCombatContext]);
 
   const copyToClipboard = useCallback(async (text) => {
     try {
@@ -1187,6 +1187,10 @@ const ImportChatModal = memo(({ isOpen, onClose, girlId, girlName, apiUrl, onImp
     ));
   }, []);
 
+  const flipAllRoles = useCallback(() => {
+    setMessages(prev => prev.map(m => ({ ...m, role: m.role === 'girl' ? 'user' : 'girl' })));
+  }, []);
+
   const deleteMessage = useCallback((idx) => {
     setMessages(prev => prev.filter((_, i) => i !== idx));
   }, []);
@@ -1273,7 +1277,11 @@ const ImportChatModal = memo(({ isOpen, onClose, girlId, girlName, apiUrl, onImp
           {step === 'confirm' && (
             <VStack spacing={3} align="stretch">
               <Flex justify="space-between" align="center" mb={-1}>
-                <Text fontSize="13px" color="gold.300">已识别 {messages.length} 条消息，请确认：</Text>
+                <Flex align="center" gap={2}>
+                  <Text fontSize="13px" color="gold.300">已识别 {messages.length} 条消息，请确认：</Text>
+                  <Button size="xs" variant="outline" colorScheme="gold" fontSize="11px" h="22px" px={2}
+                    onClick={flipAllRoles}>全部翻转</Button>
+                </Flex>
                 <Flex gap={1} align="center">
                   <Text fontSize="11px" color="rgba(245,240,232,0.4)">聊天日期</Text>
                   <Input type="date" value={chatDate} onChange={e => setChatDate(e.target.value)}
@@ -1880,6 +1888,18 @@ export default function AICoach() {
     return combatHistories[combatHistoryKey] || [];
   }, [combatHistoryKey, combatHistories]);
 
+  // 获取实战聊天上下文（带时间戳），供所有AI调用统一使用
+  const getCombatContext = useCallback(() => {
+    if (!selectedGirlId) return null;
+    const history = combatHistories[combatHistoryKey];
+    if (!history || history.length === 0) return null;
+    return history.slice(-30).map(m => ({
+      role: m.role,
+      content: m.content,
+      timestamp: m.timestamp
+    }));
+  }, [selectedGirlId, combatHistoryKey, combatHistories]);
+
   // 更新 combatContextRef：同步 chatSummary、recentMessages、importAnalysis
   const updateCombatContext = useCallback((messages, newAnalysis = null) => {
     // 更新 recentMessages（最近10-20条）
@@ -2303,7 +2323,8 @@ export default function AICoach() {
           stream: true,
           mode: deepMode ? 'pro' : 'flash', // 传递模式给后端
           girlId: selectedGirlId,
-          regenerate: true
+          regenerate: true,
+          combatMessages: getCombatContext()
         })
       });
 
@@ -2414,7 +2435,7 @@ export default function AICoach() {
         }
       }, 50);
     }
-  }, [messages, apiUrl, deepMode]);
+  }, [messages, apiUrl, deepMode, getCombatContext]);
 
   const handleHelpful = useCallback(async (messageId, isHelpful) => {
     setHelpfulId(messageId);
@@ -2495,12 +2516,13 @@ export default function AICoach() {
   // SSE 流式加载女生分析（含前端 hash 缓存 + 实时流式显示）
   const loadGirlAnalysis = useCallback(async (girlId, options = {}) => {
     if (!girlId) return;
-    const { forceRefresh = false } = options;
+    const { forceRefresh = false, combatMessages = null } = options;
     const girl = girls.find(g => g.id === girlId);
     const currentGirlHash = computeGirlDataHash(girl);
 
-    // 检查前端缓存：hash 匹配则直接复用，不调 API
-    if (!forceRefresh) {
+    // 有实战聊天上下文时，不走前端缓存（每次都带上最新聊天）
+    const hasCombatContext = combatMessages && combatMessages.length > 0;
+    if (!forceRefresh && !hasCombatContext) {
       const cached = coachCacheRef.current[girlId];
       if (cached && cached.girlDataHash === currentGirlHash) {
         setGirlAnalysisContent(cached.content);
@@ -2516,13 +2538,16 @@ export default function AICoach() {
     girlAnalysisReasoningRef.current = '';
     const token = localStorage.getItem('zhuiai_token');
     try {
-      // 带上 hash 参数，让后端也可判断缓存命中
-      let url = `${apiUrl}/api/ai-coach/girl-summary/${girlId}`;
-      if (currentGirlHash) {
-        url += `?cachedGirlHash=${encodeURIComponent(currentGirlHash)}`;
+      const url = `${apiUrl}/api/ai-coach/girl-summary/${girlId}`;
+      // POST 请求，带上实战聊天上下文
+      const body = { cachedGirlHash: currentGirlHash };
+      if (hasCombatContext) {
+        body.combatMessages = combatMessages.map(m => ({ role: m.role, content: m.content }));
       }
       const res = await fetch(url, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
       });
       if (!res.ok) throw new Error('请求失败');
       const reader = res.body.getReader();
@@ -2783,7 +2808,7 @@ export default function AICoach() {
         fetch(`${apiUrl}/api/ai-coach/reply-suggestions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ girlId: girlIdParam, lastMessage: lastGirlMsg.content })
+          body: JSON.stringify({ girlId: girlIdParam, lastMessage: lastGirlMsg.content, combatMessages: getCombatContext() })
         }).then(r => r.json()).then(data => {
           if (data.success && data.suggestions?.options?.length) {
             setCombatSuggestions({ type: 'suggestions', items: data.suggestions.options });
@@ -2794,7 +2819,7 @@ export default function AICoach() {
         fetch(`${apiUrl}/api/ai-coach/optimize-reply`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ girlId: girlIdParam, originalReply: lastDraftText })
+          body: JSON.stringify({ girlId: girlIdParam, originalReply: lastDraftText, combatMessages: getCombatContext() })
         }).then(r => r.json()).then(data => {
           if (data.success && data.optimizations?.length) {
             setCombatSuggestions({ type: 'optimizations', items: data.optimizations });
@@ -2802,7 +2827,7 @@ export default function AICoach() {
         }).catch(() => {}).finally(() => setCombatLoading(false));
       }
     }, 500);
-  }, [combatMode, selectedGirlId, combatHistories, lastDraftText, apiUrl]);
+  }, [combatMode, selectedGirlId, combatHistories, lastDraftText, apiUrl, getCombatContext]);
 
   // 聊天实战 - 直接发送原文（话术优化模式）
   const handleSendDirect = useCallback(() => {
@@ -2886,7 +2911,8 @@ export default function AICoach() {
         body: JSON.stringify({
           girlId: selectedGirlId,
           lastMessage: lastGirlMsg.content,
-          hiddenContext: combatContextRef.current || null
+          hiddenContext: combatContextRef.current || null,
+          combatMessages: getCombatContext()
         })
       }).then(r => r.json()).then(data => {
         if (data.success && data.suggestions?.options?.length) {
@@ -2956,6 +2982,8 @@ export default function AICoach() {
       if (textInput) formData.append('message', textInput);
       if (selectedGirlId) formData.append('girlId', selectedGirlId);
       formData.append('mode', deepMode ? 'pro' : 'flash');
+      const combatCtx = getCombatContext();
+      if (combatCtx) formData.append('combatMessages', JSON.stringify(combatCtx));
 
       // 流式请求：VL识别 + 文本流式输出
       const res = await fetch(`${apiUrl}/api/ai-coach/analyze-image`, {
@@ -3133,7 +3161,8 @@ export default function AICoach() {
           situation: userMessage,
           stream: true,
           mode: deepMode ? 'pro' : 'flash',
-          girlId: selectedGirlId
+          girlId: selectedGirlId,
+          combatMessages: getCombatContext()
         }),
         signal: controller.signal
       });
@@ -3571,8 +3600,8 @@ export default function AICoach() {
                 colorScheme="gold"
                 variant="outline"
                 onClick={() => {
-                  setShowAnalysisModal(true);
-                  loadGirlAnalysis(selectedGirlId);
+                  setActiveTabIndex(0);
+                  loadGirlAnalysis(selectedGirlId, { combatMessages: getCurrentCombatHistory() });
                 }}
                 isLoading={girlAnalysisLoading}
               >
@@ -3838,8 +3867,7 @@ export default function AICoach() {
               colorScheme="gold"
               variant="outline"
               onClick={() => {
-                setShowAnalysisModal(true);
-                loadGirlAnalysis(selectedGirlId);
+                loadGirlAnalysis(selectedGirlId, { combatMessages: getCurrentCombatHistory() });
               }}
               isLoading={girlAnalysisLoading}
             >
