@@ -1162,16 +1162,70 @@ const ImportChatModal = memo(({ isOpen, onClose, girlId, girlName, apiUrl, onImp
     }
   }, [images, chatDate, girlId, apiUrl, toast]);
 
+  // 时间解析辅助函数
+  function parseTimeOfDay(text) {
+    if (!text) return null;
+    const match = text.match(/(上午|下午|晚上)?(\d+):(\d+)/);
+    if (!match) return null;
+    let hours = parseInt(match[2]);
+    const period = match[1];
+    if (period === '下午' || period === '晚上') hours += 12;
+    if (period === '上午' && hours === 12) hours = 0;
+    return { hours, minutes: parseInt(match[3]) };
+  }
+
+  function parseRelativeDate(text, baseDate) {
+    if (!text) return null;
+    const base = new Date(baseDate);
+    const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+    if (text === '昨天') return new Date(base.getTime() - 86400000);
+    if (text === '前天') return new Date(base.getTime() - 2 * 86400000);
+    const dayMatch = text.match(/(周日|周一|周二|周三|周四|周五|周六)/);
+    if (dayMatch) {
+      const targetDay = dayNames.indexOf(dayMatch[1]);
+      const currentDay = base.getDay();
+      let diff = targetDay - currentDay;
+      if (diff <= 0) diff += 7;
+      return new Date(base.getTime() + diff * 86400000);
+    }
+    const monthDay = text.match(/(\d+)月(\d+)日/);
+    if (monthDay) {
+      const result = new Date(base);
+      result.setMonth(parseInt(monthDay[1]) - 1, parseInt(monthDay[2]));
+      return result;
+    }
+    return null;
+  }
+
   const confirmImport = useCallback(async () => {
     setStep('importing');
-    const ts = new Date(chatDate + 'T00:00:00');
-    onImportComplete(messages.map(m => ({
-      role: m.role,
-      content: m.content,
-      timestamp: ts.toISOString()
-    })));
+    let lastTs = new Date(chatDate + 'T00:00:00');
+    const processedMessages = messages.map(m => {
+      let ts;
+      if (m.time) {
+        const timeOfDay = parseTimeOfDay(m.time);
+        if (timeOfDay) {
+          ts = new Date(chatDate + 'T00:00:00');
+          ts.setHours(timeOfDay.hours, timeOfDay.minutes, 0, 0);
+          lastTs = ts;
+        } else {
+          const relDate = parseRelativeDate(m.time, chatDate);
+          if (relDate) {
+            ts = relDate;
+            lastTs = ts;
+          } else {
+            lastTs = new Date(lastTs.getTime() + 60000);
+            ts = lastTs;
+          }
+        }
+      } else {
+        lastTs = new Date(lastTs.getTime() + 60000);
+        ts = lastTs;
+      }
+      return { role: m.role, content: m.content, timestamp: ts.toISOString() };
+    });
+    onImportComplete(processedMessages);
     onClose();
-    // 重置状态
     setTimeout(() => {
       setStep('upload');
       setImages([]);
@@ -1179,7 +1233,7 @@ const ImportChatModal = memo(({ isOpen, onClose, girlId, girlName, apiUrl, onImp
       setEditingIndex(null);
       setChatDate(new Date().toISOString().split('T')[0]);
     }, 300);
-  }, [messages, onImportComplete, onClose]);
+  }, [messages, chatDate, onImportComplete, onClose]);
 
   const toggleRole = useCallback((idx) => {
     setMessages(prev => prev.map((m, i) =>

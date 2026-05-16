@@ -29,12 +29,55 @@ const STAGE_COLORS = {
 /** ===================== 女生 Tab ===================== */
 function GirlsTab({ girlsList, isInitialLoad, onAddGirl, onGirlClick }) {
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const [addForm, setAddForm] = useState({ name: '', age: '', occupation: '' });
+  const [addForm, setAddForm] = useState({ name: '', age: '', occupation: '', avatar: '' });
   const [adding, setAdding] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const [quotaExceeded, setQuotaExceeded] = useState(null);
+  const [extracting, setExtracting] = useState(false);
+  const [profileImageUrl, setProfileImageUrl] = useState('');
   const toast = useToast();
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
+  const profileInputRef = useRef(null);
+
+  // 头像上传
+  const handleAvatarChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast({ title: '图片不能超过 5MB', status: 'warning', duration: 3000 }); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setAddForm(prev => ({ ...prev, avatar: ev.target.result }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // 主页截图识别
+  const handleProfileScreenshot = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { toast({ title: '图片不能超过 10MB', status: 'warning', duration: 3000 }); return; }
+    setExtracting(true);
+    try {
+      const res = await girlsApi.extractProfileScreenshot(file);
+      if (res.success && res.extracted && Object.keys(res.extracted).length > 0) {
+        const ext = res.extracted;
+        setAddForm(prev => ({
+          ...prev,
+          name: ext.name || prev.name,
+          age: ext.age || prev.age,
+          occupation: ext.occupation || prev.occupation,
+        }));
+        if (res.imageUrl) setProfileImageUrl(res.imageUrl);
+        if (ext.avatar) setAddForm(prev => ({ ...prev, avatar: ext.avatar }));
+        toast({ title: '已提取信息，请确认', status: 'success', duration: 2000 });
+      } else {
+        toast({ title: '未识别到有效信息，请手动填写', status: 'info', duration: 3000 });
+      }
+    } catch (err) {
+      toast({ title: '识别失败，请重试', status: 'error', duration: 3000 });
+    } finally { setExtracting(false); }
+  };
 
   const handleAdd = async () => {
     if (!addForm.name.trim()) { toast({ title: '请输入昵称', status: 'warning', duration: 3000 }); return; }
@@ -42,8 +85,12 @@ function GirlsTab({ girlsList, isInitialLoad, onAddGirl, onGirlClick }) {
     try {
       const res = await girlsApi.clientAdd({ name: addForm.name.trim(), age: addForm.age || undefined, occupation: addForm.occupation || undefined });
       if (res.success) {
+        const girlId = res.girl?.id || res.id;
+        if (addForm.avatar && girlId) {
+          await girlsApi.updateAvatar(girlId, addForm.avatar).catch(() => {});
+        }
         toast({ title: res.quotaLeft !== undefined ? `添加成功，剩余 ${res.quotaLeft} 个名额` : '添加成功', status: 'success' });
-        setAddForm({ name: '', age: '', occupation: '' });
+        setAddForm({ name: '', age: '', occupation: '', avatar: '' });
         setShowMore(false);
         onClose();
         onAddGirl();
@@ -128,6 +175,50 @@ function GirlsTab({ girlsList, isInitialLoad, onAddGirl, onGirlClick }) {
                     placeholder="输入昵称" bg="warm.700" color="white"
                     onKeyDown={e => { if (e.key === 'Enter') handleAdd(); }} />
                 </FormControl>
+                {/* 主页截图识别 */}
+                <Box>
+                  <Text fontSize="xs" color="rgba(245,240,232,0.4)" mb={1}>主页截图识别（可选）</Text>
+                  <HStack spacing={3}>
+                    <Button
+                      as="label"
+                      size="sm"
+                      variant="outline"
+                      colorScheme="cyan"
+                      cursor="pointer"
+                      isLoading={extracting}
+                      leftIcon={<Icon as={SparklesIcon} />}
+                    >
+                      上传主页截图
+                      <input type="file" accept="image/*" hidden ref={profileInputRef} onChange={handleProfileScreenshot} />
+                    </Button>
+                    {profileImageUrl && (
+                      <Box as="img" src={profileImageUrl} w="40px" h="40px" objectFit="cover" borderRadius="md" />
+                    )}
+                  </HStack>
+                  <Text fontSize="xs" color="rgba(245,240,232,0.3)" mt={1}>支持小红书、朋友圈等平台截图，AI自动提取信息</Text>
+                </Box>
+                {/* 头像上传 */}
+                <Flex align="center" gap={4}>
+                  <Box
+                    w="64px" h="64px" borderRadius="full" bg="warm.700" cursor="pointer"
+                    overflow="hidden" flexShrink={0} border="2px dashed" borderColor="rgba(245,240,232,0.2)"
+                    _hover={{ borderColor: 'gold.500' }} onClick={() => fileInputRef.current?.click()}
+                    display="flex" alignItems="center" justifyContent="center"
+                  >
+                    {addForm.avatar ? (
+                      <Box as="img" src={addForm.avatar} w="100%" h="100%" objectFit="cover" />
+                    ) : (
+                      <Icon as={HeartIcon} color="rgba(245,240,232,0.3)" boxSize={6} />
+                    )}
+                  </Box>
+                  <VStack align="flex-start" spacing={1}>
+                    <Button as="label" size="sm" variant="outline" colorScheme="gold" cursor="pointer">
+                      上传头像
+                      <input type="file" accept="image/*" hidden ref={fileInputRef} onChange={handleAvatarChange} />
+                    </Button>
+                    <Text fontSize="xs" color="rgba(245,240,232,0.35)">支持 JPG/PNG，建议正方形图片</Text>
+                  </VStack>
+                </Flex>
                 <Button
                   size="sm"
                   variant="ghost"
