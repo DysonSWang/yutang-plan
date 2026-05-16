@@ -8,7 +8,17 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useSocket } from '../../contexts/SocketContext';
 import { DashboardIcon, UsersIcon, FemaleIcon, ChatIcon, BrainIcon, ChartIcon, FishIcon, CalendarIcon, MembershipIcon, BookIcon } from '../../components/Icons';
 import { FiActivity, FiLogOut } from 'react-icons/fi';
+import { createIcon } from '@chakra-ui/react';
 import AppLogo from '../../components/AppLogo';
+
+// 移动端退出图标
+const LogoutIcon = createIcon({
+  displayName: 'LogoutIcon',
+  viewBox: '0 0 24 24',
+  path: [
+    <path key="d" d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+  ],
+});
 
 const navItems = [
   { path: '/admin', label: '工作台', icon: DashboardIcon },
@@ -123,6 +133,7 @@ function DesktopSidebar() {
 // 移动端底部 Tab 导航
 function MobileBottomNav() {
   const location = useLocation();
+  const { logout } = useAuth();
   const { chatUnreadCount } = useSocket();
 
   return (
@@ -181,6 +192,24 @@ function MobileBottomNav() {
             </NavLink>
           );
         })}
+        {/* 移动端退出登录 */}
+        <Flex
+          direction="column"
+          align="center"
+          py={2}
+          px={3}
+          cursor="pointer"
+          color="rgba(245,240,232,0.4)"
+          transition="all 0.15s ease"
+          _hover={{ color: 'red.400' }}
+          minW="60px"
+          onClick={logout}
+        >
+          <Box mb={1}>
+            <Icon as={LogoutIcon} boxSize={5} />
+          </Box>
+          <Text fontSize="xs">退出</Text>
+        </Flex>
       </HStack>
     </Box>
   );

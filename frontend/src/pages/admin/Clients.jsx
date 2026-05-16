@@ -856,7 +856,15 @@ export default function AdminClients() {
                 <Tr key={client.id} _hover={{ bg: 'warm.800' }} cursor="pointer" onClick={() => viewClient(client)}>
                   <Td fontWeight="600" color="white" borderColor="warm.700">
                     <HStack spacing={3}>
-                      <Avatar size="sm" name={client.nickname || client.username} bg="teal.500" color="white" />
+                      <Avatar
+                        size="sm"
+                        name={client.nickname || client.username}
+                        bg="teal.500"
+                        color="white"
+                        cursor="pointer"
+                        _hover={{ bg: 'teal.400' }}
+                        onClick={(e) => { e.stopPropagation(); navigate('/admin/chat', { state: { clientId: client.id, clientName: client.nickname || client.username } }); }}
+                      />
                       <Box>
                         <Text color="white">{client.nickname || client.username}</Text>
                         <Text color="rgba(245,240,232,0.6)" fontSize="xs">{client.username}</Text>
@@ -921,7 +929,15 @@ export default function AdminClients() {
                   <CardBody py={3} px={4}>
                     <Flex justify="space-between" align="center" mb={2}>
                       <HStack spacing={2}>
-                        <Avatar size="sm" name={client.nickname || client.username} bg="teal.500" color="white" />
+                        <Avatar
+                          size="sm"
+                          name={client.nickname || client.username}
+                          bg="teal.500"
+                          color="white"
+                          cursor="pointer"
+                          _hover={{ bg: 'teal.400' }}
+                          onClick={(e) => { e.stopPropagation(); navigate('/admin/chat', { state: { clientId: client.id, clientName: client.nickname || client.username } }); }}
+                        />
                         <Box>
                           <Text color="white" fontSize="sm" fontWeight="bold">{client.nickname || client.username}</Text>
                           <Text color="rgba(245,240,232,0.6)" fontSize="xs">{client.username}</Text>

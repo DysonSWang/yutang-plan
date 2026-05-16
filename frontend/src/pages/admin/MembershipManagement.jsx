@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import useKeepAliveData from '../../hooks/useKeepAliveData';
+import { useNavigate } from 'react-router-dom';
 import {
   Box, Heading, Text, VStack, HStack, Button, Badge, Tabs, TabList, TabPanels, Tab, TabPanel,
   Table, Thead, Tbody, Tr, Th, Td, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody,
@@ -13,7 +14,7 @@ import { MembershipIcon, PointsIcon, GiftIcon, BookIcon, CameraIcon } from '../.
 const TYPE_LABEL = { TRIAL: '试用', MONTHLY: '普惠月付', YEARLY: '普惠年付', PREMIUM: '高端会员', monthly: '普惠月付', yearly: '普惠年付', premium: '高端会员' };
 const TYPE_BADGE_COLOR = { TRIAL: 'orange', MONTHLY: 'green', YEARLY: 'blue', PREMIUM: 'purple', monthly: 'green', yearly: 'blue', premium: 'purple' };
 
-function ClientMembershipCard({ client, onManage }) {
+function ClientMembershipCard({ client, onManage, onChatClick }) {
   const hasMembership = client.membership && client.membership.status === 'active';
   const endDate = client.membership?.endDate ? new Date(client.membership.endDate) : null;
   const daysLeft = endDate ? Math.max(0, Math.ceil((endDate - new Date()) / 86400000)) : 0;
@@ -23,7 +24,14 @@ function ClientMembershipCard({ client, onManage }) {
       <CardBody>
         <HStack justify="space-between" mb={3}>
           <HStack gap={3}>
-            <Avatar name={client.nickname} size="sm" bg="teal.600" />
+            <Avatar
+              name={client.nickname}
+              size="sm"
+              bg="teal.600"
+              cursor="pointer"
+              _hover={{ bg: 'teal.500' }}
+              onClick={() => onChatClick(client)}
+            />
             <Box>
               <Text color="white" fontWeight="bold">{client.nickname || client.username}</Text>
               <Text color="rgba(245,240,232,0.4)" fontSize="xs">{client.username}</Text>
@@ -61,6 +69,7 @@ function ClientMembershipCard({ client, onManage }) {
 
 function ManageModal({ client, onClose }) {
   const toast = useToast();
+  const navigate = useNavigate();
   const [tab, setTab] = useState(0);
   const [pointsHistory, setPointsHistory] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -137,12 +146,21 @@ function ManageModal({ client, onClose }) {
 
   return (
     <>
-      <HStack mb={4} p={3} bg="warm.700" borderRadius="md">
-        <Avatar name={client.nickname} size="sm" bg="teal.600" />
-        <Box>
-          <Text color="white" fontWeight="bold">{client.nickname || client.username}</Text>
-          <Text color="rgba(245,240,232,0.4)" fontSize="xs">积分：{client.points || 0}</Text>
-        </Box>
+      <HStack mb={4} p={3} bg="warm.700" borderRadius="md" justify="space-between">
+        <HStack spacing={3}>
+          <Avatar name={client.nickname} size="sm" bg="teal.600" />
+          <Box>
+            <Text color="white" fontWeight="bold">{client.nickname || client.username}</Text>
+            <Text color="rgba(245,240,232,0.4)" fontSize="xs">积分：{client.points || 0}</Text>
+          </Box>
+        </HStack>
+        <Button
+          size="sm"
+          colorScheme="blue"
+          onClick={() => navigate('/admin/chat', { state: { clientId: client.id, clientName: client.nickname || client.username } })}
+        >
+          进入聊天
+        </Button>
       </HStack>
 
       <Tabs index={tab} onChange={setTab} colorScheme="gold">
@@ -248,7 +266,7 @@ function ManageModal({ client, onClose }) {
             </VStack>
           </TabPanel>
           <TabPanel p={0}>
-            <TrialConfigTab />
+            <TrialConfigTab client={client} />
           </TabPanel>
         </TabPanels>
       </Tabs>
@@ -382,11 +400,16 @@ function ScreenshotProfilesTab() {
   );
 }
 
-function TrialConfigTab() {
+function TrialConfigTab({ client }) {
   const toast = useToast();
   const [config, setConfig] = useState({ validDays: 3, maxChapters: 2, maxGirls: 1, maxTrialUses: 2 });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // 判断当前客户是否有有效会员（试用、普惠月付、年付、高端都算有会员）
+  const hasActiveMembership = client?.membership && client.membership.status === 'active';
+  const isTrial = client?.membership?.type === 'TRIAL';
+  const isDisabled = hasActiveMembership && !isTrial;
 
   useEffect(() => { loadConfig(); }, []);
 
@@ -414,6 +437,13 @@ function TrialConfigTab() {
   return (
     <Box>
       <VStack spacing={4} align="stretch">
+        {isDisabled && (
+          <Box p={3} bg="orange.900" borderRadius="md" border="1px solid" borderColor="orange.700">
+            <Text color="orange.300" fontSize="sm">
+              该用户已有有效会员，试用配置已禁用
+            </Text>
+          </Box>
+        )}
         <Box p={4} bg="warm.800" borderRadius="md" border="1px solid" borderColor="warm.700">
           <Text color="white" fontWeight="bold" mb={4}>试用会员配置</Text>
           <VStack spacing={4} align="stretch">
@@ -425,6 +455,7 @@ function TrialConfigTab() {
                 value={config.validDays}
                 onChange={v => setConfig({ ...config, validDays: parseInt(v) || 3 })}
                 w="120px"
+                isDisabled={isDisabled}
               >
                 <NumberInputField bg="warm.700" borderColor="warm.600" />
               </NumberInput>
@@ -437,6 +468,7 @@ function TrialConfigTab() {
                 value={config.maxChapters}
                 onChange={v => setConfig({ ...config, maxChapters: parseInt(v) || 2 })}
                 w="120px"
+                isDisabled={isDisabled}
               >
                 <NumberInputField bg="warm.700" borderColor="warm.600" />
               </NumberInput>
@@ -449,6 +481,7 @@ function TrialConfigTab() {
                 value={config.maxGirls}
                 onChange={v => setConfig({ ...config, maxGirls: parseInt(v) || 1 })}
                 w="120px"
+                isDisabled={isDisabled}
               >
                 <NumberInputField bg="warm.700" borderColor="warm.600" />
               </NumberInput>
@@ -461,6 +494,7 @@ function TrialConfigTab() {
                 value={config.maxTrialUses}
                 onChange={v => setConfig({ ...config, maxTrialUses: parseInt(v) || 2 })}
                 w="120px"
+                isDisabled={isDisabled}
               >
                 <NumberInputField bg="warm.700" borderColor="warm.600" />
               </NumberInput>
@@ -470,7 +504,7 @@ function TrialConfigTab() {
             </Text>
           </VStack>
         </Box>
-        <Button colorScheme="gold" onClick={handleSave} isLoading={saving}>保存配置</Button>
+        <Button colorScheme="gold" onClick={handleSave} isLoading={saving} isDisabled={isDisabled}>保存配置</Button>
       </VStack>
     </Box>
   );
@@ -478,6 +512,7 @@ function TrialConfigTab() {
 
 export default function MembershipManagement() {
   const toast = useToast();
+  const navigate = useNavigate();
   const [clients, setClients] = useState([]);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [selectedClient, setSelectedClient] = useState(null);
@@ -493,6 +528,10 @@ export default function MembershipManagement() {
     onOpen();
   }
 
+  function handleChatClick(client) {
+    navigate('/admin/chat', { state: { clientId: client.id, clientName: client.nickname || client.username } });
+  }
+
   return (
     <Box>
       <Heading size="lg" color="white" mb={6} display="flex" alignItems="center" gap={2}>
@@ -505,7 +544,7 @@ export default function MembershipManagement() {
         <>
           <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4} mb={6}>
             {clients.map(client => (
-              <ClientMembershipCard key={client.id} client={client} onManage={handleManage} />
+              <ClientMembershipCard key={client.id} client={client} onManage={handleManage} onChatClick={handleChatClick} />
             ))}
           </SimpleGrid>
 
