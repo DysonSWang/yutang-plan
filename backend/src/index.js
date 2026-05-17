@@ -18,6 +18,7 @@ const requestIdMiddleware = require('./middleware/requestId');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 const requestLogger = require('./middleware/requestLogger');
 const errorCollector = require('./middleware/errorCollector');
+const sentry = require('./middleware/sentry');
 const logRoutes = require('./routes/logs');
 
 const authRoutes = require('./routes/auth');
@@ -174,6 +175,10 @@ const authLimiter = rateLimit({
 
 app.use(requestIdMiddleware);
 app.use(requestLogger);
+// Sentry 请求追踪（必须在其他中间件之前）
+if (process.env.SENTRY_DSN) {
+  app.use(sentry.tracingHandler);
+}
 app.use(express.json({ limit: process.env.MAX_BODY_SIZE || '2mb' }));
 app.use(errorCollector);
 
@@ -279,6 +284,7 @@ io.on('connection', (socket) => {
 app.use(notFoundHandler);
 
 // 错误处理
+app.use(sentry.errorHandler);
 app.use(errorHandler);
 
 // 恢复未完成的个性化生成任务
