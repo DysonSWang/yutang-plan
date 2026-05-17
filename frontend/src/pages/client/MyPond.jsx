@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Box, Heading, Text, SimpleGrid, Card, CardBody, Badge, Modal, ModalOverlay, ModalContent,
   ModalHeader, ModalBody, ModalCloseButton, useDisclosure, VStack, HStack, Icon, Flex,
-  Input, Button, useToast, NumberInput, NumberInputField, NumberInputStepper,
+  Input, Button, Textarea, useToast, NumberInput, NumberInputField, NumberInputStepper,
   NumberIncrementStepper, NumberDecrementStepper, Select, FormControl, FormLabel,
   Skeleton, Tabs, TabList, TabPanels, Tab, TabPanel, Avatar, Divider, Alert, AlertIcon,
   AlertDescription, Progress, Menu, MenuButton, MenuList, MenuItem,
