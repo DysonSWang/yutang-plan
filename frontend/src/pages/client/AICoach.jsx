@@ -917,6 +917,45 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
 
 // ====== 聊天实战子组件 ======
 
+// 识别 [图片:描述] / [语音] / [视频] / [红包] / [转账] / [链接] 占位标记
+const MEDIA_TAG_REGEX = /(\[(?:图片|语音|视频|红包|转账|链接)(?::[^\]]+)?\])/g;
+const MEDIA_TAG_ICON = {
+  '图片': '🖼️', '语音': '🎤', '视频': '🎬',
+  '红包': '🧧', '转账': '💸', '链接': '🔗'
+};
+function renderCombatContent(text) {
+  const parts = text.split(MEDIA_TAG_REGEX);
+  return parts.map((part, i) => {
+    const match = part.match(/^\[(图片|语音|视频|红包|转账|链接)(?::([^\]]+))?\]$/);
+    if (match) {
+      const [, type, desc] = match;
+      const icon = MEDIA_TAG_ICON[type];
+      const label = desc ? `${type} · ${desc}` : type;
+      return (
+        <Box
+          as="span"
+          key={i}
+          display="inline-flex"
+          alignItems="center"
+          gap={1}
+          bg="rgba(255,255,255,0.12)"
+          px={1.5}
+          py={0.5}
+          borderRadius="md"
+          fontSize="12px"
+          lineHeight="1.4"
+          mx={0.5}
+          verticalAlign="middle"
+        >
+          <Text as="span" fontSize="11px">{icon}</Text>
+          <Text as="span" opacity={0.9}>{label}</Text>
+        </Box>
+      );
+    }
+    return <span key={i}>{part}</span>;
+  });
+}
+
 // 聊天实战消息气泡（girl/me 两种角色）
 const CombatChatMessage = memo(({ msg, girlName, onDelete }) => {
   const [hovered, setHovered] = useState(false);
@@ -957,7 +996,7 @@ const CombatChatMessage = memo(({ msg, girlName, onDelete }) => {
           border={isGirl ? '1px solid rgba(226,176,68,0.15)' : 'none'}
           color={isGirl ? 'rgba(255,255,255,0.92)' : 'rgba(30,20,0,0.9)'}
         >
-          <Text fontSize="13px" lineHeight="1.6" color="inherit">{msg.content}</Text>
+          <Text fontSize="13px" lineHeight="1.6" color="inherit">{renderCombatContent(msg.content)}</Text>
         </Box>
       </Box>
     </Flex>
