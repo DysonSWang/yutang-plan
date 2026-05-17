@@ -1,7 +1,34 @@
 /**
  * 前端错误捕获与上报
- * 全局监听未捕获错误、Promise 拒绝，统一上报到后端日志系统
+ * 全局监听未捕获错误、Promise 拒绝，统一上报到后端日志系统 + Sentry
  */
+
+import * as Sentry from '@sentry/react';
+import { browserTracingIntegration } from '@sentry/react';
+
+// Sentry 配置（使用与后端相同的 DSN）
+const SENTRY_DSN = 'https://b1a99a858fc9e0197cf9d850107aef44@o4511406445625344.ingest.us.sentry.io/4511406460895232';
+
+// 初始化 Sentry（仅在生产环境）
+if (import.meta.env.PROD) {
+  const dsn = import.meta.env.VITE_SENTRY_DSN || SENTRY_DSN;
+  Sentry.init({
+    dsn,
+    environment: import.meta.env.MODE,
+    integrations: [
+      browserTracingIntegration(),
+    ],
+    tracesSampleRate: 0.1,
+    // 过滤敏感信息
+    beforeSend(event) {
+      if (event.request?.headers) {
+        delete event.request.headers['cookie'];
+        delete event.request.headers['authorization'];
+      }
+      return event;
+    },
+  });
+}
 
 const API_BASE = import.meta.env.VITE_API_URL || ''; // Web 用相对路径，Capacitor 用绝对路径
 
@@ -87,6 +114,11 @@ function reportError({ message, stack, type, url, metadata }) {
 
 // 手动上报（供 ErrorBoundary、try/catch 等调用）
 export function captureError(error, metadata = {}) {
+  // 同时上报到 Sentry
+  Sentry.captureException(error, {
+    extra: metadata,
+  });
+
   reportError({
     message: error?.message || String(error),
     stack: error?.stack || '',
@@ -107,6 +139,11 @@ export function initErrorCapture() {
     // 忽略资源加载错误（如图片 404），只处理脚本错误
     if (!(event instanceof ErrorEvent)) return;
 
+    // 上报到 Sentry
+    Sentry.captureException(event.error || new Error(event.message), {
+      extra: { lineno: event.lineno, colno: event.colno }
+    });
+
     reportError({
       message: event.message,
       stack: event.error?.stack || '',
@@ -119,6 +156,9 @@ export function initErrorCapture() {
   // 未处理的 Promise 拒绝
   window.addEventListener('unhandledrejection', (event) => {
     const reason = event.reason;
+    // 上报到 Sentry
+    Sentry.captureException(reason instanceof Error ? reason : new Error(String(reason)));
+
     reportError({
       message: reason?.message || String(reason),
       stack: reason?.stack || '',
