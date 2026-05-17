@@ -15,6 +15,7 @@ const AppError = require('../errors/AppError');
 const { ErrorCodes } = require('../errors/errorCodes');
 const asyncHandler = require('../middleware/asyncHandler');
 const { revokeToken } = require('../middleware/auth');
+const sentry = require('../middleware/sentry');
 
 // 登录尝试追踪（内存存储，生产环境建议用Redis）
 const loginAttempts = new Map();
@@ -100,6 +101,15 @@ router.post('/register', asyncHandler(async (req, res) => {
     membershipService.bindInvitation(user.id, inviteCode).catch(() => {});
   }
 
+  // 设置 Sentry 用户上下文
+  if (sentry.isEnabled()) {
+    sentry.Sentry.setUser({
+      id: String(user.id),
+      username: user.username,
+      role: user.role
+    });
+  }
+
   const token = jwt.sign(
     { id: user.id, username: user.username, role: user.role },
     JWT_SECRET,
@@ -143,6 +153,15 @@ router.post('/login', asyncHandler(async (req, res) => {
 
   // 登录成功，清除尝试记录
   recordSuccessfulLogin(username);
+
+  // 设置 Sentry 用户上下文（方便追踪问题）
+  if (sentry.isEnabled()) {
+    sentry.Sentry.setUser({
+      id: String(user.id),
+      username: user.username,
+      role: user.role
+    });
+  }
 
   const token = jwt.sign(
     { id: user.id, username: user.username, role: user.role },

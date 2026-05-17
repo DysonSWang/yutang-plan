@@ -1,34 +1,15 @@
+/**
+ * React ErrorBoundary 组件
+ * 捕获子组件渲染时的错误，防止整个应用崩溃
+ */
+
 import { Component } from 'react';
-import { Box, Heading, Text, Button, VStack, Card, CardBody, Code } from '@chakra-ui/react';
+import * as Sentry from '@sentry/react';
 
-const API_BASE = '';
-
-async function reportError(error, errorInfo) {
-  try {
-    const entry = {
-      errorId: `fe-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-      message: error?.message || String(error),
-      stack: error?.stack || '',
-      type: 'reactBoundary',
-      url: window.location.href,
-      userAgent: navigator.userAgent,
-      metadata: { componentStack: errorInfo?.componentStack },
-    };
-    await fetch(`${API_BASE}/api/logs/frontend-error`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(entry),
-      keepalive: true,
-    });
-  } catch (e) {
-    // 上报失败不阻塞
-  }
-}
-
-export default class ErrorBoundary extends Component {
+export class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null, errorInfo: null };
+    this.state = { hasError: false, error: null };
   }
 
   static getDerivedStateFromError(error) {
@@ -36,50 +17,94 @@ export default class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    this.setState({ errorInfo });
-    reportError(error, errorInfo);
-  }
+    // 上报到 Sentry
+    Sentry.captureException(error, {
+      extra: {
+        ...errorInfo,
+        // 附加用户信息（从 props 或 window 获取）
+        userId: this.props.user?.id,
+        userRole: this.props.user?.role,
+      },
+    });
 
-  handleReset = () => {
-    this.setState({ hasError: false, error: null, errorInfo: null });
-    window.location.href = '/';
-  };
+    // 可选：打印到控制台（开发用）
+    if (import.meta.env.DEV) {
+      console.error('[ErrorBoundary] 捕获到错误:', error, errorInfo);
+    }
+
+    // 发送到后端日志
+    fetch('/api/logs/frontend-error', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        errorId: `eb-${Date.now().toString(36)}`,
+        message: error?.message || String(error),
+        stack: error?.stack || '',
+        type: 'react-render',
+        url: window.location.href,
+        userAgent: navigator.userAgent,
+        metadata: {
+          componentStack: errorInfo?.componentStack,
+          userId: this.props.user?.id,
+        },
+      }),
+      keepalive: true,
+    }).catch(() => {});
+  }
 
   render() {
     if (this.state.hasError) {
-      const { error, errorInfo } = this.state;
-      const msg = error?.message || String(error);
-      const stack = error?.stack || errorInfo?.componentStack || '';
+      // 可自定义错误 UI
+      if (this.props.fallback) {
+        return this.props.fallback(this.state.error);
+      }
 
+      // 默认错误提示
       return (
-        <Box minH="100vh" display="flex" alignItems="center" justifyContent="center" bg="#1a1a1a" p={4}>
-          <VStack spacing={6} maxW="600px" w="100%">
-            <Heading size="lg" color="red.400">页面出错了</Heading>
-            <Text color="rgba(245,240,232,0.7)" textAlign="center">
-              抱歉，页面发生了意外错误。请尝试刷新或返回首页。
-            </Text>
-            {msg && (
-              <Box w="100%" bg="rgba(255,100,100,0.1)" border="1px solid rgba(255,100,100,0.3)" borderRadius="12px" p={4}>
-                <Text color="rgba(255,150,150,0.9)" fontSize="sm" fontFamily="mono" wordBreak="break-all">
-                  {msg}
-                </Text>
-              </Box>
-            )}
-            {stack && (
-              <Box w="100%" overflowX="auto">
-                <Code whiteSpace="pre" fontSize="xs" color="gray.400" display="block" p={3} bg="rgba(0,0,0,0.3)" borderRadius="8px" maxH="200px" overflowY="auto">
-                  {stack.slice(0, 1000)}
-                </Code>
-              </Box>
-            )}
-            <Button colorScheme="gold" onClick={this.handleReset} size="lg">
-              返回首页
-            </Button>
-          </VStack>
-        </Box>
+        <div style={{
+          padding: '20px',
+          textAlign: 'center',
+          background: '#fff',
+          borderRadius: '8px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          margin: '20px',
+        }}>
+          <h2 style={{ color: '#e53e3e', marginBottom: '10px' }}>页面出错了</h2>
+          <p style={{ color: '#718096', marginBottom: '15px' }}>
+            请尝试刷新页面或重启 APP
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              padding: '10px 20px',
+              background: '#3182ce',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+            }}
+          >
+            刷新页面
+          </button>
+        </div>
       );
     }
 
     return this.props.children;
   }
 }
+
+/**
+ * 高阶组件：包装组件添加 ErrorBoundary
+ */
+export function withErrorBoundary(Component, fallback) {
+  return function WrappedComponent(props) {
+    return (
+      <ErrorBoundary fallback={fallback}>
+        <Component {...props} />
+      </ErrorBoundary>
+    );
+  };
+}
+
+export default ErrorBoundary;

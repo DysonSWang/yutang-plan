@@ -19,6 +19,8 @@ if (import.meta.env.PROD) {
       browserTracingIntegration(),
     ],
     tracesSampleRate: 0.1,
+    // 最大 breadcrumbs 数量
+    maxBreadcrumbs: 100,
     // 过滤敏感信息
     beforeSend(event) {
       if (event.request?.headers) {
@@ -28,6 +30,47 @@ if (import.meta.env.PROD) {
       return event;
     },
   });
+
+  // 添加路由变化的 breadcrumb
+  const originalPush = window.history.pushState;
+  window.history.pushState = function(...args) {
+    originalPush.apply(this, args);
+    Sentry.addBreadcrumb({
+      category: 'navigation',
+      message: `路由: ${window.location.pathname}`,
+      data: { path: window.location.pathname },
+    });
+  };
+
+  // 添加 API 调用的 breadcrumb（通过重写 fetch）
+  const originalFetch = window.fetch;
+  window.fetch = function(...args) {
+    const url = args[0] instanceof Request ? args[0].url : args[0];
+    const method = args[1]?.method || 'GET';
+
+    return originalFetch.apply(this, args).then(response => {
+      Sentry.addBreadcrumb({
+        category: 'api',
+        message: `${method} ${url}`,
+        data: {
+          status: response.status,
+          ok: response.ok,
+        },
+        level: response.ok ? 'info' : 'warning',
+      });
+      return response;
+    }).catch(error => {
+      Sentry.addBreadcrumb({
+        category: 'api',
+        message: `${method} ${url}`,
+        data: { error: error.message },
+        level: 'error',
+      });
+      throw error;
+    });
+  };
+
+  console.log('[Sentry] 前端已初始化，breadcrumbs 已启用');
 }
 
 const API_BASE = import.meta.env.VITE_API_URL || ''; // Web 用相对路径，Capacitor 用绝对路径

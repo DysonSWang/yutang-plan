@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import * as Sentry from '@sentry/react';
 import { auth } from '../utils/api';
 
 const AuthContext = createContext(null);
@@ -26,6 +27,13 @@ export function AuthProvider({ children }) {
       ]);
       if (result.success) {
         setUser(result.user);
+
+        // 设置 Sentry 用户上下文
+        Sentry.setUser({
+          id: String(result.user.id),
+          username: result.user.username,
+          role: result.user.role,
+        });
       } else {
         // token无效，清除
         localStorage.removeItem('zhuiai_token');
@@ -43,6 +51,13 @@ export function AuthProvider({ children }) {
     if (result.success) {
       localStorage.setItem('zhuiai_token', result.token);
       setUser(result.user);
+
+      // 设置 Sentry 用户上下文
+      Sentry.setUser({
+        id: String(result.user.id),
+        username: result.user.username,
+        role: result.user.role,
+      });
     }
     return result;
   };
@@ -51,6 +66,9 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('zhuiai_token');
     sessionStorage.removeItem('zhuiai_unlocked');
     setUser(null);
+
+    // 清除 Sentry 用户上下文
+    Sentry.setUser(null);
   };
 
   const isAdmin = user?.role === 'admin';
