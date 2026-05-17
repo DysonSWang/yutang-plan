@@ -12,13 +12,13 @@ const router = express.Router();
 //   - silent:  静默更新，不弹窗提示，仅在"关于"页面显示小红点
 //   - none:   无更新
 const VERSION_CONFIG = {
-  latestVersion: '1.6.4',
+  latestVersion: '1.6.5',
   minVersion: '1.5.3',
   downloadUrl: 'https://zhuiai.club/apk/app.apk',
-  updateDescription: '支持后台下载 + 进度显示',
-  buildNumber: 56,
+  updateDescription: '体验优化',
+  buildNumber: 57,
   apkSize: '约 3.5 MB',
-  upgradeType: 'suggest'  // 发版时修改：'force' | 'suggest' | 'silent'
+  upgradeType: 'silent'  // 发版时修改：'force' | 'suggest' | 'silent'
 };
 
 router.get('/check', (req, res) => {
