@@ -14,7 +14,7 @@ const router = express.Router();
 const VERSION_CONFIG = {
   latestVersion: '1.6.5',
   minVersion: '1.5.3',
-  downloadUrl: 'https://zhuiai.club/apk/app.apk',
+  downloadUrl: 'https://zhuiai.club/apk/zhuiai.apk',
   updateDescription: '体验优化',
   buildNumber: 57,
   apkSize: '约 3.5 MB',
@@ -85,6 +85,44 @@ router.get('/check', (req, res) => {
       buildNumber: VERSION_CONFIG.buildNumber,
       apkSize: VERSION_CONFIG.apkSize
     }
+  });
+});
+
+// ============================================================
+// 健康检查接口（用于监控）
+// ============================================================
+router.get('/health', async (req, res) => {
+  const startTime = Date.now();
+  let dbStatus = 'ok';
+  let dbLatency = 0;
+
+  // 检查数据库连接
+  try {
+    const prisma = require('../prisma');
+    const dbStart = Date.now();
+    await prisma.$queryRaw`SELECT 1`;
+    dbLatency = Date.now() - dbStart;
+  } catch (err) {
+    dbStatus = 'error';
+    console.error('[Health] 数据库检查失败:', err.message);
+  }
+
+  const latency = Date.now() - startTime;
+  const memoryUsage = process.memoryUsage();
+
+  res.json({
+    status: dbStatus === 'ok' ? 'ok' : 'degraded',
+    db: dbStatus,
+    latency,
+    dbLatency,
+    timestamp: new Date().toISOString(),
+    uptime: Math.floor(process.uptime()),
+    memory: {
+      used: Math.round(memoryUsage.heapUsed / 1024 / 1024),
+      total: Math.round(memoryUsage.heapTotal / 1024 / 1024),
+      rss: Math.round(memoryUsage.rss / 1024 / 1024)
+    },
+    version: VERSION_CONFIG.latestVersion
   });
 });
 

@@ -72,7 +72,7 @@ check_json_api() {
 # ============ 主流程 ============
 main() {
     echo ""
-    log "===== 追爱AI 验证脚本 v1.0 ====="
+    log "===== 追爱AI 验证脚本 v1.1 ====="
     echo ""
 
     local failed=0
@@ -80,13 +80,16 @@ main() {
     # 1. Web 主页
     check_url "Web 主页" "$DOMAIN/app/" || failed=$((failed+1))
 
-    # 2. API 版本检查
+    # 2. 健康检查接口（包含数据库验证）
+    check_json_api "健康检查" "$DOMAIN/api/version/health" || failed=$((failed+1))
+
+    # 3. API 版本检查
     check_json_api "API 版本检查" "$DOMAIN/api/version/check" || failed=$((failed+1))
 
-    # 3. 核心接口：登录（依赖数据库）⚠️
-    check_json_api "登录接口（核心）" "$DOMAIN/api/auth/login" "POST" '{"phone":"test","password":"test"}' || failed=$((failed+1))
+    # 4. 核心接口：登录（依赖数据库）⚠️
+    check_json_api "登录接口（核心）" "$DOMAIN/api/auth/login" "POST" '{"username":"test","password":"test"}' || failed=$((failed+1))
 
-    # 4. APK 文件
+    # 5. APK 文件
     check_url "APK 下载" "$DOMAIN/apk/zhuiai.apk" || failed=$((failed+1))
 
     echo ""
