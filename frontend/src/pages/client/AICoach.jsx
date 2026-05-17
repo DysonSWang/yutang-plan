@@ -437,7 +437,7 @@ const SessionBar = memo(({
 });
 
 // ====== 回复建议面板（自包含模块级组件） ======
-const ReplySuggestionsPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
+const ReplySuggestionsPanel = memo(({ apiUrl, selectedGirlId, toast, getCombatCtx }) => {
   const [replyInput, setReplyInput] = useState('');
   const [replyStyle, setReplyStyle] = useState('');
   const [replyStyleCustom, setReplyStyleCustom] = useState('');
@@ -463,7 +463,7 @@ const ReplySuggestionsPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
       const res = await fetch(`${apiUrl}/api/ai-coach/reply-suggestions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ girlId: selectedGirlId, lastMessage: replyInput, style: style || undefined, combatMessages: getCombatContext() })
+        body: JSON.stringify({ girlId: selectedGirlId, lastMessage: replyInput, style: style || undefined, combatMessages: getCombatCtx() })
       });
       if (!res.ok) throw new Error(`回复建议请求失败 (${res.status})`);
       const data = await res.json();
@@ -474,7 +474,7 @@ const ReplySuggestionsPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
     } finally {
       setReplyLoading(false);
     }
-  }, [replyInput, replyStyle, replyStyleCustom, apiUrl, selectedGirlId, toast, getCombatContext]);
+  }, [replyInput, replyStyle, replyStyleCustom, apiUrl, selectedGirlId, toast, getCombatCtx]);
 
   const copyToClipboard = useCallback(async (text) => {
     try {
@@ -577,7 +577,7 @@ const ReplySuggestionsPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
 });
 
 // ====== 话术优化面板（自包含模块级组件） ======
-const OptimizeReplyPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
+const OptimizeReplyPanel = memo(({ apiUrl, selectedGirlId, toast, getCombatCtx }) => {
   const [optimizeInput, setOptimizeInput] = useState('');
   const [optimizeGoal, setOptimizeGoal] = useState('');
   const [optimizeGoalCustom, setOptimizeGoalCustom] = useState('');
@@ -603,7 +603,7 @@ const OptimizeReplyPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
       const res = await fetch(`${apiUrl}/api/ai-coach/optimize-reply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ originalReply: optimizeInput, girlId: selectedGirlId, goal: goal || undefined, combatMessages: getCombatContext() })
+        body: JSON.stringify({ originalReply: optimizeInput, girlId: selectedGirlId, goal: goal || undefined, combatMessages: getCombatCtx() })
       });
       if (!res.ok) throw new Error(`话术优化请求失败 (${res.status})`);
       const data = await res.json();
@@ -614,7 +614,7 @@ const OptimizeReplyPanel = memo(({ apiUrl, selectedGirlId, toast }) => {
     } finally {
       setOptimizeLoading(false);
     }
-  }, [optimizeInput, optimizeGoal, optimizeGoalCustom, apiUrl, selectedGirlId, toast, getCombatContext]);
+  }, [optimizeInput, optimizeGoal, optimizeGoalCustom, apiUrl, selectedGirlId, toast, getCombatCtx]);
 
   const copyToClipboard = useCallback(async (text) => {
     try {
@@ -1943,7 +1943,7 @@ export default function AICoach() {
   }, [combatHistoryKey, combatHistories]);
 
   // 获取实战聊天上下文（带时间戳），供所有AI调用统一使用
-  const getCombatContext = useCallback(() => {
+  const getCombatCtx = useCallback(() => {
     if (!selectedGirlId) return null;
     const history = combatHistories[combatHistoryKey];
     if (!history || history.length === 0) return null;
@@ -2378,7 +2378,7 @@ export default function AICoach() {
           mode: deepMode ? 'pro' : 'flash', // 传递模式给后端
           girlId: selectedGirlId,
           regenerate: true,
-          combatMessages: getCombatContext()
+          combatMessages: getCombatCtx()
         })
       });
 
@@ -2489,7 +2489,7 @@ export default function AICoach() {
         }
       }, 50);
     }
-  }, [messages, apiUrl, deepMode, getCombatContext]);
+  }, [messages, apiUrl, deepMode, getCombatCtx]);
 
   const handleHelpful = useCallback(async (messageId, isHelpful) => {
     setHelpfulId(messageId);
@@ -2862,7 +2862,7 @@ export default function AICoach() {
         fetch(`${apiUrl}/api/ai-coach/reply-suggestions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ girlId: girlIdParam, lastMessage: lastGirlMsg.content, combatMessages: getCombatContext() })
+          body: JSON.stringify({ girlId: girlIdParam, lastMessage: lastGirlMsg.content, combatMessages: getCombatCtx() })
         }).then(r => r.json()).then(data => {
           if (data.success && data.suggestions?.options?.length) {
             setCombatSuggestions({ type: 'suggestions', items: data.suggestions.options });
@@ -2873,7 +2873,7 @@ export default function AICoach() {
         fetch(`${apiUrl}/api/ai-coach/optimize-reply`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ girlId: girlIdParam, originalReply: lastDraftText, combatMessages: getCombatContext() })
+          body: JSON.stringify({ girlId: girlIdParam, originalReply: lastDraftText, combatMessages: getCombatCtx() })
         }).then(r => r.json()).then(data => {
           if (data.success && data.optimizations?.length) {
             setCombatSuggestions({ type: 'optimizations', items: data.optimizations });
@@ -2881,7 +2881,7 @@ export default function AICoach() {
         }).catch(() => {}).finally(() => setCombatLoading(false));
       }
     }, 500);
-  }, [combatMode, selectedGirlId, combatHistories, lastDraftText, apiUrl, getCombatContext]);
+  }, [combatMode, selectedGirlId, combatHistories, lastDraftText, apiUrl, getCombatCtx]);
 
   // 聊天实战 - 直接发送原文（话术优化模式）
   const handleSendDirect = useCallback(() => {
@@ -2966,7 +2966,7 @@ export default function AICoach() {
           girlId: selectedGirlId,
           lastMessage: lastGirlMsg.content,
           hiddenContext: combatContextRef.current || null,
-          combatMessages: getCombatContext()
+          combatMessages: getCombatCtx()
         })
       }).then(r => r.json()).then(data => {
         if (data.success && data.suggestions?.options?.length) {
@@ -3036,7 +3036,7 @@ export default function AICoach() {
       if (textInput) formData.append('message', textInput);
       if (selectedGirlId) formData.append('girlId', selectedGirlId);
       formData.append('mode', deepMode ? 'pro' : 'flash');
-      const combatCtx = getCombatContext();
+      const combatCtx = getCombatCtx();
       if (combatCtx) formData.append('combatMessages', JSON.stringify(combatCtx));
 
       // 流式请求：VL识别 + 文本流式输出
@@ -3216,7 +3216,7 @@ export default function AICoach() {
           stream: true,
           mode: deepMode ? 'pro' : 'flash',
           girlId: selectedGirlId,
-          combatMessages: getCombatContext()
+          combatMessages: getCombatCtx()
         }),
         signal: controller.signal
       });
@@ -3952,12 +3952,12 @@ export default function AICoach() {
           </TabPanel>
           <TabPanel px={0} py={2} sx={{ display: 'flex', flexDirection: 'column', flex: 1, minH: 0, overflow: 'hidden' }}>
             <Box flex="1" minH="0" overflow="auto" p={2}>
-              <ReplySuggestionsPanel apiUrl={apiUrl} selectedGirlId={selectedGirlId} toast={toast} />
+              <ReplySuggestionsPanel apiUrl={apiUrl} selectedGirlId={selectedGirlId} toast={toast} getCombatCtx={getCombatCtx} />
             </Box>
           </TabPanel>
           <TabPanel px={0} py={2} sx={{ display: 'flex', flexDirection: 'column', flex: 1, minH: 0, overflow: 'hidden' }}>
             <Box flex="1" minH="0" overflow="auto" p={2}>
-              <OptimizeReplyPanel apiUrl={apiUrl} selectedGirlId={selectedGirlId} toast={toast} />
+              <OptimizeReplyPanel apiUrl={apiUrl} selectedGirlId={selectedGirlId} toast={toast} getCombatCtx={getCombatCtx} />
             </Box>
           </TabPanel>
         </TabPanels>
@@ -4004,3 +4004,4 @@ export default function AICoach() {
     </Box>
   );
 }
+// UNIQUE_BUILD_MARKER_12345
