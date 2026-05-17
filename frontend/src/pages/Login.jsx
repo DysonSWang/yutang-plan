@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Box, Button, FormControl, FormLabel, Input, InputGroup, InputRightElement, VStack, Text, Heading, HStack, IconButton, Popover, PopoverTrigger, PopoverContent, PopoverBody, PopoverHeader, Switch, Flex, useToast, Grid, GridItem } from '@chakra-ui/react';
+import { Box, Button, FormControl, FormLabel, Input, InputGroup, InputRightElement, VStack, Text, Heading, HStack, IconButton, Popover, PopoverTrigger, PopoverContent, PopoverBody, PopoverHeader, Switch, Flex, useToast, Grid, GridItem, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, Image } from '@chakra-ui/react';
 import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
 import { useAuth } from '../contexts/AuthContext';
 import { auth } from '../utils/api';
@@ -24,6 +24,7 @@ export default function Login() {
   const [loginError, setLoginError] = useState('');
   const [disguiseCalc, setDisguiseCalc] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
 
   // 计算器状态
   const [expr, setExpr] = useState('');
@@ -432,9 +433,61 @@ export default function Login() {
                   计算器
                 </Button>
               )}
-              <Text color="rgba(245,240,232,0.35)" fontSize="xs" textAlign="center">
+              <Text
+                color="rgba(245,240,232,0.35)"
+                fontSize="xs"
+                textAlign="center"
+                cursor="pointer"
+                _hover={{ color: 'rgba(245,240,232,0.6)' }}
+                transition="color 0.2s"
+                onClick={() => setShowQrModal(true)}
+              >
                 如需账号或忘记密码，请联系管理员
               </Text>
+
+              {/* Mo哥二维码弹窗 */}
+              <Modal isOpen={showQrModal} onClose={() => setShowQrModal(false)} isCentered>
+                <ModalOverlay bg="rgba(0,0,0,0.7)" backdropFilter="blur(8px)" />
+                <ModalContent bg="warm.900" border="1px solid rgba(255,255,255,0.08)" borderRadius="20px" maxW="320px">
+                  <ModalHeader textAlign="center" borderBottom="1px solid rgba(255,255,255,0.06)">
+                    <Text color="white" fontSize="md" fontWeight="600">添加 Mo哥 微信</Text>
+                  </ModalHeader>
+                  <ModalBody py={6} textAlign="center">
+                    <Image
+                      src="/mo-wechat-qr.jpg"
+                      alt="Mo哥微信二维码"
+                      w="200px"
+                      h="200px"
+                      mx="auto"
+                      borderRadius="12px"
+                      border="1px solid rgba(255,255,255,0.1)"
+                      objectFit="cover"
+                    />
+                    <Text color="rgba(245,240,232,0.6)" fontSize="sm" mt={4}>
+                      扫码添加微信，发送「情况」获取账号
+                    </Text>
+                  </ModalBody>
+                  <ModalFooter justifyContent="center" borderTop="1px solid rgba(255,255,255,0.06)">
+                    <Button
+                      bgGradient="linear(135deg, gold.500, gold.400)"
+                      color="warm.950"
+                      borderRadius="12px"
+                      fontWeight="500"
+                      _hover={{ transform: 'translateY(-2px)', boxShadow: '0 8px 24px rgba(226,176,68,0.3)' }}
+                      onClick={() => {
+                        const link = document.createElement('a');
+                        link.href = '/mo-wechat-qr.jpg';
+                        link.download = 'mo-wechat-qr.jpg';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                      }}
+                    >
+                      保存二维码
+                    </Button>
+                  </ModalFooter>
+                </ModalContent>
+              </Modal>
             </VStack>
           </form>
         </Box>
