@@ -289,7 +289,7 @@ async function purchaseMembership(userId, type, pointsToUse = 0) {
   // 校验积分：系统仅支持积分支付，积分必须覆盖全款
   const balance = await getPointsBalance(userId);
   if (pointsToUse < price) {
-    throw new AppError(ErrorCodes.MEMBERSHIP_POINTS_INSUFFICIENT, { userMessage: `积分余额不足，需要${price}积分，当前${balance}积分` });
+    throw new AppError(ErrorCodes.MEMBERSHIP_POINTS_INSUFFICIENT, { userMessage: `积分不足，需要${price}积分，本次使用${pointsToUse}积分` });
   }
   if (pointsToUse > balance) throw new AppError(ErrorCodes.MEMBERSHIP_POINTS_INSUFFICIENT, { userMessage: '积分余额不足' });
   // 超出部分不扣

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Box, Flex, VStack, HStack, Stack, Input, Button, Text, Heading, IconButton, Image, Spinner, useDisclosure, Menu, MenuButton, MenuList, MenuItem, MenuDivider, Badge, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton, Select, List, ListItem, Switch, FormControl, FormLabel } from '@chakra-ui/react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { api, chat, upload, clients } from '../../utils/api';
+import { api, chat, upload, clients, getMediaUrl as resolveMediaUrl } from '../../utils/api';
 import { captureError } from '../../utils/frontendErrorCapture';
 import { useSocket } from '../../contexts/SocketContext';
 import ProfileSuggestModal from './ProfileSuggestModal';
@@ -756,7 +756,7 @@ export default function AdminChat() {
             </Box>
           )}
           <Image
-            src={imageUrl}
+            src={resolveMediaUrl(imageUrl)}
             alt="图片消息"
             borderRadius="md"
             maxH="200px"

@@ -9,7 +9,7 @@ import {
 import { AddIcon } from '@chakra-ui/icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSocket } from '../../contexts/SocketContext';
-import { girls as girlsApi, analyzeChatHistory, deleteCombatMessage, aiCoach } from '../../utils/api';
+import { girls as girlsApi, analyzeChatHistory, deleteCombatMessage, aiCoach, getMediaUrl } from '../../utils/api';
 import { captureError } from '../../utils/frontendErrorCapture';
 import { FireIcon, SnowIcon, SparklesIcon, BrainIcon, InboxIcon, TrashIcon as DeleteIcon } from '../../components/Icons';
 import { marked } from 'marked';
@@ -829,7 +829,7 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
               <>
                 {message.imageUrl && (
                   <Image
-                    src={message.imageUrl}
+                    src={getMediaUrl(message.imageUrl)}
                     alt="attached"
                     maxWidth="200px"
                     maxHeight="150px"
@@ -3609,7 +3609,7 @@ export default function AICoach() {
                     <Avatar
                       size="xs"
                       name={girls.find(g => g.id === selectedGirlId)?.name}
-                      src={girls.find(g => g.id === selectedGirlId)?.avatar}
+                      src={getMediaUrl(girls.find(g => g.id === selectedGirlId)?.avatar)}
                       bg="gold.500"
                     />
                     <Text>{girls.find(g => g.id === selectedGirlId)?.name}</Text>
@@ -3627,7 +3627,7 @@ export default function AICoach() {
                     _hover={{ bg: 'warm.700' }}
                   >
                     <HStack spacing={2}>
-                      <Avatar size="xs" name={g.name} src={g.avatar} bg="gold.500" />
+                      <Avatar size="xs" name={g.name} src={getMediaUrl(g.avatar)} bg="gold.500" />
                       <Text>{g.name}</Text>
                       {g.stage && <Badge size="sm" colorScheme="orange" fontSize="10px">{g.stage}</Badge>}
                     </HStack>

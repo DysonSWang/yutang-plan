@@ -5,7 +5,7 @@
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Text, Flex, VStack, Button, IconButton, Spinner } from '@chakra-ui/react';
-import { chat } from '../utils/api';
+import { chat, getMediaUrl } from '../utils/api';
 import { captureError } from '../utils/frontendErrorCapture';
 
 // sessionStorage 持久化：刷新页面/切换路由后倒计时不丢失
@@ -259,7 +259,7 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
           )}
           <video
             ref={videoRef}
-            src={imageUrl}
+            src={getMediaUrl(imageUrl)}
             controls={false}
             controlsList="nodownload nofullscreen"
             disablePictureInPicture
@@ -300,7 +300,7 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
         >
           <audio
             ref={videoRef}
-            src={imageUrl}
+            src={getMediaUrl(imageUrl)}
             controls={false}
             autoPlay
             playsInline
@@ -364,7 +364,7 @@ export default function FlashImageViewer({ isOpen, onClose, imageUrl, messageId,
           {/* 实际图片 */}
           {!loadError && (
             <img
-              src={imageUrl}
+              src={getMediaUrl(imageUrl)}
               alt="阅后即焚"
               style={{
                 maxWidth: '95vw',

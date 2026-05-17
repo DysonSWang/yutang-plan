@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, VStack, HStack, Stack, Input, Button, Text, Flex, IconButton, Image, Badge, useToast, Center, Spinner, Icon, Switch, FormControl, FormLabel, Tooltip, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure } from '@chakra-ui/react';
 import { WarningIcon, CloseIcon } from '@chakra-ui/icons';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { api, chat, upload } from '../../utils/api';
+import { api, chat, upload, getMediaUrl as resolveMediaUrl } from '../../utils/api';
 import { captureError } from '../../utils/frontendErrorCapture';
 import { useSocket } from '../../contexts/SocketContext';
 import { useRouteActivated } from '../../hooks/useRouteLifecycle';
@@ -864,7 +864,7 @@ export default function ClientChat() {
             </Box>
           )}
           <Image
-            src={imageUrl}
+            src={resolveMediaUrl(imageUrl)}
             alt="图片消息"
             borderRadius="md"
             maxH="200px"

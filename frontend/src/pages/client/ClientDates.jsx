@@ -703,7 +703,7 @@ export default function ClientDates() {
                       {girlList.map(g => (
                         <MenuItem key={g.id} _hover={{ bg: 'warm.700' }} onClick={() => setFilterGirlId(g.id)}>
                           <HStack spacing={2}>
-                            <Avatar size="xs" name={g.name} src={g.avatar} bg="purple.400" />
+                            <Avatar size="xs" name={g.name} src={getMediaUrl(g.avatar)} bg="purple.400" />
                             <Text>{g.name}</Text>
                             {g.stage && <Badge size="sm" colorScheme="orange" fontSize="10px">{g.stage}</Badge>}
                           </HStack>

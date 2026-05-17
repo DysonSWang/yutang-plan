@@ -206,7 +206,7 @@ function GirlsTab({ girlsList, isInitialLoad, onAddGirl, onGirlClick }) {
                     display="flex" alignItems="center" justifyContent="center"
                   >
                     {addForm.avatar ? (
-                      <Box as="img" src={addForm.avatar} w="100%" h="100%" objectFit="cover" />
+                      <Box as="img" src={getMediaUrl(addForm.avatar)} w="100%" h="100%" objectFit="cover" />
                     ) : (
                       <Icon as={HeartIcon} color="rgba(245,240,232,0.3)" boxSize={6} />
                     )}
@@ -423,7 +423,7 @@ function DatesTab({ datesList, allDates, pendingInterviews, isInitialLoad, onRef
                 {girlList.map(g => (
                   <MenuItem key={g.id} _hover={{ bg: 'warm.700' }} onClick={() => setFilterGirlId(g.id)}>
                     <HStack spacing={2}>
-                      <Avatar size="xs" name={g.name} src={g.avatar} bg="purple.400" />
+                      <Avatar size="xs" name={g.name} src={getMediaUrl(g.avatar)} bg="purple.400" />
                       <Text>{g.name}</Text>
                     </HStack>
                   </MenuItem>

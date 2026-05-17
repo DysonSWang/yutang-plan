@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Box, Heading, Card, CardBody, SimpleGrid, Badge, Text, VStack, HStack, Flex, Avatar, Button, Checkbox, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton, useDisclosure, FormControl, FormLabel, Input, Select, Textarea, useToast, Spinner, Icon, InputGroup, InputRightElement, IconButton, Image, Progress } from '@chakra-ui/react';
 import { CrownIcon, CheckIcon } from '../../components/Icons';
 import { FiEdit2, FiEye, FiEyeOff } from 'react-icons/fi';
-import { api, clients, membership as membershipApi, auth, upload } from '../../utils/api';
+import { api, clients, membership as membershipApi, auth, upload, getMediaUrl } from '../../utils/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { captureError } from '../../utils/frontendErrorCapture';
 import RegionSelector from '../../components/RegionSelector';
@@ -730,7 +730,7 @@ export default function ClientProfile() {
             {/* 左侧：头像 + 昵称 */}
             <HStack spacing={3} minW="0">
               <Box position="relative" flexShrink={0}>
-                <Avatar size="lg" name={profile.nickname || profile.username} src={profile.avatar} bg="teal.500" />
+                <Avatar size="lg" name={profile.nickname || profile.username} src={getMediaUrl(profile.avatar)} bg="teal.500" />
                 <IconButton
                   aria-label="编辑头像"
                   icon={<Icon as={FiEdit2} />}
