@@ -4,7 +4,7 @@
 
 | 服务器 | IP | 目录 | 登录方式 |
 |--------|-----|------|---------|
-| 小里（生产） | 149.129.227.54 | 前端：`/var/www/zhuiai/app-spa/` 后端：`/home/zhuiai/backend/` | 密码：W199191w |
+| 小里（生产） | 149.129.227.54 | 前端：`/var/www/zhuiai/app-spa/` 后端：`/home/zhuiai/backend/` (数据symlink到`/data/zhuiai/data`) | 密码：W199191w |
 | 小腾 | 118.25.94.81 | 备用 | SSH 密钥 |
 
 ---

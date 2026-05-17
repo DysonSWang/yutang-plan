@@ -763,13 +763,13 @@ function MessageBubble({ message, onCopy, onRegenerate, onHelpful, isStreaming, 
       <Box
         maxW="85%"
         className="bubble-glow"
-        bg={isUser ? 'linear-gradient(135deg, rgba(226,176,68,0.88), rgba(201,127,89,0.82))' : 'rgba(255,255,255,0.06)'}
-        border={isUser ? 'none' : '1px solid rgba(226,176,68,0.12)'}
+        bg={isUser ? 'linear-gradient(135deg, rgba(226,176,68,0.88), rgba(201,127,89,0.82))' : 'rgba(255,255,255,0.10)'}
+        border={isUser ? 'none' : '1px solid rgba(226,176,68,0.18)'}
         color={isUser ? 'rgba(30,20,0,0.9)' : 'rgba(255,255,255,0.92)'}
         px={hasReasoning ? 0 : 4}
         py={hasReasoning ? 0 : 3}
-        borderRadius="18px 4px 18px 18px"
-        boxShadow={isUser ? '0 4px 16px rgba(226,176,68,0.20)' : 'none'}
+        borderRadius={isUser ? '18px 4px 18px 18px' : '4px 18px 18px 18px'}
+        boxShadow={isUser ? '0 4px 16px rgba(226,176,68,0.20)' : '0 2px 8px rgba(0,0,0,0.15)'}
         position="relative"
         overflow="hidden"
       >
@@ -949,13 +949,15 @@ const CombatChatMessage = memo(({ msg, girlName, onDelete }) => {
           )}
         </Flex>
         <Box
-          bg={isGirl ? 'warm.700' : 'warm.700'}
+          bg={isGirl ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, rgba(226,176,68,0.85), rgba(201,127,89,0.80))'}
           px={3} py={2}
           borderRadius="xl"
           borderBottomLeftRadius={isGirl ? 'sm' : undefined}
           borderBottomRightRadius={isGirl ? undefined : 'sm'}
+          border={isGirl ? '1px solid rgba(226,176,68,0.15)' : 'none'}
+          color={isGirl ? 'rgba(255,255,255,0.92)' : 'rgba(30,20,0,0.9)'}
         >
-          <Text fontSize="13px" lineHeight="1.6">{msg.content}</Text>
+          <Text fontSize="13px" lineHeight="1.6" color="inherit">{msg.content}</Text>
         </Box>
       </Box>
     </Flex>

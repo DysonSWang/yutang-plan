@@ -485,8 +485,10 @@ export default function MyPond() {
   const [dateForm, setDateForm] = useState({
     title: '', dateTime: '', location: '', notes: '',
     scene: '', budget: '', duration: '半天', transportMode: '地铁/打车',
-    relationshipStage: '初次见面', specialRequirements: ''
+    relationshipStage: '初次见面', specialRequirements: '',
+    rating: '', totalExpense: '', dateDuration: '', postNotes: ''
   });
+  const [isHistorical, setIsHistorical] = useState(false);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [showAiFields, setShowAiFields] = useState(false);
@@ -540,16 +542,30 @@ export default function MyPond() {
   }, []);
 
   const resetDateForm = () => {
-    setDateForm({ title: '', dateTime: '', location: '', notes: '', scene: '', budget: '', duration: '半天', transportMode: localStorage.getItem('dating_transportMode') || '地铁/打车', relationshipStage: '初次见面', specialRequirements: '' });
-    setShowAiFields(false); setSelectedGirlForDate(null); setAddStep(1);
+    setDateForm({ title: '', dateTime: '', location: '', notes: '', scene: '', budget: '', duration: '半天', transportMode: localStorage.getItem('dating_transportMode') || '地铁/打车', relationshipStage: '初次见面', specialRequirements: '', rating: '', totalExpense: '', dateDuration: '', postNotes: '' });
+    setShowAiFields(false); setSelectedGirlForDate(null); setAddStep(1); setIsHistorical(false);
   };
 
   const handleSaveDate = async () => {
     if (!selectedGirlForDate) { toast({ title: '请选择约会对象', status: 'warning', duration: 3000 }); return; }
     setSaving(true);
     try {
-      const res = await dates.create({ girlId: selectedGirlForDate.id, dateTime: dateForm.dateTime || undefined, location: dateForm.location, title: dateForm.title || '新约会', notes: dateForm.notes });
-      if (res.success) { toast({ title: '约会添加成功', status: 'success', duration: 2000 }); setShowAddModal(false); resetDateForm(); refresh(); }
+      const payload = {
+        girlId: selectedGirlForDate.id,
+        dateTime: dateForm.dateTime || undefined,
+        location: dateForm.location,
+        title: dateForm.title || '新约会',
+        notes: dateForm.notes,
+      };
+      if (isHistorical) {
+        payload.isHistorical = true;
+        if (dateForm.rating) payload.rating = dateForm.rating;
+        if (dateForm.totalExpense !== '') payload.totalExpense = dateForm.totalExpense;
+        if (dateForm.dateDuration) payload.duration = dateForm.dateDuration;
+        if (dateForm.postNotes) payload.postNotes = dateForm.postNotes;
+      }
+      const res = await dates.create(payload);
+      if (res.success) { toast({ title: isHistorical ? '历史约会已记录' : '约会添加成功', status: 'success', duration: 2000 }); setShowAddModal(false); resetDateForm(); refresh(); }
       else { toast({ title: res.error || '添加失败', status: 'error', duration: 4000 }); }
     } catch (e) { toast({ title: '添加失败', status: 'error', duration: 4000 }); }
     setSaving(false);
@@ -695,8 +711,51 @@ export default function MyPond() {
                   <FormLabel color="rgba(245,240,232,0.4)">备注（选填）</FormLabel>
                   <Input placeholder="备注信息" value={dateForm.notes} onChange={e => setDateForm({...dateForm, notes: e.target.value})} bg="warm.700" borderColor="warm.600" />
                 </FormControl>
+
+                {/* 历史约会开关 */}
+                <Flex align="center" justify="space-between" bg="warm.700" p={3} borderRadius="md">
+                  <Box>
+                    <Text color="white" fontSize="sm" fontWeight="bold">历史约会</Text>
+                    <Text color="rgba(245,240,232,0.4)" fontSize="xs">记录已经发生过的约会</Text>
+                  </Box>
+                  <Box as="button" w="44px" h="24px" borderRadius="full" bg={isHistorical ? 'gold.500' : 'warm.500'} position="relative" transition="all 0.2s" onClick={() => setIsHistorical(!isHistorical)}>
+                    <Box position="absolute" top="2px" left={isHistorical ? '22px' : '2px'} w="20px" h="20px" borderRadius="full" bg="white" transition="all 0.2s" />
+                  </Box>
+                </Flex>
+
+                {/* 历史约会额外字段 */}
+                {isHistorical && (
+                  <VStack spacing={3} align="stretch" bg="rgba(255,215,0,0.05)" p={3} borderRadius="md" border="1px solid" borderColor="rgba(255,215,0,0.2)">
+                    <Text color="gold.400" fontSize="sm" fontWeight="bold">约会回顾</Text>
+                    <FormControl>
+                      <FormLabel color="rgba(245,240,232,0.4)" fontSize="xs">评分（1-5 星）</FormLabel>
+                      <HStack spacing={1}>
+                        {[1,2,3,4,5].map(star => (
+                          <Box key={star} as="button" fontSize="24px" cursor="pointer" onClick={() => setDateForm({...dateForm, rating: star})}
+                            color={star <= (dateForm.rating || 0) ? 'gold.400' : 'warm.500'} transition="all 0.15s">★</Box>
+                        ))}
+                        {dateForm.rating > 0 && <Text color="rgba(245,240,232,0.4)" fontSize="sm" ml={2}>{dateForm.rating} 星</Text>}
+                      </HStack>
+                    </FormControl>
+                    <HStack spacing={3}>
+                      <FormControl>
+                        <FormLabel color="rgba(245,240,232,0.4)" fontSize="xs">花费（元）</FormLabel>
+                        <Input type="number" placeholder="0" value={dateForm.totalExpense} onChange={e => setDateForm({...dateForm, totalExpense: e.target.value})} bg="warm.700" borderColor="warm.600" size="sm" />
+                      </FormControl>
+                      <FormControl>
+                        <FormLabel color="rgba(245,240,232,0.4)" fontSize="xs">时长</FormLabel>
+                        <Input placeholder="如：2小时" value={dateForm.dateDuration} onChange={e => setDateForm({...dateForm, dateDuration: e.target.value})} bg="warm.700" borderColor="warm.600" size="sm" />
+                      </FormControl>
+                    </HStack>
+                    <FormControl>
+                      <FormLabel color="rgba(245,240,232,0.4)" fontSize="xs">约会总结</FormLabel>
+                      <Textarea placeholder="这次约会的感受、亮点、待改进..." value={dateForm.postNotes} onChange={e => setDateForm({...dateForm, postNotes: e.target.value})} bg="warm.700" borderColor="warm.600" size="sm" rows={3} resize="vertical" />
+                    </FormControl>
+                  </VStack>
+                )}
+
                 <HStack mt={4} spacing={3}>
-                  <Button colorScheme="green" flex={1} size="lg" isLoading={saving} onClick={handleSaveDate}>保存约会</Button>
+                  <Button colorScheme={isHistorical ? 'gold' : 'green'} flex={1} size="lg" isLoading={saving} onClick={handleSaveDate}>{isHistorical ? '记录历史约会' : '保存约会'}</Button>
                   <Button variant={showAiFields ? 'solid' : 'outline'} colorScheme={showAiFields ? 'brand' : 'gray'} leftIcon={<SparklesIcon />} flex={1} size="lg" onClick={() => {
                     const willShow = !showAiFields;
                     setShowAiFields(willShow);

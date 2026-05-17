@@ -1121,19 +1121,19 @@ export default function ClientChat() {
                         {new Date(msg.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })}
                       </Text>
                     )}
-                    <HStack spacing={2} maxW="95%">
+                    <HStack spacing={2} maxW="85%" w="fit-content">
                       <Box
-                        w="75%"
+                        maxW="100%"
                         p={3}
                         className="bubble-glow"
                         bg={msg.isBurnAfterRead && !msg.burnedAt
                           ? 'linear-gradient(135deg, rgba(255,140,0,0.25), rgba(255,80,0,0.15))'
                           : isClient
                             ? 'linear-gradient(135deg, rgba(226,176,68,0.90), rgba(201,127,89,0.85))'
-                            : 'rgba(255,255,255,0.06)'}
-                        border={msg.isBurnAfterRead && !msg.burnedAt ? '1px solid rgba(255,140,0,0.35)' : (isClient ? 'none' : '1px solid rgba(226,176,68,0.15)')}
+                            : 'rgba(255,255,255,0.10)'}
+                        border={msg.isBurnAfterRead && !msg.burnedAt ? '1px solid rgba(255,140,0,0.35)' : (isClient ? 'none' : '1px solid rgba(226,176,68,0.18)')}
                         borderRadius={isClient ? '18px 4px 18px 18px' : '4px 18px 18px 18px'}
-                        boxShadow={isClient ? '0 4px 16px rgba(226,176,68,0.20)' : 'none'}
+                        boxShadow={isClient ? '0 4px 16px rgba(226,176,68,0.20)' : '0 2px 8px rgba(0,0,0,0.15)'}
                         color={isClient ? 'rgba(30,20,0,0.9)' : 'rgba(255,255,255,0.92)'}
                         onPointerDown={(e) => handlePointerDown(e, msg)}
                         onPointerUp={handlePointerUp}

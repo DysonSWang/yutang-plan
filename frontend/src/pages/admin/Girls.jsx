@@ -7,7 +7,7 @@ import {
   Accordion, AccordionItem, AccordionButton, AccordionPanel, AccordionIcon, Tabs, TabList, TabPanels, Tab, TabPanel, Icon, IconButton, Spinner, Switch
 } from '@chakra-ui/react';
 import { FiX, FiArrowRight, FiAlertTriangle } from 'react-icons/fi';
-import { girls, clients, chatScreenshots, alerts as alertsApi } from '../../utils/api';
+import { girls, clients, chatScreenshots, alerts as alertsApi, getMediaUrl } from '../../utils/api';
 import { captureError } from '../../utils/frontendErrorCapture';
 import { HeartIcon, FireIcon, SnowIcon, SparklesIcon } from '../../components/Icons';
 import { useSocket } from '../../contexts/SocketContext';
@@ -1832,7 +1832,7 @@ export default function AdminGirls() {
                         <Text color="rgba(245,240,232,0.4)" fontSize="sm" mb={2}>照片</Text>
                         <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={2}>
                           {(parseJSONField(selectedGirl.photos) || []).map((url, i) => (
-                            <Image key={i} src={url} alt="照片" h="100px" objectFit="cover" borderRadius="md" cursor="pointer" onClick={() => window.open(url, '_blank')} _hover={{ opacity: 0.8 }} />
+                            <Image key={i} src={getMediaUrl(url)} alt="照片" h="100px" objectFit="cover" borderRadius="md" cursor="pointer" onClick={() => window.open(getMediaUrl(url), '_blank')} _hover={{ opacity: 0.8 }} />
                           ))}
                         </SimpleGrid>
                       </Box>

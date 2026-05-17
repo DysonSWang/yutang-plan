@@ -6,14 +6,19 @@ const express = require('express');
 const router = express.Router();
 
 // 版本配置（每次发版时更新）
-// upgradeType: 'force' | 'suggest' | 'none'
+// upgradeType: 'force' | 'suggest' | 'silent' | 'none'
+//   - force:  强制更新，用户必须升级才能使用
+//   - suggest: 建议更新，弹窗提示但可跳过
+//   - silent:  静默更新，不弹窗提示，仅在"关于"页面显示小红点
+//   - none:   无更新
 const VERSION_CONFIG = {
-  latestVersion: '1.6.1',
+  latestVersion: '1.6.4',
   minVersion: '1.5.3',
   downloadUrl: 'https://zhuiai.club/apk/app.apk',
-  updateDescription: '体验优化',
-  buildNumber: 53,
-  apkSize: '约 3.5 MB'
+  updateDescription: '支持后台下载 + 进度显示',
+  buildNumber: 56,
+  apkSize: '约 3.5 MB',
+  upgradeType: 'suggest'  // 发版时修改：'force' | 'suggest' | 'silent'
 };
 
 router.get('/check', (req, res) => {
@@ -27,7 +32,7 @@ router.get('/check', (req, res) => {
       code: 0,
       data: {
         hasUpdate: true,
-        upgradeType: 'none',
+        upgradeType: VERSION_CONFIG.upgradeType || 'suggest',
         ...VERSION_CONFIG
       }
     });
@@ -60,7 +65,12 @@ router.get('/check', (req, res) => {
 
   let upgradeType = 'none';
   if (isNewer) {
-    upgradeType = isForced ? 'force' : 'suggest';
+    if (isForced) {
+      upgradeType = 'force';
+    } else {
+      // 使用配置的升级类型，支持 silent 模式
+      upgradeType = VERSION_CONFIG.upgradeType || 'suggest';
+    }
   }
 
   res.json({

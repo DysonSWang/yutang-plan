@@ -128,7 +128,7 @@ async function activateTrial(userId) {
   const endDate = new Date();
   endDate.setDate(endDate.getDate() + config.validDays);
 
-  return prisma.membership.create({
+  const membership = await prisma.membership.create({
     data: {
       userId,
       type: 'TRIAL',
@@ -141,6 +141,14 @@ async function activateTrial(userId) {
       girlQuota: config.maxGirls
     }
   });
+
+  // 同步 User.girlQuota
+  await prisma.user.update({
+    where: { id: userId },
+    data: { girlQuota: config.maxGirls }
+  }).catch(err => console.error(`[Membership] 同步试用 User.girlQuota 失败: ${err.message}`));
+
+  return membership;
 }
 
 /**
@@ -331,6 +339,14 @@ async function purchaseMembership(userId, type, pointsToUse = 0) {
       }
     });
   }).then(async (membership) => {
+    // 同步 User.girlQuota（会员类型对应的额度）
+    const quotaByType = { monthly: 30, yearly: 365, premium: 999 };
+    const newQuota = quotaByType[type] || 30;
+    await prisma.user.update({
+      where: { id: userId },
+      data: { girlQuota: newQuota }
+    }).catch(err => console.error(`[Membership] 同步 User.girlQuota 失败: ${err.message}`));
+
     // 新购成功后，给邀请人发积分
     if (isFirstPurchase) {
       const inv = await prisma.invitation.findFirst({

@@ -464,7 +464,7 @@ router.get('/', authMiddleware, async (req, res) => {
 // 创建约会
 router.post('/', authMiddleware, async (req, res) => {
   try {
-    const { clientId, girlId, dateTime, location, title, conditions, notes } = req.body;
+    const { clientId, girlId, dateTime, location, title, conditions, notes, isHistorical, rating, totalExpense, duration, postNotes } = req.body;
 
     let effectiveClientId;
     if (req.user.role === 'client') {
@@ -488,40 +488,58 @@ router.post('/', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: { code: 'G0302', message: '该女生不属于您' } });
     }
 
-    const date = await prisma.date.create({
-      data: {
-        userId: effectiveClientId,
-        girlId,
-        dateTime: dateTime ? new Date(dateTime) : new Date(),
-        location,
-        title,
-        conditions: conditions ? JSON.stringify(conditions) : null,
-        notes,
-        status: req.user.role === 'client' ? 'confirmed' : 'pending_plan',
-        planStatus: req.user.role === 'client' ? 'confirmed' : 'pending'
-      }
-    });
+    const isHist = !!isHistorical;
 
-    // 更新女生阶段为约会
+    const createData = {
+      userId: effectiveClientId,
+      girlId,
+      dateTime: dateTime ? new Date(dateTime) : new Date(),
+      location,
+      title,
+      conditions: conditions ? JSON.stringify(conditions) : null,
+      notes,
+      status: isHist ? 'completed' : (req.user.role === 'client' ? 'confirmed' : 'pending_plan'),
+      planStatus: isHist ? 'completed' : (req.user.role === 'client' ? 'confirmed' : 'pending')
+    };
+
+    // 历史约会可附带 post-date 数据
+    if (isHist) {
+      if (rating !== undefined) {
+        const r = parseInt(rating);
+        if (r >= 1 && r <= 5) createData.rating = r;
+      }
+      if (totalExpense !== undefined) {
+        const expense = parseFloat(totalExpense);
+        if (!isNaN(expense) && expense >= 0) createData.totalExpense = expense;
+      }
+      if (duration !== undefined) createData.duration = duration;
+      if (postNotes !== undefined) createData.postNotes = postNotes;
+    }
+
+    const date = await prisma.date.create({ data: createData });
+
+    // 更新女生阶段为约会（包括历史约会，补充关系进展）
     await prisma.girl.update({
       where: { id: girlId },
       data: { stage: '约会', status: 'dating' }
     });
 
-    // 自动创建日历事件
-    const eventTime = dateTime ? new Date(dateTime) : new Date();
-    await prisma.event.create({
-      data: {
-        clientId: effectiveClientId,
-        girlId,
-        title: title || '约会',
-        content: location ? `地点：${location}` : null,
-        eventTime,
-        type: 'date',
-        status: 'pending',
-        dateId: date.id
-      }
-    });
+    // 历史约会不创建日历事件（已经发生过了）
+    if (!isHist) {
+      const eventTime = dateTime ? new Date(dateTime) : new Date();
+      await prisma.event.create({
+        data: {
+          clientId: effectiveClientId,
+          girlId,
+          title: title || '约会',
+          content: location ? `地点：${location}` : null,
+          eventTime,
+          type: 'date',
+          status: 'pending',
+          dateId: date.id
+        }
+      });
+    }
 
     res.json({ success: true, date });
   } catch (error) {
