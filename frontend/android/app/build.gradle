@@ -7,8 +7,8 @@ android {
         applicationId "com.zhuiai.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 57
-        versionName "1.6.5"
+        versionCode 58
+        versionName "1.6.6"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -17,13 +17,18 @@ android {
         }
     }
 
-    // 签名配置
+    // 签名配置（密码从 keystore.properties 读取，该文件不提交到 git）
     signingConfigs {
+        def keystorePropertiesFile = rootProject.file("keystore.properties")
+        def keystoreProperties = new Properties()
+        if (keystorePropertiesFile.exists()) {
+            keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+        }
         release {
             storeFile file('zhuiai-release.keystore')
-            storePassword 'zhuiai2024'
-            keyAlias 'zhuiai'
-            keyPassword 'zhuiai2024'
+            storePassword keystoreProperties['storePassword'] ?: ''
+            keyAlias keystoreProperties['keyAlias'] ?: ''
+            keyPassword keystoreProperties['keyPassword'] ?: ''
         }
     }
 
