@@ -6,8 +6,8 @@ const isProduction = process.env.NODE_ENV === 'production'
 const isCapacitor = process.env.CAPACITOR_BUILD === 'true'
 
 export default defineConfig({
-  // Capacitor 构建用 /（Android assets 根路径），其他生产环境用 /app/
-  base: isCapacitor ? '/' : (process.env.NODE_ENV === 'production' ? '/app/' : '/'),
+  // Capacitor 构建用相对路径 ./（资源从 assets/ 加载），其他生产环境用 /app/
+  base: isCapacitor ? './' : (process.env.NODE_ENV === 'production' ? '/app/' : '/'),
   plugins: [
     react(),
     // PWA 在生产环境启用（已临时禁用以便调试构建问题）
