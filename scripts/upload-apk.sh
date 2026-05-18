@@ -79,9 +79,9 @@ main() {
     log "上传 APK..."
     scp_file $APK_DIR/zhuiai.apk /var/www/zhuiai/apk/zhuiai.apk
 
-    # 7. 清理服务器旧 APK
+    # 7. 清理服务器旧 APK，保留 zhuiai.apk
     log "清理旧版本..."
-    ssh_cmd "cd /var/www/zhuiai/apk && rm -f *.apk && mv zhuiai.apk app.apk" 2>/dev/null || true
+    ssh_cmd "cd /var/www/zhuiai/apk && rm -f app-release.apk app.apk && ln -sf zhuiai.apk app.apk" 2>/dev/null || true
 
     info "APK 上传完成: https://zhuiai.club/apk/zhuiai.apk"
 }

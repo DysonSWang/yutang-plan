@@ -57,8 +57,8 @@ check_json_api() {
         response=$(curl -s "$url" --max-time 10)
     fi
 
-    # 检查是否返回有效 JSON（包含 "success" 或 "code"）
-    if echo "$response" | grep -q '"success"\|"code"'; then
+    # 检查是否返回有效 JSON（包含 "success" 或 "code" 或 "status"）
+    if echo "$response" | grep -q '"success"\|"code"\|"status"'; then
         info "$name 正常"
         echo "    响应: $(echo $response | head -c 100)..."
         return 0
