@@ -601,12 +601,39 @@ for f in *.html; do
 done
 ```
 
+### 高清截图（1080×1440，deviceScaleFactor=2）
+> 原因：直接用 viewport 540×720 截图文字发虚，需用 deviceScaleFactor=2 输出2倍像素图（1080×1440），文件体积翻倍但清晰度翻倍，发小红书更清晰。
+
+```bash
+node -e "
+const { chromium } = require('playwright');
+(async () => {
+  const browser = await chromium.launch();
+  const context = await browser.newContext({
+    viewport: { width: 540, height: 720 },
+    deviceScaleFactor: 2
+  });
+  const page = await context.newPage();
+  // 拦截字体请求避免等待超时（字体已在本地缓存）
+  await page.route('**/fonts.googleapis.com/**', route => route.abort());
+  await page.route('**/fonts.gstatic.com/**', route => route.abort());
+  const slides = ['slide-01-cover.html', 'slide-02-signals.html', 'slide-03-pitfall1.html', 'slide-04-pitfall2.html', 'slide-05-pitfall3.html', 'slide-06-formula.html', 'slide-07-cta.html'];
+  for (const slide of slides) {
+    await page.goto('file://' + process.cwd() + '/' + slide, { waitUntil: 'domcontentloaded', timeout: 10000 });
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: '../配图/' + slide.replace('.html', '.png') });
+    console.log('Done:', slide);
+  }
+  await browser.close();
+})();
+"
+
 ### 产出
 - 7张 PNG 截图存入 `[话题名称]/配图/`（尺寸必须全是 540×720）
 
 ---
 
-## Phase 7 · 多轮评审配图
+## Phase 7 · 评审配图
 
 ### 评审维度
 
@@ -632,13 +659,19 @@ done
 
 ### 动作
 1. 文案MD标记「定稿」状态
-2. 配图全部确认
-3. 更新运营方案「已发布话题清单」
-4. 按最佳时间发布（工作日 12:00-13:30 / 20:00-22:00）
+2. **生成发布文案.md**：删除所有 `---` 分隔符和 `**` 粗体，保留纯文本格式，方便直接复制粘贴到小红书编辑器
+3. 配图全部确认
+4. 更新运营方案「已发布话题清单」
+5. 按最佳时间发布（工作日 12:00-13:30 / 20:00-22:00）
+
+### 发布文案.md 格式规范（铁律）
+- ❌ 禁用：`---`、`**`、任何 Markdown 格式符号
+- ✅ 正确：纯文本，换行即段落
+- 原因：小红书编辑器不支持 Markdown，直接粘贴会显示原始符号
 
 ### 产出
+- 发布文案.md（可直接复制到小红书编辑器）
 - 发布记录
-- 数据追踪开始
 
 ---
 
