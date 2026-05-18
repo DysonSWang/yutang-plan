@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>下载追AI Android 安装包</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -532,7 +535,7 @@
   <div class="dl-card">
     <div class="dl-size" id="version-info">检测中...</div>
 
-    <a class="dl-btn" href="/apk/app.apk" id="dl-btn">
+    <a class="dl-btn" href="/apk/zhuiai.apk" id="dl-btn">
       <span class="icon">⬇️</span>
       立即下载安装包
     </a>
@@ -627,18 +630,22 @@
 
   // ─── 动态加载版本信息 ───
   var latestVersion = '';
-  var downloadUrl = 'https://zhuiai.club/apk/app.apk';
+  var downloadUrl = 'https://zhuiai.club/apk/zhuiai.apk';
   var apkSize = '约 4.2 MB';
 
-  fetch('/api/version/check')
+  fetch('/api/version/check?' + Date.now())
     .then(function(res) { return res.json(); })
     .then(function(data) {
       if (data.data && data.data.latestVersion) {
         latestVersion = data.data.latestVersion;
         downloadUrl = data.data.downloadUrl || downloadUrl;
         apkSize = data.data.apkSize || apkSize;
+        // 添加时间戳防止浏览器缓存旧 APK
+        var cacheBuster = '?v=' + latestVersion + '&t=' + Date.now();
         $('version-info').textContent = 'v' + latestVersion + ' · ' + apkSize + ' · Android 5.0+';
-        $('dl-btn').href = downloadUrl;
+        $('dl-btn').href = downloadUrl + cacheBuster;
+        // 更新全局 downloadUrl 供复制链接使用
+        downloadUrl = downloadUrl + cacheBuster;
       } else {
         $('version-info').textContent = 'v1.2.4 · ' + apkSize + ' · Android 5.0+';
       }
@@ -671,11 +678,8 @@
     return;
   }
 
-  // ─── 非微信：自动下载 ───
-  var iframe = document.createElement('iframe');
-  iframe.style.display = 'none';
-  iframe.src = '/apk/app.apk';
-  document.body.appendChild(iframe);
+  // ─── 非微信：不自动下载，等用户点击按钮 ───
+  // （移除了 iframe 自动下载，避免与按钮点击产生并发下载导致文件损坏）
 
   // 标记下载开始时间
   sessionStorage.setItem(downloadStartedKey, Date.now().toString());
@@ -766,9 +770,11 @@
 
   // 下载按钮点击反馈
   $('dl-btn').addEventListener('click', function() {
+    // 标记下载开始时间（用于回流引导检测）
+    sessionStorage.setItem(downloadStartedKey, Date.now().toString());
     var that = this;
     setTimeout(function() {
-      that.innerHTML = '<span class="icon">⏳</span> 正在下载...';
+      that.textContent = '⏳ 正在下载...';
       // 显示安装引导
       $('install-guide').style.display = 'block';
     }, 80);
